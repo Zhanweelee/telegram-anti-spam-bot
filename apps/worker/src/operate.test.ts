@@ -283,6 +283,7 @@ describe("handleIncomingEvent", () => {
         blocklist.setEnabled(tenantId, chatId, enabled),
       add: (tenantId, entry) => blocklist.add(tenantId, entry),
       remove: (tenantId, entry) => blocklist.remove(tenantId, entry),
+      size: (tenantId) => blocklist.size(tenantId),
       async has(tenantId, entry) {
         reads += 1;
         return blocklist.has(tenantId, entry);
@@ -305,7 +306,9 @@ describe("handleIncomingEvent", () => {
       await incoming({ text: "/blocklist -100 add actor 5", direct: true }),
       base,
     );
-    expect(kit.reply.sent.at(-1)?.text).toBe("blocklist -100 off\nadded");
+    expect(kit.reply.sent.at(-1)?.text).toBe(
+      "blocklist -100 off shared 1\nadded",
+    );
     await handleIncomingEvent(
       await incoming({ text: "明天下午见", chatId: "-100", actorId: "5" }),
       base,

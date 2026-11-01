@@ -800,7 +800,15 @@ describe("runOperatorCommand", () => {
       blocklist: wrapped,
       ...deps,
     });
-    expect(off).toMatchObject({ text: "blocklist -100 off" });
+    expect(off).toMatchObject({ text: "blocklist -100 off shared 0" });
+    const english = await runOperatorCommand({
+      event: event({ text: "/blocklist -100", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      locale: "en",
+      ...deps,
+    });
+    expect(english).toMatchObject({ text: "Blocklist -100 is off shared 0" });
     expect(reads).toBe(0);
 
     const added = await runOperatorCommand({
@@ -809,7 +817,7 @@ describe("runOperatorCommand", () => {
       blocklist: wrapped,
       ...deps,
     });
-    expect(added).toMatchObject({ text: "blocklist -100 off\nadded" });
+    expect(added).toMatchObject({ text: "blocklist -100 off shared 1\nadded" });
     expect(await blocklist.has("local", { kind: "actor", value: "9" })).toBe(
       true,
     );
@@ -825,7 +833,9 @@ describe("runOperatorCommand", () => {
       blocklist: wrapped,
       ...deps,
     });
-    expect(hashed).toMatchObject({ text: "blocklist -100 off\nadded" });
+    expect(hashed).toMatchObject({
+      text: "blocklist -100 off shared 2\nadded",
+    });
     expect(JSON.stringify(hashed)).not.toContain(hash);
     expect(await blocklist.has("local", { kind: "hash", value: hash })).toBe(
       true,
@@ -837,14 +847,14 @@ describe("runOperatorCommand", () => {
       blocklist: wrapped,
       ...deps,
     });
-    expect(turnedOn).toMatchObject({ text: "blocklist -100 on" });
+    expect(turnedOn).toMatchObject({ text: "blocklist -100 on shared 2" });
     const turnedOff = await runOperatorCommand({
       event: event({ text: "/blocklist -100 off", direct: true }),
       adminActorIds: ["42"],
       blocklist: wrapped,
       ...deps,
     });
-    expect(turnedOff).toMatchObject({ text: "blocklist -100 off" });
+    expect(turnedOff).toMatchObject({ text: "blocklist -100 off shared 2" });
     expect(await blocklist.isEnabled("local", "-100")).toBe(false);
     expect(await blocklist.has("local", { kind: "actor", value: "9" })).toBe(
       true,
@@ -867,7 +877,9 @@ describe("runOperatorCommand", () => {
       blocklist,
       ...deps,
     });
-    expect(removed).toMatchObject({ text: "blocklist -100 on\nremoved" });
+    expect(removed).toMatchObject({
+      text: "blocklist -100 on shared 1\nremoved",
+    });
     expect(JSON.stringify(removed)).not.toContain("user_9");
     expect(
       await blocklist.has("local", { kind: "actor", value: "user_9" }),
@@ -885,7 +897,9 @@ describe("runOperatorCommand", () => {
       blocklist,
       ...deps,
     });
-    expect(hashed).toMatchObject({ text: "blocklist -100 on\nremoved" });
+    expect(hashed).toMatchObject({
+      text: "blocklist -100 on shared 0\nremoved",
+    });
     expect(JSON.stringify(hashed)).not.toContain(hash);
     expect(await blocklist.has("local", { kind: "hash", value: hash })).toBe(
       false,
@@ -899,7 +913,9 @@ describe("runOperatorCommand", () => {
       blocklist,
       ...deps,
     });
-    expect(absent).toMatchObject({ text: "blocklist -100 on\nabsent" });
+    expect(absent).toMatchObject({
+      text: "blocklist -100 on shared 0\nabsent",
+    });
     expect(JSON.stringify(absent)).not.toContain("user_9");
     const raw = await runOperatorCommand({
       event: event({
@@ -1028,6 +1044,7 @@ describe("runOperatorCommand", () => {
         addedThenUnreadable.setEnabled(tenantId, chatId, enabled),
       add: (tenantId, entry) => addedThenUnreadable.add(tenantId, entry),
       remove: (tenantId, entry) => addedThenUnreadable.remove(tenantId, entry),
+      size: (tenantId) => addedThenUnreadable.size(tenantId),
       has: (tenantId, entry) => addedThenUnreadable.has(tenantId, entry),
     };
     const hidden = await runOperatorCommand({
@@ -1055,6 +1072,9 @@ describe("runOperatorCommand", () => {
       },
       async remove() {
         return false;
+      },
+      async size() {
+        return 0;
       },
     };
     const rejectedAdd = await runOperatorCommand({
@@ -2840,6 +2860,7 @@ function countingStore(
       inner.setEnabled(tenantId, chatId, enabled),
     add: (tenantId, entry) => inner.add(tenantId, entry),
     remove: (tenantId, entry) => inner.remove(tenantId, entry),
+    size: (tenantId) => inner.size(tenantId),
     async has(tenantId, entry) {
       onRead();
       return inner.has(tenantId, entry);
@@ -2924,6 +2945,9 @@ function failingStore(phrase: string): BlocklistStore & { reads: number } {
       throw new Error(phrase);
     },
     async remove() {
+      throw new Error(phrase);
+    },
+    async size() {
       throw new Error(phrase);
     },
   };

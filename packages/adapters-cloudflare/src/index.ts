@@ -433,6 +433,9 @@ export function createKvBlocklistStore(
       });
       return true;
     },
+    async size(tenantId) {
+      return (await load(tenantId)).entries.length;
+    },
   };
 }
 

@@ -51,6 +51,25 @@ export function bindBlocklistStoreContract(create: () => BlocklistStore): void {
       ).toBe(true);
     });
 
+    it("counts entries for one tenant without enabling a chat", async () => {
+      const store = create();
+      expect(await store.size("tenant_a")).toBe(0);
+      await store.add("tenant_a", { kind: "actor", value: "user_9" });
+      await store.add("tenant_a", { kind: "hash", value: hash });
+      await store.add("tenant_a", { kind: "actor", value: "user_9" });
+      expect(await store.size("tenant_a")).toBe(2);
+      expect(await store.size("tenant_b")).toBe(0);
+      expect(await store.isEnabled("tenant_a", "chat_1")).toBe(false);
+      expect(
+        await store.remove("tenant_a", { kind: "hash", value: hash }),
+      ).toBe(true);
+      expect(await store.size("tenant_a")).toBe(1);
+      expect(
+        await store.remove("tenant_a", { kind: "hash", value: hash }),
+      ).toBe(false);
+      expect(await store.size("tenant_a")).toBe(1);
+    });
+
     it("removes one entry and frees a slot without turning the chat off", async () => {
       const store = create();
       await store.setEnabled("tenant_a", "chat_1", true);

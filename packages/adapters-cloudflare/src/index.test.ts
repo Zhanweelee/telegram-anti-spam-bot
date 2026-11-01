@@ -519,6 +519,8 @@ describe("kv blocklist store", () => {
     await first.setEnabled("local", "-100", true);
     await first.add("local", { kind: "actor", value: "user_9" });
     expect(puts).toBe(2);
+    expect(await first.size("local")).toBe(1);
+    expect(puts).toBe(2);
     const key = [...backing.values.keys()][0];
     expect(key?.startsWith("blocklist")).toBe(true);
     const second = createKvBlocklistStore(backing.store);
@@ -548,6 +550,7 @@ describe("kv blocklist store", () => {
       false,
     );
     expect(await kept.isEnabled("local", "-100")).toBe(false);
+    expect(await kept.size("local")).toBe(0);
   });
 
   it("does not rewrite a corrupt document and hides the text", async () => {

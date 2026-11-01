@@ -841,10 +841,8 @@ async function editBlocklist(
   }
   const op = args[1];
   if (op === undefined) {
-    const enabled = await readEnabled(input, store, chatId);
-    return enabled === null
-      ? say(input, "command.invalid")
-      : formatBlocklist(input, chatId, enabled);
+    const status = await blocklistStatus(input, store, chatId);
+    return status ?? say(input, "command.invalid");
   }
   if (op === "on" || op === "off") {
     if (args.length !== 2) {
@@ -856,10 +854,8 @@ async function editBlocklist(
     if (!wrote) {
       return say(input, "command.invalid");
     }
-    const enabled = await readEnabled(input, store, chatId);
-    return enabled === null
-      ? say(input, "command.invalid")
-      : formatBlocklist(input, chatId, enabled);
+    const status = await blocklistStatus(input, store, chatId);
+    return status ?? say(input, "command.invalid");
   }
   if ((op !== "add" && op !== "remove") || args.length !== 4) {
     return say(input, "command.blocklist.usage");
@@ -884,14 +880,14 @@ async function editBlocklist(
     if (removed === null) {
       return say(input, "command.invalid");
     }
-    const enabled = await readEnabled(input, store, chatId);
-    if (enabled === null) {
+    const status = await blocklistStatus(input, store, chatId);
+    if (status === null) {
       return say(input, "command.invalid");
     }
     return say(
       input,
       removed ? "command.blocklist.removed" : "command.blocklist.absent",
-      { status: formatBlocklist(input, chatId, enabled) },
+      { status },
     );
   }
   const wrote = await writeBlocklist(input, () =>
@@ -900,22 +896,22 @@ async function editBlocklist(
   if (!wrote) {
     return say(input, "command.invalid");
   }
-  const enabled = await readEnabled(input, store, chatId);
-  if (enabled === null) {
+  const status = await blocklistStatus(input, store, chatId);
+  if (status === null) {
     return say(input, "command.invalid");
   }
-  return say(input, "command.blocklist.added", {
-    status: formatBlocklist(input, chatId, enabled),
-  });
+  return say(input, "command.blocklist.added", { status });
 }
 
-async function readEnabled(
+async function blocklistStatus(
   input: OperatorCommandInput,
   store: BlocklistStore,
   chatId: string,
-): Promise<boolean | null> {
+): Promise<string | null> {
   try {
-    return await store.isEnabled(input.event.tenantId, chatId);
+    const enabled = await store.isEnabled(input.event.tenantId, chatId);
+    const count = await store.size(input.event.tenantId);
+    return formatBlocklist(input, chatId, enabled, count);
   } catch {
     rejectBlocklist(input);
     return null;
@@ -959,10 +955,12 @@ function formatBlocklist(
   input: OperatorCommandInput,
   chatId: string,
   enabled: boolean,
+  count: number,
 ): string {
   return say(input, "command.blocklist.status", {
     chatId,
     state: say(input, enabled ? "command.switch.on" : "command.switch.off"),
+    count,
   });
 }
 

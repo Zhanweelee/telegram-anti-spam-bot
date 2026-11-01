@@ -128,7 +128,7 @@ const zh = {
   "command.redacted": "redacted",
   "command.blocklist.usage":
     "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
-  "command.blocklist.status": "blocklist {chatId} {state}",
+  "command.blocklist.status": "blocklist {chatId} {state} shared {count}",
   "command.blocklist.added": "{status}\nadded",
   "command.blocklist.removed": "{status}\nremoved",
   "command.blocklist.absent": "{status}\nabsent",
@@ -195,7 +195,7 @@ const en = {
   "command.redacted": "redacted",
   "command.blocklist.usage":
     "Usage: /blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
-  "command.blocklist.status": "Blocklist {chatId} is {state}",
+  "command.blocklist.status": "Blocklist {chatId} is {state} shared {count}",
   "command.blocklist.added": "{status}\nAdded",
   "command.blocklist.removed": "{status}\nRemoved",
   "command.blocklist.absent": "{status}\nAbsent",

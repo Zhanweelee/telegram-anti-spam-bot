@@ -55,6 +55,7 @@ function countingStore(): { store: BlocklistStore; reads: () => number } {
       inner.setEnabled(tenantId, chatId, enabled),
     add: (tenantId, entry) => inner.add(tenantId, entry),
     remove: (tenantId, entry) => inner.remove(tenantId, entry),
+    size: (tenantId) => inner.size(tenantId),
     async has(tenantId, entry) {
       reads += 1;
       return inner.has(tenantId, entry);
