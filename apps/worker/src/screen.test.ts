@@ -1,4 +1,8 @@
-import { createMemoryCache, createMemoryStorage } from "@tasb/adapter-memory";
+import {
+  createMemoryCache,
+  createMemoryPolicyStore,
+  createMemoryStorage,
+} from "@tasb/adapter-memory";
 import {
   createMemoryLogger,
   parseEvent,
@@ -270,5 +274,50 @@ describe("screenTelegramEvent", () => {
     const result = await screenTelegramEvent(await event("免费领取", true));
     expect(result.outcome).toBe("exempt");
     expect(result.decision.action).toBe("allow");
+  });
+
+  it("deletes an admin message when that chat turns exemption off", async () => {
+    const text = "请免费领取礼品";
+    const policyStore = createMemoryPolicyStore();
+    await policyStore.put("local", "-100", {
+      exemptAdmins: false,
+      allowActorIds: [],
+    });
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(await event(text, true), {
+      logger,
+      cache: createMemoryCache(),
+      policyStore,
+    });
+    expect(result.outcome).toBe("decided");
+    expect(result.decision.action).toBe("delete");
+    expect(JSON.stringify(logger.entries)).not.toContain(text);
+  });
+
+  it("allowlists an actor only in the chat that stored the id", async () => {
+    const text = "请免费领取礼品";
+    const policyStore = createMemoryPolicyStore();
+    await policyStore.put("local", "-100", {
+      exemptAdmins: true,
+      allowActorIds: ["5"],
+    });
+    const allowed = await screenTelegramEvent(await event(text, false), {
+      cache: createMemoryCache(),
+      policyStore,
+    });
+    expect(allowed.outcome).toBe("exempt");
+    expect(allowed.exemptReason).toBe("allowlist");
+
+    const otherChat = await screenTelegramEvent(
+      await event(text, false, "-200"),
+      { cache: createMemoryCache(), policyStore },
+    );
+    expect(otherChat.decision.action).toBe("delete");
+
+    const adminElsewhere = await screenTelegramEvent(
+      await event(text, true, "-200"),
+      { cache: createMemoryCache(), policyStore },
+    );
+    expect(adminElsewhere.exemptReason).toBe("admin");
   });
 });

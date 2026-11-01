@@ -53,6 +53,13 @@ export {
   defineDetector,
 } from "./plugin.js";
 export {
+  DEFAULT_POLICY_CACHE_TTL_SECONDS,
+  defaultPrefilterPolicy,
+  type LoadPolicyInput,
+  loadPolicy,
+} from "./policy-load.js";
+export type { PolicyStore } from "./policy-store.js";
+export {
   type AuditQuery,
   type AuditRecord,
   auditQuerySchema,
@@ -67,6 +74,8 @@ export {
 } from "./ports.js";
 export {
   type ExemptReason,
+  MAX_ACTOR_ID_LENGTH,
+  MAX_ALLOW_ACTOR_IDS,
   type PrefilterPolicy,
   prefilter,
   prefilterPolicySchema,

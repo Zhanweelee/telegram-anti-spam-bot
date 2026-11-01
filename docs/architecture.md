@@ -58,6 +58,8 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`。群覆盖是整份替换。缓存目前是进程内内存，接口留给以后的 KV。
 
+`loadPolicy` 同样先读 `Cache`，键是 `policy:<tenantId>:<chatId>`。未命中再读 `PolicyStore`。该群没有记录时使用调用方给的 fallback。Worker 的 fallback 是豁免管理员、空白名单。某个群把 `exemptAdmins` 存成 false 之后，只关闭这一群的豁免。白名单不跨租户、不跨群。存储抛错时记 `policy_store_failed` 并使用 fallback，不写异常文本。坏掉的缓存不当成「没有策略」，会再读一次存储。`put` 不会清缓存，默认 60 秒后才看见新策略。这条路径也不读 D1。说明见 ADR 0005。
+
 ## 多租户
 
 每条事件、规则和审计都带 `tenantId` 与 `chatId`。Self-host 是「一个租户、不计费」的配置，不是另一套程序。租户如何开通、额度如何扣，只允许出现在 `apps/cloud`。
@@ -78,7 +80,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
 5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
 
-`apps/worker` 在归一化之后跑 core 流水线：关键词检测器和删除动作，预过滤豁免管理员。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的 `deleteMessage`。审计也不出这个请求。持久化和真正的 API 调用在 P0-04 之后的适配任务里。
+`apps/worker` 在归一化之后跑 core 流水线：关键词检测器，以及 delete、mute、ban。预过滤按租户和群从 `PolicyStore` 读取；没有记录时豁免管理员。Worker 目前用内存策略存储。KV 形态的同一端口在 `packages/adapters-cloudflare`，绑定到 Worker 是 P0-08。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的删除、禁言或封禁接口。审计也不出这个请求。
 
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 

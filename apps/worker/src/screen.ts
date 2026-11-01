@@ -6,14 +6,18 @@ import {
 import {
   createMemoryCache,
   createMemoryModerator,
+  createMemoryPolicyStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
   type Cache,
+  defaultPrefilterPolicy,
   type Event,
   type Logger,
+  loadPolicy,
   loadRuleSet,
   type PipelineResult,
+  type PolicyStore,
   type RuleSource,
   runPipeline,
   type Storage,
@@ -27,6 +31,7 @@ import { fileRuleSource } from "./rules.js";
  * The moderator is still per request and does not call Telegram.
  */
 const ruleCache = createMemoryCache();
+const defaultPolicyStore = createMemoryPolicyStore();
 
 const detector = createKeywordDetector({
   keywords: ["免费领取", "加微信"],
@@ -51,6 +56,7 @@ export interface ScreenDeps {
   readonly cache?: Cache;
   readonly source?: RuleSource;
   readonly storage?: Storage;
+  readonly policyStore?: PolicyStore;
 }
 
 export async function screenTelegramEvent(
@@ -65,10 +71,18 @@ export async function screenTelegramEvent(
     source: deps.source ?? fileRuleSource,
     logger,
   });
+  const policy = await loadPolicy({
+    tenantId: event.tenantId,
+    chatId: event.chatId,
+    cache: deps.cache ?? ruleCache,
+    store: deps.policyStore ?? defaultPolicyStore,
+    logger,
+    fallback: defaultPrefilterPolicy,
+  });
   const result = await runPipeline({
     event,
     rules,
-    policy: { exemptAdmins: true, allowActorIds: [] },
+    policy,
     detectors: [detector],
     actions: [
       createDeleteAction(),

@@ -6,9 +6,11 @@ import {
   type DeleteTarget,
   type ModerationPort,
   type MuteTarget,
+  type PolicyStore,
   parseAuditQuery,
   parseAuditRecord,
   parseRuleSet,
+  prefilterPolicySchema,
   type RuleSet,
   type Storage,
 } from "@tasb/core";
@@ -66,8 +68,30 @@ export function createMemoryModerator(): ModerationPort & {
   };
 }
 
+export function createMemoryPolicyStore(): PolicyStore {
+  const values = new Map<string, string>();
+  return {
+    async get(tenantId, chatId) {
+      const raw = values.get(policyKey(tenantId, chatId));
+      if (raw === undefined) {
+        return null;
+      }
+      const parsed = prefilterPolicySchema.safeParse(JSON.parse(raw));
+      return parsed.success ? parsed.data : null;
+    },
+    async put(tenantId, chatId, policy) {
+      const parsed = prefilterPolicySchema.parse(policy);
+      values.set(policyKey(tenantId, chatId), JSON.stringify(parsed));
+    },
+  };
+}
+
 function key(tenantId: string, chatId: string): string {
   return `${tenantId}\n${chatId}`;
+}
+
+function policyKey(tenantId: string, chatId: string): string {
+  return `${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
 }
 
 export function createMemoryCache(nowMs: () => number = Date.now): Cache {

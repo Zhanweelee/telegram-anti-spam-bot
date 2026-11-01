@@ -1,11 +1,15 @@
 import { createDeleteAction } from "@tasb/actions";
 import {
+  createMemoryCache,
   createMemoryModerator,
+  createMemoryPolicyStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
   createFixedClock,
   createMemoryLogger,
+  defaultPrefilterPolicy,
+  loadPolicy,
   type PipelineResult,
   parseRuleSet,
   runPipeline,
@@ -37,6 +41,15 @@ export async function screen(
 }> {
   const storage = createMemoryStorage();
   const moderator = createMemoryModerator();
+  const logger = createMemoryLogger();
+  const policy = await loadPolicy({
+    tenantId: "tenant_demo",
+    chatId: "chat_demo",
+    cache: createMemoryCache(),
+    store: createMemoryPolicyStore(),
+    logger,
+    fallback: defaultPrefilterPolicy,
+  });
   const result = await runPipeline({
     event: createMessageEvent({
       text,
@@ -44,12 +57,12 @@ export async function screen(
       chatId: "chat_demo",
     }),
     rules,
-    policy: { exemptAdmins: true, allowActorIds: [] },
+    policy,
     detectors: [createKeywordDetector({ keywords: ["免费领取", "加微信"] })],
     actions: [createDeleteAction()],
     storage,
     moderator,
-    logger: createMemoryLogger(),
+    logger,
     clock: createFixedClock("2026-11-01T00:00:00Z"),
     dryRun: options?.dryRun ?? false,
   });

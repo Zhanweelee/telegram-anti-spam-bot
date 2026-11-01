@@ -7,6 +7,7 @@ export default defineConfig({
       "packages/detectors-keyword",
       "packages/actions",
       "packages/adapters-memory",
+      "packages/adapters-cloudflare",
       "packages/sdk",
       "packages/platform-telegram",
       "examples/minimal-pipeline",

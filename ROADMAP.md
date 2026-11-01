@@ -71,7 +71,7 @@
 - 两个动作都支持 dry-run 和缺失目标时的 `failed`。
 - 严重度顺序保持 ban > mute > delete。
 
-### P0-05 白名单与管理员豁免的存储 — todo
+### P0-05 白名单与管理员豁免的存储 — done
 
 验收：
 
@@ -210,3 +210,9 @@
 - 做了什么：ADR 0004 规定 mute 和 ban 的端口形状。两个动作支持 dry-run 和缺少 actor 时的 `failed`。内存适配器只记录调用。严重度保持 ban > mute > delete。
 - 学到什么：时长放在动作配置里，绝对时间留给以后发 HTTP 的适配器。ban 不隐含 delete，否则一条规则会做两件没有写出来的事。
 - 下一步：做 P0-05，把白名单和管理员豁免按 tenant + chat 放进适配器，并允许关掉管理员豁免。
+
+### 2026-11-01 P0-05
+
+- 做了什么：`PolicyStore` 按 tenant + chat 保存预过滤策略。`loadPolicy` 先读缓存。没有记录时 Worker 仍豁免管理员。某个群可以把 `exemptAdmins` 存成 false。内存适配器和 KV 形态的 Cloudflare 适配器共用 `bindPolicyStoreContract`。
+- 学到什么：坏缓存要回源，不能当成「这个群没有策略」。`put` 不清缓存，避免每条消息都打 KV。Worker 在绑定 KV 之前继续用内存存储。
+- 下一步：做 P0-06，只让配置中的管理员在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的命令不改配置。

@@ -15,11 +15,11 @@ const rules = [
   },
   {
     prefix: "packages/adapters-memory/",
-    allow: [/^\.{1,2}\//, /^@tasb\/core$/, /^vitest$/],
+    allow: [/^\.{1,2}\//, /^@tasb\/core(\/.*)?$/, /^vitest$/],
   },
   {
     prefix: "packages/adapters-cloudflare/",
-    allow: [/^\.{1,2}\//, /^@tasb\/core$/],
+    allow: [/^\.{1,2}\//, /^@tasb\/core(\/.*)?$/, /^vitest$/],
   },
   {
     prefix: "packages/platform-telegram/",

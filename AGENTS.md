@@ -162,7 +162,7 @@ pnpm --filter @tasb/example-minimal-pipeline test
 ## 新增一个 Adapter
 
 1. 建 `packages/adapters-<runtime>`，实现 core 的端口，不要把平台类型导出给 core。
-2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。
+2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。实现 `PolicyStore` 时从 `@tasb/core/testing` 调用 `bindPolicyStoreContract`。
 3. 对照 `docs/limits.md` 写明读放大、写放大和失败时的行为。
 4. Workers 绑定只出现在该包和 `apps/worker`。
 5. 新的 npm 依赖需要 ADR。

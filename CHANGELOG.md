@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P0-05
+
+- `PolicyStore` 按 `tenantId` + `chatId` 保存预过滤策略。`loadPolicy` 先读缓存，缺记录时使用调用方的 fallback。
+- 管理员豁免可以按群关掉。白名单不跨租户、不跨群。
+- 内存适配器与 KV 形态的 Cloudflare 适配器共用 `@tasb/core/testing` 的同一组行为测试。Worker 在绑定 KV 之前使用内存存储。
+
 ### P0-04
 
 - `ModerationPort` 增加 `muteActor` 与 `banActor`。说明见 ADR 0004。

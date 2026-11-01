@@ -1,10 +1,14 @@
 import { parseRuleSet } from "@tasb/core";
+import { bindPolicyStoreContract } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
   createMemoryCache,
   createMemoryModerator,
+  createMemoryPolicyStore,
   createMemoryStorage,
 } from "./index.js";
+
+bindPolicyStoreContract(createMemoryPolicyStore);
 
 const record = {
   tenantId: "tenant_a",
