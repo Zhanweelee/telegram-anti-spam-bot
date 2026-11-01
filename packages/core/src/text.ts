@@ -34,25 +34,27 @@ export function foldDotLookalikes(text: string): string {
 }
 
 const CYRILLIC_LOOKALIKES: Record<string, string> = {
+  "\u0406": "I",
   "\u0410": "A",
-  "\u0430": "a",
   "\u0415": "E",
-  "\u0435": "e",
   "\u041E": "O",
-  "\u043E": "o",
   "\u0420": "P",
-  "\u0440": "p",
   "\u0421": "C",
-  "\u0441": "c",
   "\u0423": "Y",
-  "\u0443": "y",
   "\u0425": "X",
+  "\u0430": "a",
+  "\u0435": "e",
+  "\u043E": "o",
+  "\u0440": "p",
+  "\u0441": "c",
+  "\u0443": "y",
   "\u0445": "x",
+  "\u0456": "i",
 };
 
 /**
- * Fold seven Cyrillic letters that share a Latin shape.
- * Ukrainian і, Cyrillic т, and every other letter stay.
+ * Fold Cyrillic letters that share a Latin shape.
+ * Cyrillic т and every other letter stay.
  */
 export function foldCyrillicLookalikes(text: string): string {
   let out = "";

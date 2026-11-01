@@ -139,6 +139,43 @@ describe("keyword detector", () => {
     ).toBeNull();
   });
 
+  it("folds ukrainian i before matching", async () => {
+    const vip = createKeywordDetector({ keywords: ["vip"] });
+    const hit = await vip.detect({
+      event: messageEvent("v\u0456p"),
+      logger,
+      signal,
+    });
+    expect(hit?.evidence[0]?.summary).toBe("keyword:vip");
+    const sensitive = createKeywordDetector({
+      keywords: ["VIP"],
+      caseSensitive: true,
+    });
+    expect(
+      await sensitive.detect({
+        event: messageEvent("v\u0456p"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      (
+        await sensitive.detect({
+          event: messageEvent("V\u0406P"),
+          logger,
+          signal,
+        })
+      )?.evidence[0]?.summary,
+    ).toBe("keyword:VIP");
+    expect(
+      await detector.detect({
+        event: messageEvent("привіт"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
   it("matches a join profile without copying the whole name", async () => {
     const name = "广告员免费领取礼品";
     const hit = await detector.detect({

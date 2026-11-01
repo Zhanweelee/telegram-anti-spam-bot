@@ -3384,6 +3384,32 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("btn64");
   });
 
+  it("folds ukrainian i in button text down to an ascii host", async () => {
+    const outcome = await normalize({
+      update_id: 3612,
+      message: {
+        message_id: 182,
+        date: 1761955200,
+        chat: { id: -100880, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "b\u0456t.ly/btn65", url: "https://example.com" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("btn65");
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

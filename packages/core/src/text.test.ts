@@ -75,7 +75,7 @@ describe("foldFullwidthLatin", () => {
 });
 
 describe("foldCyrillicLookalikes", () => {
-  it("folds seven cyrillic letters and keeps the rest", () => {
+  it("folds cyrillic lookalikes and keeps the rest", () => {
     expect(foldCyrillicLookalikes("bit.l\u0443")).toBe("bit.ly");
     expect(foldCyrillicLookalikes("t.m\u0415")).toBe("t.mE");
     expect(
@@ -86,7 +86,9 @@ describe("foldCyrillicLookalikes", () => {
     ).toBe("AEOPCYX");
     expect(foldCyrillicLookalikes("привет")).toBe("пpивeт");
     expect(foldCyrillicLookalikes("ивт")).toBe("ивт");
-    expect(foldCyrillicLookalikes("b\u0456t.ly")).toBe("b\u0456t.ly");
+    expect(foldCyrillicLookalikes("b\u0456t.ly")).toBe("bit.ly");
+    expect(foldCyrillicLookalikes("b\u0406t.ly")).toBe("bIt.ly");
+    expect(foldCyrillicLookalikes("\u0442.me")).toBe("\u0442.me");
     expect(foldCyrillicLookalikes("免费领取")).toBe("免费领取");
     expect(foldCyrillicLookalikes("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
   });

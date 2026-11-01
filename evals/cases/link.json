@@ -210,5 +210,15 @@
     "id": "cyrillic-ordinary",
     "text": "\u0435xample.com/docs",
     "label": "ham"
+  },
+  {
+    "id": "ukrainian-i-shortener",
+    "text": "b\u0456t.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "ukrainian-greeting",
+    "text": "привіт",
+    "label": "ham"
   }
 ]

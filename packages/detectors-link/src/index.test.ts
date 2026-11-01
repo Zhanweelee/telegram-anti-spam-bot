@@ -636,10 +636,28 @@ describe("link fixtures", () => {
     expect(ordinary).toBeNull();
 
     const ukrainian = await detector.detect({
-      event: eventFor("b\u0456t.ly/uk64"),
+      event: eventFor("b\u0456t.ly/uk65"),
       logger: createMemoryLogger(),
       signal,
     });
-    expect(ukrainian).toBeNull();
+    expect(ukrainian?.reasons).toEqual(["short_link"]);
+    expect(ukrainian?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(ukrainian)).not.toContain("uk65");
+
+    const capital = await detector.detect({
+      event: eventFor("b\u0406t.ly/cap65"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.reasons).toEqual(["short_link"]);
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(capital)).not.toContain("cap65");
+
+    const te = await detector.detect({
+      event: eventFor("\u0442.me/+NO65"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(te).toBeNull();
   });
 });
