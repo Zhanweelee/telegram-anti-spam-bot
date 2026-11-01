@@ -4052,6 +4052,220 @@ describe("normalizeUpdate", () => {
     expect(inlineDump).not.toContain("bit.ly");
   });
 
+  it("hashes a caption-less rich photo and leaves the file id out", async () => {
+    const fileId = "SECRETFILE92";
+    const uniqueId = "RICHPHOTO92";
+    const photo = await normalize({
+      update_id: 6010,
+      message: {
+        message_id: 420,
+        date: 1761955200,
+        chat: { id: -101150, type: "supergroup", title: "keep-title" },
+        from: { id: 92, first_name: "from92" },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: "SMALL92",
+                  file_unique_id: "SMALLUNIQ92",
+                  width: 1,
+                  height: 1,
+                },
+                {
+                  file_id: fileId,
+                  file_unique_id: uniqueId,
+                  width: 8,
+                  height: 8,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(photo.status).toBe("event");
+    if (photo.status !== "event") {
+      return;
+    }
+    expect(photo.event.message?.text).toBe("");
+    expect(photo.event.message?.media).toBe("photo");
+    expect(photo.event.message?.mediaSha256).toBe(
+      await sha256Hex(`photo\n${uniqueId}`),
+    );
+    const photoDump = JSON.stringify(photo.event);
+    expect(photoDump).not.toContain(fileId);
+    expect(photoDump).not.toContain(uniqueId);
+    expect(photoDump).not.toContain("SMALL92");
+    expect(photoDump).not.toContain("SMALLUNIQ92");
+    expect(photoDump).not.toContain("from92");
+    expect(photoDump).not.toContain("keep-title");
+
+    const nested = await normalize({
+      update_id: 6011,
+      message: {
+        message_id: 421,
+        date: 1761955200,
+        chat: { id: -101151, type: "supergroup" },
+        from: { id: 92 },
+        rich_message: {
+          blocks: [
+            { type: "paragraph", text: "今天站会" },
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "photo",
+                  photo: [
+                    {
+                      file_id: fileId,
+                      file_unique_id: uniqueId,
+                      width: 1,
+                      height: 1,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.text).toBe("今天站会");
+    expect(nested.event.message?.media).toBe("photo");
+    expect(nested.event.message?.mediaSha256).toBe(
+      await sha256Hex(`photo\n${uniqueId}`),
+    );
+    expect(JSON.stringify(nested.event)).not.toContain(fileId);
+    expect(JSON.stringify(nested.event)).not.toContain(uniqueId);
+
+    const sticker = await normalize({
+      update_id: 6012,
+      message: {
+        message_id: 422,
+        date: 1761955200,
+        chat: { id: -101152, type: "supergroup" },
+        from: { id: 92 },
+        sticker: {
+          file_id: fileId,
+          file_unique_id: "STICKER92",
+          width: 1,
+          height: 1,
+        },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: fileId,
+                  file_unique_id: uniqueId,
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(sticker.status).toBe("event");
+    if (sticker.status !== "event") {
+      return;
+    }
+    expect(sticker.event.message?.media).toBe("sticker");
+    expect(sticker.event.message?.mediaSha256).toBe(
+      await sha256Hex("sticker\nSTICKER92"),
+    );
+    expect(JSON.stringify(sticker.event)).not.toContain(fileId);
+    expect(JSON.stringify(sticker.event)).not.toContain(uniqueId);
+    expect(JSON.stringify(sticker.event)).not.toContain("STICKER92");
+
+    const voice = await normalize({
+      update_id: 6013,
+      message: {
+        message_id: 423,
+        date: 1761955200,
+        chat: { id: -101153, type: "supergroup" },
+        from: { id: 92 },
+        rich_message: {
+          blocks: [
+            {
+              type: "voice_note",
+              voice_note: {
+                file_id: fileId,
+                file_unique_id: "RICHVOICE92",
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(voice.status).toBe("event");
+    if (voice.status !== "event") {
+      return;
+    }
+    expect(voice.event.message?.text).toBe("");
+    expect(voice.event.message?.media).toBe("voice");
+    expect(voice.event.message?.mediaSha256).toBe(
+      await sha256Hex("voice\nRICHVOICE92"),
+    );
+    expect(JSON.stringify(voice.event)).not.toContain(fileId);
+    expect(JSON.stringify(voice.event)).not.toContain("RICHVOICE92");
+
+    const longId = "y".repeat(257);
+    const oversized = await normalize({
+      update_id: 6014,
+      message: {
+        message_id: 424,
+        date: 1761955200,
+        chat: { id: -101154, type: "supergroup" },
+        from: { id: 92 },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: fileId,
+                  file_unique_id: longId,
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+            {
+              type: "video",
+              video: {
+                file_id: fileId,
+                file_unique_id: uniqueId,
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(oversized.status).toBe("event");
+    if (oversized.status !== "event") {
+      return;
+    }
+    expect(oversized.event.message?.media).toBe("photo");
+    expect(oversized.event.message?.mediaSha256).toBeUndefined();
+    const oversizedDump = JSON.stringify(oversized.event);
+    expect(oversizedDump).not.toContain(longId);
+    expect(oversizedDump).not.toContain(fileId);
+    expect(oversizedDump).not.toContain(uniqueId);
+  });
+
   it("leaves a reply keyboard out of the text", async () => {
     const outcome = await normalize({
       update_id: 2806,

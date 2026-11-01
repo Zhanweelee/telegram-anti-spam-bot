@@ -859,7 +859,87 @@ async function mediaMark(
     const id = uniqueId(value);
     return id ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) } : { kind };
   }
+  const rich = message.rich_message;
+  if (!isRecord(rich)) {
+    return undefined;
+  }
+  return firstRichMedia(rich.blocks);
+}
+
+async function firstRichMedia(
+  value: unknown,
+): Promise<{ readonly kind: MediaKind; readonly sha256?: string } | undefined> {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  for (const block of value) {
+    if (!isRecord(block)) {
+      continue;
+    }
+    const found = await markRichBlock(block);
+    if (found) {
+      return found;
+    }
+  }
   return undefined;
+}
+
+async function markRichBlock(
+  block: Record<string, unknown>,
+): Promise<{ readonly kind: MediaKind; readonly sha256?: string } | undefined> {
+  const type = block.type;
+  if (
+    type === "animation" ||
+    type === "video" ||
+    type === "audio" ||
+    type === "document"
+  ) {
+    const value = block[type];
+    if (!isRecord(value)) {
+      return undefined;
+    }
+    return marked(type, uniqueId(value));
+  }
+  if (type === "voice_note") {
+    if (!isRecord(block.voice_note)) {
+      return undefined;
+    }
+    return marked("voice", uniqueId(block.voice_note));
+  }
+  if (type === "photo") {
+    if (!Array.isArray(block.photo) || block.photo.length === 0) {
+      return undefined;
+    }
+    return marked("photo", uniqueId(block.photo[block.photo.length - 1]));
+  }
+  if (type === "list" && Array.isArray(block.items)) {
+    for (const item of block.items) {
+      if (!isRecord(item)) {
+        continue;
+      }
+      const found = await firstRichMedia(item.blocks);
+      if (found) {
+        return found;
+      }
+    }
+    return undefined;
+  }
+  if (
+    type === "details" ||
+    type === "blockquote" ||
+    type === "collage" ||
+    type === "slideshow"
+  ) {
+    return firstRichMedia(block.blocks);
+  }
+  return undefined;
+}
+
+async function marked(
+  kind: MediaKind,
+  id: string | undefined,
+): Promise<{ readonly kind: MediaKind; readonly sha256?: string }> {
+  return id ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) } : { kind };
 }
 
 function uniqueId(value: unknown): string | undefined {

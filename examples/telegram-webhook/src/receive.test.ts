@@ -1,3 +1,4 @@
+import { sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { receiveUpdate } from "./receive.js";
 
@@ -244,6 +245,53 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("name91");
     expect(dumped).not.toContain("from91");
     expect(dumped).not.toContain("grp91");
+  });
+
+  it("hashes a caption-less rich photo and leaves the file id out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 9,
+        message: {
+          message_id: 90,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp92" },
+          from: { id: 92, first_name: "https://tinyurl.com/from92" },
+          rich_message: {
+            blocks: [
+              {
+                type: "photo",
+                photo: [
+                  {
+                    file_id: "SECRETFILE92",
+                    file_unique_id: "RICHPHOTO92",
+                    width: 1,
+                    height: 1,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_9",
+      kind: "message",
+      message: {
+        id: "90",
+        text: "",
+        media: "photo",
+        mediaSha256: await sha256Hex("photo\nRICHPHOTO92"),
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("SECRETFILE92");
+    expect(dumped).not.toContain("RICHPHOTO92");
+    expect(dumped).not.toContain("from92");
+    expect(dumped).not.toContain("grp92");
   });
 
   it("returns an internal event for a valid secret", async () => {
