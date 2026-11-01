@@ -94,6 +94,7 @@ describe("event schema", () => {
       },
     });
     expect(event.message?.hosts).toEqual(["bit.ly", "203.0.113.9"]);
+    expect(event.message?.invites).toBeUndefined();
     const bad = [
       "BIT.LY",
       "a..b",
@@ -134,6 +135,40 @@ describe("event schema", () => {
           text: "点这里",
           textSha256: "ab".repeat(32),
           hosts: [],
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts invite hostnames and rejects a code stuffed into the list", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "点这里",
+        textSha256: "ab".repeat(32),
+        invites: ["t.me"],
+      },
+    });
+    expect(event.message?.invites).toEqual(["t.me"]);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "点这里",
+          textSha256: "ab".repeat(32),
+          invites: ["t.me/+INVITESECRET99"],
         },
       }),
     ).toThrow();

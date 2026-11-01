@@ -180,6 +180,49 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
+  it("marks a hidden telegram invite without keeping the code", async () => {
+    const code = "INVITESECRET99";
+    const outcome = await normalize({
+      update_id: 2004,
+      message: {
+        message_id: 12,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 9 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/+${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "https://t.me/durov",
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://telegram.me/joinchat/${code}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点这里");
+    expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
+    expect(outcome.event.message?.hosts).toEqual(["t.me", "telegram.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(code);
+  });
+
   it("prefers a caption when text is missing", async () => {
     const outcome = await normalize({
       update_id: 8,

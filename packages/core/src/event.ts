@@ -44,6 +44,8 @@ export const messageSchema = z.strictObject({
   forward: forwardKindSchema.optional(),
   /** Hostnames from hidden links. Paths and queries stay out. */
   hosts: z.array(hostnameSchema).min(1).max(8).optional(),
+  /** Invite hostnames. The invite code stays out. */
+  invites: z.array(hostnameSchema).min(1).max(8).optional(),
 });
 
 export const profileSchema = z.strictObject({

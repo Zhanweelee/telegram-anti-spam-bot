@@ -11,6 +11,7 @@ const hostSchema = z.string().min(1).max(253);
 export const linkConfigSchema = z.strictObject({
   shorteners: z.array(hostSchema).max(32).optional(),
   denylist: z.array(hostSchema).max(64).optional(),
+  inviteHosts: z.array(hostSchema).max(32).optional(),
   sourceTimeoutMs: z.number().int().positive().max(40).optional(),
 });
 
@@ -26,9 +27,16 @@ export interface ReputationSource {
 export interface LinkDetectorDeps {
   readonly shorteners?: readonly string[];
   readonly denylist?: readonly string[];
+  readonly inviteHosts?: readonly string[];
   readonly source?: ReputationSource;
   readonly sourceTimeoutMs?: number;
 }
+
+export const defaultInviteHosts = [
+  "t.me",
+  "telegram.me",
+  "telegram.dog",
+] as const;
 
 export const defaultShorteners = [
   "bit.ly",
@@ -57,6 +65,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         ? {}
         : { shorteners: [...deps.shorteners] }),
       ...(deps.denylist === undefined ? {} : { denylist: [...deps.denylist] }),
+      ...(deps.inviteHosts === undefined
+        ? {}
+        : { inviteHosts: [...deps.inviteHosts] }),
       ...(deps.sourceTimeoutMs === undefined
         ? {}
         : { sourceTimeoutMs: deps.sourceTimeoutMs }),
@@ -66,8 +77,17 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       if (!message) {
         return null;
       }
+      const inviteNames = new Set(
+        (parsed.inviteHosts ?? defaultInviteHosts).map((item) =>
+          item.toLowerCase(),
+        ),
+      );
+      const invites = mergeHosts(
+        extractInviteHosts(message.text, inviteNames),
+        message.invites,
+      );
       const hosts = mergeHosts(extractHosts(message.text), message.hosts);
-      if (hosts.length === 0) {
+      if (hosts.length === 0 && invites.length === 0) {
         return null;
       }
       const shorteners = new Set(
@@ -80,6 +100,16 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       );
       const reasons: string[] = [];
       const evidence: DetectorHit["evidence"][number][] = [];
+      for (const host of invites) {
+        if (!matchesHost(host, inviteNames) || reasons.includes("invite")) {
+          continue;
+        }
+        reasons.push("invite");
+        evidence.push({
+          kind: "feature",
+          summary: summaryFor("invite", host),
+        });
+      }
       for (const host of hosts) {
         const local = localReason(host, shorteners, denied);
         if (!local || reasons.includes(local)) {
@@ -204,9 +234,58 @@ function mergeHosts(
   return found;
 }
 
+function extractInviteHosts(
+  text: string,
+  names: ReadonlySet<string>,
+): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  token.lastIndex = 0;
+  for (const match of text.matchAll(token)) {
+    const raw = match[0];
+    if (!raw) {
+      continue;
+    }
+    const host = inviteHost(raw.replace(/[),.;!?]+$/g, ""), names);
+    if (!host || seen.has(host)) {
+      continue;
+    }
+    seen.add(host);
+    found.push(host);
+    if (found.length >= 8) {
+      break;
+    }
+  }
+  return found;
+}
+
+function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+  let url: URL;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (!matchesHost(host, names)) {
+    return null;
+  }
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+  if (
+    /^\/\+[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    /^\/addlist\/[A-Za-z0-9_-]{1,128}$/.test(path)
+  ) {
+    return host;
+  }
+  return null;
+}
+
 export function extractHosts(text: string): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
+  token.lastIndex = 0;
   for (const match of text.matchAll(token)) {
     const raw = match[0];
     if (!raw) {

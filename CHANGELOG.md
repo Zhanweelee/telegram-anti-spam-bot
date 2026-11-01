@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-14
+
+- `t.me`、`telegram.me`、`telegram.dog` 的邀请链接会删除。见 ADR 0030。
+- 证据是 `invite:` 加主机名。邀请码不进入事件或日志。
+- 公开的 `t.me/名字` 保留。隐藏的 `text_link` 同样只留主机名。
+
 ### P1-13
 
 - 隐藏的 `text_link` 只保留主机名，并交给现有链接规则。见 ADR 0029。

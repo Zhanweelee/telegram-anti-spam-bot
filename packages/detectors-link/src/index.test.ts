@@ -27,7 +27,11 @@ const phrase = "请免费领取礼品";
 const signal = { aborted: false };
 const HASH = "ab".repeat(32);
 
-function eventFor(text: string, hosts?: readonly string[]): Event {
+function eventFor(
+  text: string,
+  hosts?: readonly string[],
+  invites?: readonly string[],
+): Event {
   return parseEvent({
     id: "evt_link",
     tenantId: "tenant_demo",
@@ -40,6 +44,7 @@ function eventFor(text: string, hosts?: readonly string[]): Event {
       text,
       textSha256: HASH,
       ...(hosts === undefined ? {} : { hosts: [...hosts] }),
+      ...(invites === undefined ? {} : { invites: [...invites] }),
     },
   });
 }
@@ -162,5 +167,43 @@ describe("link fixtures", () => {
       signal,
     });
     expect(capped).toBeNull();
+  });
+
+  it("scores a telegram invite and keeps the code out of evidence", async () => {
+    const code = "INVITESECRET99";
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(`打开 https://t.me/+${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["invite"]);
+    expect(hit?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(hit)).not.toContain(code);
+    const joinchat = await detector.detect({
+      event: eventFor(`https://telegram.me/joinchat/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joinchat?.evidence[0]?.summary).toBe("invite:telegram.me");
+    const folder = await detector.detect({
+      event: eventFor(`https://telegram.dog/addlist/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(folder?.evidence[0]?.summary).toBe("invite:telegram.dog");
+    const hidden = await detector.detect({
+      event: eventFor("点这里", undefined, ["t.me"]),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hidden?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(hidden)).not.toContain(code);
+    const pub = await detector.detect({
+      event: eventFor("https://t.me/durov"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(pub).toBeNull();
   });
 });

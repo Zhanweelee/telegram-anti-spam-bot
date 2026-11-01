@@ -91,7 +91,7 @@ async function messageEvent(
   }
   const text = messageText(message);
   const forward = forwardKind(message);
-  const hosts = linkHosts(message);
+  const links = linkHosts(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -110,7 +110,8 @@ async function messageEvent(
       text,
       textSha256: await sha256Hex(text),
       ...(forward ? { forward } : {}),
-      ...(hosts.length > 0 ? { hosts } : {}),
+      ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
+      ...(links.invites.length > 0 ? { invites: links.invites } : {}),
     },
   });
 }
@@ -295,9 +296,14 @@ function finish(draft: unknown): NormalizeOutcome {
 const MAX_LINK = 2048;
 const MAX_HOSTS = 8;
 
-function linkHosts(message: Record<string, unknown>): string[] {
-  const found: string[] = [];
-  const seen = new Set<string>();
+function linkHosts(message: Record<string, unknown>): {
+  hosts: string[];
+  invites: string[];
+} {
+  const hosts: string[] = [];
+  const invites: string[] = [];
+  const seenHosts = new Set<string>();
+  const seenInvites = new Set<string>();
   for (const list of [message.entities, message.caption_entities]) {
     if (!Array.isArray(list)) {
       continue;
@@ -306,21 +312,28 @@ function linkHosts(message: Record<string, unknown>): string[] {
       if (!isRecord(entity) || entity.type !== "text_link") {
         continue;
       }
-      const host = hostFromUrl(entity.url);
-      if (!host || seen.has(host)) {
+      const link = hostFromUrl(entity.url);
+      if (!link) {
         continue;
       }
-      seen.add(host);
-      found.push(host);
-      if (found.length >= MAX_HOSTS) {
-        return found;
+      if (!seenHosts.has(link.host) && hosts.length < MAX_HOSTS) {
+        seenHosts.add(link.host);
+        hosts.push(link.host);
+      }
+      if (
+        link.invite &&
+        !seenInvites.has(link.host) &&
+        invites.length < MAX_HOSTS
+      ) {
+        seenInvites.add(link.host);
+        invites.push(link.host);
       }
     }
   }
-  return found;
+  return { hosts, invites };
 }
 
-function hostFromUrl(value: unknown): string | null {
+function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
@@ -349,7 +362,26 @@ function hostFromUrl(value: unknown): string | null {
   ) {
     return null;
   }
-  return host;
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+  return { host, invite: isTelegramInvite(host, path) };
+}
+
+function isTelegramInvite(host: string, path: string): boolean {
+  const telegram =
+    host === "t.me" ||
+    host.endsWith(".t.me") ||
+    host === "telegram.me" ||
+    host.endsWith(".telegram.me") ||
+    host === "telegram.dog" ||
+    host.endsWith(".telegram.dog");
+  if (!telegram) {
+    return false;
+  }
+  return (
+    /^\/\+[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    /^\/addlist\/[A-Za-z0-9_-]{1,128}$/.test(path)
+  );
 }
 
 function messageText(message: Record<string, unknown>): string {

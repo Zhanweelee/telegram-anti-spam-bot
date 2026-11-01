@@ -54,5 +54,21 @@
     "text": "点这里",
     "hosts": ["example.com"],
     "label": "ham"
+  },
+  {
+    "id": "invite-plus",
+    "text": "https://t.me/+INVITESECRET99",
+    "label": "spam"
+  },
+  {
+    "id": "invite-public",
+    "text": "https://t.me/durov",
+    "label": "ham"
+  },
+  {
+    "id": "hidden-invite",
+    "text": "点这里",
+    "invites": ["t.me"],
+    "label": "spam"
   }
 ]
