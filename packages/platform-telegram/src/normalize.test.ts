@@ -329,6 +329,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("点下面");
     expect(outcome.event.message?.hosts).toEqual([
       "bit.ly",
+      "evil.example",
       "t.me",
       "login.example",
       "app.example",
@@ -337,7 +338,7 @@ describe("normalizeUpdate", () => {
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
-    expect(dumped).not.toContain("evil.example");
+    expect(dumped).not.toContain("/hide");
     expect(dumped).not.toContain("/start");
     expect(dumped).not.toContain("/open");
   });
@@ -1651,10 +1652,69 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会 免费领取");
-    expect(outcome.event.message?.hosts).toEqual(["example.com"]);
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会 免费领取"),
+    );
+    expect(outcome.event.message?.hosts).toEqual([
+      "evil.example",
+      "example.com",
+    ]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
-    expect(dumped).not.toContain("evil.example");
+    expect(dumped).not.toContain("/hide");
+  });
+
+  it("keeps hostnames found inside copied button text", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "COPYSENT42";
+    const encoded = "COPYENC42";
+    const outcome = await normalize({
+      update_id: 2805,
+      message: {
+        message_id: 105,
+        date: 1761955200,
+        chat: { id: -100774, type: "supergroup" },
+        from: { id: 9 },
+        text: "点这里",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "copy",
+                copy_text: {
+                  text: `${phrase} 打开 https://bit.ly/offer42 和 https://t.me/+${code}. 还有 bit.ly/bare 以及 www.tinyurl.com/y https://t.me/%2B${encoded} https://example.com/page`,
+                },
+              },
+              {
+                text: "skip",
+                callback_data: `https://login.example/${phrase}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点这里");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("点这里"));
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "www.tinyurl.com",
+      "example.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(encoded);
+    expect(dumped).not.toContain("/offer42");
+    expect(dumped).not.toContain("/page");
+    expect(dumped).not.toContain("/bare");
+    expect(dumped).not.toContain("login.example");
   });
 
   it("keeps only the hostname of a login url and a web app", async () => {

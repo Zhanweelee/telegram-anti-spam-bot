@@ -399,6 +399,21 @@ function linkHosts(message: Record<string, unknown>): {
   return { hosts, invites };
 }
 
+const COPY_URL =
+  /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
+
+function urlsInText(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(new RegExp(COPY_URL.source, "gi"))) {
+    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
+    if (!raw) {
+      continue;
+    }
+    found.push(/^https?:\/\//i.test(raw) ? raw : `http://${raw}`);
+  }
+  return found;
+}
+
 function buttonUrls(message: Record<string, unknown>): unknown[] {
   const markup = message.reply_markup;
   if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
@@ -418,7 +433,9 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       }
       const copied = button.copy_text;
       if (isRecord(copied) && typeof copied.text === "string") {
-        urls.push(copied.text);
+        for (const url of urlsInText(copied.text)) {
+          urls.push(url);
+        }
       }
       const login = button.login_url;
       if (isRecord(login) && typeof login.url === "string") {
