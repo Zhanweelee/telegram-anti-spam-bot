@@ -11,6 +11,7 @@ import {
   handleTelegramWebhook,
 } from "@tasb/platform-telegram";
 import { Hono } from "hono";
+import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
 import { allowUnsignedPlugins } from "./plugins.js";
@@ -36,6 +37,7 @@ export interface CreateAppOptions {
   readonly onEvent?: (event: Event) => Promise<void>;
   readonly nowIso?: () => string;
   readonly logger?: Logger;
+  readonly webhookBudget?: WebhookBudget;
 }
 
 export function normalizeDeploymentMode(
@@ -100,6 +102,23 @@ export function createApp(
       adminUserIds: parseAdminUserIds(c.env?.ADMIN_USER_IDS),
       logger,
       ...(options.nowIso ? { nowIso: options.nowIso } : {}),
+      gate: async (event) => {
+        const budget = options.webhookBudget ?? workerWebhookBudget;
+        const decision = await budget.allow({
+          tenantId: event.tenantId,
+          chatId: event.chatId,
+          nowMs: Date.parse(event.occurredAt),
+        });
+        if (decision === "skipped") {
+          logger.warn("webhook_budget_skipped", {
+            eventId: event.id,
+            chatId: event.chatId,
+            tenantId: event.tenantId,
+          });
+          return "allow";
+        }
+        return decision;
+      },
       onEvent: async (event) => {
         if (options.onEvent) {
           await options.onEvent(event);

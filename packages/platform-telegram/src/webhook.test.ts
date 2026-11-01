@@ -222,4 +222,54 @@ describe("handleTelegramWebhook", () => {
     expect(response.status).toBe(413);
     expect(calls).toBe(0);
   });
+
+  it("skips the pipeline when the gate sheds the chat", async () => {
+    const logger = createMemoryLogger();
+    let calls = 0;
+    const response = await handleTelegramWebhook(
+      request(fixture("message.json"), SECRET),
+      {
+        secretToken: SECRET,
+        tenantId: "local",
+        logger,
+        async gate() {
+          return "limited";
+        },
+        async onEvent() {
+          calls += 1;
+        },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, limited: true });
+    expect(calls).toBe(0);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("webhook_limited");
+    expect(logged).not.toContain("hello");
+  });
+
+  it("still screens when the gate throws", async () => {
+    const logger = createMemoryLogger();
+    let calls = 0;
+    const response = await handleTelegramWebhook(
+      request(fixture("message.json"), SECRET),
+      {
+        secretToken: SECRET,
+        tenantId: "local",
+        logger,
+        async gate() {
+          throw new Error("hello");
+        },
+        async onEvent() {
+          calls += 1;
+        },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(calls).toBe(1);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("webhook_budget_failed");
+    expect(logged).not.toContain("hello");
+  });
 });

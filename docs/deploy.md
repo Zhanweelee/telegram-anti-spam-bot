@@ -102,7 +102,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -d "{\"url\":\"https://tasb.<你的子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"edited_message\",\"chat_member\",\"callback_query\"],\"drop_pending_updates\":true}"
 ```
 
-把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `edited_message`、`chat_member` 和 `callback_query`，否则编辑后的垃圾消息、入群更新和验证按钮不会送到 bot。验证状态在 isolate 内存里，重启后未完成的验证会消失；限制的 `until_date` 仍会到期。
+把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `edited_message`、`chat_member` 和 `callback_query`，否则编辑后的垃圾消息、入群更新和验证按钮不会送到 bot。验证状态在 isolate 内存里，重启后未完成的验证会消失；限制的 `until_date` 仍会到期。同一群 10 秒内超过 30 条更新时，bot 返回 200 并且不再检测，避免 Telegram 重试。见 ADR 0024。
 
 ## 确认
 

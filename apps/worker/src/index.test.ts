@@ -1,5 +1,7 @@
 import { createMemoryLogger } from "@tasb/core";
+import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { describe, expect, it } from "vitest";
+import { createWebhookBudget } from "./budget.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import {
   createApp,
@@ -207,6 +209,54 @@ describe("POST /telegram/webhook", () => {
     expect(response.status).toBe(200);
     expect(raw).not.toContain(spam);
     expect(JSON.parse(raw)).toEqual({ ok: true });
+  });
+
+  it("sheds one chat after the budget and still screens another", async () => {
+    const phrase = "加微x看看";
+    const logger = createMemoryLogger();
+    let calls = 0;
+    const app = createApp({
+      logger,
+      webhookBudget: createWebhookBudget(createMemoryRateWindow(), 2),
+      onEvent: async () => {
+        calls += 1;
+      },
+    });
+    let updateId = 5800;
+    const send = (chatId: number) => {
+      updateId += 1;
+      return app.request(
+        "/telegram/webhook",
+        {
+          method: "POST",
+          headers: { "x-telegram-bot-api-secret-token": SECRET },
+          body: JSON.stringify({
+            update_id: updateId,
+            message: {
+              message_id: 10,
+              date: 1761955200,
+              chat: { id: chatId, type: "supergroup" },
+              from: { id: 7 },
+              text: phrase,
+            },
+          }),
+        },
+        { WEBHOOK_SECRET: SECRET },
+      );
+    };
+    const first = await send(-100580);
+    const second = await send(-100580);
+    const third = await send(-100580);
+    const other = await send(-100581);
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ ok: true });
+    expect(await second.json()).toEqual({ ok: true });
+    expect(await third.json()).toEqual({ ok: true, limited: true });
+    expect(await other.json()).toEqual({ ok: true });
+    expect(calls).toBe(3);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("webhook_limited");
+    expect(logged).not.toContain(phrase);
   });
 
   it("audits an expired captcha without storing the nonce", async () => {

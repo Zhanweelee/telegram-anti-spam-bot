@@ -11,6 +11,8 @@ export interface WebhookDependencies {
   readonly tenantId: string;
   readonly adminUserIds?: readonly string[];
   readonly onEvent: (event: Event) => Promise<void>;
+  /** Return "limited" to skip the pipeline and answer 200. */
+  readonly gate?: (event: Event) => Promise<"allow" | "limited">;
   readonly nowIso?: () => string;
   readonly logger?: Logger;
   readonly botToken?: string;
@@ -67,6 +69,28 @@ export async function handleTelegramWebhook(
     deps.logger?.info("webhook_ignored", {});
     await ackCallback(callbackId, deps);
     return json(200, { ok: true, ignored: true });
+  }
+
+  let limited = false;
+  if (deps.gate) {
+    try {
+      limited = (await deps.gate(outcome.event)) === "limited";
+    } catch {
+      deps.logger?.warn("webhook_budget_failed", {
+        eventId: outcome.event.id,
+        chatId: outcome.event.chatId,
+        tenantId: outcome.event.tenantId,
+      });
+    }
+  }
+  if (limited) {
+    deps.logger?.warn("webhook_limited", {
+      eventId: outcome.event.id,
+      chatId: outcome.event.chatId,
+      tenantId: outcome.event.tenantId,
+    });
+    await ackCallback(callbackId, deps);
+    return json(200, { ok: true, limited: true });
   }
 
   try {
