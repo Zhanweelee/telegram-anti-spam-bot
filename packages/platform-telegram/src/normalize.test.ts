@@ -5153,4 +5153,178 @@ describe("normalizeUpdate", () => {
     expect(titleDump).not.toContain("body77");
     expect(titleDump).not.toContain(phrase);
   });
+
+  it("keeps hostnames from inline query buttons", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "QRY78";
+    const labeled = await normalize({
+      update_id: 4910,
+      message: {
+        message_id: 290,
+        date: 1761955200,
+        chat: { id: -101020, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: `https://bit.ly/qry78 ${phrase}`,
+                callback_data: "https://ow.ly/cb78",
+              },
+              {
+                text: "当前",
+                switch_inline_query_current_chat: `https://t.me/+${code}.`,
+              },
+            ],
+            [
+              {
+                text: "挑选",
+                switch_inline_query_chosen_chat: {
+                  query: "https://tinyurl.com/ch78",
+                  allow_group_chats: true,
+                },
+                login_url: {
+                  url: "https://example.com/login78",
+                  forward_text: "https://cutt.ly/fwd78",
+                },
+              },
+            ],
+          ],
+          keyboard: [[{ text: "https://is.gd/kb78" }]],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "example.com",
+      "tinyurl.com",
+    ]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("qry78");
+    expect(labeledDump).not.toContain("ch78");
+    expect(labeledDump).not.toContain("cb78");
+    expect(labeledDump).not.toContain("fwd78");
+    expect(labeledDump).not.toContain("kb78");
+    expect(labeledDump).not.toContain("ow.ly");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("is.gd");
+    expect(labeledDump).not.toContain("login78");
+
+    const ordinary = await normalize({
+      update_id: 4911,
+      message: {
+        message_id: 291,
+        date: 1761955200,
+        chat: { id: -101021, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: "https://example.com/ok78",
+                callback_data: "https://bit.ly/onlycb78",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok78");
+    expect(ordinaryDump).not.toContain("onlycb78");
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const label = "今天站会";
+    const query = "免费领取 https://bit.ly/body78";
+    const asLabel = await normalize({
+      update_id: 4912,
+      message: {
+        message_id: 292,
+        date: 1761955200,
+        chat: { id: -101022, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: label, switch_inline_query_current_chat: query }],
+          ],
+        },
+      },
+    });
+    expect(asLabel.status).toBe("event");
+    if (asLabel.status !== "event") {
+      return;
+    }
+    expect(asLabel.event.message?.text).toBe(label);
+    expect(asLabel.event.message?.textSha256).toBe(await sha256Hex(label));
+    expect(asLabel.event.message?.hosts).toEqual(["bit.ly"]);
+    const labelDump = JSON.stringify(asLabel.event);
+    expect(labelDump).not.toContain("免费领取");
+    expect(labelDump).not.toContain("body78");
+
+    const richCode = "RICH78";
+    const rich = await normalize({
+      update_id: 4913,
+      message: {
+        message_id: 293,
+        date: 1761955200,
+        chat: { id: -101023, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [
+                {
+                  text: "打开",
+                  switch_inline_query: "https://rb.gy/rich78",
+                  callback_data: "https://bit.ly/richcb78",
+                },
+                {
+                  text: "挑选",
+                  switch_inline_query_chosen_chat: {
+                    query: `https://t.me/+${richCode}`,
+                    allow_user_chats: true,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("今天站会");
+    expect(rich.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(rich.event.message?.hosts).toEqual(["rb.gy", "t.me"]);
+    expect(rich.event.message?.invites).toEqual(["t.me"]);
+    const richDump = JSON.stringify(rich.event);
+    expect(richDump).not.toContain("rich78");
+    expect(richDump).not.toContain(richCode);
+    expect(richDump).not.toContain("richcb78");
+    expect(richDump).not.toContain("bit.ly");
+  });
 });

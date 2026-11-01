@@ -624,7 +624,7 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
   if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
     return [];
   }
-  const urls: unknown[] = [];
+  const urls: string[] = [];
   for (const row of markup.inline_keyboard) {
     if (!Array.isArray(row)) {
       continue;
@@ -655,9 +655,22 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       if (isRecord(app) && typeof app.url === "string") {
         urls.push(app.url);
       }
+      pushSwitchInlineQueries(button, urls);
     }
   }
   return urls;
+}
+
+function pushSwitchInlineQueries(
+  button: Record<string, unknown>,
+  urls: string[],
+): void {
+  pushPlainUrls(button.switch_inline_query, urls);
+  pushPlainUrls(button.switch_inline_query_current_chat, urls);
+  const chosen = button.switch_inline_query_chosen_chat;
+  if (isRecord(chosen)) {
+    pushPlainUrls(chosen.query, urls);
+  }
 }
 
 function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
@@ -995,6 +1008,7 @@ function richButton(value: unknown, urls: string[]): string {
   if (isRecord(app) && typeof app.url === "string") {
     urls.push(app.url);
   }
+  pushSwitchInlineQueries(value, urls);
   return richText(value.text, urls);
 }
 
