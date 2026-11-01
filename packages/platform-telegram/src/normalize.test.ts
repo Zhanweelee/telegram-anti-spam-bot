@@ -465,6 +465,137 @@ describe("normalizeUpdate", () => {
     );
   });
 
+  it("uses a poll question when text and caption are missing", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INVITEPOLL99";
+    const question = "免费领取";
+    const outcome = await normalize({
+      update_id: 2201,
+      message: {
+        message_id: 41,
+        date: 1761955200,
+        chat: { id: -100710, type: "supergroup" },
+        from: { id: 9 },
+        poll: {
+          question,
+          question_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: question.length,
+              url: `https://bit.ly/path?q=${phrase}`,
+            },
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: `https://t.me/+${code}`,
+            },
+          ],
+          options: [{ text: phrase, voter_count: 0 }],
+          explanation: phrase,
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(question);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(question));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+  });
+
+  it("keeps a caption when a poll is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2202,
+      message: {
+        message_id: 42,
+        date: 1761955200,
+        chat: { id: -100711, type: "supergroup" },
+        from: { id: 9 },
+        caption: "caption-only",
+        poll: { question: "免费领取", options: [] },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("caption-only");
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("caption-only"),
+    );
+  });
+
+  it("uses a giveaway prize description when text is missing", async () => {
+    const title = "请免费领取礼品";
+    const prize = "免费领取";
+    const outcome = await normalize({
+      update_id: 2203,
+      message: {
+        message_id: 43,
+        date: 1761955200,
+        chat: { id: -100712, type: "supergroup" },
+        from: { id: 9 },
+        giveaway: {
+          chats: [{ id: -1001, type: "channel", title }],
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+          prize_description: prize,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(prize);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(prize));
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain("-1001");
+  });
+
+  it("uses a finished giveaway prize description and drops winner names", async () => {
+    const name = "中奖用户名";
+    const prize = "加微信";
+    const outcome = await normalize({
+      update_id: 2204,
+      message: {
+        message_id: 44,
+        date: 1761955200,
+        chat: { id: -100713, type: "supergroup" },
+        from: { id: 9 },
+        giveaway_winners: {
+          chat: { id: -1002, type: "channel", title: name },
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+          winners: [{ id: 4242, is_bot: false, first_name: name }],
+          prize_description: prize,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(prize);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(prize));
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("4242");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({

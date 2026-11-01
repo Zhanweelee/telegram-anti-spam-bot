@@ -69,6 +69,8 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 内联按钮上的 `url` 和隐藏链接一样，只把主机名交给 `links`。`copy_text` 只有整段是一条网址时才留下主机名。按钮文字、路径和查询不进事件。`callback_data` 不当成链接。见 ADR 0029、ADR 0053 和 ADR 0055。
 
+没有 `text` 和 `caption` 的投票、进行中的抽奖和已开奖消息，用题干或奖品说明当正文。选项、补充说明、频道标题和中奖者名字不进事件。题干上的 `text_link` 只留主机名。见 ADR 0056。
+
 没有正文的贴纸、动图、图片、视频、文件和语音会参加同一条重复规则。事件里只有类别和文件摘要，没有文件 id、文件名或贴纸包标题。有正文时仍按正文判断。空正文且没有文件摘要时不参加重复。见 ADR 0052。
 
 洪泛和重复默认在 isolate 内存里计数。要跨 isolate 累加时，在自己的 `wrangler.jsonc` 里加 Durable Object，绑定名是 `RATE_WINDOW`，类名是 `RateWindowObject`，迁移用 `new_sqlite_classes`。提交的配置不加这个绑定。对象调用失败时这条检测放过。Webhook 预算仍在内存。见 ADR 0010 和 ADR 0050。

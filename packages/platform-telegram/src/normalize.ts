@@ -342,7 +342,12 @@ function linkHosts(message: Record<string, unknown>): {
   const seenHosts = new Set<string>();
   const seenInvites = new Set<string>();
   const urls: unknown[] = [];
-  for (const list of [message.entities, message.caption_entities]) {
+  const poll = message.poll;
+  const lists = [message.entities, message.caption_entities];
+  if (isRecord(poll)) {
+    lists.push(poll.question_entities);
+  }
+  for (const list of lists) {
     if (!Array.isArray(list)) {
       continue;
     }
@@ -504,6 +509,24 @@ function messageText(message: Record<string, unknown>): string {
   }
   if (typeof message.caption === "string" && message.caption.length > 0) {
     return message.caption.slice(0, MAX_TEXT);
+  }
+  const poll = message.poll;
+  if (
+    isRecord(poll) &&
+    typeof poll.question === "string" &&
+    poll.question.length > 0
+  ) {
+    return poll.question.slice(0, MAX_TEXT);
+  }
+  for (const field of ["giveaway", "giveaway_winners"]) {
+    const value = message[field];
+    if (
+      isRecord(value) &&
+      typeof value.prize_description === "string" &&
+      value.prize_description.length > 0
+    ) {
+      return value.prize_description.slice(0, MAX_TEXT);
+    }
   }
   return "";
 }
