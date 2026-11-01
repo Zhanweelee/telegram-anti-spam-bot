@@ -1,11 +1,13 @@
 import {
   createMemoryCache,
+  createMemoryCaptchaStore,
+  createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryReply,
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
-import { createMemoryLogger, parseEvent } from "@tasb/core";
+import { createFixedClock, createMemoryLogger, parseEvent } from "@tasb/core";
 import { sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { handleIncomingEvent } from "./operate.js";
@@ -126,5 +128,132 @@ describe("handleIncomingEvent", () => {
     expect(logReply).toContain("delete");
     expect(logReply).not.toContain(phrase);
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("releases a join when the captcha button cannot be sent", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      { ...kit, moderator, captchaStore, createNonce: () => nonce },
+    );
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toHaveLength(1);
+    expect(await captchaStore.get("local", "-100123", "77")).toBeNull();
+    expect(
+      kit.logger.entries.some(
+        (entry) => entry.message === "captcha_prompt_failed",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.storage.records)).not.toContain(nonce);
+  });
+
+  it("audits a passed challenge and a timeout without the nonce", async () => {
+    const nonce = "abcdef0123456789";
+    const passedStore = createMemoryCaptchaStore();
+    const passedMod = createMemoryModerator();
+    const passed = deps();
+    const clock = createFixedClock("2026-11-01T00:00:00.000Z");
+    await passedStore.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:05:00.000Z",
+    });
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_pass",
+        tenantId: "local",
+        chatId: "-100",
+        kind: "challenge",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        challenge: { nonce },
+      }),
+      { ...passed, moderator: passedMod, captchaStore: passedStore, clock },
+    );
+    expect(passedMod.released).toHaveLength(1);
+    expect(passed.storage.records[0]?.reasons).toEqual(["captcha_passed"]);
+    expect(JSON.stringify(passed.storage.records)).not.toContain(nonce);
+    expect(JSON.stringify(passed.storage.records)).not.toContain("text");
+
+    const expiredStore = createMemoryCaptchaStore();
+    const expiredMod = createMemoryModerator();
+    const expired = deps();
+    await expiredStore.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+    });
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_late",
+        tenantId: "local",
+        chatId: "-100",
+        kind: "challenge",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        challenge: { nonce },
+      }),
+      {
+        ...expired,
+        moderator: expiredMod,
+        captchaStore: expiredStore,
+        clock,
+      },
+    );
+    expect(expiredMod.released).toEqual([]);
+    expect(expired.storage.records[0]?.reasons).toEqual(["captcha_expired"]);
+    expect(JSON.stringify(expired.storage.records)).not.toContain(nonce);
+  });
+
+  it("keeps the member restricted after the button is sent", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let body = "";
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_button",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      {
+        ...kit,
+        moderator,
+        captchaStore,
+        createNonce: () => nonce,
+        botToken: "bot-token",
+        fetchImpl: async (_input, init) => {
+          body = String(init?.body ?? "");
+          return new Response("ok", { status: 200 });
+        },
+      },
+    );
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(await captchaStore.get("local", "-100123", "77")).not.toBeNull();
+    expect(body).toContain(`c:${nonce}`);
+    expect(body).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
   });
 });

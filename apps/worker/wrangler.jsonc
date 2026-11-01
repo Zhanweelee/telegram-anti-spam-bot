@@ -10,6 +10,9 @@
   "observability": {
     "enabled": true
   },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
   "vars": {
     "DEPLOYMENT_MODE": "self-host",
     "TENANT_ID": "local"

@@ -185,6 +185,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.kind).toBe("chat_member");
     expect(outcome.event.message).toBeUndefined();
     expect(outcome.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(outcome.event.membership).toBe("join");
     expect(outcome.event.chatId).toBe("-100123");
     expect(outcome.event.occurredAt).toBe(
       new Date(1761955200 * 1000).toISOString(),
@@ -230,6 +231,42 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.actor.isAdmin).toBe(true);
+    expect(outcome.event.membership).toBe("join");
+  });
+
+  it("does not mark a leave or a bot as a join", async () => {
+    const leave = await normalize({
+      update_id: 2004,
+      chat_member: {
+        chat: { id: -100 },
+        date: 1761955200,
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: { user: { id: 77 }, status: "left" },
+      },
+    });
+    expect(leave.status).toBe("event");
+    if (leave.status === "event") {
+      expect(leave.event.membership).toBeUndefined();
+    }
+    const bot = await normalize({
+      update_id: 2005,
+      chat_member: {
+        chat: { id: -100 },
+        date: 1761955200,
+        old_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "left",
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "member",
+        },
+      },
+    });
+    expect(bot.status).toBe("event");
+    if (bot.status === "event") {
+      expect(bot.event.membership).toBeUndefined();
+    }
   });
 
   it("ignores incomplete membership updates and my_chat_member", async () => {
@@ -249,6 +286,48 @@ describe("normalizeUpdate", () => {
         })
       ).status,
     ).toBe("ignored");
+  });
+
+  it("turns a captcha button into a challenge without message text", async () => {
+    const nonce = "0123456789abcdef";
+    const leaked = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 30,
+      callback_query: {
+        id: "cb-1",
+        from: { id: 77 },
+        data: `c:${nonce}`,
+        message: {
+          message_id: 4,
+          chat: { id: -100123 },
+          text: leaked,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.kind).toBe("challenge");
+    expect(outcome.event.message).toBeUndefined();
+    expect(outcome.event.challenge).toEqual({ nonce });
+    expect(outcome.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(JSON.stringify(outcome.event)).not.toContain(leaked);
+  });
+
+  it("ignores callback data that is not a captcha nonce", async () => {
+    const leaked = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 31,
+      callback_query: {
+        id: "cb-2",
+        from: { id: 77 },
+        data: leaked,
+        message: { chat: { id: -100 } },
+      },
+    });
+    expect(outcome.status).toBe("ignored");
+    expect(JSON.stringify(outcome)).not.toContain(leaked);
   });
 
   it("ignores unsupported update types and incomplete messages", async () => {

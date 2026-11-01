@@ -1,22 +1,26 @@
 import {
   createBanAction,
+  createCaptchaAction,
   createDeleteAction,
   createMuteAction,
 } from "@tasb/actions";
 import {
   createMemoryCache,
-  createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
   type Cache,
+  type CaptchaStore,
+  type Clock,
+  createSystemClock,
   defaultPrefilterPolicy,
   type Event,
   type Logger,
   loadPolicy,
   loadRuleSet,
+  type ModerationPort,
   type PipelineResult,
   type PolicyStore,
   type RuleSource,
@@ -25,13 +29,18 @@ import {
   type Storage,
   wrapLogger,
 } from "@tasb/core";
+import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
+import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
+import { moderatorFor } from "./moderation.js";
 import { fileRuleSource } from "./rules.js";
 
 /**
  * Isolate-local fallback when D1 and KV are not bound. A rule miss
- * still reads the bundled files. The moderator is per request and
- * does not call Telegram. Memory audits are capped at 200 rows.
+ * still reads the bundled files. Memory audits are capped at 200 rows.
+ * Captcha challenges live in this isolate. A restart drops them.
+ * delete / mute / ban still do not call Telegram. restrict / release
+ * call Telegram only when TELEGRAM_BOT_TOKEN is set.
  */
 export const workerCache = createMemoryCache();
 export const workerPolicyStore = createMemoryPolicyStore();
@@ -63,6 +72,12 @@ export interface ScreenDeps {
   readonly storage?: Storage;
   readonly policyStore?: PolicyStore;
   readonly runtime?: RuntimeStore;
+  readonly moderator?: ModerationPort;
+  readonly captchaStore?: CaptchaStore;
+  readonly clock?: Clock;
+  readonly createNonce?: () => string;
+  readonly botToken?: string;
+  readonly fetchImpl?: typeof fetch;
 }
 
 export async function screenTelegramEvent(
@@ -102,14 +117,25 @@ export async function screenTelegramEvent(
     rules,
     policy,
     dryRun,
-    detectors: [detector],
+    detectors: [detector, createJoinDetector()],
     actions: [
       createDeleteAction(),
       createMuteAction({ durationSeconds: 60 * 60 }),
       createBanAction(),
+      createCaptchaAction({
+        ttlSeconds: 300,
+        createNonce: deps.createNonce ?? createCaptchaNonce,
+        store: deps.captchaStore ?? workerCaptcha,
+        clock: deps.clock ?? createSystemClock(),
+      }),
     ],
     storage: deps.storage ?? workerStorage,
-    moderator: createMemoryModerator(),
+    moderator:
+      deps.moderator ??
+      moderatorFor({
+        token: deps.botToken,
+        fetchImpl: deps.fetchImpl,
+      }),
     logger,
   });
   logger.info("webhook_screened", {

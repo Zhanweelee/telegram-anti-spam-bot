@@ -136,7 +136,7 @@ KV 是最终一致的。
 
 来源：[Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) 指向的 Workers 账号限制。
 
-免费计划全账号 5 个 Cron。本项目预留 1 个，例如每小时的保留清理。不要为指标、评测、名单同步各占一个。
+免费计划全账号 5 个 Cron。本项目只用 1 个：`*/15 * * * *`，清理当前 isolate 里到期的入群验证并写审计。以后的保留清理要共用这个触发器，不要再占第二个。不要为指标、评测、名单同步各占一个。
 
 ## 这些额度如何影响流水线
 

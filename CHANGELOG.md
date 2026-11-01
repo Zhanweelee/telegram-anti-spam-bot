@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+### P1-01
+
+- 新成员在通过按钮验证前被限制发言。通过和超时都留下不含原文的审计。见 ADR 0009。
+- 检测器抛错时默认 fail-open，不会限制这个人。没有 bot token，或按钮发不出去时，挑战会回滚。
+- `callback_query` 收成 `kind: "challenge"`。设置 webhook 时要带上 `callback_query`。
+- 账号上的那一个 Cron 每 15 分钟清理当前 isolate 里到期的验证。isolate 重启会丢掉未完成的挑战。
+
 ### P0-09
 
 - 可以按租户导出审计 JSON，也可以再限定一个群。文档里没有原文键。见 ADR 0008。

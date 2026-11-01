@@ -78,11 +78,11 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 1. 读取 `X-Telegram-Bot-Api-Secret-Token`。`WEBHOOK_SECRET` 未配置、请求头缺失或不相等时返回 401，不调用 `onEvent`。比较时对两侧做 SHA-256，再按固定长度逐字节异或。密钥最长 256 字符，和 Telegram 的 `secret_token` 限制一致。
 2. 正文超过 64 KiB 返回 413。JSON 无法解析，或缺少 `update_id`，返回 400。
-3. `message` 收成 `kind: "message"`。`chat_member` 收成 `kind: "chat_member"`，不带 `message`。主体是 `new_chat_member.user`；`from` 只表示谁执行了操作。`new_chat_member.status` 为 `administrator` 或 `creator` 时 `actor.isAdmin` 为 true。`edited_message`、`my_chat_member`、`callback_query` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。要收到入群更新，设置 webhook 时把 `chat_member` 放进 `allowed_updates`。
+3. `message` 收成 `kind: "message"`。`chat_member` 收成 `kind: "chat_member"`，不带 `message`。主体是 `new_chat_member.user`；`from` 只表示谁执行了操作。`new_chat_member.status` 为 `administrator` 或 `creator` 时 `actor.isAdmin` 为 true。从群外进入（旧状态缺失、`left` 或 `kicked`，新状态是 `member` 或 `restricted`，且不是 bot）时带 `membership: "join"`。`callback_query` 的 `data` 为 `c:` 加 16 位十六进制时收成 `kind: "challenge"`，只带 nonce，不带消息正文。其它回调仍忽略。`edited_message`、`my_chat_member` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。设置 webhook 时把 `message`、`chat_member`、`callback_query` 都放进 `allowed_updates`。配了 bot token 时，回调会再应答一次，清掉按钮上的转圈。
 4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
 5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
 
-`apps/worker` 在归一化之后跑 core 流水线：关键词检测器，以及 delete、mute、ban。预过滤按租户和群从 `PolicyStore` 读取；没有记录时豁免管理员。配了 `POLICY_KV` 时白名单走 KV，否则用内存。配了 `DB` 时审计和规则文档走 D1，否则审计留在内存，最多 200 条。规则热路径仍然是缓存加包内 JSON，不读 `Storage.getRuleSet`。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的删除、禁言或封禁接口。存储失败不改变决策。管理员可以在私聊导出或删除某个租户、某个群的审计；删除不碰规则和白名单。30 天自动清理还没有做。说明见 ADR 0007 和 ADR 0008。
+`apps/worker` 在归一化之后跑 core 流水线：关键词检测器和入群检测器，以及 delete、mute、ban、captcha。预过滤按租户和群从 `PolicyStore` 读取；没有记录时豁免管理员，所以管理员入群不会被要求验证。配了 `POLICY_KV` 时白名单走 KV，否则用内存。配了 `DB` 时审计和规则文档走 D1，否则审计留在内存，最多 200 条。规则热路径仍然是缓存加包内 JSON，不读 `Storage.getRuleSet`。delete、mute、ban 仍不请求 Telegram。captcha 在有 `TELEGRAM_BOT_TOKEN` 时调用 `restrictChatMember` 和 `sendMessage`。没有 token 时限制会失败并回滚挑战，成员不会被卡住。验证状态只在当前 isolate 的内存里。每 15 分钟的 Cron 只清理这个 isolate 里已经到期的挑战，并写一条不含原文的审计，不会解除限制；Telegram 的 `until_date` 自己到期。存储失败不改变决策。管理员可以在私聊导出或删除某个租户、某个群的审计；删除不碰规则和白名单。30 天自动清理还没有做。说明见 ADR 0007、ADR 0008 和 ADR 0009。
 
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 

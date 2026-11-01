@@ -3,13 +3,17 @@ import {
   type AuditRecord,
   type BanTarget,
   type Cache,
+  type CaptchaChallenge,
+  type CaptchaStore,
   type DeleteTarget,
+  isExpired,
   type ModerationPort,
   type MuteTarget,
   type PolicyStore,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
+  parseCaptchaChallenge,
   parseRuleSet,
   prefilterPolicySchema,
   type ReplyMessage,
@@ -67,14 +71,20 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
+  readonly restricted: readonly MuteTarget[];
+  readonly released: readonly BanTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
+  const restricted: MuteTarget[] = [];
+  const released: BanTarget[] = [];
   return {
     deleted,
     muted,
     banned,
+    restricted,
+    released,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -84,7 +94,41 @@ export function createMemoryModerator(): ModerationPort & {
     async banActor(target) {
       banned.push({ ...target });
     },
+    async restrictActor(target) {
+      restricted.push({ ...target });
+    },
+    async releaseActor(target) {
+      released.push({ ...target });
+    },
   };
+}
+
+export function createMemoryCaptchaStore(): CaptchaStore {
+  const values = new Map<string, CaptchaChallenge>();
+  return {
+    async get(tenantId, chatId, actorId) {
+      return values.get(captchaKey(tenantId, chatId, actorId)) ?? null;
+    },
+    async put(challenge) {
+      const parsed = parseCaptchaChallenge(challenge);
+      values.set(
+        captchaKey(parsed.tenantId, parsed.chatId, parsed.actorId),
+        parsed,
+      );
+    },
+    async delete(tenantId, chatId, actorId) {
+      values.delete(captchaKey(tenantId, chatId, actorId));
+    },
+    async listExpired(nowIso) {
+      return [...values.values()].filter((challenge) =>
+        isExpired(challenge.expiresAt, nowIso),
+      );
+    },
+  };
+}
+
+function captchaKey(tenantId: string, chatId: string, actorId: string): string {
+  return `${tenantId}\n${chatId}\n${actorId}`;
 }
 
 export function createMemoryPolicyStore(): PolicyStore {

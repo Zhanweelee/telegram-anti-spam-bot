@@ -5,6 +5,12 @@
  * justifies the dependency. See ADR 0001.
  */
 export { sha256Hex } from "./hash.js";
+export {
+  answerCallbackQuery,
+  captchaPrompt,
+  createTelegramModerator,
+  sendCaptchaButton,
+} from "./moderate.js";
 export { type NormalizeOutcome, normalizeUpdate } from "./normalize.js";
 export { createTelegramReply } from "./reply.js";
 export { secretsMatch } from "./secret.js";

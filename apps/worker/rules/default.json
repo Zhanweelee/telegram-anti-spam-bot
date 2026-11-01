@@ -8,6 +8,14 @@
       "detectorIds": ["keyword"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "new_member",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["join"],
+      "threshold": 1,
+      "actions": ["captcha"]
     }
   ]
 }

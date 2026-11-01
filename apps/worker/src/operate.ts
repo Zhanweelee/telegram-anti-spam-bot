@@ -1,9 +1,14 @@
 import {
+  createSystemClock,
   type Event,
   type Logger,
   type ReplyPort,
+  resolveChallenge,
   runOperatorCommand,
 } from "@tasb/core";
+import { sendCaptchaButton } from "@tasb/platform-telegram";
+import { workerCaptcha } from "./captcha-runtime.js";
+import { moderatorFor } from "./moderation.js";
 import { fileRuleSource } from "./rules.js";
 import {
   createWorkerLogger,
@@ -30,6 +35,31 @@ export async function handleIncomingEvent(
   const storage = deps.storage ?? workerStorage;
   const policyStore = deps.policyStore ?? workerPolicyStore;
   const runtime = deps.runtime ?? workerRuntime;
+  const moderator =
+    deps.moderator ??
+    moderatorFor({ token: deps.botToken, fetchImpl: deps.fetchImpl });
+  const captchaStore = deps.captchaStore ?? workerCaptcha;
+  if (event.kind === "challenge") {
+    try {
+      await resolveChallenge({
+        event,
+        ports: {
+          store: captchaStore,
+          storage,
+          restrict: (target) => moderator.restrictActor(target),
+          release: (target) => moderator.releaseActor(target),
+          clock: deps.clock ?? createSystemClock(),
+          logger,
+        },
+      });
+    } catch {
+      logger.warn("captcha_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+    return;
+  }
   const outcome = await runOperatorCommand({
     event,
     adminActorIds: deps.adminActorIds ?? [],
@@ -44,14 +74,61 @@ export async function handleIncomingEvent(
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
     return;
   }
-  await screenTelegramEvent(event, {
+  const result = await screenTelegramEvent(event, {
     logger,
     cache,
     source,
     storage,
     policyStore,
     runtime,
+    moderator,
+    captchaStore,
+    ...(deps.clock ? { clock: deps.clock } : {}),
+    ...(deps.createNonce ? { createNonce: deps.createNonce } : {}),
+    ...(deps.botToken ? { botToken: deps.botToken } : {}),
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
   });
+  const prompted = result.actionResults.some(
+    (item) => item.actionId === "captcha" && item.status === "executed",
+  );
+  if (!prompted) {
+    return;
+  }
+  const challenge = await captchaStore.get(
+    event.tenantId,
+    event.chatId,
+    event.actor.id,
+  );
+  if (!challenge) {
+    return;
+  }
+  try {
+    await sendCaptchaButton({
+      token: deps.botToken,
+      chatId: event.chatId,
+      nonce: challenge.nonce,
+      ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    });
+  } catch {
+    try {
+      await moderator.releaseActor({
+        tenantId: event.tenantId,
+        chatId: event.chatId,
+        actorId: event.actor.id,
+      });
+      await captchaStore.delete(event.tenantId, event.chatId, event.actor.id);
+    } catch {
+      logger.warn("captcha_prompt_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+      return;
+    }
+    logger.warn("captcha_prompt_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
 }
 
 async function sendReply(

@@ -87,10 +87,10 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 ```sh
 curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H 'content-type: application/json' \
-  -d "{\"url\":\"https://tasb.<你的子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"chat_member\"],\"drop_pending_updates\":true}"
+  -d "{\"url\":\"https://tasb.<你的子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"chat_member\",\"callback_query\"],\"drop_pending_updates\":true}"
 ```
 
-把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `chat_member`，否则入群更新不会送到 bot。
+把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `chat_member` 和 `callback_query`，否则入群更新和验证按钮不会送到 bot。验证状态在 isolate 内存里，重启后未完成的验证会消失；限制的 `until_date` 仍会到期。
 
 ## 确认
 

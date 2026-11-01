@@ -5,6 +5,7 @@ export default defineConfig({
     projects: [
       "packages/core",
       "packages/detectors-keyword",
+      "packages/detectors-join",
       "packages/actions",
       "packages/adapters-memory",
       "packages/adapters-cloudflare",

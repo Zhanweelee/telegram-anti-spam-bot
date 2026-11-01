@@ -25,6 +25,9 @@ export async function normalizeUpdate(
   if (updateId === null || updateId < 0) {
     return { status: "invalid" };
   }
+  if (Object.hasOwn(input.update, "callback_query")) {
+    return callbackEvent(input.update.callback_query, updateId, input);
+  }
   if (Object.hasOwn(input.update, "chat_member")) {
     return chatMemberEvent(input.update.chat_member, updateId, input);
   }
@@ -32,6 +35,37 @@ export async function normalizeUpdate(
     return { status: "ignored" };
   }
   return messageEvent(input.update.message, updateId, input);
+}
+
+function callbackEvent(
+  value: unknown,
+  updateId: number,
+  input: NormalizeInput,
+): NormalizeOutcome {
+  if (!isRecord(value) || typeof value.data !== "string") {
+    return { status: "ignored" };
+  }
+  const matched = /^c:([a-f0-9]{16})$/.exec(value.data);
+  const nonce = matched?.[1];
+  if (!nonce) {
+    return { status: "ignored" };
+  }
+  const actor = nestedId(value.from);
+  const message = isRecord(value.message) ? value.message : null;
+  const chatId = message ? nestedId(message.chat) : null;
+  if (!actor || !chatId) {
+    return { status: "ignored" };
+  }
+  const admins = new Set(input.adminUserIds);
+  return finish({
+    id: `tg_${updateId}`,
+    tenantId: input.tenantId,
+    chatId,
+    kind: "challenge" as const,
+    occurredAt: occurredAt(message?.date, input.nowIso),
+    actor: { id: actor, isAdmin: admins.has(actor) },
+    challenge: { nonce },
+  });
 }
 
 async function messageEvent(
@@ -89,6 +123,7 @@ function chatMemberEvent(
   const status = value.new_chat_member.status;
   const admins = new Set(input.adminUserIds);
   const direct = isPrivateChat(value.chat);
+  const membership = joiningMember(value) ? ("join" as const) : undefined;
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -101,7 +136,27 @@ function chatMemberEvent(
         status === "administrator" || status === "creator" || admins.has(actor),
     },
     ...(direct ? { direct: true } : {}),
+    ...(membership ? { membership } : {}),
   });
+}
+
+function joiningMember(value: Record<string, unknown>): boolean {
+  if (!isRecord(value.new_chat_member)) {
+    return false;
+  }
+  const user = value.new_chat_member.user;
+  if (isRecord(user) && user.is_bot === true) {
+    return false;
+  }
+  const status = value.new_chat_member.status;
+  if (status !== "member" && status !== "restricted") {
+    return false;
+  }
+  if (!isRecord(value.old_chat_member)) {
+    return true;
+  }
+  const previous = value.old_chat_member.status;
+  return previous === "left" || previous === "kicked" || previous === undefined;
 }
 
 function isPrivateChat(chat: unknown): boolean {

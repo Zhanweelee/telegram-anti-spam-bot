@@ -113,6 +113,8 @@ function harness(options?: { failStorage?: boolean }) {
     },
     async muteActor() {},
     async banActor() {},
+    async restrictActor() {},
+    async releaseActor() {},
   };
   return {
     records,

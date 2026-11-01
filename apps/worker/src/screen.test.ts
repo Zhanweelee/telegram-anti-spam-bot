@@ -1,5 +1,7 @@
 import {
   createMemoryCache,
+  createMemoryCaptchaStore,
+  createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
@@ -159,10 +161,24 @@ describe("screenTelegramEvent", () => {
         signal: { aborted: false },
       }),
     ).toBeNull();
-    const result = await screenTelegramEvent(outcome.event, { logger });
-    expect(result.decision.action).toBe("allow");
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      captchaStore,
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(result.decision.action).toBe("captcha");
     expect(result.detectorErrors).toEqual([]);
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(await captchaStore.get("local", "-100123", "77")).not.toBeNull();
+    expect(JSON.stringify(result.actionResults)).not.toContain(
+      "0123456789abcdef",
+    );
     expect(JSON.stringify(logger.entries)).not.toContain("Newbie");
+    expect(JSON.stringify(logger.entries)).not.toContain("0123456789abcdef");
   });
 
   it("uses a chat override from the rule file and does not read storage", async () => {

@@ -6,7 +6,12 @@ const isoSchema = z
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/);
 const idSchema = z.string().min(1).max(128);
 
-export const eventKinds = ["message", "chat_member", "command"] as const;
+export const eventKinds = [
+  "message",
+  "chat_member",
+  "command",
+  "challenge",
+] as const;
 export const eventKindSchema = z.enum(eventKinds);
 
 export const messageSchema = z.strictObject({
@@ -29,6 +34,12 @@ export const eventSchema = z.strictObject({
   actor: actorSchema,
   /** True when the event is a private conversation with the bot. */
   direct: z.boolean().optional(),
+  /** Present when a member joined from outside the chat. */
+  membership: z.literal("join").optional(),
+  /** Button answer. The nonce is not message text. */
+  challenge: z
+    .strictObject({ nonce: z.string().regex(/^[a-f0-9]{16}$/) })
+    .optional(),
   message: messageSchema.optional(),
 });
 

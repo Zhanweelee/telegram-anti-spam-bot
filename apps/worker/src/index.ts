@@ -1,9 +1,15 @@
-import type { Event, Logger } from "@tasb/core";
+import {
+  createSystemClock,
+  type Event,
+  expireChallenges,
+  type Logger,
+} from "@tasb/core";
 import {
   createTelegramReply,
   handleTelegramWebhook,
 } from "@tasb/platform-telegram";
 import { Hono } from "hono";
+import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
 import { createWorkerLogger } from "./screen.js";
 import { resolveStores } from "./stores.js";
@@ -93,8 +99,14 @@ export function createApp(
           reply: createTelegramReply({ token: c.env?.TELEGRAM_BOT_TOKEN }),
           storage: stores.storage,
           policyStore: stores.policyStore,
+          ...(c.env?.TELEGRAM_BOT_TOKEN
+            ? { botToken: c.env.TELEGRAM_BOT_TOKEN }
+            : {}),
         });
       },
+      ...(c.env?.TELEGRAM_BOT_TOKEN
+        ? { botToken: c.env.TELEGRAM_BOT_TOKEN }
+        : {}),
     });
   });
 
@@ -104,4 +116,29 @@ export function createApp(
 
 const app = createApp();
 
-export default app;
+export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
+  const logger = createWorkerLogger();
+  const stores = resolveStores(env);
+  try {
+    await expireChallenges({
+      store: workerCaptcha,
+      storage: stores.storage,
+      async restrict() {},
+      async release() {},
+      clock: createSystemClock(),
+      logger,
+    });
+  } catch {
+    logger.error("captcha_expire_failed", {});
+  }
+}
+
+export default {
+  fetch: app.fetch.bind(app),
+  scheduled(
+    _controller: ScheduledController,
+    env: WorkerBindings,
+  ): Promise<void> {
+    return runScheduled(env);
+  },
+};

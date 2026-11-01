@@ -35,6 +35,8 @@ async function post(
     readonly header?: string;
     readonly secret?: string;
     readonly onEvent?: (event: Event) => Promise<void>;
+    readonly botToken?: string;
+    readonly fetchImpl?: typeof fetch;
   },
 ) {
   const events: Event[] = [];
@@ -44,6 +46,8 @@ async function post(
     secretToken: options && "secret" in options ? options.secret : SECRET,
     tenantId: "local",
     logger,
+    ...(options?.botToken ? { botToken: options.botToken } : {}),
+    ...(options?.fetchImpl ? { fetchImpl: options.fetchImpl } : {}),
     onEvent: async (event) => {
       calls += 1;
       events.push(event);
@@ -138,6 +142,44 @@ describe("handleTelegramWebhook", () => {
     expect(events[0]?.kind).toBe("chat_member");
     expect(events[0]?.message).toBeUndefined();
     expect(events[0]?.actor).toEqual({ id: "77", isAdmin: false });
+    expect(events[0]?.membership).toBe("join");
+  });
+
+  it("acks a callback without logging its data", async () => {
+    const token = "bot-token";
+    const leaked = "请免费领取礼品";
+    let method = "";
+    let payload = "";
+    const { response, calls, logger } = await post(
+      JSON.stringify({
+        update_id: 40,
+        callback_query: {
+          id: "cb-9",
+          from: { id: 77 },
+          data: leaked,
+          message: { chat: { id: -100 } },
+        },
+      }),
+      {
+        header: SECRET,
+        botToken: token,
+        fetchImpl: async (input, init) => {
+          method = String(input);
+          payload = String(init?.body ?? "");
+          return new Response("ok", { status: 200 });
+        },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, ignored: true });
+    expect(calls).toBe(0);
+    expect(method).toBe(
+      `https://api.telegram.org/bot${token}/answerCallbackQuery`,
+    );
+    expect(payload).toContain("cb-9");
+    expect(payload).not.toContain(leaked);
+    expect(JSON.stringify(logger.entries)).not.toContain(leaked);
+    expect(JSON.stringify(logger.entries)).not.toContain(token);
   });
 
   it("normalizes a valid fixture and hides the text from the response", async () => {

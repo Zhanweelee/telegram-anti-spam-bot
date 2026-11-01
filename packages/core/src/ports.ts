@@ -72,6 +72,8 @@ export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
+  restrictActor(target: MuteTarget): Promise<void>;
+  releaseActor(target: BanTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

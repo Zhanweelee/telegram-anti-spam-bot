@@ -1,0 +1,18 @@
+[
+  {
+    "name": "join",
+    "kind": "chat_member",
+    "membership": "join",
+    "expect": "hit"
+  },
+  {
+    "name": "message",
+    "kind": "message",
+    "expect": "miss"
+  },
+  {
+    "name": "leave",
+    "kind": "chat_member",
+    "expect": "miss"
+  }
+]

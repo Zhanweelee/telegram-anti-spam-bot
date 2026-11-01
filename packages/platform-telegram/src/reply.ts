@@ -1,4 +1,5 @@
 import type { ReplyMessage, ReplyPort } from "@tasb/core";
+import { telegramId } from "./ids.js";
 
 export function createTelegramReply(input: {
   readonly token: string | undefined;
@@ -16,7 +17,7 @@ export function createTelegramReply(input: {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            chat_id: telegramChatId(message.chatId),
+            chat_id: telegramId(message.chatId),
             text: message.text.slice(0, 4096),
             link_preview_options: { is_disabled: true },
           }),
@@ -27,16 +28,6 @@ export function createTelegramReply(input: {
       }
     },
   };
-}
-
-function telegramChatId(chatId: string): string | number {
-  if (/^-?\d+$/.test(chatId)) {
-    const numeric = Number(chatId);
-    if (Number.isSafeInteger(numeric)) {
-      return numeric;
-    }
-  }
-  return chatId;
 }
 
 export type { ReplyMessage };

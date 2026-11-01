@@ -1,10 +1,12 @@
 import {
+  bindCaptchaStoreContract,
   bindPolicyStoreContract,
   bindStorageContract,
 } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
   createMemoryCache,
+  createMemoryCaptchaStore,
   createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryReply,
@@ -14,6 +16,7 @@ import {
 
 bindPolicyStoreContract(createMemoryPolicyStore);
 bindStorageContract(() => createMemoryStorage());
+bindCaptchaStoreContract(createMemoryCaptchaStore);
 
 const record = {
   tenantId: "tenant_a",
@@ -55,6 +58,22 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", actorId: "u" },
     ]);
     expect(moderator.deleted).toEqual([]);
+    await moderator.restrictActor({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "u",
+      durationSeconds: 300,
+    });
+    await moderator.releaseActor({ tenantId: "t", chatId: "c", actorId: "u" });
+    expect(moderator.restricted).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u", durationSeconds: 300 },
+    ]);
+    expect(moderator.released).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u" },
+    ]);
+    expect(moderator.banned).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u" },
+    ]);
   });
 
   it("keeps dry-run and replies isolated by tenant and chat", async () => {

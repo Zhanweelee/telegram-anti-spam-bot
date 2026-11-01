@@ -1,4 +1,5 @@
 import type { Event, Logger } from "@tasb/core";
+import { answerCallbackQuery } from "./moderate.js";
 import { normalizeUpdate } from "./normalize.js";
 import { secretsMatch } from "./secret.js";
 
@@ -12,6 +13,8 @@ export interface WebhookDependencies {
   readonly onEvent: (event: Event) => Promise<void>;
   readonly nowIso?: () => string;
   readonly logger?: Logger;
+  readonly botToken?: string;
+  readonly fetchImpl?: typeof fetch;
 }
 
 export async function handleTelegramWebhook(
@@ -59,8 +62,10 @@ export async function handleTelegramWebhook(
     deps.logger?.warn("webhook_invalid_update", {});
     return json(400, { ok: false, error: "invalid_update" });
   }
+  const callbackId = callbackQueryId(parsed);
   if (outcome.status === "ignored") {
     deps.logger?.info("webhook_ignored", {});
+    await ackCallback(callbackId, deps);
     return json(200, { ok: true, ignored: true });
   }
 
@@ -72,7 +77,45 @@ export async function handleTelegramWebhook(
       chatId: outcome.event.chatId,
     });
   }
+  await ackCallback(callbackId, deps);
   return json(200, { ok: true });
+}
+
+function callbackQueryId(update: unknown): string | null {
+  if (!isRecord(update) || !isRecord(update.callback_query)) {
+    return null;
+  }
+  const id = update.callback_query.id;
+  if (typeof id !== "string" || id.length === 0 || id.length > 256) {
+    return null;
+  }
+  return id;
+}
+
+async function ackCallback(
+  callbackId: string | null,
+  deps: WebhookDependencies,
+): Promise<void> {
+  if (!callbackId) {
+    return;
+  }
+  const token = deps.botToken?.trim() ?? "";
+  if (token.length === 0) {
+    return;
+  }
+  try {
+    await answerCallbackQuery({
+      token,
+      callbackId,
+      ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    });
+  } catch {
+    deps.logger?.warn("callback_ack_failed", {});
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function json(status: number, body: unknown): Response {

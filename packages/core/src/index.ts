@@ -1,4 +1,16 @@
 export type { Cache } from "./cache.js";
+export {
+  addSeconds,
+  beginChallenge,
+  type CaptchaChallenge,
+  type CaptchaPorts,
+  type CaptchaStore,
+  captchaChallengeSchema,
+  expireChallenges,
+  isExpired,
+  parseCaptchaChallenge,
+  resolveChallenge,
+} from "./captcha.js";
 export { type Clock, createFixedClock, createSystemClock } from "./clock.js";
 export {
   type OperatorCommandInput,

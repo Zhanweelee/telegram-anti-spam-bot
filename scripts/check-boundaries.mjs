@@ -10,6 +10,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-join/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -39,6 +43,7 @@ const rules = [
       /^@tasb\/core$/,
       /^@tasb\/platform-telegram$/,
       /^@tasb\/detector-keyword$/,
+      /^@tasb\/detector-join$/,
       /^@tasb\/actions$/,
       /^@tasb\/adapter-memory$/,
       /^@tasb\/adapter-cloudflare$/,

@@ -1,11 +1,14 @@
 import { createMemoryLogger } from "@tasb/core";
 import { describe, expect, it } from "vitest";
+import { workerCaptcha } from "./captcha-runtime.js";
 import {
   createApp,
   normalizeDeploymentMode,
   normalizeTenantId,
   parseAdminUserIds,
+  runScheduled,
 } from "./index.js";
+import { workerStorage } from "./screen.js";
 
 const SECRET = "dev-secret";
 
@@ -199,5 +202,26 @@ describe("POST /telegram/webhook", () => {
     expect(response.status).toBe(200);
     expect(raw).not.toContain(spam);
     expect(JSON.parse(raw)).toEqual({ ok: true });
+  });
+
+  it("audits an expired captcha without storing the nonce", async () => {
+    const nonce = "abcdef0123456789";
+    await workerCaptcha.put({
+      tenantId: "cron_tenant",
+      chatId: "cron_chat",
+      actorId: "cron_actor",
+      nonce,
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    });
+    await runScheduled();
+    const rows = await workerStorage.exportAudits({ tenantId: "cron_tenant" });
+    expect(rows.some((row) => row.reasons.includes("captcha_expired"))).toBe(
+      true,
+    );
+    expect(JSON.stringify(rows)).not.toContain(nonce);
+    expect(
+      await workerCaptcha.get("cron_tenant", "cron_chat", "cron_actor"),
+    ).toBe(null);
+    await workerStorage.deleteAudits({ tenantId: "cron_tenant" });
   });
 });

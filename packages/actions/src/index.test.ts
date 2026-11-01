@@ -63,6 +63,8 @@ describe("delete action", () => {
           },
           async muteActor() {},
           async banActor() {},
+          async restrictActor() {},
+          async releaseActor() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -110,6 +112,8 @@ function ports(): ModerationPort & {
     async banActor(target) {
       banned.push(target);
     },
+    async restrictActor() {},
+    async releaseActor() {},
   };
 }
 
