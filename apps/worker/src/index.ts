@@ -18,8 +18,11 @@ import { handleIncomingEvent } from "./operate.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { allowUnsignedPlugins } from "./plugins.js";
 import { workerQuota } from "./quota-runtime.js";
+import { type RateWindowNamespace, rateWindowFromEnv } from "./rate-object.js";
 import { createWorkerLogger } from "./screen.js";
 import { resolveStores } from "./stores.js";
+
+export { RateWindowObject } from "./rate-object.js";
 
 export type DeploymentMode = "self-host" | "cloud";
 
@@ -34,6 +37,7 @@ export type WorkerBindings = {
   POLICY_KV?: KVNamespace;
   AI?: Ai;
   ALLOW_UNSIGNED_PLUGINS?: string;
+  RATE_WINDOW?: RateWindowNamespace;
 };
 
 export interface CreateAppOptions {
@@ -128,6 +132,7 @@ export function createApp(
           return;
         }
         const stores = resolveStores(c.env ?? {});
+        const rateWindow = rateWindowFromEnv(c.env ?? {});
         const locale = normalizeLocale(c.env?.LOCALE);
         const allowUnsigned = allowUnsignedPlugins(c.env ?? {});
         const ai = c.env?.AI;
@@ -162,6 +167,7 @@ export function createApp(
             source: workerRulePacks.source,
           },
           blocklist: stores.blocklist,
+          ...(rateWindow ? { rateWindow } : {}),
         });
       },
       ...(c.env?.TELEGRAM_BOT_TOKEN

@@ -63,6 +63,7 @@ const rules = [
     allow: [
       /^\.{1,2}\//,
       /^hono$/,
+      /^cloudflare:workers$/,
       /^vitest$/,
       /^@tasb\/core$/,
       /^@tasb\/platform-telegram$/,
