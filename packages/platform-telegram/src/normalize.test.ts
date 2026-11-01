@@ -679,6 +679,100 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("免费领取");
   });
 
+  it("uses a game title when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "免费领取";
+    const fileId = "GAMEFILEUNIQUE99";
+    const outcome = await normalize({
+      update_id: 2401,
+      message: {
+        message_id: 61,
+        date: 1761955200,
+        chat: { id: -100730, type: "supergroup" },
+        from: { id: 9 },
+        game: {
+          title,
+          description: phrase,
+          text: phrase,
+          text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/game",
+            },
+          ],
+          photo: [
+            { file_id: "abc", file_unique_id: fileId, width: 1, height: 1 },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(title);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.media).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(fileId);
+  });
+
+  it("uses an invoice title when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "加微信";
+    const outcome = await normalize({
+      update_id: 2402,
+      message: {
+        message_id: 62,
+        date: 1761955200,
+        chat: { id: -100731, type: "supergroup" },
+        from: { id: 9 },
+        invoice: {
+          title,
+          description: phrase,
+          start_parameter: phrase,
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(title);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("XTR");
+  });
+
+  it("keeps a checklist title when a game is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2403,
+      message: {
+        message_id: 63,
+        date: 1761955200,
+        chat: { id: -100732, type: "supergroup" },
+        from: { id: 9 },
+        checklist: { title: "今天站会", tasks: [] },
+        game: { title: "免费领取", description: "说明", photo: [] },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({

@@ -540,6 +540,16 @@ function messageText(message: Record<string, unknown>): string {
   ) {
     return checklist.title.slice(0, MAX_TEXT);
   }
+  for (const field of ["game", "invoice"]) {
+    const value = message[field];
+    if (
+      isRecord(value) &&
+      typeof value.title === "string" &&
+      value.title.length > 0
+    ) {
+      return value.title.slice(0, MAX_TEXT);
+    }
+  }
   return "";
 }
 
