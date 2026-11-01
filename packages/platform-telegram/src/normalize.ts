@@ -446,14 +446,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushTextLinks(poll.explanation_entities, urls);
     pushPlainUrls(poll.description, urls);
     pushTextLinks(poll.description_entities, urls);
-    pushPollMediaLink(poll.media, urls);
-    pushPollMediaLink(poll.explanation_media, urls);
+    pushPollMedia(poll.media, urls);
+    pushPollMedia(poll.explanation_media, urls);
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (!isRecord(option)) {
           continue;
         }
-        pushPollMediaLink(option.media, urls);
+        pushPollMedia(option.media, urls);
       }
     }
   }
@@ -566,12 +566,29 @@ function sideUrls(message: Record<string, unknown>): string[] {
   return urls;
 }
 
-function pushPollMediaLink(media: unknown, urls: string[]): void {
-  if (!isRecord(media) || !isRecord(media.link)) {
+function pushPollMedia(media: unknown, urls: string[]): void {
+  if (!isRecord(media)) {
     return;
   }
-  if (typeof media.link.url === "string") {
+  if (isRecord(media.link) && typeof media.link.url === "string") {
     urls.push(media.link.url);
+  }
+  for (const field of ["animation", "video", "audio", "document"]) {
+    const value = media[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    if (field === "audio") {
+      pushPlainUrls(value.title, urls);
+      pushPlainUrls(value.file_name, urls);
+      pushPlainUrls(value.performer, urls);
+      continue;
+    }
+    pushPlainUrls(value.file_name, urls);
+  }
+  if (isRecord(media.venue)) {
+    pushPlainUrls(media.venue.title, urls);
+    pushPlainUrls(media.venue.address, urls);
   }
 }
 

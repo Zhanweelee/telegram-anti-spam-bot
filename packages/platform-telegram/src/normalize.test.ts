@@ -4762,4 +4762,126 @@ describe("normalizeUpdate", () => {
     expect(photoDump).not.toContain("hidden73");
     expect(photoDump).not.toContain("latitude");
   });
+
+  it("keeps hostnames from a poll media name", async () => {
+    const code = "POLL74";
+    const outcome = await normalize({
+      update_id: 4510,
+      message: {
+        message_id: 250,
+        date: 1761955200,
+        chat: { id: -100980, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll: {
+          question: "今天站会",
+          media: {
+            animation: {
+              file_name: "https://bit.ly/anim74",
+              file_id: "https://bit.ly/id74",
+              file_unique_id: "a",
+              width: 1,
+              height: 1,
+              duration: 1,
+            },
+          },
+          explanation_media: {
+            venue: {
+              title: "见面",
+              address: `https://t.me/+${code}`,
+              location: { latitude: 1, longitude: 2 },
+              foursquare_id: "https://bit.ly/fsq74",
+            },
+          },
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              media: {
+                video: {
+                  file_name: "https://tinyurl.com/vid74",
+                  file_id: "https://cutt.ly/id74",
+                  file_unique_id: "b",
+                  width: 1,
+                  height: 1,
+                  duration: 1,
+                },
+              },
+            },
+            {
+              text: "乙",
+              voter_count: 0,
+              media: {
+                sticker: {
+                  set_name: "https://bit.ly/set74",
+                  file_id: "s",
+                  file_unique_id: "c",
+                  type: "regular",
+                  width: 1,
+                  height: 1,
+                  is_animated: false,
+                  is_video: false,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "tinyurl.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("anim74");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("vid74");
+    expect(dumped).not.toContain("id74");
+    expect(dumped).not.toContain("fsq74");
+    expect(dumped).not.toContain("set74");
+    expect(dumped).not.toContain("latitude");
+    expect(dumped).not.toContain("file_id");
+
+    const audio = await normalize({
+      update_id: 4511,
+      message: {
+        message_id: 251,
+        date: 1761955200,
+        chat: { id: -100981, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll: {
+          question: "听一段",
+          options: [{ text: "甲", voter_count: 0 }],
+          media: {
+            audio: {
+              title: "https://ow.ly/song74",
+              performer: "歌手",
+              file_id: "https://bit.ly/aid74",
+              file_unique_id: "d",
+              duration: 1,
+            },
+          },
+        },
+      },
+    });
+    expect(audio.status).toBe("event");
+    if (audio.status !== "event") {
+      return;
+    }
+    expect(audio.event.message?.text).toBe("今天站会");
+    expect(audio.event.message?.hosts).toEqual(["ow.ly"]);
+    const audioDump = JSON.stringify(audio.event);
+    expect(audioDump).not.toContain("song74");
+    expect(audioDump).not.toContain("aid74");
+    expect(audioDump).not.toContain("歌手");
+  });
 });
