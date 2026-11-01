@@ -1409,6 +1409,77 @@ describe("normalizeUpdate", () => {
     expect(encodedDump).not.toContain("1.5");
   });
 
+  it("keeps only the hostname from a venue title", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "TITLE50";
+    const placeId = "PLACEIDSECRET50";
+    const outcome = await normalize({
+      update_id: 2512,
+      message: {
+        message_id: 76,
+        date: 1761955200,
+        chat: { id: -100747, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        venue: {
+          location: { latitude: 31.2304, longitude: 121.4737 },
+          title: `${phrase} https://bit.ly/title50 https://t.me/+${code}.`,
+          address: `${phrase} 南京东路 1 号`,
+          google_place_id: placeId,
+          foursquare_id: placeId,
+          foursquare_type: "https://tinyurl.com/type50",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("/title50");
+    expect(dumped).not.toContain(placeId);
+    expect(dumped).not.toContain("31.2304");
+    expect(dumped).not.toContain("南京东路");
+    expect(dumped).not.toContain("tinyurl.com");
+
+    const encoded = await normalize({
+      update_id: 2513,
+      message: {
+        message_id: 77,
+        date: 1761955200,
+        chat: { id: -100748, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        venue: {
+          location: { latitude: 1.5, longitude: 2.5 },
+          title: `www.tinyurl.com/v50 https://t.me/%2B${code}`,
+          address: phrase,
+          google_place_type: "https://is.gd/type50",
+        },
+      },
+    });
+    expect(encoded.status).toBe("event");
+    if (encoded.status !== "event") {
+      return;
+    }
+    expect(encoded.event.message?.text).toBe("今天站会");
+    expect(encoded.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(encoded.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
+    expect(encoded.event.message?.invites).toEqual(["t.me"]);
+    const encodedDump = JSON.stringify(encoded.event);
+    expect(encodedDump).not.toContain(phrase);
+    expect(encodedDump).not.toContain(code);
+    expect(encodedDump).not.toContain("/v50");
+    expect(encodedDump).not.toContain("is.gd");
+    expect(encodedDump).not.toContain("1.5");
+  });
+
   it("keeps an invoice title when a venue is also present", async () => {
     const outcome = await normalize({
       update_id: 2503,

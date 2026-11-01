@@ -460,6 +460,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   const venue = message.venue;
   if (isRecord(venue)) {
+    pushPlainUrls(venue.title, urls);
     pushPlainUrls(venue.address, urls);
   }
   const preview = message.link_preview_options;
