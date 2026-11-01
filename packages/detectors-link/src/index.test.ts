@@ -806,6 +806,75 @@ describe("link fixtures", () => {
     expect(nested).toBeNull();
   });
 
+  it("reads the text inside a telegram msg link and leaves the path out", async () => {
+    const detector = createLinkDetector();
+    const hidden = await detector.detect({
+      event: eventFor(
+        "tg://msg?text=https%3A%2F%2F203.0.113.9%2Fpath100&to=durov",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hidden?.reasons).toEqual(["ip_host"]);
+    expect(hidden?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(hidden)).not.toContain("path100");
+    expect(JSON.stringify(hidden)).not.toContain("durov");
+
+    const code = "code100";
+    const invite = await detector.detect({
+      event: eventFor(
+        `tg:msg?text=${encodeURIComponent(`tg://join?invite=${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "tg://msg?text=https%3A%2F%2Fexample.com%2Fok100&to=198.51.100.20",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const recipient = await detector.detect({
+      event: eventFor("tg://msg?to=203.0.113.9&text=hello"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(recipient).toBeNull();
+
+    const search = await detector.detect({
+      event: eventFor("tg://search?query=https%3A%2F%2F203.0.113.9%2Fpath100"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(search).toBeNull();
+
+    const profile = await detector.detect({
+      event: eventFor(
+        "https://t.me/durov?text=https%3A%2F%2F203.0.113.9%2Fpath100",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(profile).toBeNull();
+
+    const nested = encodeURIComponent(
+      `tg://msg?text=${encodeURIComponent("https://203.0.113.9/path100")}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`tg://msg?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("folds dot lookalikes into ascii dots before reading hosts", async () => {
     const detector = createLinkDetector();
     const short = await detector.detect({

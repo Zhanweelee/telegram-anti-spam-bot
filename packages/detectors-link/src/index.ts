@@ -261,6 +261,7 @@ function extractInviteHosts(
     const stripped = raw.replace(/[),.;!?]+$/g, "");
     pushInvite(inviteHost(stripped, names));
     pushWrappedInvites(stripped, names, pushInvite);
+    pushMsgTextInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
       return found;
     }
@@ -274,6 +275,7 @@ function extractInviteHosts(
     const stripped = raw.replace(/[),.;!?]+$/g, "");
     pushInvite(deepInviteHost(stripped, names));
     pushWrappedInvites(stripped, names, pushInvite);
+    pushMsgTextInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
       return found;
     }
@@ -359,6 +361,7 @@ export function extractHosts(text: string): string[] {
     push(hostname(raw));
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
+    pushMsgTextHosts(raw, push);
     if (found.length >= 8) {
       return found;
     }
@@ -371,6 +374,7 @@ export function extractHosts(text: string): string[] {
     }
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
+    pushMsgTextHosts(raw, push);
     if (found.length >= 8) {
       return found;
     }
@@ -444,6 +448,64 @@ function telegramWrapped(
         : null,
     text: text !== null && text.length > 0 && text.length <= 4096 ? text : null,
   };
+}
+
+function pushMsgTextHosts(
+  raw: string,
+  push: (host: string | null) => void,
+): void {
+  const text = telegramMsgText(raw);
+  if (!text) {
+    return;
+  }
+  for (const inner of linkTokens(text)) {
+    push(hostname(inner));
+    push(proxyServerHost(inner));
+  }
+}
+
+function pushMsgTextInvites(
+  raw: string,
+  names: ReadonlySet<string>,
+  push: (host: string | null) => void,
+): void {
+  const text = telegramMsgText(raw);
+  if (!text) {
+    return;
+  }
+  for (const inner of linkTokens(text)) {
+    push(inviteHost(inner, names));
+  }
+  for (const inner of deepTokens(text)) {
+    push(deepInviteHost(inner, names));
+  }
+}
+
+function telegramMsgText(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
+  } catch {
+    return null;
+  }
+  if (!isTelegramMsg(url)) {
+    return null;
+  }
+  const text = queryValue(raw, "text");
+  if (text === null || text.length === 0 || text.length > 4096) {
+    return null;
+  }
+  return text;
+}
+
+function isTelegramMsg(url: URL): boolean {
+  if (url.protocol !== "tg:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const command = host.length > 0 ? host : path;
+  return command === "msg";
 }
 
 function queryValue(raw: string, name: string): string | null {

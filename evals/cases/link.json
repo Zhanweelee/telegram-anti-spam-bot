@@ -355,5 +355,25 @@
     "id": "foreign-share",
     "text": "https://example.com/share/url?url=https%3A%2F%2Fbit.ly%2Foffer",
     "label": "ham"
+  },
+  {
+    "id": "tg-msg-ip",
+    "text": "tg://msg?text=https%3A%2F%2F203.0.113.9%2Fpath&to=durov",
+    "label": "spam"
+  },
+  {
+    "id": "tg-msg-join",
+    "text": "tg://msg?text=tg%3A%2F%2Fjoin%3Finvite%3Djoin100",
+    "label": "spam"
+  },
+  {
+    "id": "tg-msg-ordinary",
+    "text": "tg://msg?text=https%3A%2F%2Fexample.com%2Fdocs&to=durov",
+    "label": "ham"
+  },
+  {
+    "id": "tg-msg-recipient",
+    "text": "tg://msg?to=203.0.113.9&text=hello",
+    "label": "ham"
   }
 ]

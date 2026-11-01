@@ -2915,4 +2915,103 @@ describe("screenTelegramEvent", () => {
     expect(foreign.result.decision.action).toBe("allow");
     expect(foreign.moderator.deleted).toEqual([]);
   });
+
+  it("deletes a telegram msg link whose text carries an address", async () => {
+    const screenMsg = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 100, first_name: "https://tinyurl.com/from100" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "私聊", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenMsg(
+      6910,
+      -100740,
+      "tg://msg?text=https%3A%2F%2F203.0.113.9%2Fpath100&to=durov",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("ip_host");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100740", messageId: "6910" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("path100");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from100");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "path100",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const code = "code100";
+    const invite = await screenMsg(
+      6911,
+      -100741,
+      "今天站会",
+      `tg://msg?text=${encodeURIComponent(`tg://join?invite=${code}`)}&to=durov`,
+    );
+    expect(invite.result.decision.action).toBe("delete");
+    expect(invite.result.decision.reasons).toContain("invite");
+    expect(invite.event.message?.text).toBe("今天站会");
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+    expect(JSON.stringify(invite.event)).not.toContain("durov");
+    expect(JSON.stringify(invite.logger.entries)).not.toContain("from100");
+
+    const keyword = await screenMsg(
+      6912,
+      -100742,
+      "今天站会",
+      "tg://msg?text=请免费领取礼品&to=durov",
+    );
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("from100");
+
+    const ordinary = await screenMsg(
+      6913,
+      -100743,
+      "tg://msg?text=https%3A%2F%2Fexample.com%2Fok100&to=198.51.100.20",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from100");
+  });
 });

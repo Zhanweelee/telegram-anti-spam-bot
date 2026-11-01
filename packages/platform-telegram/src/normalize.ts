@@ -812,7 +812,9 @@ function hostFromUrl(
     return deep;
   }
   const proxy = proxyServerHost(url);
-  const wrapped = unwrap ? wrappedExtras(folded, url) : [];
+  const wrapped = unwrap
+    ? [...wrappedExtras(folded, url), ...msgTextExtras(folded, url)]
+    : [];
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     if (proxy !== null) {
       return packHost(proxy, false, wrapped);
@@ -896,6 +898,41 @@ function wrappedExtras(
     }
   }
   return found;
+}
+
+function msgTextExtras(
+  folded: string,
+  url: URL,
+): { host: string; invite: boolean }[] {
+  if (!isTelegramMsg(url)) {
+    return [];
+  }
+  const text = queryValue(folded, "text");
+  if (text === null || text.length === 0 || text.length > MAX_TEXT) {
+    return [];
+  }
+  const found: { host: string; invite: boolean }[] = [];
+  for (const raw of urlsInText(text)) {
+    const inner = hostFromUrl(raw, false);
+    if (!inner) {
+      continue;
+    }
+    found.push({ host: inner.host, invite: inner.invite });
+    for (const extra of inner.extras ?? []) {
+      found.push(extra);
+    }
+  }
+  return found;
+}
+
+function isTelegramMsg(url: URL): boolean {
+  if (url.protocol !== "tg:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const command = host.length > 0 ? host : path;
+  return command === "msg";
 }
 
 function queryValue(raw: string, name: string): string | null {
