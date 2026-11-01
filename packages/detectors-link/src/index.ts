@@ -2,6 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
+  foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
   foldMatchText,
@@ -85,8 +86,8 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldEncodedSeparators(
-        foldEncodedGaps(foldMatchText(message.text)),
+      const compared = foldEncodedAlphabet(
+        foldEncodedSeparators(foldEncodedGaps(foldMatchText(message.text))),
       );
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),

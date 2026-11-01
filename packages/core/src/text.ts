@@ -43,6 +43,19 @@ export function foldEncodedSeparators(text: string): string {
   return text.replace(/%2E/gi, ".").replace(/%2F/gi, "/").replace(/%2B/gi, "+");
 }
 
+const ENCODED_ALPHABET = /%[0-9A-Fa-f]{2}/g;
+
+/**
+ * Turn one `%HH` into a letter, digit, hyphen, or underscore.
+ * `%20`, `%2E`, and a second layer written as `%25HH` stay.
+ */
+export function foldEncodedAlphabet(text: string): string {
+  return text.replace(ENCODED_ALPHABET, (token) => {
+    const char = String.fromCharCode(Number.parseInt(token.slice(1), 16));
+    return /[A-Za-z0-9_-]/.test(char) ? char : token;
+  });
+}
+
 function encodedGapLength(text: string, index: number): number {
   const first = readPercentByte(text, index);
   if (!first) {

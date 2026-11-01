@@ -401,6 +401,80 @@ describe("link fixtures", () => {
     expect(dumped).not.toContain("durov");
   });
 
+  it("treats a percent-encoded letter as part of the link", async () => {
+    const code = "LETTER99";
+    const detector = createLinkDetector();
+    const logger = createMemoryLogger();
+    const short = await detector.detect({
+      event: eventFor("b%69t.ly/offer"),
+      logger,
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const invite = await detector.detect({
+      event: eventFor(`t.me/+OFF%45${code}`),
+      logger,
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    const lower = await detector.detect({
+      event: eventFor(`telegram.me/joinchat/off%65${code}`),
+      logger,
+      signal,
+    });
+    expect(lower?.reasons).toEqual(["invite"]);
+    expect(lower?.evidence[0]?.summary).toBe("invite:telegram.me");
+    const marked = await detector.detect({
+      event: eventFor(`t.me/%2B%5F${code}`),
+      logger,
+      signal,
+    });
+    expect(marked?.reasons).toEqual(["invite"]);
+    expect(marked?.evidence[0]?.summary).toBe("invite:t.me");
+    const doubled = await detector.detect({
+      event: eventFor(`t.me/+OFF%2545${code}`),
+      logger,
+      signal,
+    });
+    expect(doubled).toBeNull();
+    const doubleHost = await detector.detect({
+      event: eventFor("b%2569t.ly/offer"),
+      logger,
+      signal,
+    });
+    expect(doubleHost).toBeNull();
+    const plain = await detector.detect({
+      event: eventFor("example%41.com/docs"),
+      logger,
+      signal,
+    });
+    expect(plain).toBeNull();
+    const hyphen = await detector.detect({
+      event: eventFor("bit%2Dly/offer"),
+      logger,
+      signal,
+    });
+    expect(hyphen).toBeNull();
+    const dotted = await detector.detect({
+      event: eventFor(`t.me/+OFF%2E${code}`),
+      logger,
+      signal,
+    });
+    expect(dotted).toBeNull();
+    const dumped = JSON.stringify({
+      short,
+      invite,
+      lower,
+      marked,
+      logs: logger.entries,
+    });
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("offer");
+    expect(dumped).not.toContain("/docs");
+  });
+
   it("scores a telegram invite and keeps the code out of evidence", async () => {
     const code = "INVITESECRET99";
     const detector = createLinkDetector();

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
   foldMatchText,
@@ -78,5 +79,23 @@ describe("foldEncodedSeparators", () => {
     expect(foldEncodedSeparators("t.me/%2bCODE")).toBe("t.me/+CODE");
     expect(foldEncodedSeparators("t.me/%252BCODE")).toBe("t.me/%252BCODE");
     expect(foldMatchText("免%2B费领取")).toBe("免%2B费领取");
+  });
+});
+
+describe("foldEncodedAlphabet", () => {
+  it("turns one encoded letter, digit, hyphen, or underscore into itself", () => {
+    expect(foldEncodedAlphabet("b%69t.ly")).toBe("bit.ly");
+    expect(foldEncodedAlphabet("b%69T.LY")).toBe("biT.LY");
+    expect(foldEncodedAlphabet("OFF%45R")).toBe("OFFER");
+    expect(foldEncodedAlphabet("off%65r")).toBe("offer");
+    expect(foldEncodedAlphabet("OFF%4eR")).toBe("OFFNR");
+    expect(foldEncodedAlphabet("A%5F%2DB")).toBe("A_-B");
+    expect(foldEncodedAlphabet("%39")).toBe("9");
+    expect(foldEncodedAlphabet("b%2569t.ly")).toBe("b%2569t.ly");
+    expect(foldEncodedAlphabet("OFF%2545R")).toBe("OFF%2545R");
+    expect(foldEncodedAlphabet("%20")).toBe("%20");
+    expect(foldEncodedAlphabet("%2E")).toBe("%2E");
+    expect(foldEncodedAlphabet("%00")).toBe("%00");
+    expect(foldMatchText("免%45费领取")).toBe("免%45费领取");
   });
 });

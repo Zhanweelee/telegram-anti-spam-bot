@@ -106,6 +106,28 @@
     "expect": "miss"
   },
   {
+    "name": "encoded-host-letter",
+    "text": "b%69t.ly/offer",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "encoded-invite-letter",
+    "text": "t.me/+OFF%45LETTER",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "double-encoded-letter",
+    "text": "t.me/+OFF%2545LETTER",
+    "expect": "miss"
+  },
+  {
+    "name": "encoded-ordinary-letter",
+    "text": "example%41.com/docs",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"

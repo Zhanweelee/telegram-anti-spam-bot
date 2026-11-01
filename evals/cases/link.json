@@ -145,5 +145,20 @@
     "id": "double-encoded-plus",
     "text": "t.me/%252BOFFER",
     "label": "ham"
+  },
+  {
+    "id": "encoded-host-letter",
+    "text": "b%69t.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-invite-letter",
+    "text": "t.me/+OFF%45R",
+    "label": "spam"
+  },
+  {
+    "id": "double-encoded-letter",
+    "text": "t.me/+OFF%2545R",
+    "label": "ham"
   }
 ]
