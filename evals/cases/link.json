@@ -260,5 +260,15 @@
     "id": "encoded-ideographic-stop",
     "text": "example%E3%80%82com/docs",
     "label": "ham"
+  },
+  {
+    "id": "armenian-infix",
+    "text": "b\u0561it.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "armenian-glued",
+    "text": "x\u0561bit.ly/offer",
+    "label": "ham"
   }
 ]

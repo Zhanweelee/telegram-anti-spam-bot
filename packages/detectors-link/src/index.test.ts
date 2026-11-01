@@ -773,4 +773,38 @@ describe("link fixtures", () => {
     });
     expect(doubled).toBeNull();
   });
+
+  it("drops armenian letters before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("b\u0561it.ly/lat69"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("lat69");
+
+    const cjk = await detector.detect({
+      event: eventFor("点击bit.ly/cjk69"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(cjk?.reasons).toEqual(["short_link"]);
+    expect(cjk?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const glued = await detector.detect({
+      event: eventFor("x\u0561bit.ly/glue69"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+
+    const bare = await detector.detect({
+      event: eventFor("\u0561.me/+NO69"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+  });
 });

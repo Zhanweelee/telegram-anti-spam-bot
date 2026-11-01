@@ -101,6 +101,8 @@ describe("foldHostInterrupters", () => {
     expect(foldHostInterrupters("b\u0442it.ly")).toBe("bit.ly");
     expect(foldHostInterrupters("b\u03BFit.ly")).toBe("bit.ly");
     expect(foldHostInterrupters("b\u00E9it.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("b\u0561it.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("\u0561.me")).toBe(".me");
     expect(foldHostInterrupters("\u0442.me")).toBe(".me");
     expect(foldHostInterrupters("bit.ly")).toBe("bit.ly");
     expect(foldHostInterrupters("点击bit.ly")).toBe("点击bit.ly");

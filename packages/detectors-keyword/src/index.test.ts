@@ -249,6 +249,14 @@ describe("keyword detector", () => {
       signal,
     });
     expect(katakana?.evidence[0]?.summary).toBe("keyword:加微信");
+    const armenian = createKeywordDetector({ keywords: ["bit"] });
+    expect(
+      await armenian.detect({
+        event: messageEvent("b\u0561it"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
     expect(
       await detector.detect({
         event: messageEvent("不是免费。领取"),
