@@ -2,7 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // WEBHOOK_SECRET and TELEGRAM_BOT_TOKEN are Worker secrets.
   // Local dev reads apps/worker/.dev.vars. Never put secrets in vars.
-  // D1 and KV bindings wait for P0-08. A free deploy must succeed without them.
+  // DB and POLICY_KV are optional. Paste them after `wrangler d1 create`
+  // and `wrangler kv namespace create`. A free deploy must succeed without them.
   "name": "tasb",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-30",

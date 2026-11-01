@@ -1,10 +1,18 @@
 import { type PolicyStore, prefilterPolicySchema } from "@tasb/core";
 
+export {
+  applyStorageMigrations,
+  createD1Storage,
+  type SqlDatabase,
+  type SqlPrepared,
+  storageMigrationStatements,
+} from "./d1.js";
+
 /**
  * Cloudflare bindings adapter.
- * D1 / Queues / Durable Objects implementations land with later storage work.
- * The policy store talks to a string map so tests do not import Workers types.
- * This module must not be imported by @tasb/core.
+ * D1 stores audits and rule documents. KV stores prefilter policy.
+ * Queues and Durable Objects stay unused. This module must not be
+ * imported by @tasb/core, and it does not import Workers types.
  */
 export const cloudflareAdapter = {
   id: "cloudflare",

@@ -56,7 +56,7 @@ packages/core                 领域类型与流水线
 packages/detectors-keyword    关键词检测器
 packages/actions              内置动作
 packages/adapters-memory      内存 Storage / Moderation
-packages/adapters-cloudflare  Cloudflare 适配层骨架
+packages/adapters-cloudflare  D1 审计与 KV 白名单
 packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  Node 侧测试帮手（sha256、构造事件）
 apps/worker                   Hono 入口
@@ -81,7 +81,7 @@ pnpm smoke          # 需要 WEBHOOK_SECRET，检查 /health 和一次 webhook 2
 pnpm --filter @tasb/example-minimal-pipeline test
 ```
 
-本地需要 Node 22。测试不需要 Cloudflare 账号。部署步骤在 `docs/deploy.md`，免费套餐即可，暂时不要创建 D1 或 KV。
+本地需要 Node 22。测试不需要 Cloudflare 账号。部署步骤在 `docs/deploy.md`。免费套餐即可。D1 和 KV 可以后配；没配时审计和白名单留在内存里。
 
 ## 代码规范
 
@@ -163,7 +163,7 @@ pnpm --filter @tasb/example-minimal-pipeline test
 ## 新增一个 Adapter
 
 1. 建 `packages/adapters-<runtime>`，实现 core 的端口，不要把平台类型导出给 core。
-2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。实现 `PolicyStore` 时从 `@tasb/core/testing` 调用 `bindPolicyStoreContract`。
+2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。实现 `PolicyStore` 时从 `@tasb/core/testing` 调用 `bindPolicyStoreContract`。实现 `Storage` 时调用 `bindStorageContract`。
 3. 对照 `docs/limits.md` 写明读放大、写放大和失败时的行为。
 4. Workers 绑定只出现在该包和 `apps/worker`。
 5. 新的 npm 依赖需要 ADR。

@@ -21,16 +21,24 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 看私聊命令怎么改配置 | [examples/operator-commands](examples/operator-commands) |
 | 部署到自己的 Cloudflare | [docs/deploy.md](docs/deploy.md) |
 
-Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的这些文本不会改配置。免费套餐可以部署，暂时不要创建 D1 或 KV。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配了 KV 之后白名单进 KV，配了 D1 之后审计进 D1。两个绑定都可以不填，那时数据留在 isolate 内存里。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的这些文本不会改配置。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
 
 ## 10 分钟跑通
 
-需要 Node.js 22、pnpm 10、一个 Cloudflare 免费账号，以及 BotFather 的 token。不需要信用卡。P0-08 还没合并，所以不要创建 D1 或 KV。
+需要 Node.js 22、pnpm 10、一个 Cloudflare 免费账号，以及 BotFather 的 token。不需要信用卡。
 
 ```sh
 pnpm install
 cd apps/worker
 pnpm exec wrangler login
+pnpm exec wrangler d1 create tasb
+pnpm exec wrangler kv namespace create POLICY_KV
+```
+
+把打印出来的 id 按 [docs/deploy.md](docs/deploy.md) 写进 `wrangler.jsonc` 的 `DB` 和 `POLICY_KV`，然后执行可重复的迁移。绑定可以先不填。没填时审计和白名单留在 isolate 内存里，`wrangler deploy` 仍然成功。
+
+```sh
+pnpm exec wrangler d1 execute tasb --remote --file=../../packages/adapters-cloudflare/migrations/0001_storage.sql
 printf '%s' "$WEBHOOK_SECRET" | pnpm exec wrangler secret put WEBHOOK_SECRET
 printf '%s' "$TELEGRAM_BOT_TOKEN" | pnpm exec wrangler secret put TELEGRAM_BOT_TOKEN
 pnpm exec wrangler deploy
@@ -75,7 +83,7 @@ packages/core                 领域逻辑。零 I/O，零平台 SDK
 packages/detectors-keyword    内置关键词检测器
 packages/actions              内置动作（delete / mute / ban）
 packages/adapters-memory      测试用存储、策略、处罚和回复
-packages/adapters-cloudflare  Cloudflare 绑定适配层（KV 策略存储已有形状）
+packages/adapters-cloudflare  D1 审计 / 规则文档，KV 白名单
 packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  插件作者的测试帮手
 apps/worker                   Workers 入口。self-host / cloud 共用

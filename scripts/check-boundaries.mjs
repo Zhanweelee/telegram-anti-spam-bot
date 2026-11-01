@@ -20,6 +20,7 @@ const rules = [
   {
     prefix: "packages/adapters-cloudflare/",
     allow: [/^\.{1,2}\//, /^@tasb\/core(\/.*)?$/, /^vitest$/],
+    testAllow: [/^node:/],
   },
   {
     prefix: "packages/platform-telegram/",
@@ -40,6 +41,7 @@ const rules = [
       /^@tasb\/detector-keyword$/,
       /^@tasb\/actions$/,
       /^@tasb\/adapter-memory$/,
+      /^@tasb\/adapter-cloudflare$/,
     ],
   },
   { prefix: "apps/cloud/", allow: [/^\.{1,2}\//] },
@@ -128,8 +130,11 @@ for (const file of files) {
     continue;
   }
   const source = await readFile(file, "utf8");
+  const allow = rel.endsWith(".test.ts")
+    ? [...rule.allow, ...(rule.testAllow ?? [])]
+    : rule.allow;
   for (const specifier of specifiers(source)) {
-    if (!rule.allow.some((pattern) => pattern.test(specifier))) {
+    if (!allow.some((pattern) => pattern.test(specifier))) {
       violations.push(`${rel}: forbidden import "${specifier}"`);
     }
   }

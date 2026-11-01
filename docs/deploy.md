@@ -2,7 +2,7 @@
 
 Self-host 部署到你自己的 Cloudflare 账号。Workers 免费套餐就够，不需要信用卡、自定义域名或付费绑定。
 
-P0-08 还没合并。这一步不要创建 D1 或 KV，`wrangler.jsonc` 里也没有这些绑定。规则在 Worker 包内的 JSON 文件里，审计和白名单先留在 isolate 内存中。
+规则在 Worker 包内的 JSON 文件里，热路径读缓存，不读 D1。审计可以进 D1，白名单可以进 KV。这两个绑定都可以先不填。没填时审计和白名单留在 isolate 内存里，`wrangler deploy` 仍然成功。
 
 ## 准备
 
@@ -22,6 +22,42 @@ openssl rand -hex 32
 export TELEGRAM_BOT_TOKEN='你的 token'
 export WEBHOOK_SECRET='上面生成的 hex'
 ```
+
+## 创建 D1 和 KV
+
+在 `apps/worker` 里：
+
+```sh
+pnpm exec wrangler login
+pnpm exec wrangler d1 create tasb
+pnpm exec wrangler kv namespace create POLICY_KV
+```
+
+把打印出来的 id 写进 `apps/worker/wrangler.jsonc`。仓库里的这份配置故意不带占位 id：
+
+```jsonc
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "tasb",
+    "database_id": "<d1 create 打印的 id>"
+  }
+],
+"kv_namespaces": [
+  {
+    "binding": "POLICY_KV",
+    "id": "<kv namespace create 打印的 id>"
+  }
+]
+```
+
+迁移可以重复执行：
+
+```sh
+pnpm exec wrangler d1 execute tasb --remote --file=../../packages/adapters-cloudflare/migrations/0001_storage.sql
+```
+
+额度数字以 [limits.md](limits.md) 为准。这一步不需要付费计划。
 
 ## 部署
 

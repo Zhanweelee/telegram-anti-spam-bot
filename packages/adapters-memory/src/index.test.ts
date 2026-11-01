@@ -1,5 +1,7 @@
-import { parseRuleSet } from "@tasb/core";
-import { bindPolicyStoreContract } from "@tasb/core/testing";
+import {
+  bindPolicyStoreContract,
+  bindStorageContract,
+} from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
   createMemoryCache,
@@ -11,6 +13,7 @@ import {
 } from "./index.js";
 
 bindPolicyStoreContract(createMemoryPolicyStore);
+bindStorageContract(() => createMemoryStorage());
 
 const record = {
   tenantId: "tenant_a",
@@ -26,46 +29,6 @@ const record = {
 };
 
 describe("memory adapter", () => {
-  it("isolates audits and rules by tenant and chat", async () => {
-    const storage = createMemoryStorage();
-    await storage.appendAudit(record);
-    await storage.appendAudit({
-      ...record,
-      tenantId: "tenant_b",
-      chatId: "chat_2",
-      eventId: "evt_2",
-    });
-    expect(
-      await storage.listAudits({ tenantId: "tenant_a", limit: 10 }),
-    ).toHaveLength(1);
-    expect(
-      await storage.listAudits({
-        tenantId: "tenant_a",
-        chatId: "missing",
-        limit: 10,
-      }),
-    ).toHaveLength(0);
-    expect(await storage.getRuleSet("tenant_a", "chat_1")).toBeNull();
-    const rules = parseRuleSet({
-      version: 1,
-      aggregate: "max",
-      rules: [
-        {
-          id: "spam_keywords",
-          enabled: true,
-          detectorIds: ["keyword"],
-          threshold: 1,
-          actions: ["delete"],
-        },
-      ],
-    });
-    await storage.putRuleSet("tenant_a", "chat_1", rules);
-    expect((await storage.getRuleSet("tenant_a", "chat_1"))?.rules[0]?.id).toBe(
-      "spam_keywords",
-    );
-    expect(await storage.getRuleSet("tenant_b", "chat_1")).toBeNull();
-  });
-
   it("expires cache entries from the injected clock", async () => {
     let now = 1_000;
     const cache = createMemoryCache(() => now);

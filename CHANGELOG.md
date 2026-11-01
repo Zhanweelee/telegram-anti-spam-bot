@@ -4,10 +4,17 @@
 
 ## Unreleased
 
+### P0-08
+
+- D1 按租户和群保存审计与规则文档。迁移语句可以重复执行。见 ADR 0007。
+- allow 和 dry-run 不写审计。`appendAudit` 失败时决策保持不变，日志只有 `storage_failed`。
+- 内存适配器与 D1 适配器共用 `@tasb/core/testing` 的 `bindStorageContract`。
+- Worker 在 `DB` / `POLICY_KV` 存在时使用它们。两个绑定都可以不填，免费部署仍然成功。
+
 ### P0-07
 
 - README 的 10 分钟路径包含设置 secret、`wrangler deploy` 和设置 webhook。
-- P0-08 尚未合并，部署不创建 D1 或 KV，也不要求付费计划。
+- 当时还没有 D1 适配器，所以那一版部署不创建 D1 或 KV，也不要求付费计划。
 - `pnpm smoke` 检查 `/health`，以及不带密钥的 401 和带密钥的 webhook 200。
 
 ### P0-06

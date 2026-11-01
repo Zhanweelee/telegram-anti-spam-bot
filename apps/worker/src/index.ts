@@ -6,6 +6,7 @@ import {
 import { Hono } from "hono";
 import { handleIncomingEvent } from "./operate.js";
 import { createWorkerLogger } from "./screen.js";
+import { resolveStores } from "./stores.js";
 
 export type DeploymentMode = "self-host" | "cloud";
 
@@ -15,6 +16,8 @@ export type WorkerBindings = {
   TENANT_ID?: string;
   ADMIN_USER_IDS?: string;
   TELEGRAM_BOT_TOKEN?: string;
+  DB?: D1Database;
+  POLICY_KV?: KVNamespace;
 };
 
 export interface CreateAppOptions {
@@ -83,10 +86,13 @@ export function createApp(
           await options.onEvent(event);
           return;
         }
+        const stores = resolveStores(c.env ?? {});
         await handleIncomingEvent(event, {
           logger,
           adminActorIds: parseAdminUserIds(c.env?.ADMIN_USER_IDS),
           reply: createTelegramReply({ token: c.env?.TELEGRAM_BOT_TOKEN }),
+          storage: stores.storage,
+          policyStore: stores.policyStore,
         });
       },
     });

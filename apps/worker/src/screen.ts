@@ -29,9 +29,9 @@ import { createKeywordDetector } from "@tasb/detector-keyword";
 import { fileRuleSource } from "./rules.js";
 
 /**
- * Isolate-local cache, policy, dry-run, and audits. A rule miss reads
- * the bundled files, not D1. The moderator is still per request and
- * does not call Telegram. Audits are capped at 200 rows.
+ * Isolate-local fallback when D1 and KV are not bound. A rule miss
+ * still reads the bundled files. The moderator is per request and
+ * does not call Telegram. Memory audits are capped at 200 rows.
  */
 export const workerCache = createMemoryCache();
 export const workerPolicyStore = createMemoryPolicyStore();

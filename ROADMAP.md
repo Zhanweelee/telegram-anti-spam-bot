@@ -95,7 +95,7 @@
 - 全新账号按文档操作能收到 `/health` 与一次 webhook 200。
 - 不要求付费计划。
 
-### P0-08 Cloudflare 存储适配器 — todo
+### P0-08 Cloudflare 存储适配器 — done
 
 验收：
 
@@ -228,3 +228,9 @@
 - 做了什么：README 和 `docs/deploy.md` 写成免费套餐的部署路径：设置 secret、`wrangler deploy`、`setWebhook`，再用 `pnpm smoke` 确认 `/health` 和一次 webhook 200。P0-08 还没合并，所以文档明确不要创建 D1 或 KV。
 - 学到什么：Telegram 的 `secret_token` 字符集比我们的比较函数更窄，部署文档必须先把它写清楚，否则 `setWebhook` 会拒绝密钥。
 - 下一步：做 P0-08，把 D1 迁移和 Cloudflare 存储适配器接上，并让 allow 与 dry-run 不写审计。
+
+### 2026-11-01 P0-08
+
+- 做了什么：D1 保存审计和规则文档，KV 继续保存白名单。迁移用 `CREATE TABLE IF NOT EXISTS`，可以重复执行。没配 `DB` 或 `POLICY_KV` 时 Worker 仍用内存。allow 和 dry-run 不写审计，存储失败不改变决策。
+- 学到什么：提交的 `wrangler.jsonc` 不能放占位 database id，否则免费账号的 dry-run 会在绑定不存在时失败。规则热路径继续绕过 `Storage.getRuleSet`。
+- 下一步：做 P0-09，按 tenant 导出不含原文的审计，并支持删除该范围内的记录。自动清理仍要先确认 30 天保留期。

@@ -89,7 +89,7 @@ function harness(options?: { failStorage?: boolean }) {
   const storage: Storage = {
     async appendAudit(record) {
       if (options?.failStorage) {
-        throw new Error("disk");
+        throw new Error("请免费领取礼品");
       }
       records.push(record);
     },
@@ -476,8 +476,13 @@ describe("runPipeline", () => {
       detail: "action_failed",
     });
     expect(
-      kit.logger.entries.some((entry) => entry.message === "audit_failed"),
+      kit.logger.entries.some(
+        (entry) =>
+          entry.message === "audit_failed" &&
+          entry.fields.code === "storage_failed",
+      ),
     ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("请免费领取礼品");
   });
 
   it("redacts evidence that copies the message body", async () => {
