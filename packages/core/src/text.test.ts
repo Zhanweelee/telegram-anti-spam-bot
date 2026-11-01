@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foldMatchText } from "./text.js";
+import { foldEncodedGaps, foldMatchText } from "./text.js";
 
 describe("foldMatchText", () => {
   it("drops format characters and keeps spaces and words", () => {
@@ -22,5 +22,31 @@ describe("foldMatchText", () => {
     expect(foldMatchText("加\u180B微信")).toBe("加微信");
     expect(foldMatchText("加\u{E0100}微信")).toBe("加微信");
     expect(foldMatchText("免 费领取")).toBe("免 费领取");
+  });
+});
+
+describe("foldEncodedGaps", () => {
+  it("drops percent-encoded gaps and keeps an ordinary space", () => {
+    expect(foldEncodedGaps("IN%E2%80%8BVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%e2%80%8bVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%EF%B8%8FVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%C2%A0VITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%0AVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%E1%A0%8BVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("a%F3%A0%84%80b")).toBe("ab");
+    expect(foldEncodedGaps("IN%20VITE")).toBe("IN%20VITE");
+    expect(foldEncodedGaps("bit%2Ely")).toBe("bit%2Ely");
+    expect(foldEncodedGaps("%00%7F")).toBe("%00%7F");
+    expect(foldEncodedGaps("%25E2%2580%258B")).toBe("%25E2%2580%258B");
+    expect(foldEncodedGaps("IN%E2%80")).toBe("IN%E2%80");
+    expect(foldEncodedGaps("%C0%80")).toBe("%C0%80");
+    expect(foldEncodedGaps("%ED%A0%80")).toBe("%ED%A0%80");
+    expect(foldEncodedGaps("%F0%80%80%80")).toBe("%F0%80%80%80");
+    expect(foldEncodedGaps("%F4%90%80%80")).toBe("%F4%90%80%80");
+    expect(foldEncodedGaps("%")).toBe("%");
+    expect(foldEncodedGaps("%ZZ")).toBe("%ZZ");
+    expect(foldEncodedGaps("免费领取")).toBe("免费领取");
+    expect(foldMatchText("免%E2%80%8B费领取")).toBe("免%E2%80%8B费领取");
+    expect(foldEncodedGaps("IN%E2%80%8BVITE")).not.toContain("\u200b");
   });
 });

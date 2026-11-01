@@ -199,6 +199,42 @@ describe("link fixtures", () => {
     expect(dumped).not.toContain("\u200b");
   });
 
+  it("folds percent-encoded gaps before reading a link", async () => {
+    const code = "ENCODEFOLD99";
+    const detector = createLinkDetector();
+    const logger = createMemoryLogger();
+    const invite = await detector.detect({
+      event: eventFor(`https://t.me/+IN%E2%80%8B${code}`),
+      logger,
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    const bare = await detector.detect({
+      event: eventFor("bit%E2%80%8B.ly/encoded"),
+      logger,
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const spaced = await detector.detect({
+      event: eventFor("https://bit.%20ly/encoded"),
+      logger,
+      signal,
+    });
+    expect(spaced).toBeNull();
+    const doubled = await detector.detect({
+      event: eventFor("https://t.me/+IN%25E2%2580%258BDOUBLE99"),
+      logger,
+      signal,
+    });
+    expect(doubled).toBeNull();
+    const dumped = JSON.stringify({ invite, bare, logs: logger.entries });
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("encoded");
+    expect(dumped).not.toContain("DOUBLE99");
+  });
+
   it("scores a telegram invite and keeps the code out of evidence", async () => {
     const code = "INVITESECRET99";
     const detector = createLinkDetector();

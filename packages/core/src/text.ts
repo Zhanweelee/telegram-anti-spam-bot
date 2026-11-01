@@ -15,3 +15,132 @@ const VARIATION_SELECTORS = /\p{Variation_Selector}/gu;
 export function foldMatchText(text: string): string {
   return text.replace(VARIATION_SELECTORS, "").replace(MATCH_GAPS, "");
 }
+
+/**
+ * Drop percent-encoded characters that `foldMatchText` would remove.
+ * `%20` and `%2E` stay. One layer only, so `%25E2%2580%258B` stays.
+ */
+export function foldEncodedGaps(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const skipped = encodedGapLength(text, index);
+    if (skipped > 0) {
+      index += skipped;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedGapLength(text: string, index: number): number {
+  const first = readPercentByte(text, index);
+  if (!first) {
+    return 0;
+  }
+  const width = utf8Width(first.byte);
+  if (!width) {
+    return 0;
+  }
+  const bytes = [first.byte];
+  let next = first.next;
+  for (let part = 1; part < width; part += 1) {
+    const byte = readPercentByte(text, next);
+    if (!byte || (byte.byte & 0xc0) !== 0x80) {
+      return 0;
+    }
+    bytes.push(byte.byte);
+    next = byte.next;
+  }
+  const char = decodeUtf8(bytes);
+  if (char === null || foldMatchText(char) !== "") {
+    return 0;
+  }
+  return next - index;
+}
+
+function readPercentByte(
+  text: string,
+  index: number,
+): { readonly byte: number; readonly next: number } | null {
+  if (text.charCodeAt(index) !== 37) {
+    return null;
+  }
+  const hex = text.slice(index + 1, index + 3);
+  if (!/^[0-9a-fA-F]{2}$/.test(hex)) {
+    return null;
+  }
+  return { byte: Number.parseInt(hex, 16), next: index + 3 };
+}
+
+function utf8Width(first: number): number | null {
+  if (first < 0x80) {
+    return 1;
+  }
+  if (first >= 0xc2 && first <= 0xdf) {
+    return 2;
+  }
+  if (first >= 0xe0 && first <= 0xef) {
+    return 3;
+  }
+  if (first >= 0xf0 && first <= 0xf4) {
+    return 4;
+  }
+  return null;
+}
+
+function decodeUtf8(bytes: readonly number[]): string | null {
+  const point = codePoint(bytes);
+  if (point === null || point > 0x10ffff) {
+    return null;
+  }
+  return String.fromCodePoint(point);
+}
+
+function codePoint(bytes: readonly number[]): number | null {
+  const first = bytes[0];
+  if (first === undefined) {
+    return null;
+  }
+  if (bytes.length === 1) {
+    return first;
+  }
+  const second = bytes[1];
+  if (second === undefined) {
+    return null;
+  }
+  if (bytes.length === 2) {
+    return ((first & 0x1f) << 6) | (second & 0x3f);
+  }
+  const third = bytes[2];
+  if (third === undefined) {
+    return null;
+  }
+  if (first === 0xe0 && second < 0xa0) {
+    return null;
+  }
+  if (first === 0xed && second >= 0xa0) {
+    return null;
+  }
+  if (bytes.length === 3) {
+    return ((first & 0x0f) << 12) | ((second & 0x3f) << 6) | (third & 0x3f);
+  }
+  const fourth = bytes[3];
+  if (fourth === undefined) {
+    return null;
+  }
+  if (first === 0xf0 && second < 0x90) {
+    return null;
+  }
+  if (first === 0xf4 && second >= 0x90) {
+    return null;
+  }
+  return (
+    ((first & 0x07) << 18) |
+    ((second & 0x3f) << 12) |
+    ((third & 0x3f) << 6) |
+    (fourth & 0x3f)
+  );
+}

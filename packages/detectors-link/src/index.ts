@@ -2,6 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
+  foldEncodedGaps,
   foldMatchText,
   withTimeout,
 } from "@tasb/core";
@@ -83,7 +84,7 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldMatchText(message.text);
+      const compared = foldEncodedGaps(foldMatchText(message.text));
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
         message.invites,

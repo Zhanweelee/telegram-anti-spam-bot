@@ -80,5 +80,20 @@
     "id": "spaced-short",
     "text": "bit. ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "encoded-invite",
+    "text": "https://t.me/+IN%E2%80%8BOFFER",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-short",
+    "text": "bit%E2%80%8B.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-space",
+    "text": "bit.%20ly/offer",
+    "label": "ham"
   }
 ]

@@ -254,5 +254,5 @@ export {
   ruleSwitchSchema,
   runtimeDocumentSchema,
 } from "./runtime.js";
-export { foldMatchText } from "./text.js";
+export { foldEncodedGaps, foldMatchText } from "./text.js";
 export { withTimeout } from "./timeout.js";

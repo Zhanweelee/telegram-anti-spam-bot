@@ -29,6 +29,23 @@
     "expect": "miss"
   },
   {
+    "name": "encoded-invite",
+    "text": "https://t.me/+IN%E2%80%8BINVITECODE",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "encoded-short",
+    "text": "bit%E2%80%8B.ly/abc",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "encoded-space",
+    "text": "bit.%20ly/abc",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"
