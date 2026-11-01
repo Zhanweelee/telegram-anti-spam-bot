@@ -90,7 +90,7 @@ packages/detectors-blocklist  跨群黑名单。默认关闭，只存标识或�
 packages/actions              内置动作（delete / mute / ban / captcha）
 packages/adapters-memory      测试用存储、策略、处罚和回复
 packages/adapters-cloudflare  D1 审计 / 规则文档，KV 白名单
-packages/platform-telegram    Telegram webhook 校验与 Update → Event。没有正文时用题干、标题、文件名、按钮文字或手动引用。复制句子里的网址、登录按钮和小程序按钮只留主机名
+packages/platform-telegram    Telegram webhook 校验与 Update → Event。没有正文时用题干、标题、文件名、按钮文字、富文本或手动引用。复制句子、富文本链接和登录按钮只留主机名
 packages/sdk                  插件作者的测试帮手
 apps/worker                   Workers 入口。self-host / cloud 共用
 apps/cloud                    云租户模块。免费额度配置在这里，支付未实现

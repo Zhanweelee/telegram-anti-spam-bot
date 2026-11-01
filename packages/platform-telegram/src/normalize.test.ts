@@ -1828,6 +1828,220 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("bit.ly");
   });
 
+  it("uses rich message text and keeps only link hostnames", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "RICHLINK43";
+    const outcome = await normalize({
+      update_id: 2901,
+      message: {
+        message_id: 111,
+        date: 1761955200,
+        chat: { id: -100780, type: "supergroup" },
+        from: { id: 9 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                "免",
+                { type: "bold", text: "费领取" },
+                {
+                  type: "url",
+                  text: "点",
+                  url: `https://bit.ly/path?q=${phrase}`,
+                },
+                {
+                  type: "url",
+                  text: "邀",
+                  url: `https://t.me/+${code}`,
+                },
+              ],
+            },
+            {
+              type: "list",
+              items: [
+                {
+                  label: "甲",
+                  blocks: [{ type: "paragraph", text: "乙" }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取点邀 甲 乙");
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("免费领取点邀 甲 乙"),
+    );
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("/path");
+  });
+
+  it("keeps a caption when a rich message is also present", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 2902,
+      message: {
+        message_id: 112,
+        date: 1761955200,
+        chat: { id: -100781, type: "supergroup" },
+        from: { id: 9 },
+        caption: "caption-only",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: `${phrase} https://evil.example/hide`,
+            },
+            {
+              type: "paragraph",
+              text: {
+                type: "url",
+                text: "短链",
+                url: "https://bit.ly/only",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("caption-only");
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("caption-only"),
+    );
+    expect(outcome.event.message?.hosts).toEqual(["evil.example", "bit.ly"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("/hide");
+    expect(dumped).not.toContain("/only");
+  });
+
+  it("uses rich button labels when the rich message has no text", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "RICHBTN43";
+    const outcome = await normalize({
+      update_id: 2903,
+      message: {
+        message_id: 113,
+        date: 1761955200,
+        chat: { id: -100782, type: "supergroup" },
+        from: { id: 9 },
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [
+                {
+                  text: "免费领取",
+                  url: `https://t.me/%2B${code}`,
+                },
+                {
+                  text: "今天站会",
+                  copy_text: { text: `${phrase} https://example.com/hide` },
+                  web_app: { url: "https://tinyurl.com/only" },
+                },
+                {
+                  text: "skip",
+                  callback_data: "https://bit.ly/skip",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取 今天站会 skip");
+    expect(outcome.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "tinyurl.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("/hide");
+    expect(dumped).not.toContain("/only");
+    expect(dumped).not.toContain("/skip");
+  });
+
+  it("leaves rich mention ids and card numbers out of the event", async () => {
+    const card = "4111111111111111";
+    const mail = "secret@evil.example";
+    const phone = "+10000000043";
+    const latex = "LATEXSECRET43";
+    const outcome = await normalize({
+      update_id: 2904,
+      message: {
+        message_id: 114,
+        date: 1761955200,
+        chat: { id: -100783, type: "supergroup" },
+        from: { id: 9 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                {
+                  type: "text_mention",
+                  text: "名字",
+                  user: { id: 999001, first_name: "机密用户名" },
+                },
+                {
+                  type: "bank_card_number",
+                  text: "卡",
+                  bank_card_number: card,
+                },
+                {
+                  type: "email_address",
+                  text: "邮",
+                  email_address: mail,
+                },
+                {
+                  type: "phone_number",
+                  text: "电",
+                  phone_number: phone,
+                },
+              ],
+            },
+            { type: "mathematical_expression", expression: latex },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("名字卡邮电");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("999001");
+    expect(dumped).not.toContain("机密用户名");
+    expect(dumped).not.toContain(card);
+    expect(dumped).not.toContain(mail);
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(latex);
+    expect(dumped).not.toContain("evil.example");
+  });
+
   it("leaves a reply keyboard out of the text", async () => {
     const outcome = await normalize({
       update_id: 2806,

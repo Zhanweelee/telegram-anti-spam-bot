@@ -378,6 +378,9 @@ function linkHosts(message: Record<string, unknown>): {
   for (const url of buttonUrls(message)) {
     urls.push(url);
   }
+  for (const url of richUrls(message)) {
+    urls.push(url);
+  }
   for (const url of urls) {
     const link = hostFromUrl(url);
     if (!link) {
@@ -550,6 +553,179 @@ function uniqueId(value: unknown): string | undefined {
   return id;
 }
 
+function richBody(message: Record<string, unknown>): string {
+  const read = readRich(message);
+  return read.text;
+}
+
+function richUrls(message: Record<string, unknown>): string[] {
+  return readRich(message).urls;
+}
+
+function readRich(message: Record<string, unknown>): {
+  text: string;
+  urls: string[];
+} {
+  const rich = message.rich_message;
+  if (!isRecord(rich)) {
+    return { text: "", urls: [] };
+  }
+  const parts: string[] = [];
+  const labels: string[] = [];
+  const urls: string[] = [];
+  walkBlocks(rich.blocks, parts, labels, urls);
+  const body = parts.join(" ");
+  const text = body.length > 0 ? body : labels.join(" ");
+  return { text: text.slice(0, MAX_TEXT), urls };
+}
+
+function walkBlocks(
+  value: unknown,
+  parts: string[],
+  labels: string[],
+  urls: string[],
+): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const block of value) {
+    if (!isRecord(block)) {
+      continue;
+    }
+    if (block.type === "buttons" && Array.isArray(block.buttons)) {
+      for (const button of block.buttons) {
+        const label = richButton(button, urls);
+        if (label.length > 0) {
+          labels.push(label);
+        }
+      }
+      continue;
+    }
+    if (block.type === "list" && Array.isArray(block.items)) {
+      for (const item of block.items) {
+        if (!isRecord(item)) {
+          continue;
+        }
+        if (typeof item.label === "string" && item.label.length > 0) {
+          parts.push(item.label);
+        }
+        walkBlocks(item.blocks, parts, labels, urls);
+      }
+      continue;
+    }
+    if (block.type === "table" && Array.isArray(block.cells)) {
+      for (const row of block.cells) {
+        if (!Array.isArray(row)) {
+          continue;
+        }
+        for (const cell of row) {
+          if (!isRecord(cell)) {
+            continue;
+          }
+          const text = richText(cell.text, urls);
+          if (text.length > 0) {
+            parts.push(text);
+          }
+        }
+      }
+      pushRich(richText(block.caption, urls), parts);
+      continue;
+    }
+    if (block.type === "details") {
+      pushRich(richText(block.summary, urls), parts);
+      walkBlocks(block.blocks, parts, labels, urls);
+      continue;
+    }
+    if (
+      block.type === "blockquote" ||
+      block.type === "collage" ||
+      block.type === "slideshow"
+    ) {
+      walkBlocks(block.blocks, parts, labels, urls);
+      pushRich(richText(block.credit, urls), parts);
+      pushCaption(block.caption, parts, urls);
+      continue;
+    }
+    if (
+      block.type === "paragraph" ||
+      block.type === "heading" ||
+      block.type === "pre" ||
+      block.type === "footer" ||
+      block.type === "expandable_blockquote" ||
+      block.type === "pullquote" ||
+      block.type === "thinking"
+    ) {
+      pushRich(richText(block.text, urls), parts);
+      pushRich(richText(block.credit, urls), parts);
+      continue;
+    }
+    pushCaption(block.caption, parts, urls);
+  }
+}
+
+function pushRich(text: string, parts: string[]): void {
+  if (text.length > 0) {
+    parts.push(text);
+  }
+}
+
+function pushCaption(caption: unknown, parts: string[], urls: string[]): void {
+  if (!isRecord(caption)) {
+    return;
+  }
+  pushRich(richText(caption.text, urls), parts);
+  pushRich(richText(caption.credit, urls), parts);
+}
+
+function richText(value: unknown, urls: string[]): string {
+  if (typeof value === "string") {
+    for (const url of urlsInText(value)) {
+      urls.push(url);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => richText(item, urls)).join("");
+  }
+  if (!isRecord(value)) {
+    return "";
+  }
+  if (value.type === "url" && typeof value.url === "string") {
+    urls.push(value.url);
+  }
+  if (value.type === "button") {
+    return richButton(value.button, urls);
+  }
+  if ("text" in value) {
+    return richText(value.text, urls);
+  }
+  return "";
+}
+
+function richButton(value: unknown, urls: string[]): string {
+  if (!isRecord(value)) {
+    return "";
+  }
+  if (typeof value.url === "string") {
+    urls.push(value.url);
+  }
+  const copied = value.copy_text;
+  if (isRecord(copied) && typeof copied.text === "string") {
+    for (const url of urlsInText(copied.text)) {
+      urls.push(url);
+    }
+  }
+  const login = value.login_url;
+  if (isRecord(login) && typeof login.url === "string") {
+    urls.push(login.url);
+  }
+  const app = value.web_app;
+  if (isRecord(app) && typeof app.url === "string") {
+    urls.push(app.url);
+  }
+  return richText(value.text, urls);
+}
+
 function messageText(
   message: Record<string, unknown>,
   includeQuote = true,
@@ -559,6 +735,10 @@ function messageText(
   }
   if (typeof message.caption === "string" && message.caption.length > 0) {
     return message.caption.slice(0, MAX_TEXT);
+  }
+  const rich = richBody(message);
+  if (rich.length > 0) {
+    return rich;
   }
   const poll = message.poll;
   if (
