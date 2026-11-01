@@ -59,6 +59,7 @@ describe("event schema", () => {
       },
     });
     expect(event.message?.forward).toBe("channel");
+    expect(event.message?.hosts).toBeUndefined();
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -72,6 +73,67 @@ describe("event schema", () => {
           text: "hi",
           textSha256: "ab".repeat(32),
           forward: "bot",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts hidden hostnames and rejects paths or odd names", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "点这里",
+        textSha256: "ab".repeat(32),
+        hosts: ["bit.ly", "203.0.113.9"],
+      },
+    });
+    expect(event.message?.hosts).toEqual(["bit.ly", "203.0.113.9"]);
+    const bad = [
+      "BIT.LY",
+      "a..b",
+      ".bit.ly",
+      "bit.ly.",
+      "bit.ly/x",
+      "",
+      "a".repeat(254),
+    ];
+    for (const host of bad) {
+      expect(() =>
+        parseEvent({
+          id: "evt_1",
+          tenantId: "tenant_1",
+          chatId: "chat_1",
+          kind: "message",
+          occurredAt: "2026-11-01T00:00:00Z",
+          actor: { id: "user_1", isAdmin: false },
+          message: {
+            id: "msg_1",
+            text: "点这里",
+            textSha256: "ab".repeat(32),
+            hosts: [host],
+          },
+        }),
+      ).toThrow();
+    }
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "点这里",
+          textSha256: "ab".repeat(32),
+          hosts: [],
         },
       }),
     ).toThrow();

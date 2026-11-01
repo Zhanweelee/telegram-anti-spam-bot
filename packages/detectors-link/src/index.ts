@@ -62,11 +62,11 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         : { sourceTimeoutMs: deps.sourceTimeoutMs }),
     },
     async detect(ctx, parsed) {
-      const text = ctx.event.message?.text;
-      if (!text) {
+      const message = ctx.event.message;
+      if (!message) {
         return null;
       }
-      const hosts = extractHosts(text);
+      const hosts = mergeHosts(extractHosts(message.text), message.hosts);
       if (hosts.length === 0) {
         return null;
       }
@@ -182,6 +182,26 @@ function isIp(host: string): boolean {
     const value = Number(part);
     return value >= 0 && value <= 255;
   });
+}
+
+function mergeHosts(
+  fromText: readonly string[],
+  extra: readonly string[] | undefined,
+): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  for (const host of extra === undefined ? fromText : [...fromText, ...extra]) {
+    const normalized = host.toLowerCase();
+    if (normalized.length === 0 || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    found.push(normalized);
+    if (found.length >= 8) {
+      break;
+    }
+  }
+  return found;
 }
 
 export function extractHosts(text: string): string[] {

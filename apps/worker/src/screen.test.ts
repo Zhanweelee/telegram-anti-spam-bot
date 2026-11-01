@@ -466,6 +466,44 @@ describe("screenTelegramEvent", () => {
     ).toBe(true);
   });
 
+  it("deletes a hidden short link and keeps the path out of logs", async () => {
+    const secret = "https://bit.ly/机密路径";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2003,
+        message: {
+          message_id: 11,
+          date: 1761955200,
+          chat: { id: -100589, type: "supergroup", title: "机密群名" },
+          from: { id: 81 },
+          text: "点这里",
+          entities: [{ type: "text_link", offset: 0, length: 3, url: secret }],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(secret);
+    expect(dumped).not.toContain("机密路径");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a short link and keeps the path out of the decision", async () => {
     const path = "secretpath";
     const result = await screenTelegramEvent(

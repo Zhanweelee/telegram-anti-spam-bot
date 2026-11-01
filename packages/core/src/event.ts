@@ -21,12 +21,29 @@ export const forwardKindSchema = z.enum(forwardKinds);
 export const botStates = ["admin", "gone"] as const;
 export const botStateSchema = z.enum(botStates);
 
+function isHostname(value: string): boolean {
+  if (value.length < 1 || value.length > 253) {
+    return false;
+  }
+  if (!/^[a-z0-9.-]+$/.test(value)) {
+    return false;
+  }
+  if (value.includes("..") || value.startsWith(".") || value.endsWith(".")) {
+    return false;
+  }
+  return true;
+}
+
+const hostnameSchema = z.string().refine(isHostname);
+
 export const messageSchema = z.strictObject({
   id: idSchema,
   text: z.string().max(4096),
   textSha256: sha256Schema,
   /** Source class only. Titles and author names stay out. */
   forward: forwardKindSchema.optional(),
+  /** Hostnames from hidden links. Paths and queries stay out. */
+  hosts: z.array(hostnameSchema).min(1).max(8).optional(),
 });
 
 export const profileSchema = z.strictObject({

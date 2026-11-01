@@ -27,7 +27,7 @@ const phrase = "请免费领取礼品";
 const signal = { aborted: false };
 const HASH = "ab".repeat(32);
 
-function eventFor(text: string): Event {
+function eventFor(text: string, hosts?: readonly string[]): Event {
   return parseEvent({
     id: "evt_link",
     tenantId: "tenant_demo",
@@ -35,7 +35,12 @@ function eventFor(text: string): Event {
     kind: "message",
     occurredAt: "2026-11-01T00:00:00.000Z",
     actor: { id: "user_1", isAdmin: false },
-    message: { id: "msg_1", text, textSha256: HASH },
+    message: {
+      id: "msg_1",
+      text,
+      textSha256: HASH,
+      ...(hosts === undefined ? {} : { hosts: [...hosts] }),
+    },
   });
 }
 
@@ -122,5 +127,40 @@ describe("link fixtures", () => {
     });
     expect(plain).toBeNull();
     expect(calls).toBe(0);
+  });
+
+  it("scores a hidden short-link host and leaves the path out", async () => {
+    const secret = "机密路径";
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor("点这里", ["bit.ly"]),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["short_link"]);
+    expect(hit?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(hit)).not.toContain(secret);
+    const plain = await detector.detect({
+      event: eventFor("点这里", ["example.com"]),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+    const bare = await detector.detect({
+      event: eventFor("", ["203.0.113.9"]),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["ip_host"]);
+    const visible = Array.from(
+      { length: 8 },
+      (_, index) => `https://h${index}.example`,
+    ).join(" ");
+    const capped = await detector.detect({
+      event: eventFor(visible, ["bit.ly"]),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capped).toBeNull();
   });
 });

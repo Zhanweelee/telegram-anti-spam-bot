@@ -13,6 +13,7 @@ interface LinkCase {
   readonly id: string;
   readonly text: string;
   readonly label: "spam" | "ham";
+  readonly hosts?: readonly string[];
   readonly denylist?: readonly string[];
   readonly source?: "timeout" | "bad" | "throw";
 }
@@ -79,6 +80,7 @@ export async function evaluateLink(): Promise<{
           id: "1",
           text: item.text,
           textSha256: "e".repeat(64),
+          ...(item.hosts === undefined ? {} : { hosts: [...item.hosts] }),
         },
       }),
       logger,

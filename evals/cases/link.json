@@ -42,5 +42,17 @@
     "text": "https://example.com/boom",
     "label": "ham",
     "source": "throw"
+  },
+  {
+    "id": "hidden-short",
+    "text": "点这里",
+    "hosts": ["bit.ly"],
+    "label": "spam"
+  },
+  {
+    "id": "hidden-plain",
+    "text": "点这里",
+    "hosts": ["example.com"],
+    "label": "ham"
   }
 ]

@@ -114,6 +114,72 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.actor.isAdmin).toBe(true);
   });
 
+  it("keeps only the hostname of a hidden text link", async () => {
+    const secret = "https://user:机密@bit.ly/机密路径?q=1";
+    const outcome = await normalize({
+      update_id: 2003,
+      message: {
+        message_id: 9,
+        date: 1761955200,
+        chat: { id: -100589, type: "supergroup" },
+        from: { id: 9 },
+        text: "点这里",
+        entities: [
+          { type: "text_link", offset: 0, length: 3, url: secret },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "https://BIT.LY/again",
+          },
+          {
+            type: "url",
+            offset: 0,
+            length: 3,
+            url: "https://evil.example/nope",
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "tg://resolve?domain=spam",
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://bit.ly/${"a".repeat(2048)}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "http://[2001:db8::1]/x",
+          },
+        ],
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 2,
+            url: "https://example.com/docs?token=机密",
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点这里");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("点这里"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(secret);
+    expect(dumped).not.toContain("机密");
+    expect(dumped).not.toContain("evil.example");
+  });
+
   it("prefers a caption when text is missing", async () => {
     const outcome = await normalize({
       update_id: 8,

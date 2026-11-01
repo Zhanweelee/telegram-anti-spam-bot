@@ -91,6 +91,7 @@ async function messageEvent(
   }
   const text = messageText(message);
   const forward = forwardKind(message);
+  const hosts = linkHosts(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -109,6 +110,7 @@ async function messageEvent(
       text,
       textSha256: await sha256Hex(text),
       ...(forward ? { forward } : {}),
+      ...(hosts.length > 0 ? { hosts } : {}),
     },
   });
 }
@@ -288,6 +290,66 @@ function finish(draft: unknown): NormalizeOutcome {
   } catch {
     return { status: "ignored" };
   }
+}
+
+const MAX_LINK = 2048;
+const MAX_HOSTS = 8;
+
+function linkHosts(message: Record<string, unknown>): string[] {
+  const found: string[] = [];
+  const seen = new Set<string>();
+  for (const list of [message.entities, message.caption_entities]) {
+    if (!Array.isArray(list)) {
+      continue;
+    }
+    for (const entity of list) {
+      if (!isRecord(entity) || entity.type !== "text_link") {
+        continue;
+      }
+      const host = hostFromUrl(entity.url);
+      if (!host || seen.has(host)) {
+        continue;
+      }
+      seen.add(host);
+      found.push(host);
+      if (found.length >= MAX_HOSTS) {
+        return found;
+      }
+    }
+  }
+  return found;
+}
+
+function hostFromUrl(value: unknown): string | null {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > MAX_LINK
+  ) {
+    return null;
+  }
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  if (
+    host.length === 0 ||
+    host.length > 253 ||
+    host.includes(":") ||
+    host.includes("..") ||
+    host.startsWith(".") ||
+    host.endsWith(".") ||
+    !/^[a-z0-9.-]+$/.test(host)
+  ) {
+    return null;
+  }
+  return host;
 }
 
 function messageText(message: Record<string, unknown>): string {
