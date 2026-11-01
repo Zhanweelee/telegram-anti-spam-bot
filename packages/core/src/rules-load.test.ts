@@ -7,6 +7,7 @@ import {
   type RulePackSource,
 } from "./rule-pack.js";
 import {
+  applyRuleSwitches,
   type LoadRuleSetInput,
   loadRuleSet,
   openRuleSet,
@@ -348,6 +349,105 @@ describe("loadRuleSet", () => {
     expect(await store.get("other", "chat_1")).toBeNull();
     await store.put("local", "chat_1", null);
     expect(await store.get("local", "chat_1")).toBeNull();
+  });
+});
+
+describe("applyRuleSwitches", () => {
+  it("enables a disabled rule and ignores unknown ids", () => {
+    const rules = {
+      version: 1 as const,
+      aggregate: "max" as const,
+      rules: [
+        {
+          id: "spam_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete" as const],
+        },
+        {
+          id: "via_inline",
+          enabled: false,
+          detectorIds: ["via"],
+          threshold: 1,
+          actions: ["delete" as const],
+        },
+      ],
+    };
+    const same = applyRuleSwitches(rules, []);
+    expect(same).toBe(rules);
+    const ignored = applyRuleSwitches(rules, [
+      { ruleId: "missing", enabled: false },
+    ]);
+    expect(ignored).toBe(rules);
+    const next = applyRuleSwitches(rules, [
+      { ruleId: "via_inline", enabled: true },
+      { ruleId: "missing", enabled: false },
+    ]);
+    expect(next).not.toBe(rules);
+    expect(next.rules[0]).toBe(rules.rules[0]);
+    expect(next.rules[1]?.enabled).toBe(true);
+    expect(rules.rules[1]?.enabled).toBe(false);
+  });
+
+  it("applies a switch after the cached ruleset", async () => {
+    const cached = memoryCache();
+    const rules = source();
+    const first = await loadRuleSet(input(cached, rules));
+    expect(first.rules[0]?.enabled).toBe(true);
+    const reads = rules.calls;
+    const second = await loadRuleSet({
+      ...input(cached, rules),
+      switches: [{ ruleId: "spam_keywords", enabled: false }],
+    });
+    expect(rules.calls).toBe(reads);
+    expect(second.rules[0]?.enabled).toBe(false);
+    expect(cached.values.get("rules:local:chat_1")).toContain('"enabled":true');
+    const packed = await resolveRuleSet({
+      ...input(cached, rules),
+      switches: [{ ruleId: "spam_keywords", enabled: false }],
+      pack: {
+        id: "community",
+        source: countingPacks({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "via_inline",
+              enabled: false,
+              detectorIds: ["via"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        }),
+        archive: createMemoryRulePackArchive(),
+      },
+    });
+    expect(packed.rules[0]?.id).toBe("via_inline");
+    expect(packed.rules[0]?.enabled).toBe(false);
+    const opened = await resolveRuleSet({
+      ...input(memoryCache(), rules),
+      switches: [{ ruleId: "via_inline", enabled: true }],
+      pack: {
+        id: "community",
+        source: countingPacks({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "via_inline",
+              enabled: false,
+              detectorIds: ["via"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        }),
+        archive: createMemoryRulePackArchive(),
+      },
+    });
+    expect(opened.rules[0]?.enabled).toBe(true);
   });
 });
 

@@ -2,6 +2,7 @@ import type { Cache } from "./cache.js";
 import type { Logger } from "./logger.js";
 import { type RuleSet, ruleSetSchema } from "./rule.js";
 import type { RulePackArchive, RulePackSource } from "./rule-pack.js";
+import type { RuleSwitch } from "./runtime.js";
 
 export const DEFAULT_RULE_CACHE_TTL_SECONDS = 60;
 
@@ -28,6 +29,7 @@ export interface LoadRuleSetInput {
   readonly source: RuleSource;
   readonly logger: Logger;
   readonly ttlSeconds?: number;
+  readonly switches?: readonly RuleSwitch[];
 }
 
 export interface RulePackRequest {
@@ -36,7 +38,34 @@ export interface RulePackRequest {
   readonly archive: RulePackArchive;
 }
 
+export function applyRuleSwitches(
+  rules: RuleSet,
+  switches: readonly RuleSwitch[],
+): RuleSet {
+  if (switches.length === 0) {
+    return rules;
+  }
+  const enabled = new Map(switches.map((item) => [item.ruleId, item.enabled]));
+  let changed = false;
+  const next = rules.rules.map((rule) => {
+    const flag = enabled.get(rule.id);
+    if (flag === undefined || flag === rule.enabled) {
+      return rule;
+    }
+    changed = true;
+    return { ...rule, enabled: flag };
+  });
+  return changed ? { ...rules, rules: next } : rules;
+}
+
 export async function loadRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
+  return applyRuleSwitches(
+    await loadStoredRuleSet(input),
+    input.switches ?? [],
+  );
+}
+
+async function loadStoredRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
   const key = `rules:${input.tenantId}:${input.chatId}`;
   const ttl = input.ttlSeconds ?? DEFAULT_RULE_CACHE_TTL_SECONDS;
   const cached = await readCache(input, key);
@@ -96,9 +125,18 @@ export async function loadRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
 export async function resolveRuleSet(
   input: LoadRuleSetInput & { readonly pack?: RulePackRequest },
 ): Promise<RuleSet> {
+  return applyRuleSwitches(
+    await resolveStoredRuleSet(input),
+    input.switches ?? [],
+  );
+}
+
+async function resolveStoredRuleSet(
+  input: LoadRuleSetInput & { readonly pack?: RulePackRequest },
+): Promise<RuleSet> {
   const pack = input.pack;
   if (!pack) {
-    return loadRuleSet(input);
+    return loadStoredRuleSet(input);
   }
   const key = `pack:${input.tenantId}:${input.chatId}:${pack.id}`;
   const ttl = input.ttlSeconds ?? DEFAULT_RULE_CACHE_TTL_SECONDS;
@@ -144,7 +182,7 @@ async function keepPrevious(
     await remember(input, key, previous, ttl);
     return previous;
   }
-  return loadRuleSet(input);
+  return loadStoredRuleSet(input);
 }
 
 async function saveArchive(

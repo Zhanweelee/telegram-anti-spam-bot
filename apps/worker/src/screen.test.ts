@@ -433,6 +433,137 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes an inline bot after a private-chat switch enables the rule", async () => {
+    const name = "机密代发";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2011,
+        message: {
+          message_id: 15,
+          date: 1761955200,
+          chat: { id: -100596, type: "supergroup", title: "机密群名" },
+          from: { id: 94 },
+          text: "今天站会",
+          via_bot: {
+            id: 999003,
+            is_bot: true,
+            first_name: name,
+            username: name,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const runtime = createMemoryRuntimeStore();
+    const cache = createMemoryCache();
+    const idle = await screenTelegramEvent(outcome.event, {
+      logger: createMemoryLogger(),
+      rateWindow: createMemoryRateWindow(),
+      runtime,
+      cache,
+    });
+    expect(idle.decision.action).toBe("allow");
+    expect(
+      await runtime.setRuleSwitch("local", "-100596", "via_inline", true),
+    ).toBe(true);
+    const hit = await screenTelegramEvent(
+      { ...outcome.event, id: "tg_2012" },
+      {
+        logger: createMemoryLogger(),
+        rateWindow: createMemoryRateWindow(),
+        runtime,
+        cache,
+      },
+    );
+    expect(hit.decision.action).toBe("delete");
+    expect(hit.decision.reasons).toContain("via_bot");
+    expect(hit.decision.ruleIds).toContain("via_inline");
+    await runtime.clearRuleSwitch("local", "-100596", "via_inline");
+    const again = await screenTelegramEvent(
+      { ...outcome.event, id: "tg_2013" },
+      {
+        logger: createMemoryLogger(),
+        rateWindow: createMemoryRateWindow(),
+        runtime,
+        cache,
+      },
+    );
+    expect(again.decision.action).toBe("allow");
+    const brokenLog = createMemoryLogger();
+    const broken = await screenTelegramEvent(
+      { ...outcome.event, id: "tg_2014" },
+      {
+        logger: brokenLog,
+        rateWindow: createMemoryRateWindow(),
+        cache,
+        runtime: {
+          ...runtime,
+          async listRuleSwitches() {
+            throw new Error(name);
+          },
+        },
+      },
+    );
+    expect(broken.decision.action).toBe("allow");
+    expect(JSON.stringify(brokenLog.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(brokenLog.entries)).not.toContain(name);
+    expect(JSON.stringify(hit.decision.evidence)).not.toContain("999003");
+  });
+
+  it("drops a switched-on via rule after the free quota is spent", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(
+      await runtime.setRuleSwitch("local", "-100597", "via_inline", true),
+    ).toBe(true);
+    const quota = {
+      policy: quotaPolicyFromEnv({
+        QUOTA_ENABLED: "true",
+        QUOTA_LIMIT: "1",
+        QUOTA_BASIC: "keyword",
+      }),
+      store: createMemoryQuotaStore(),
+    };
+    const viaEvent = parseEvent({
+      id: "tg_2015",
+      tenantId: "local",
+      chatId: "-100597",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "94", isAdmin: false },
+      message: {
+        id: "15",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        via: true,
+      },
+    });
+    const first = await screenTelegramEvent(viaEvent, {
+      runtime,
+      quota,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(first.decision.action).toBe("delete");
+    expect(first.decision.reasons).toContain("via_bot");
+    const second = await screenTelegramEvent(
+      { ...viaEvent, id: "tg_2016" },
+      {
+        runtime,
+        quota,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(second.decision.action).toBe("allow");
+    expect(second.decision.reasons).not.toContain("via_bot");
+  });
+
   it("uses a chat override from the rule file and does not read storage", async () => {
     const text = "请免费领取礼品";
     const storage = countingStorage();

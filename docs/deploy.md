@@ -61,7 +61,9 @@ pnpm exec wrangler d1 execute tasb --remote --file=../../packages/adapters-cloud
 
 Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时，在 `wrangler.jsonc` 里加 `"ai": { "binding": "AI" }`，再把那条规则的 `enabled` 改成 true。模型名和免费计划限制见 ADR 0015。
 
-正则规则 `regex_hint` 同样是关闭的。要打开时只改这条规则的 `enabled`。模式列表在检测器里，创建时就会拒绝过长或带嵌套量词的写法。见 ADR 0023。
+正则规则 `regex_hint` 同样是关闭的。要打开时只改这条规则的 `enabled`，或在私聊用 `/rule`。模式列表在检测器里，创建时就会拒绝过长或带嵌套量词的写法。见 ADR 0023。
+
+`/rule [chatId] <ruleId> on|off|reset` 只改这一群这一条已有规则的启用状态。开关在 isolate 内存里，每个群最多 32 条，一共最多 256 个群，重启后回到文件里的 `enabled`。不新增 wrangler 变量。见 ADR 0034。
 
 ## 部署
 

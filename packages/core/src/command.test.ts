@@ -74,6 +74,7 @@ function policyStore(): PolicyStore & { puts: number; gets: number } {
 
 function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
   const enabled = new Map<string, boolean>();
+  const ruleSwitches = new Map<string, Map<string, boolean>>();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -81,6 +82,29 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async setDryRun(tenantId, chatId, value) {
       enabled.set(`${tenantId}:${chatId}`, value);
+    },
+    async listRuleSwitches(tenantId, chatId) {
+      const saved = ruleSwitches.get(`${tenantId}:${chatId}`);
+      if (!saved) {
+        return [];
+      }
+      return [...saved.entries()].map(([ruleId, flag]) => ({
+        ruleId,
+        enabled: flag,
+      }));
+    },
+    async setRuleSwitch(tenantId, chatId, ruleId, flag) {
+      const id = `${tenantId}:${chatId}`;
+      let saved = ruleSwitches.get(id);
+      if (!saved) {
+        saved = new Map();
+        ruleSwitches.set(id, saved);
+      }
+      saved.set(ruleId, flag);
+      return true;
+    },
+    async clearRuleSwitch(tenantId, chatId, ruleId) {
+      ruleSwitches.get(`${tenantId}:${chatId}`)?.delete(ruleId);
     },
   };
 }
@@ -1675,7 +1699,240 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(other)).not.toContain(phrase);
   });
+
+  it("toggles one rule from private chat without rewriting the file", async () => {
+    const deps = kit();
+    const file = ruleFile();
+    const scoped = directory(["-100"]);
+    const on = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule via_inline on", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(on).toMatchObject({
+      status: "reply",
+      command: "rule",
+      text: "rule -100 via_inline enabled switch",
+    });
+    const listed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(listed).toMatchObject({ status: "reply" });
+    if (listed.status === "reply") {
+      expect(listed.text).toContain("via_inline enabled");
+      expect(listed.text).toContain("spam_keywords enabled");
+    }
+    const reset = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule via_inline reset",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(reset).toMatchObject({
+      text: "rule -100 via_inline disabled file",
+    });
+    const off = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule spam_keywords off",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(off).toMatchObject({
+      text: "rule -100 spam_keywords disabled switch",
+    });
+    const bare = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule via_inline on", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(bare).toMatchObject({
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+    });
+    const status = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule -100 via_inline", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(status).toMatchObject({
+      text: "rule -100 via_inline disabled file",
+    });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -200 via_inline on",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const noisy = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: `/rule ${phrase} on`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(noisy).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(noisy)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule not_a_rule on",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(missing).toMatchObject({ text: "rule not_a_rule missing" });
+    const many = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule via_inline on", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100", "-300"]),
+      source: file,
+    });
+    expect(many).toMatchObject({
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+    });
+    const mode = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule via_inline maybe",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(mode).toMatchObject({
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+    });
+    expect(JSON.stringify(mode)).not.toContain("maybe");
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      source: file,
+    });
+    expect(english).toMatchObject({
+      text: "Usage: /rule [chatId] <ruleId> [on|off|reset]",
+    });
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule -100 via_inline on", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+      runtime: {
+        ...deps.runtime,
+        async setRuleSwitch() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("rule_switch_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule -100 via_inline", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+      runtime: {
+        ...deps.runtime,
+        async listRuleSwitches() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const help = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text).toContain("/rule [chatId] <ruleId> [on|off|reset]");
+    }
+  });
 });
+
+function directory(ids: readonly string[]) {
+  return {
+    async noteBot() {
+      return "ok" as const;
+    },
+    async noteMember() {
+      return "ok" as const;
+    },
+    async chatsFor() {
+      return ids;
+    },
+    async list() {
+      return ids;
+    },
+  };
+}
+
+function ruleFile(): RuleSource {
+  return {
+    async loadChat() {
+      return null;
+    },
+    async loadDefault() {
+      return {
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "spam_keywords",
+            enabled: true,
+            detectorIds: ["keyword"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+          {
+            id: "via_inline",
+            enabled: false,
+            detectorIds: ["via"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      };
+    },
+  };
+}
 
 function appealAudit(): AuditRecord {
   return {

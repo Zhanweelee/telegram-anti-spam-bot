@@ -177,8 +177,12 @@ function policyKey(tenantId: string, chatId: string): string {
   return `${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
 }
 
+const MAX_SWITCH_CHATS = 256;
+const MAX_SWITCHES_PER_CHAT = 32;
+
 export function createMemoryRuntimeStore(): RuntimeStore {
   const dryRun = new Set<string>();
+  const switches = new Map<string, Map<string, boolean>>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -190,6 +194,43 @@ export function createMemoryRuntimeStore(): RuntimeStore {
         return;
       }
       dryRun.delete(id);
+    },
+    async listRuleSwitches(tenantId, chatId) {
+      const saved = switches.get(key(tenantId, chatId));
+      if (!saved) {
+        return [];
+      }
+      return [...saved.entries()].map(([ruleId, enabled]) => ({
+        ruleId,
+        enabled,
+      }));
+    },
+    async setRuleSwitch(tenantId, chatId, ruleId, enabled) {
+      const id = key(tenantId, chatId);
+      let saved = switches.get(id);
+      if (!saved) {
+        if (switches.size >= MAX_SWITCH_CHATS) {
+          return false;
+        }
+        saved = new Map();
+        switches.set(id, saved);
+      }
+      if (!saved.has(ruleId) && saved.size >= MAX_SWITCHES_PER_CHAT) {
+        return false;
+      }
+      saved.set(ruleId, enabled);
+      return true;
+    },
+    async clearRuleSwitch(tenantId, chatId, ruleId) {
+      const id = key(tenantId, chatId);
+      const saved = switches.get(id);
+      if (!saved) {
+        return;
+      }
+      saved.delete(ruleId);
+      if (saved.size === 0) {
+        switches.delete(id);
+      }
     },
   };
 }

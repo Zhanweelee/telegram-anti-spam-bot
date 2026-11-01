@@ -31,11 +31,12 @@ import {
 } from "./review.js";
 import { parseRulePackId, type RuleSubscriptionStore } from "./rule-pack.js";
 import { loadRuleSet, type RuleSource } from "./rules-load.js";
-import type { RuntimeStore } from "./runtime.js";
+import type { RuleSwitch, RuntimeStore } from "./runtime.js";
 
 const COMMAND_NAMES = [
   "help",
   "rules",
+  "rule",
   "whitelist",
   "logs",
   "dryrun",
@@ -147,6 +148,8 @@ async function dispatch(
       return say(input, "command.help");
     case "rules":
       return showRules(input, args);
+    case "rule":
+      return editRule(input, args);
     case "whitelist":
       return editWhitelist(input, args);
     case "logs":
@@ -251,12 +254,17 @@ async function showRules(
   if (refused) {
     return refused;
   }
+  const switches = await readRuleSwitches(input, chatId);
+  if (!switches) {
+    return say(input, "command.invalid");
+  }
   const rules = await loadRuleSet({
     tenantId: input.event.tenantId,
     chatId,
     cache: input.cache,
     source: input.source,
     logger: input.logger,
+    switches,
   });
   const lines = [say(input, "command.rules.header", { chatId })];
   if (rules.rules.length === 0) {
@@ -511,6 +519,202 @@ async function editDryRun(
     chatId,
     state: say(input, enabled ? "command.switch.on" : "command.switch.off"),
   });
+}
+
+async function editRule(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length === 0 || args.length > 3) {
+    return say(input, "command.rule.usage");
+  }
+  const parsed = parseRuleArgs(input, args);
+  if (!parsed) {
+    return say(input, "command.rule.usage");
+  }
+  const refused = refuseChat(input, parsed.chatId);
+  if (refused) {
+    return refused;
+  }
+  if (!isRuleId(parsed.ruleId)) {
+    return say(input, "command.invalid");
+  }
+  const mode = parsed.mode;
+  if (
+    mode !== undefined &&
+    mode !== "on" &&
+    mode !== "off" &&
+    mode !== "reset"
+  ) {
+    return say(input, "command.rule.usage");
+  }
+  const tenantId = input.event.tenantId;
+  const switches = await readRuleSwitches(input, parsed.chatId);
+  if (!switches) {
+    return say(input, "command.invalid");
+  }
+  const rules = await loadRuleSet({
+    tenantId,
+    chatId: parsed.chatId,
+    cache: input.cache,
+    source: input.source,
+    logger: input.logger,
+    switches,
+  });
+  if (!rules.rules.some((rule) => rule.id === parsed.ruleId)) {
+    return say(input, "command.rule.missing", { id: parsed.ruleId });
+  }
+  if (mode === "on" || mode === "off") {
+    const saved = await writeRuleSwitch(
+      input,
+      parsed.chatId,
+      parsed.ruleId,
+      mode === "on",
+    );
+    if (saved === "invalid") {
+      return say(input, "command.invalid");
+    }
+    if (saved === "full") {
+      input.logger.warn("rule_switch_full", {
+        eventId: input.event.id,
+        chatId: parsed.chatId,
+        command: "rule",
+      });
+      return say(input, "command.invalid");
+    }
+  } else if (mode === "reset") {
+    const cleared = await removeRuleSwitch(input, parsed.chatId, parsed.ruleId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+  }
+  return formatRule(input, parsed.chatId, parsed.ruleId);
+}
+
+function parseRuleArgs(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): {
+  readonly chatId: string;
+  readonly ruleId: string;
+  readonly mode?: string;
+} | null {
+  const head = args[0];
+  if (!head) {
+    return null;
+  }
+  if (isTargetId(head)) {
+    const ruleId = args[1];
+    if (!ruleId) {
+      return null;
+    }
+    const mode = args[2];
+    return mode === undefined
+      ? { chatId: head, ruleId }
+      : { chatId: head, ruleId, mode };
+  }
+  if (args.length > 2) {
+    return null;
+  }
+  const chatId = defaultChat(scopeOf(input));
+  if (!chatId) {
+    return null;
+  }
+  const mode = args[1];
+  return mode === undefined
+    ? { chatId, ruleId: head }
+    : { chatId, ruleId: head, mode };
+}
+
+async function readRuleSwitches(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<readonly RuleSwitch[] | null> {
+  try {
+    return await input.runtime.listRuleSwitches(input.event.tenantId, chatId);
+  } catch {
+    rejectRule(input);
+    return null;
+  }
+}
+
+async function writeRuleSwitch(
+  input: OperatorCommandInput,
+  chatId: string,
+  ruleId: string,
+  enabled: boolean,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setRuleSwitch(
+      input.event.tenantId,
+      chatId,
+      ruleId,
+      enabled,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectRule(input);
+    return "invalid";
+  }
+}
+
+async function removeRuleSwitch(
+  input: OperatorCommandInput,
+  chatId: string,
+  ruleId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearRuleSwitch(input.event.tenantId, chatId, ruleId);
+    return true;
+  } catch {
+    rejectRule(input);
+    return false;
+  }
+}
+
+async function formatRule(
+  input: OperatorCommandInput,
+  chatId: string,
+  ruleId: string,
+): Promise<string> {
+  const switches = await readRuleSwitches(input, chatId);
+  if (!switches) {
+    return say(input, "command.invalid");
+  }
+  const rules = await loadRuleSet({
+    tenantId: input.event.tenantId,
+    chatId,
+    cache: input.cache,
+    source: input.source,
+    logger: input.logger,
+    switches,
+  });
+  const rule = rules.rules.find((item) => item.id === ruleId);
+  if (!rule) {
+    return say(input, "command.rule.missing", { id: ruleId });
+  }
+  const override = switches.some((item) => item.ruleId === ruleId);
+  return say(input, "command.rule.status", {
+    chatId,
+    ruleId,
+    state: say(
+      input,
+      rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
+    ),
+    source: say(input, override ? "command.rule.switch" : "command.rule.file"),
+  });
+}
+
+function rejectRule(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "rule",
+  });
+}
+
+function isRuleId(value: string): boolean {
+  return /^[a-z][a-z0-9_-]{0,63}$/.test(value);
 }
 
 function formatPolicy(

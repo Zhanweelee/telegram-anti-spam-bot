@@ -11,6 +11,11 @@ export const messageKeys = [
   "command.rules.line",
   "command.rules.enabled",
   "command.rules.disabled",
+  "command.rule.usage",
+  "command.rule.status",
+  "command.rule.missing",
+  "command.rule.file",
+  "command.rule.switch",
   "command.whitelist.usage",
   "command.whitelist.body",
   "command.allow.empty",
@@ -54,6 +59,7 @@ export type MessageKey = (typeof messageKeys)[number];
 const syntax = [
   "/help",
   "/rules [chatId]",
+  "/rule [chatId] <ruleId> [on|off|reset]",
   "/whitelist <chatId>",
   "/whitelist <chatId> add <actorId>",
   "/whitelist <chatId> remove <actorId>",
@@ -83,6 +89,11 @@ const zh = {
   "command.rules.line": "{id} {state} threshold {threshold} actions {actions}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
+  "command.rule.usage": "用法：/rule [chatId] <ruleId> [on|off|reset]",
+  "command.rule.status": "rule {chatId} {ruleId} {state} {source}",
+  "command.rule.missing": "rule {id} missing",
+  "command.rule.file": "file",
+  "command.rule.switch": "switch",
   "command.whitelist.usage": "用法：/whitelist <chatId> [add|remove <actorId>]",
   "command.whitelist.body":
     "whitelist {chatId}\nexemptAdmins {exemptAdmins}\nallow {allow}",
@@ -134,6 +145,11 @@ const en = {
   "command.rules.line": "{id} {state} threshold {threshold} actions {actions}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
+  "command.rule.usage": "Usage: /rule [chatId] <ruleId> [on|off|reset]",
+  "command.rule.status": "rule {chatId} {ruleId} {state} {source}",
+  "command.rule.missing": "rule {id} missing",
+  "command.rule.file": "file",
+  "command.rule.switch": "switch",
   "command.whitelist.usage":
     "Usage: /whitelist <chatId> [add|remove <actorId>]",
   "command.whitelist.body":

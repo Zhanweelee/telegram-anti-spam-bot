@@ -35,6 +35,7 @@ import {
   type RuleSet,
   type RuleSource,
   type RuleSubscriptionStore,
+  type RuleSwitch,
   type RuntimeStore,
   resolveRuleSet,
   runPipeline,
@@ -212,6 +213,16 @@ export async function screenTelegramEvent(
   deps: ScreenDeps = {},
 ): Promise<PipelineResult> {
   const logger = deps.logger ?? createWorkerLogger();
+  const runtime = deps.runtime ?? workerRuntime;
+  let switches: readonly RuleSwitch[] = [];
+  try {
+    switches = await runtime.listRuleSwitches(event.tenantId, event.chatId);
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -219,6 +230,7 @@ export async function screenTelegramEvent(
     cache: deps.cache ?? workerCache,
     source: deps.source ?? fileRuleSource,
     logger,
+    switches,
     ...(packId && deps.rulePacks
       ? {
           pack: {
@@ -240,10 +252,7 @@ export async function screenTelegramEvent(
   });
   let dryRun = false;
   try {
-    dryRun = await (deps.runtime ?? workerRuntime).getDryRun(
-      event.tenantId,
-      event.chatId,
-    );
+    dryRun = await runtime.getDryRun(event.tenantId, event.chatId);
   } catch {
     logger.warn("runtime_failed", {
       eventId: event.id,

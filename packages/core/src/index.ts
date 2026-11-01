@@ -226,6 +226,7 @@ export {
   rulePackIdSchema,
 } from "./rule-pack.js";
 export {
+  applyRuleSwitches,
   DEFAULT_RULE_CACHE_TTL_SECONDS,
   type LoadRuleSetInput,
   loadRuleSet,
@@ -234,5 +235,5 @@ export {
   type RuleSource,
   resolveRuleSet,
 } from "./rules-load.js";
-export type { RuntimeStore } from "./runtime.js";
+export type { RuleSwitch, RuntimeStore } from "./runtime.js";
 export { withTimeout } from "./timeout.js";

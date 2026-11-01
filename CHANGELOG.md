@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-18
+
+- 私聊 `/rule` 可以打开、关闭或清除某一条已有规则。见 ADR 0034。
+- 覆盖存在 isolate 内存里，读完缓存后才套上。重启后回到文件里的 `enabled`。
+- `via_inline` 和 `regex_hint` 仍默认关闭。云额度的基础检测器名单没有改。
+
 ### P1-17
 
 - 经 inline bot 发出的消息可以带 `message.via`。见 ADR 0033。

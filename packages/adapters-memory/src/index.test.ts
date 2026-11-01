@@ -89,12 +89,56 @@ describe("memory adapter", () => {
     expect(await runtime.getDryRun("tenant_a", "chat_2")).toBe(false);
     await runtime.setDryRun("tenant_a", "chat_1", false);
     expect(await runtime.getDryRun("tenant_a", "chat_1")).toBe(false);
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_1")).toEqual([]);
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "chat_1", "via_inline", true),
+    ).toBe(true);
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_1")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_2")).toEqual([]);
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "chat_1", "via_inline", false),
+    ).toBe(true);
+    await runtime.clearRuleSwitch("tenant_a", "chat_1", "via_inline");
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_1")).toEqual([]);
 
     const reply = createMemoryReply();
     await reply.send({ tenantId: "tenant_a", chatId: "42", text: "命令：" });
     expect(reply.sent).toEqual([
       { tenantId: "tenant_a", chatId: "42", text: "命令：" },
     ]);
+  });
+
+  it("keeps at most 32 switches and 256 chats", async () => {
+    const runtime = createMemoryRuntimeStore();
+    for (let index = 0; index < 32; index += 1) {
+      expect(
+        await runtime.setRuleSwitch("tenant_a", "full", `rule_${index}`, true),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "full", "rule_extra", true),
+    ).toBe(false);
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "full", "rule_0", false),
+    ).toBe(true);
+    expect(await runtime.listRuleSwitches("tenant_a", "full")).toHaveLength(32);
+    for (let index = 0; index < 255; index += 1) {
+      expect(
+        await runtime.setRuleSwitch("tenant_a", `chat_${index}`, "links", true),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "overflow", "links", true),
+    ).toBe(false);
+    expect(await runtime.listRuleSwitches("tenant_a", "overflow")).toEqual([]);
+    for (let index = 0; index < 32; index += 1) {
+      await runtime.clearRuleSwitch("tenant_a", "full", `rule_${index}`);
+    }
+    expect(
+      await runtime.setRuleSwitch("tenant_a", "overflow", "links", false),
+    ).toBe(true);
   });
 
   it("drops the oldest audits past the cap", async () => {
