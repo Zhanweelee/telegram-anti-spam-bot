@@ -860,10 +860,45 @@ async function mediaMark(
     return id ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) } : { kind };
   }
   const rich = message.rich_message;
-  if (!isRecord(rich)) {
+  if (isRecord(rich)) {
+    const found = await firstRichMedia(rich.blocks);
+    if (found) {
+      return found;
+    }
+  }
+  return firstPaidMedia(message.paid_media);
+}
+
+async function firstPaidMedia(
+  paid: unknown,
+): Promise<{ readonly kind: MediaKind; readonly sha256?: string } | undefined> {
+  if (!isRecord(paid) || !Array.isArray(paid.paid_media)) {
     return undefined;
   }
-  return firstRichMedia(rich.blocks);
+  for (const item of paid.paid_media) {
+    if (!isRecord(item)) {
+      continue;
+    }
+    if (item.type === "photo") {
+      if (!Array.isArray(item.photo) || item.photo.length === 0) {
+        continue;
+      }
+      return marked("photo", uniqueId(item.photo[item.photo.length - 1]));
+    }
+    if (item.type === "video") {
+      if (!isRecord(item.video)) {
+        continue;
+      }
+      return marked("video", uniqueId(item.video));
+    }
+    if (item.type === "live_photo") {
+      if (!isRecord(item.live_photo)) {
+        continue;
+      }
+      return marked("video", uniqueId(item.live_photo));
+    }
+  }
+  return undefined;
 }
 
 async function firstRichMedia(

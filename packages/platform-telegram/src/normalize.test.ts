@@ -3051,6 +3051,344 @@ describe("normalizeUpdate", () => {
     expect(paid.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("hashes a caption-less paid photo and leaves the file id out", async () => {
+    const fileId = "SECRETFILE93";
+    const uniqueId = "PAIDPHOTO93";
+    const photo = await normalize({
+      update_id: 6210,
+      message: {
+        message_id: 430,
+        date: 1761955200,
+        chat: { id: -101160, type: "supergroup", title: "keep-title" },
+        from: { id: 93, first_name: "from93" },
+        paid_media: {
+          star_count: 93093,
+          paid_media: [
+            { type: "preview", width: 1, height: 1 },
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: "SMALL93",
+                  file_unique_id: "SMALLUNIQ93",
+                  width: 1,
+                  height: 1,
+                },
+                {
+                  file_id: fileId,
+                  file_unique_id: uniqueId,
+                  width: 8,
+                  height: 8,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(photo.status).toBe("event");
+    if (photo.status !== "event") {
+      return;
+    }
+    expect(photo.event.message?.text).toBe("");
+    expect(photo.event.message?.media).toBe("photo");
+    expect(photo.event.message?.mediaSha256).toBe(
+      await sha256Hex(`photo\n${uniqueId}`),
+    );
+    const photoDump = JSON.stringify(photo.event);
+    expect(photoDump).not.toContain(fileId);
+    expect(photoDump).not.toContain(uniqueId);
+    expect(photoDump).not.toContain("SMALL93");
+    expect(photoDump).not.toContain("SMALLUNIQ93");
+    expect(photoDump).not.toContain("93093");
+    expect(photoDump).not.toContain("from93");
+    expect(photoDump).not.toContain("keep-title");
+
+    const live = await normalize({
+      update_id: 6211,
+      message: {
+        message_id: 431,
+        date: 1761955200,
+        chat: { id: -101161, type: "supergroup" },
+        from: { id: 93 },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "live_photo",
+              live_photo: {
+                file_id: fileId,
+                file_unique_id: "PAIDLIVE93",
+                width: 1,
+                height: 1,
+                duration: 2,
+                photo: [
+                  {
+                    file_id: "STILLFILE93",
+                    file_unique_id: "STILL93",
+                    width: 1,
+                    height: 1,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(live.status).toBe("event");
+    if (live.status !== "event") {
+      return;
+    }
+    expect(live.event.message?.text).toBe("");
+    expect(live.event.message?.media).toBe("video");
+    expect(live.event.message?.mediaSha256).toBe(
+      await sha256Hex("video\nPAIDLIVE93"),
+    );
+    const liveDump = JSON.stringify(live.event);
+    expect(liveDump).not.toContain(fileId);
+    expect(liveDump).not.toContain("PAIDLIVE93");
+    expect(liveDump).not.toContain("STILL93");
+    expect(liveDump).not.toContain("STILLFILE93");
+
+    const video = await normalize({
+      update_id: 6212,
+      message: {
+        message_id: 432,
+        date: 1761955200,
+        chat: { id: -101162, type: "supergroup" },
+        from: { id: 93 },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "video",
+              video: {
+                file_id: fileId,
+                file_unique_id: "PAIDVIDEO93",
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(video.status).toBe("event");
+    if (video.status !== "event") {
+      return;
+    }
+    expect(video.event.message?.text).toBe("");
+    expect(video.event.message?.media).toBe("video");
+    expect(video.event.message?.mediaSha256).toBe(
+      await sha256Hex("video\nPAIDVIDEO93"),
+    );
+    expect(JSON.stringify(video.event)).not.toContain(fileId);
+    expect(JSON.stringify(video.event)).not.toContain("PAIDVIDEO93");
+
+    const named = "clip93.mp4";
+    const withName = await normalize({
+      update_id: 6213,
+      message: {
+        message_id: 433,
+        date: 1761955200,
+        chat: { id: -101163, type: "supergroup" },
+        from: { id: 93 },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "video",
+              video: {
+                file_id: fileId,
+                file_unique_id: "PAIDVIDEO93",
+                file_name: named,
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(withName.status).toBe("event");
+    if (withName.status !== "event") {
+      return;
+    }
+    expect(withName.event.message?.text).toBe(named);
+    expect(withName.event.message?.media).toBe("video");
+    expect(withName.event.message?.mediaSha256).toBe(
+      await sha256Hex("video\nPAIDVIDEO93"),
+    );
+    expect(JSON.stringify(withName.event)).not.toContain(fileId);
+    expect(JSON.stringify(withName.event)).not.toContain("PAIDVIDEO93");
+
+    const sticker = await normalize({
+      update_id: 6214,
+      message: {
+        message_id: 434,
+        date: 1761955200,
+        chat: { id: -101164, type: "supergroup" },
+        from: { id: 93 },
+        sticker: {
+          file_id: fileId,
+          file_unique_id: "STICKER93",
+          width: 1,
+          height: 1,
+        },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: fileId,
+                  file_unique_id: uniqueId,
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(sticker.status).toBe("event");
+    if (sticker.status !== "event") {
+      return;
+    }
+    expect(sticker.event.message?.media).toBe("sticker");
+    expect(sticker.event.message?.mediaSha256).toBe(
+      await sha256Hex("sticker\nSTICKER93"),
+    );
+    expect(JSON.stringify(sticker.event)).not.toContain(fileId);
+    expect(JSON.stringify(sticker.event)).not.toContain(uniqueId);
+    expect(JSON.stringify(sticker.event)).not.toContain("STICKER93");
+
+    const richFirst = await normalize({
+      update_id: 6215,
+      message: {
+        message_id: 435,
+        date: 1761955200,
+        chat: { id: -101165, type: "supergroup" },
+        from: { id: 93 },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: fileId,
+                  file_unique_id: "RICHPHOTO93",
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+          ],
+        },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "video",
+              video: {
+                file_id: fileId,
+                file_unique_id: "PAIDVIDEO93",
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(richFirst.status).toBe("event");
+    if (richFirst.status !== "event") {
+      return;
+    }
+    expect(richFirst.event.message?.media).toBe("photo");
+    expect(richFirst.event.message?.mediaSha256).toBe(
+      await sha256Hex("photo\nRICHPHOTO93"),
+    );
+    expect(JSON.stringify(richFirst.event)).not.toContain(fileId);
+    expect(JSON.stringify(richFirst.event)).not.toContain("RICHPHOTO93");
+    expect(JSON.stringify(richFirst.event)).not.toContain("PAIDVIDEO93");
+
+    const longId = "z".repeat(257);
+    const oversized = await normalize({
+      update_id: 6216,
+      message: {
+        message_id: 436,
+        date: 1761955200,
+        chat: { id: -101166, type: "supergroup" },
+        from: { id: 93 },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: fileId,
+                  file_unique_id: longId,
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+            {
+              type: "video",
+              video: {
+                file_id: fileId,
+                file_unique_id: uniqueId,
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(oversized.status).toBe("event");
+    if (oversized.status !== "event") {
+      return;
+    }
+    expect(oversized.event.message?.media).toBe("photo");
+    expect(oversized.event.message?.mediaSha256).toBeUndefined();
+    const oversizedDump = JSON.stringify(oversized.event);
+    expect(oversizedDump).not.toContain(longId);
+    expect(oversizedDump).not.toContain(fileId);
+    expect(oversizedDump).not.toContain(uniqueId);
+
+    const preview = await normalize({
+      update_id: 6217,
+      message: {
+        message_id: 437,
+        date: 1761955200,
+        chat: { id: -101167, type: "supergroup" },
+        from: { id: 93 },
+        paid_media: {
+          star_count: 93093,
+          paid_media: [{ type: "preview", width: 4, height: 5, duration: 6 }],
+        },
+      },
+    });
+    expect(preview.status).toBe("event");
+    if (preview.status !== "event") {
+      return;
+    }
+    expect(preview.event.message?.text).toBe("");
+    expect(preview.event.message?.media).toBeUndefined();
+    expect(preview.event.message?.mediaSha256).toBeUndefined();
+    expect(JSON.stringify(preview.event)).not.toContain("93093");
+  });
+
   it("keeps hostnames from hidden forward names", async () => {
     const phrase = "请免费领取礼品";
     const code = "HIDE60";

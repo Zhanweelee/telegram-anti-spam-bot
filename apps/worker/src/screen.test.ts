@@ -2280,4 +2280,85 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(other.event)).not.toContain(fileId);
     expect(JSON.stringify(other.logger.entries)).not.toContain(fileId);
   });
+
+  it("deletes the third caption-less paid photo with the same file", async () => {
+    const window = createMemoryRateWindow();
+    const fileId = "SECRETFILE93";
+    const uniqueId = "PAIDPHOTO93";
+    const screenPhoto = async (updateId: number, id: string) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -100660, type: "supergroup", title: "机密群名" },
+            from: { id: 93, first_name: "from93" },
+            paid_media: {
+              star_count: 93093,
+              paid_media: [
+                {
+                  type: "photo",
+                  photo: [
+                    {
+                      file_id: fileId,
+                      file_unique_id: id,
+                      width: 1,
+                      height: 1,
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+        rateWindow: window,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const first = await screenPhoto(6210, uniqueId);
+    expect(first.result.decision.action).toBe("allow");
+    const second = await screenPhoto(6211, uniqueId);
+    expect(second.result.decision.action).toBe("allow");
+    const third = await screenPhoto(6212, uniqueId);
+    expect(third.result.decision.action).toBe("delete");
+    expect(third.result.decision.reasons).toContain("repeat");
+    expect(third.result.decision.ruleIds).toContain("repeat");
+    expect(third.event.message?.text).toBe("");
+    expect(third.event.message?.media).toBe("photo");
+    expect(third.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100660", messageId: "6212" },
+    ]);
+    expect(JSON.stringify(third.logger.entries)).not.toContain(fileId);
+    expect(JSON.stringify(third.logger.entries)).not.toContain(uniqueId);
+    expect(JSON.stringify(third.logger.entries)).not.toContain("from93");
+    expect(JSON.stringify(third.logger.entries)).not.toContain("93093");
+    expect(JSON.stringify(third.result.decision.evidence)).not.toContain(
+      fileId,
+    );
+    expect(JSON.stringify(third.result.decision.evidence)).not.toContain(
+      uniqueId,
+    );
+
+    const other = await screenPhoto(6213, "OTHERPHOTO93");
+    expect(other.result.decision.action).toBe("allow");
+    expect(other.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(other.event)).not.toContain("OTHERPHOTO93");
+    expect(JSON.stringify(other.event)).not.toContain(fileId);
+    expect(JSON.stringify(other.logger.entries)).not.toContain(fileId);
+  });
 });

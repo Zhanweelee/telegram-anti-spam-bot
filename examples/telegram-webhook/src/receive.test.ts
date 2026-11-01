@@ -294,6 +294,55 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp92");
   });
 
+  it("hashes a caption-less paid photo and leaves the file id out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 10,
+        message: {
+          message_id: 100,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp93" },
+          from: { id: 93, first_name: "https://tinyurl.com/from93" },
+          paid_media: {
+            star_count: 93093,
+            paid_media: [
+              {
+                type: "photo",
+                photo: [
+                  {
+                    file_id: "SECRETFILE93",
+                    file_unique_id: "PAIDPHOTO93",
+                    width: 1,
+                    height: 1,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_10",
+      kind: "message",
+      message: {
+        id: "100",
+        text: "",
+        media: "photo",
+        mediaSha256: await sha256Hex("photo\nPAIDPHOTO93"),
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("SECRETFILE93");
+    expect(dumped).not.toContain("PAIDPHOTO93");
+    expect(dumped).not.toContain("from93");
+    expect(dumped).not.toContain("grp93");
+    expect(dumped).not.toContain("93093");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",
