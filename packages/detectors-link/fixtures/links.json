@@ -84,6 +84,28 @@
     "expect": "miss"
   },
   {
+    "name": "encoded-plus-invite",
+    "text": "t.me/%2BPLUSCODE",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "encoded-plus-lower",
+    "text": "telegram.me/%2bPLUSCODE",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "double-encoded-plus",
+    "text": "t.me/%252BPLUSCODE",
+    "expect": "miss"
+  },
+  {
+    "name": "encoded-plus-public-path",
+    "text": "example.com/%2Bdocs",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"

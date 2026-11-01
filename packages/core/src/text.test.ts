@@ -66,7 +66,7 @@ describe("foldEncodedGaps", () => {
 });
 
 describe("foldEncodedSeparators", () => {
-  it("turns one encoded dot or slash into a separator", () => {
+  it("turns one encoded dot, slash, or plus into a separator", () => {
     expect(foldEncodedSeparators("bit%2Ely")).toBe("bit.ly");
     expect(foldEncodedSeparators("bit%2ely")).toBe("bit.ly");
     expect(foldEncodedSeparators("t.me%2F+CODE")).toBe("t.me/+CODE");
@@ -74,5 +74,9 @@ describe("foldEncodedSeparators", () => {
     expect(foldEncodedSeparators("bit%252Ely")).toBe("bit%252Ely");
     expect(foldEncodedSeparators("t.me%252F+CODE")).toBe("t.me%252F+CODE");
     expect(foldEncodedSeparators("t.me%2Fdurov")).toBe("t.me/durov");
+    expect(foldEncodedSeparators("t.me/%2BCODE")).toBe("t.me/+CODE");
+    expect(foldEncodedSeparators("t.me/%2bCODE")).toBe("t.me/+CODE");
+    expect(foldEncodedSeparators("t.me/%252BCODE")).toBe("t.me/%252BCODE");
+    expect(foldMatchText("免%2B费领取")).toBe("免%2B费领取");
   });
 });

@@ -38,9 +38,9 @@ export function foldEncodedGaps(text: string): string {
   return out;
 }
 
-/** Turn one `%2E` or `%2F` into `.` or `/`. `%252E` and `%252F` stay. */
+/** Turn one `%2E`, `%2F`, or `%2B` into `.`, `/`, or `+`. A second layer stays. */
 export function foldEncodedSeparators(text: string): string {
-  return text.replace(/%2E/gi, ".").replace(/%2F/gi, "/");
+  return text.replace(/%2E/gi, ".").replace(/%2F/gi, "/").replace(/%2B/gi, "+");
 }
 
 function encodedGapLength(text: string, index: number): number {

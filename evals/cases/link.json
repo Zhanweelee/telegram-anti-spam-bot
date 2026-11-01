@@ -130,5 +130,20 @@
     "id": "double-encoded-slash",
     "text": "t.me%252F+OFFER",
     "label": "ham"
+  },
+  {
+    "id": "encoded-plus-invite",
+    "text": "t.me/%2BOFFER",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-lower",
+    "text": "telegram.me/%2bOFFER",
+    "label": "spam"
+  },
+  {
+    "id": "double-encoded-plus",
+    "text": "t.me/%252BOFFER",
+    "label": "ham"
   }
 ]

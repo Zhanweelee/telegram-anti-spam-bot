@@ -551,6 +551,69 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("/only");
   });
 
+  it("folds a percent-encoded plus before classifying an invite", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PLUSFOLD39";
+    const lower = "PLUSLOW39";
+    const outcome = await normalize({
+      update_id: 3839,
+      message: {
+        message_id: 39,
+        date: 1761955200,
+        chat: { id: -100739, type: "supergroup" },
+        from: { id: 9 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: phrase,
+                url: `https://t.me/%2B${code}`,
+              },
+            ],
+            [
+              {
+                text: "lower",
+                url: `https://telegram.me/%2b${lower}`,
+              },
+              {
+                text: "public",
+                url: "https://t.me/durov",
+              },
+              {
+                text: "plain",
+                url: "https://example.com/%2Bdocs",
+              },
+              {
+                text: "twice",
+                url: "https://double.t.me/%252BDOUBLE39",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual([
+      "t.me",
+      "telegram.me",
+      "example.com",
+      "double.t.me",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(lower);
+    expect(dumped).not.toContain("DOUBLE39");
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("%2Bdocs");
+  });
+
   it("marks a hidden telegram invite without keeping the code", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalize({
