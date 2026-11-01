@@ -2,6 +2,7 @@ import {
   type Event,
   type ForwardKind,
   foldEncodedGaps,
+  foldEncodedSeparators,
   foldMatchText,
   type MediaKind,
   parseEvent,
@@ -433,7 +434,7 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   }
   let url: URL;
   try {
-    url = new URL(foldMatchText(foldEncodedGaps(value)));
+    url = new URL(foldEncodedSeparators(foldMatchText(foldEncodedGaps(value))));
   } catch {
     return null;
   }

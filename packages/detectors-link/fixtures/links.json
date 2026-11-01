@@ -68,6 +68,22 @@
     "expect": "miss"
   },
   {
+    "name": "encoded-slash-invite",
+    "text": "t.me%2F+SLASHCODE",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "encoded-slash-public",
+    "text": "t.me%2Fdurov",
+    "expect": "miss"
+  },
+  {
+    "name": "double-encoded-slash",
+    "text": "t.me%252F+SLASHCODE",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"

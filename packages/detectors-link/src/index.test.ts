@@ -301,6 +301,47 @@ describe("link fixtures", () => {
     expect(dumped).not.toContain("dotpath");
   });
 
+  it("treats a percent-encoded slash as a path separator", async () => {
+    const code = "SLASHFOLD99";
+    const detector = createLinkDetector();
+    const logger = createMemoryLogger();
+    const invite = await detector.detect({
+      event: eventFor(`t.me%2F+${code}`),
+      logger,
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    const lower = await detector.detect({
+      event: eventFor(`telegram.me%2fjoinchat%2f${code}`),
+      logger,
+      signal,
+    });
+    expect(lower?.reasons).toEqual(["invite"]);
+    expect(lower?.evidence[0]?.summary).toBe("invite:telegram.me");
+    const pub = await detector.detect({
+      event: eventFor("t.me%2Fdurov"),
+      logger,
+      signal,
+    });
+    expect(pub).toBeNull();
+    const doubled = await detector.detect({
+      event: eventFor(`t.me%252F+${code}`),
+      logger,
+      signal,
+    });
+    expect(doubled).toBeNull();
+    const plain = await detector.detect({
+      event: eventFor("example.com%2Fdocs"),
+      logger,
+      signal,
+    });
+    expect(plain).toBeNull();
+    const dumped = JSON.stringify({ invite, lower, logs: logger.entries });
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("durov");
+  });
+
   it("scores a telegram invite and keeps the code out of evidence", async () => {
     const code = "INVITESECRET99";
     const detector = createLinkDetector();

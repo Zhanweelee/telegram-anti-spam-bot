@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { foldEncodedGaps, foldMatchText } from "./text.js";
+import {
+  foldEncodedGaps,
+  foldEncodedSeparators,
+  foldMatchText,
+} from "./text.js";
 
 describe("foldMatchText", () => {
   it("drops format characters and keeps spaces and words", () => {
@@ -58,5 +62,17 @@ describe("foldEncodedGaps", () => {
     expect(foldEncodedGaps("免费领取")).toBe("免费领取");
     expect(foldMatchText("免%E2%80%8B费领取")).toBe("免%E2%80%8B费领取");
     expect(foldEncodedGaps("IN%E2%80%8BVITE")).not.toContain("\u200b");
+  });
+});
+
+describe("foldEncodedSeparators", () => {
+  it("turns one encoded dot or slash into a separator", () => {
+    expect(foldEncodedSeparators("bit%2Ely")).toBe("bit.ly");
+    expect(foldEncodedSeparators("bit%2ely")).toBe("bit.ly");
+    expect(foldEncodedSeparators("t.me%2F+CODE")).toBe("t.me/+CODE");
+    expect(foldEncodedSeparators("t.me%2f+CODE")).toBe("t.me/+CODE");
+    expect(foldEncodedSeparators("bit%252Ely")).toBe("bit%252Ely");
+    expect(foldEncodedSeparators("t.me%252F+CODE")).toBe("t.me%252F+CODE");
+    expect(foldEncodedSeparators("t.me%2Fdurov")).toBe("t.me/durov");
   });
 });

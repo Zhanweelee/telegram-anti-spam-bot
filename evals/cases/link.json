@@ -115,5 +115,20 @@
     "id": "encoded-dot-plain",
     "text": "example%2Ecom/docs",
     "label": "ham"
+  },
+  {
+    "id": "encoded-slash-invite",
+    "text": "t.me%2F+OFFER",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-public",
+    "text": "t.me%2Fdurov",
+    "label": "ham"
+  },
+  {
+    "id": "double-encoded-slash",
+    "text": "t.me%252F+OFFER",
+    "label": "ham"
   }
 ]

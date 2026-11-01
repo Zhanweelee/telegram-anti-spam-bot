@@ -3,6 +3,7 @@ import {
   type DetectorHit,
   defineDetector,
   foldEncodedGaps,
+  foldEncodedSeparators,
   foldMatchText,
   withTimeout,
 } from "@tasb/core";
@@ -56,10 +57,6 @@ export const defaultShorteners = [
 const token =
   /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
 
-function foldEncodedDots(text: string): string {
-  return text.replace(/%2E/gi, ".");
-}
-
 export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
   return defineDetector({
     id: "link",
@@ -88,7 +85,7 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldEncodedDots(
+      const compared = foldEncodedSeparators(
         foldEncodedGaps(foldMatchText(message.text)),
       );
       const invites = mergeHosts(

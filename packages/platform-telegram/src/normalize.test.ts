@@ -488,6 +488,69 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("bit.ly");
   });
 
+  it("folds a percent-encoded slash before classifying a structured link", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "SLASHFOLD38";
+    const join = "SLASHJOIN38";
+    const outcome = await normalize({
+      update_id: 3838,
+      message: {
+        message_id: 38,
+        date: 1761955200,
+        chat: { id: -100738, type: "supergroup" },
+        from: { id: 9 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: phrase,
+                url: `https://t.me%2F+${code}`,
+              },
+            ],
+            [
+              {
+                text: "join",
+                url: `https://telegram.me%2fjoinchat%2f${join}`,
+              },
+              {
+                text: "public",
+                url: "https://telegram.dog%2Fdurov",
+              },
+              {
+                text: "short",
+                url: "https://bit.ly%2Fonly",
+              },
+              {
+                text: "twice",
+                url: "https://double.t.me%252F+DOUBLE38",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual([
+      "t.me",
+      "telegram.me",
+      "telegram.dog",
+      "bit.ly",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(join);
+    expect(dumped).not.toContain("DOUBLE38");
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("/only");
+  });
+
   it("marks a hidden telegram invite without keeping the code", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalize({
