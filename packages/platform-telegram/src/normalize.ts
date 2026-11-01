@@ -1,6 +1,7 @@
 import {
   type Event,
   type ForwardKind,
+  foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
@@ -624,7 +625,9 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   try {
     url = new URL(
       foldEncodedAlphabet(
-        foldEncodedSeparators(foldMatchText(foldEncodedGaps(value))),
+        foldEncodedSeparators(
+          foldMatchText(foldDotLookalikes(foldEncodedGaps(value))),
+        ),
       ),
     );
   } catch {

@@ -9,5 +9,7 @@
   { "id": "h1", "text": "今天站会改到三点", "label": "ham" },
   { "id": "h2", "text": "欢迎新人看置顶", "label": "ham" },
   { "id": "h3", "text": "hello team", "label": "ham" },
-  { "id": "h4", "text": "", "label": "ham" }
+  { "id": "h4", "text": "", "label": "ham" },
+  { "id": "s8", "text": "免\u00B7费领取", "label": "spam" },
+  { "id": "h5", "text": "不是免费。领取", "label": "ham" }
 ]

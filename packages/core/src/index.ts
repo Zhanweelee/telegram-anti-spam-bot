@@ -255,9 +255,11 @@ export {
   runtimeDocumentSchema,
 } from "./runtime.js";
 export {
+  foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
+  foldInterpuncts,
   foldMatchText,
 } from "./text.js";
 export { withTimeout } from "./timeout.js";

@@ -4,6 +4,8 @@
   { "text": "免\u200b费领取", "expect": "hit" },
   { "text": "免\u00a0费领取", "expect": "hit" },
   { "text": "免\uFE0F费领取", "expect": "hit" },
+  { "text": "免\u00B7费领取", "expect": "hit" },
+  { "text": "不是免费。领取", "expect": "miss" },
   { "text": "免 费领取", "expect": "miss" },
   { "text": "今天站会改到三点", "expect": "miss" },
   { "text": "", "expect": "miss" }

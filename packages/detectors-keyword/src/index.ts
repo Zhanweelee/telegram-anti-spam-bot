@@ -1,4 +1,9 @@
-import { type Detector, defineDetector, foldMatchText } from "@tasb/core";
+import {
+  type Detector,
+  defineDetector,
+  foldInterpuncts,
+  foldMatchText,
+} from "@tasb/core";
 import { z } from "zod";
 
 export const keywordConfigSchema = z.strictObject({
@@ -24,15 +29,15 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
       }
       const caseSensitive = parsed.caseSensitive === true;
       const matched = parsed.keywords.filter((keyword) => {
-        const needle = foldMatchText(
-          caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+        const needle = foldInterpuncts(
+          foldMatchText(caseSensitive ? keyword : keyword.toLocaleLowerCase()),
         );
         if (needle.length === 0) {
           return false;
         }
         return texts.some((text) => {
-          const haystack = foldMatchText(
-            caseSensitive ? text : text.toLocaleLowerCase(),
+          const haystack = foldInterpuncts(
+            foldMatchText(caseSensitive ? text : text.toLocaleLowerCase()),
           );
           return haystack.includes(needle);
         });
@@ -46,7 +51,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         reasons: ["keyword_match"],
         evidence: matched.map((keyword) => ({
           kind: "keyword" as const,
-          summary: `keyword:${foldMatchText(keyword).slice(0, 80)}`,
+          summary: `keyword:${foldInterpuncts(foldMatchText(keyword)).slice(0, 80)}`,
         })),
       };
     },

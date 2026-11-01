@@ -534,4 +534,40 @@ describe("link fixtures", () => {
     });
     expect(pub).toBeNull();
   });
+
+  it("folds dot lookalikes into ascii dots before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("https://bit\u00B7ly/dot62"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("dot62");
+    expect(JSON.stringify(short)).not.toContain("xn--");
+
+    const invite = await detector.detect({
+      event: eventFor("https://t\u30FBme/+DOT62"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("DOT62");
+
+    const ordinary = await detector.detect({
+      event: eventFor("https://example\u00B7com/page62"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const period = await detector.detect({
+      event: eventFor("不是免费。领取 https://bit。ly/stop62"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(period?.evidence[0]?.summary).toBe("short_link:bit.ly");
+  });
 });

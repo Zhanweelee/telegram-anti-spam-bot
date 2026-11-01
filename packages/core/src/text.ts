@@ -17,6 +17,23 @@ export function foldMatchText(text: string): string {
 }
 
 /**
+ * Dot-like characters that split a keyword or become a different hostname.
+ * An ascii dot, an ordinary space, and the ideographic full stop stay.
+ */
+const DOT_LOOKALIKES =
+  /[\u00B7\u2022\u2027\u2219\u22C5\u30FB\uFF0E\uFE52\uFF61]/g;
+
+/** Drop dot lookalikes before a keyword or pattern match. */
+export function foldInterpuncts(text: string): string {
+  return text.replace(DOT_LOOKALIKES, "");
+}
+
+/** Turn dot lookalikes into `.` before a hostname parse. */
+export function foldDotLookalikes(text: string): string {
+  return text.replace(DOT_LOOKALIKES, ".");
+}
+
+/**
  * Drop percent-encoded characters that `foldMatchText` would remove.
  * A second layer written as `%25HH` is removed the same way.
  * `%20`, `%2E`, `%2520`, and `%252E` stay. A third layer stays.

@@ -170,5 +170,15 @@
     "id": "triple-encoded-letter",
     "text": "t.me/+OFF%252545R",
     "label": "ham"
+  },
+  {
+    "id": "middle-dot-shortener",
+    "text": "https://bit\u00B7ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "middle-dot-ordinary",
+    "text": "https://example\u00B7com/docs",
+    "label": "ham"
   }
 ]

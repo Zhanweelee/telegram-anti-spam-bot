@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
+  foldInterpuncts,
   foldMatchText,
 } from "./text.js";
 
@@ -30,6 +32,30 @@ describe("foldMatchText", () => {
   });
 });
 
+describe("foldInterpuncts", () => {
+  it("drops dot lookalikes and keeps spaces, periods, and ascii dots", () => {
+    expect(foldInterpuncts("免\u00B7费\u30FB领\uFF0E取")).toBe("免费领取");
+    expect(foldInterpuncts("加\u2022微\u22C5信")).toBe("加微信");
+    expect(foldInterpuncts("免 费领取")).toBe("免 费领取");
+    expect(foldInterpuncts("不是免费。领取")).toBe("不是免费。领取");
+    expect(foldInterpuncts("bit.ly")).toBe("bit.ly");
+    expect(foldInterpuncts("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
+  });
+});
+
+describe("foldDotLookalikes", () => {
+  it("turns dot lookalikes into ascii dots", () => {
+    expect(foldDotLookalikes("bit\u00B7ly")).toBe("bit.ly");
+    expect(foldDotLookalikes("https://t\u30FBme/+CODE")).toBe(
+      "https://t.me/+CODE",
+    );
+    expect(foldDotLookalikes("bit\uFF0Ely")).toBe("bit.ly");
+    expect(foldDotLookalikes("example.com")).toBe("example.com");
+    expect(foldDotLookalikes("不是免费。领取")).toBe("不是免费。领取");
+    expect(foldDotLookalikes("免 费领取")).toBe("免 费领取");
+  });
+});
+
 describe("foldEncodedGaps", () => {
   it("drops percent-encoded gaps and keeps an ordinary space", () => {
     expect(foldEncodedGaps("IN%E2%80%8BVITE")).toBe("INVITE");
@@ -41,6 +67,7 @@ describe("foldEncodedGaps", () => {
     expect(foldEncodedGaps("a%F3%A0%84%80b")).toBe("ab");
     expect(foldEncodedGaps("IN%20VITE")).toBe("IN%20VITE");
     expect(foldEncodedGaps("bit%2Ely")).toBe("bit%2Ely");
+    expect(foldEncodedGaps("bit%C2%B7ly")).toBe("bit%C2%B7ly");
     expect(foldEncodedGaps("%00%7F")).toBe("%00%7F");
     expect(foldEncodedGaps("%25E2%2580%258B")).toBe("");
     expect(foldEncodedGaps("IN%25E2%2580%258BVITE")).toBe("INVITE");
