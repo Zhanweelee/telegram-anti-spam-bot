@@ -66,7 +66,7 @@ packages/adapters-cloudflare  D1 审计与 KV 白名单
 packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  Node 侧测试帮手（sha256、构造事件）
 apps/worker                   Hono 入口
-apps/cloud                    云租户模块。免费额度配置在这里。支付仍不实现
+apps/cloud                    云租户模块。免费额度和接入目录在这里。支付仍不实现
 examples/minimal-pipeline     端到端例子
 evals                         评测集。检测器变更必须跑
 docs/adr                      ADR

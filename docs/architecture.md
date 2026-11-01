@@ -71,6 +71,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 `DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次。超过之后，只留下 `QUOTA_BASIC` 里的检测器，默认不含 `llm`。自部署默认关闭。`QUOTA_ENABLED` 可以覆盖。计数在 isolate 内存，最多 256 个群，重启清零。放不下或抛错时不降级。管理员消息不计数。`/quota <chatId>` 只读。支付和 Telegram Stars 没有实现。
 
+接入目录也在 `apps/cloud`。授予 bot 管理员的人，以及之后被标成管理员的人，只能在私聊操作自己的群。`ADMIN_USER_IDS` 仍可操作全部群。`/chats` 只返回群 id。目录最多 256 个群，重启清空。见 ADR 0027。
+
 ## 隐私
 
 请求处理期间，`Event.message.text` 可以留在内存里，检测器需要它。存储端口的 `AuditRecord` 没有原文栏位，只有 `textSha256`、原因和截断后的证据摘要。写入前会拒绝与原文完全相同的字符串，以及名为 `text` / `body` / `caption` / `raw` / `messageText` / `content` 的字段。
@@ -83,7 +85,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 1. 读取 `X-Telegram-Bot-Api-Secret-Token`。`WEBHOOK_SECRET` 未配置、请求头缺失或不相等时返回 401，不调用 `onEvent`。比较时对两侧做 SHA-256，再按固定长度逐字节异或。密钥最长 256 字符，和 Telegram 的 `secret_token` 限制一致。
 2. 正文超过 64 KiB 返回 413。JSON 无法解析，或缺少 `update_id`，返回 400。
-3. `message` 收成 `kind: "message"`。`chat_member` 收成 `kind: "chat_member"`，不带 `message`。主体是 `new_chat_member.user`；`from` 只表示谁执行了操作。`new_chat_member.status` 为 `administrator` 或 `creator` 时 `actor.isAdmin` 为 true。从群外进入（旧状态缺失、`left` 或 `kicked`，新状态是 `member` 或 `restricted`，且不是 bot）时带 `membership: "join"`。`callback_query` 的 `data` 为 `c:` 加 16 位十六进制时收成 `kind: "challenge"`，只带 nonce，不带消息正文。其它回调仍忽略。`edited_message` 收成同一条 `kind: "message"`，并带 `edited: true`。正文仍只留在当次请求的内存里。`my_chat_member` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。设置 webhook 时把 `message`、`edited_message`、`chat_member`、`callback_query` 都放进 `allowed_updates`。见 ADR 0022。配了 bot token 时，回调会再应答一次，清掉按钮上的转圈。
+3. `message` 收成 `kind: "message"`。`chat_member` 收成 `kind: "chat_member"`，不带 `message`。主体是 `new_chat_member.user`；`from` 只表示谁执行了操作。`new_chat_member.status` 为 `administrator` 或 `creator` 时 `actor.isAdmin` 为 true。从群外进入（旧状态缺失、`left` 或 `kicked`，新状态是 `member` 或 `restricted`，且不是 bot）时带 `membership: "join"`。`callback_query` 的 `data` 为 `c:` 加 16 位十六进制时收成 `kind: "challenge"`，只带 nonce，不带消息正文。其它回调仍忽略。`edited_message` 收成同一条 `kind: "message"`，并带 `edited: true`。正文仍只留在当次请求的内存里。群和超级群的 `my_chat_member` 收成 `kind: "bot_membership"`，只带 `admin` 或 `gone`，不带群名。私聊和频道忽略。见 ADR 0027。其它更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。设置 webhook 时把 `message`、`edited_message`、`chat_member`、`callback_query`、`my_chat_member` 都放进 `allowed_updates`。见 ADR 0022。配了 bot token 时，回调会再应答一次，清掉按钮上的转圈。
 4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
 5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
 6. Worker 在跑流水线之前按租户和群计数。同一群 10 秒内超过 30 条更新时返回 200，正文是 `{ "ok": true, "limited": true }`，不调用 `onEvent`。其他群继续检测。计数失败时放过。见 ADR 0024。

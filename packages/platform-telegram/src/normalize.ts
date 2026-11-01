@@ -28,6 +28,9 @@ export async function normalizeUpdate(
   if (Object.hasOwn(input.update, "callback_query")) {
     return callbackEvent(input.update.callback_query, updateId, input);
   }
+  if (Object.hasOwn(input.update, "my_chat_member")) {
+    return botMembershipEvent(input.update.my_chat_member, updateId, input);
+  }
   if (Object.hasOwn(input.update, "chat_member")) {
     return chatMemberEvent(input.update.chat_member, updateId, input);
   }
@@ -178,6 +181,56 @@ function chatMemberEvent(
     ...(direct ? { direct: true } : {}),
     ...(membership ? { membership } : {}),
   });
+}
+
+function botMembershipEvent(
+  value: unknown,
+  updateId: number,
+  input: NormalizeInput,
+): NormalizeOutcome {
+  if (!isRecord(value) || !isGroupChat(value.chat)) {
+    return { status: "ignored" };
+  }
+  if (!isRecord(value.new_chat_member)) {
+    return { status: "ignored" };
+  }
+  const state = botState(value.new_chat_member.status);
+  const chatId = nestedId(value.chat);
+  const actor = nestedId(value.from);
+  if (!state || !chatId || !actor) {
+    return { status: "ignored" };
+  }
+  const admins = new Set(input.adminUserIds);
+  return finish({
+    id: `tg_${updateId}`,
+    tenantId: input.tenantId,
+    chatId,
+    kind: "bot_membership" as const,
+    occurredAt: occurredAt(value.date, input.nowIso),
+    actor: { id: actor, isAdmin: admins.has(actor) },
+    bot: state,
+  });
+}
+
+function botState(status: unknown): "admin" | "gone" | null {
+  if (status === "administrator" || status === "creator") {
+    return "admin";
+  }
+  if (
+    status === "left" ||
+    status === "kicked" ||
+    status === "member" ||
+    status === "restricted"
+  ) {
+    return "gone";
+  }
+  return null;
+}
+
+function isGroupChat(chat: unknown): boolean {
+  return (
+    isRecord(chat) && (chat.type === "group" || chat.type === "supergroup")
+  );
 }
 
 function joiningMember(value: Record<string, unknown>): boolean {

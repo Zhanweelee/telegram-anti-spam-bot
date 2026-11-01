@@ -22,6 +22,11 @@ export {
   parseCaptchaChallenge,
   resolveChallenge,
 } from "./captcha.js";
+export type {
+  ChatDirectory,
+  ChatDirectoryResult,
+  ChatNote,
+} from "./chats.js";
 export { type Clock, createFixedClock, createSystemClock } from "./clock.js";
 export {
   type OperatorCommandInput,
@@ -43,6 +48,9 @@ export { PipelineConfigError, RawContentError } from "./errors.js";
 export {
   type Actor,
   actorSchema,
+  type BotState,
+  botStateSchema,
+  botStates,
   type Event,
   type EventKind,
   eventKindSchema,

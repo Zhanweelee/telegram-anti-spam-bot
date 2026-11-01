@@ -420,4 +420,66 @@ describe("normalizeUpdate", () => {
       (await normalize({ update_id: 3, message: { text: "no ids" } })).status,
     ).toBe("ignored");
   });
+
+  it("records a group admin grant without the chat title", async () => {
+    const title = "机密群名";
+    const granted = await normalize({
+      update_id: 34,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup", title },
+        from: { id: 7, first_name: title },
+        date: 1761955200,
+        old_chat_member: { user: { id: 99, is_bot: true }, status: "left" },
+        new_chat_member: {
+          user: { id: 99, is_bot: true, username: "tasb" },
+          status: "administrator",
+        },
+      },
+    });
+    expect(granted.status).toBe("event");
+    if (granted.status === "event") {
+      expect(granted.event.kind).toBe("bot_membership");
+      expect(granted.event.bot).toBe("admin");
+      expect(granted.event.chatId).toBe("-100586");
+      expect(granted.event.actor).toEqual({ id: "7", isAdmin: false });
+      expect(granted.event.message).toBeUndefined();
+      expect(JSON.stringify(granted.event)).not.toContain(title);
+    }
+    const left = await normalize({
+      update_id: 35,
+      my_chat_member: {
+        chat: { id: -100586, type: "group", title },
+        from: { id: 7 },
+        new_chat_member: { user: { id: 99 }, status: "left" },
+      },
+    });
+    expect(left.status).toBe("event");
+    if (left.status === "event") {
+      expect(left.event.bot).toBe("gone");
+    }
+    expect(
+      (
+        await normalize({
+          update_id: 36,
+          my_chat_member: {
+            chat: { id: 7, type: "private" },
+            from: { id: 7 },
+            new_chat_member: { user: { id: 99 }, status: "member" },
+          },
+        })
+      ).status,
+    ).toBe("ignored");
+    expect(
+      (
+        await normalize({
+          update_id: 37,
+          my_chat_member: {
+            chat: { id: -100586, type: "channel", title },
+            from: { id: 7 },
+            new_chat_member: { user: { id: 99 }, status: "administrator" },
+          },
+        })
+      ).status,
+    ).toBe("ignored");
+  });
 });

@@ -11,7 +11,11 @@ import {
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
-import { createMemoryQuotaStore, quotaPolicyFromEnv } from "@tasb/cloud";
+import {
+  createMemoryChatDirectory,
+  createMemoryQuotaStore,
+  quotaPolicyFromEnv,
+} from "@tasb/cloud";
 import {
   type BlocklistStore,
   createFixedClock,
@@ -520,6 +524,64 @@ describe("handleIncomingEvent", () => {
     );
     expect(kit.reply.sent[1]?.text).toBe(
       "quota -100 0/3000 calendar_month full",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("lets the person who promoted the bot manage that chat", async () => {
+    const kit = deps();
+    const chats = createMemoryChatDirectory();
+    const title = "机密群名";
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_bot",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+      }),
+      { ...kit, chats },
+    );
+    expect(kit.reply.sent).toHaveLength(0);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(title);
+    await handleIncomingEvent(
+      await incoming({ text: "/chats", direct: true, actorId: "7" }),
+      { ...kit, chats, adminActorIds: ["42"] },
+    );
+    expect(kit.reply.sent[0]?.text).toBe("chats\n-100586");
+    await handleIncomingEvent(
+      await incoming({
+        text: `/quota -100587 ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      {
+        ...kit,
+        chats,
+        adminActorIds: ["42"],
+        quota: {
+          policy: quotaPolicyFromEnv({ QUOTA_ENABLED: "true" }),
+          store: createMemoryQuotaStore(),
+        },
+      },
+    );
+    expect(kit.reply.sent[1]?.text).toBe("用法：/quota <chatId>");
+    await handleIncomingEvent(
+      await incoming({ text: "/quota -100586", direct: true, actorId: "7" }),
+      {
+        ...kit,
+        chats,
+        adminActorIds: ["42"],
+        quota: {
+          policy: quotaPolicyFromEnv({ QUOTA_ENABLED: "true" }),
+          store: createMemoryQuotaStore(),
+        },
+      },
+    );
+    expect(kit.reply.sent[2]?.text).toBe(
+      "quota -100586 0/3000 calendar_month full",
     );
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });

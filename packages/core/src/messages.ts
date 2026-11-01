@@ -43,6 +43,10 @@ export const messageKeys = [
   "command.quota.status",
   "command.quota.basic",
   "command.quota.full",
+  "command.chats.usage",
+  "command.chats.disabled",
+  "command.chats.empty",
+  "command.chats.body",
 ] as const;
 
 export type MessageKey = (typeof messageKeys)[number];
@@ -66,6 +70,7 @@ const syntax = [
   "/evals [chatId]",
   "/packs <chatId> [packId|off]",
   "/quota <chatId>",
+  "/chats",
 ].join("\n");
 
 const zh = {
@@ -113,6 +118,10 @@ const zh = {
   "command.quota.status": "quota {chatId} {used}/{limit} {period} {state}",
   "command.quota.basic": "basic",
   "command.quota.full": "full",
+  "command.chats.usage": "用法：/chats",
+  "command.chats.disabled": "chats off",
+  "command.chats.empty": "none",
+  "command.chats.body": "chats\n{chats}",
 } satisfies Record<MessageKey, string>;
 
 const en = {
@@ -161,6 +170,10 @@ const en = {
   "command.quota.status": "Quota {chatId} {used}/{limit} {period} {state}",
   "command.quota.basic": "basic",
   "command.quota.full": "full",
+  "command.chats.usage": "Usage: /chats",
+  "command.chats.disabled": "Chats off",
+  "command.chats.empty": "none",
+  "command.chats.body": "chats\n{chats}",
 } satisfies Record<MessageKey, string>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { zh, en };

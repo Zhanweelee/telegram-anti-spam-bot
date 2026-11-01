@@ -1,4 +1,5 @@
 import {
+  type ChatDirectory,
   createSystemClock,
   type Event,
   type Locale,
@@ -31,6 +32,7 @@ export interface OperateDeps extends ScreenDeps {
   readonly reply?: ReplyPort;
   readonly locale?: Locale;
   readonly review?: ReviewQueue;
+  readonly chats?: ChatDirectory;
 }
 
 export async function handleIncomingEvent(
@@ -51,12 +53,19 @@ export async function handleIncomingEvent(
   const review = deps.review ?? workerReview;
   const rulePacks = deps.rulePacks ?? workerRulePacks;
   const quota = deps.quota;
+  const chats = deps.chats;
   const reportActorId = (deps.adminActorIds ?? []).find((id) => id.length > 0);
   const notifier =
     deps.notifier ??
     (deps.reply && reportActorId
       ? adminNotifier(deps.reply, reportActorId)
       : undefined);
+  if (event.kind === "bot_membership" || event.kind === "chat_member") {
+    await syncChatDirectory(event, chats, logger);
+  }
+  if (event.kind === "bot_membership") {
+    return;
+  }
   if (event.kind === "challenge") {
     try {
       await resolveChallenge({
@@ -105,6 +114,7 @@ export async function handleIncomingEvent(
           },
         }
       : {}),
+    ...(chats ? { chats } : {}),
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
@@ -174,6 +184,47 @@ export async function handleIncomingEvent(
     logger.warn("captcha_prompt_failed", {
       eventId: event.id,
       chatId: event.chatId,
+    });
+  }
+}
+
+async function syncChatDirectory(
+  event: Event,
+  directory: ChatDirectory | undefined,
+  logger: Logger,
+): Promise<void> {
+  if (!directory) {
+    return;
+  }
+  try {
+    const result =
+      event.kind === "bot_membership"
+        ? event.bot
+          ? await directory.noteBot({
+              tenantId: event.tenantId,
+              chatId: event.chatId,
+              actorId: event.actor.id,
+              state: event.bot,
+            })
+          : "ok"
+        : await directory.noteMember({
+            tenantId: event.tenantId,
+            chatId: event.chatId,
+            actorId: event.actor.id,
+            admin: event.actor.isAdmin,
+          });
+    if (result === "full") {
+      logger.warn("chat_directory_full", {
+        eventId: event.id,
+        chatId: event.chatId,
+        tenantId: event.tenantId,
+      });
+    }
+  } catch {
+    logger.warn("chat_directory_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+      tenantId: event.tenantId,
     });
   }
 }

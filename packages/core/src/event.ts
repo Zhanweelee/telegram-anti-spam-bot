@@ -11,11 +11,15 @@ export const eventKinds = [
   "chat_member",
   "command",
   "challenge",
+  "bot_membership",
 ] as const;
 export const eventKindSchema = z.enum(eventKinds);
 
 export const forwardKinds = ["user", "chat", "channel", "hidden"] as const;
 export const forwardKindSchema = z.enum(forwardKinds);
+
+export const botStates = ["admin", "gone"] as const;
+export const botStateSchema = z.enum(botStates);
 
 export const messageSchema = z.strictObject({
   id: idSchema,
@@ -43,6 +47,8 @@ export const eventSchema = z.strictObject({
   edited: z.literal(true).optional(),
   /** Present when a member joined from outside the chat. */
   membership: z.literal("join").optional(),
+  /** Bot admin state. Chat titles stay out of the event. */
+  bot: botStateSchema.optional(),
   /** Button answer. The nonce is not message text. */
   challenge: z
     .strictObject({ nonce: z.string().regex(/^[a-f0-9]{16}$/) })
@@ -52,6 +58,7 @@ export const eventSchema = z.strictObject({
 
 export type EventKind = z.output<typeof eventKindSchema>;
 export type ForwardKind = z.output<typeof forwardKindSchema>;
+export type BotState = z.output<typeof botStateSchema>;
 export type MessageContent = z.output<typeof messageSchema>;
 export type Actor = z.output<typeof actorSchema>;
 export type Event = z.output<typeof eventSchema>;

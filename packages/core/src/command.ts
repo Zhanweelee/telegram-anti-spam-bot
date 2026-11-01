@@ -4,6 +4,7 @@ import {
   blocklistEntrySchema,
 } from "./blocklist.js";
 import type { Cache } from "./cache.js";
+import type { ChatDirectory } from "./chats.js";
 import type { Event } from "./event.js";
 import { feedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
@@ -45,6 +46,7 @@ const COMMAND_NAMES = [
   "evals",
   "packs",
   "quota",
+  "chats",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -67,6 +69,13 @@ export interface OperatorCommandInput {
   readonly locale?: Locale;
   readonly rulePacks?: RuleSubscriptionStore;
   readonly quota?: QuotaReader;
+  readonly chats?: ChatDirectory;
+  readonly scope?: CommandScope;
+}
+
+interface CommandScope {
+  readonly all: boolean;
+  readonly ids: readonly string[];
 }
 
 export type OperatorCommandResult =
@@ -89,12 +98,10 @@ export async function runOperatorCommand(
     return { status: "skip" };
   }
   const admins = new Set(input.adminActorIds.slice(0, 64));
-  if (!admins.has(input.event.actor.id)) {
-    input.logger.warn("operator_denied", {
-      eventId: input.event.id,
-      chatId: input.event.chatId,
-      command: parsed.name,
-    });
+  const scope = admins.has(input.event.actor.id)
+    ? { all: true, ids: [] }
+    : await actorScope(input, parsed.name);
+  if (!scope) {
     return {
       status: "reply",
       command: parsed.name,
@@ -106,7 +113,11 @@ export async function runOperatorCommand(
     chatId: input.event.chatId,
     command: parsed.name,
   });
-  const textReply = await dispatch(input, parsed.name, parsed.args);
+  const textReply = await dispatch(
+    { ...input, scope },
+    parsed.name,
+    parsed.args,
+  );
   return { status: "reply", command: parsed.name, text: textReply };
 }
 
@@ -156,7 +167,71 @@ async function dispatch(
       return editPacks(input, args);
     case "quota":
       return showQuota(input, args);
+    case "chats":
+      return showChats(input, args);
   }
+}
+
+async function actorScope(
+  input: OperatorCommandInput,
+  command: CommandName,
+): Promise<CommandScope | null> {
+  const directory = input.chats;
+  if (!directory) {
+    deny(input, command);
+    return null;
+  }
+  try {
+    const ids = await directory.chatsFor(
+      input.event.tenantId,
+      input.event.actor.id,
+    );
+    if (ids.length === 0) {
+      deny(input, command);
+      return null;
+    }
+    return { all: false, ids };
+  } catch {
+    input.logger.warn("operator_rejected", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+      command,
+    });
+    return null;
+  }
+}
+
+function deny(input: OperatorCommandInput, command: CommandName): void {
+  input.logger.warn("operator_denied", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command,
+  });
+}
+
+function scopeOf(input: OperatorCommandInput): CommandScope {
+  return input.scope ?? { all: false, ids: [] };
+}
+
+function defaultChat(scope: CommandScope): string | undefined {
+  if (scope.all || scope.ids.length !== 1) {
+    return undefined;
+  }
+  return scope.ids[0];
+}
+
+function refuseChat(
+  input: OperatorCommandInput,
+  chatId: string | undefined,
+): string | undefined {
+  const scope = scopeOf(input);
+  if (scope.all) {
+    return undefined;
+  }
+  if (chatId !== undefined && scope.ids.includes(chatId)) {
+    return undefined;
+  }
+  return say(input, "command.denied");
 }
 
 async function showRules(
@@ -166,9 +241,15 @@ async function showRules(
   if (args.length > 1) {
     return say(input, "command.rules.usage");
   }
-  const chatId = args[0] ?? input.event.chatId;
-  if (!isTargetId(chatId)) {
-    return say(input, "command.invalid");
+  const scope = scopeOf(input);
+  const chatId =
+    args[0] ?? (scope.all ? input.event.chatId : defaultChat(scope));
+  if (!chatId || !isTargetId(chatId)) {
+    return say(input, scope.all ? "command.invalid" : "command.rules.usage");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   const rules = await loadRuleSet({
     tenantId: input.event.tenantId,
@@ -206,6 +287,10 @@ async function editWhitelist(
   const chatId = args[0];
   if (!chatId || !isTargetId(chatId)) {
     return say(input, "command.whitelist.usage");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   const op = args[1];
   const actorId = args[2];
@@ -267,9 +352,20 @@ async function showLogs(
   if (args.length > 1) {
     return say(input, "command.logs.usage");
   }
-  const chatId = args[0];
+  const scope = scopeOf(input);
+  let chatId = args[0];
+  if (chatId === undefined && !scope.all) {
+    chatId = defaultChat(scope);
+    if (chatId === undefined) {
+      return say(input, "command.logs.usage");
+    }
+  }
   if (chatId !== undefined && !isTargetId(chatId)) {
     return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   const records = await input.storage.listAudits(
     chatId === undefined
@@ -371,9 +467,20 @@ function resolveScope(
   if (args.length > 1) {
     return say(input, usageKey);
   }
-  const chatId = args[0];
+  const scope = scopeOf(input);
+  let chatId = args[0];
+  if (chatId === undefined && !scope.all) {
+    chatId = defaultChat(scope);
+    if (chatId === undefined) {
+      return say(input, usageKey);
+    }
+  }
   if (chatId !== undefined && !isTargetId(chatId)) {
     return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   return chatId === undefined
     ? { tenantId: input.event.tenantId }
@@ -387,6 +494,10 @@ async function editDryRun(
   const chatId = args[0];
   if (!chatId || !isTargetId(chatId) || args.length > 2) {
     return say(input, "command.dryrun.usage");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   const mode = args[1];
   if (mode !== undefined && mode !== "on" && mode !== "off") {
@@ -478,6 +589,10 @@ async function editBlocklist(
     return args.length === 0
       ? say(input, "command.blocklist.usage")
       : say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
   }
   const op = args[1];
   if (op === undefined) {
@@ -607,6 +722,10 @@ async function appealAudit(
   if (!chatId || !isTargetId(chatId) || !eventId || !isEventId(eventId)) {
     return say(input, "command.invalid");
   }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
   const label = appealLabel(verb);
   if (!label) {
     return say(input, "command.appeal.usage");
@@ -682,6 +801,10 @@ async function editPacks(
   if (!chatId || !isTargetId(chatId) || args.length > 2) {
     return say(input, "command.packs.usage");
   }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
   const verb = args[1];
   if (verb === undefined) {
     return showPack(input, store, chatId);
@@ -751,6 +874,10 @@ async function showQuota(
   if (!isTargetId(chatId)) {
     return say(input, "command.invalid");
   }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
   try {
     const parsed = quotaSnapshotSchema.safeParse(
       await reader.read(input.event.tenantId, chatId, input.event.occurredAt),
@@ -774,6 +901,36 @@ async function showQuota(
       eventId: input.event.id,
       chatId: input.event.chatId,
       command: "quota",
+    });
+    return say(input, "command.invalid");
+  }
+}
+
+async function showChats(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 0) {
+    return say(input, "command.chats.usage");
+  }
+  const directory = input.chats;
+  if (!directory) {
+    return say(input, "command.chats.disabled");
+  }
+  const scope = scopeOf(input);
+  try {
+    const ids = scope.all
+      ? await directory.list(input.event.tenantId)
+      : scope.ids;
+    if (ids.length === 0) {
+      return say(input, "command.chats.empty");
+    }
+    return say(input, "command.chats.body", { chats: ids.join("\n") });
+  } catch {
+    input.logger.warn("operator_rejected", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+      command: "chats",
     });
     return say(input, "command.invalid");
   }

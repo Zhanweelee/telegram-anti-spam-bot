@@ -12,6 +12,7 @@ export const cloudModule = {
   version: "0.0.0",
 } as const;
 
+export { createMemoryChatDirectory } from "./chats.js";
 export {
   createMemoryQuotaStore,
   defaultBasicDetectorIds,

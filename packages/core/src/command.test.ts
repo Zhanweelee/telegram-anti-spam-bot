@@ -1523,6 +1523,158 @@ describe("runOperatorCommand", () => {
     });
     expect(invalid).toMatchObject({ text: "参数无效" });
   });
+
+  it("lets a granting user manage only that chat", async () => {
+    const deps = kit();
+    const directory = {
+      async noteBot() {
+        return "ok" as const;
+      },
+      async noteMember() {
+        return "ok" as const;
+      },
+      async chatsFor() {
+        return ["-100"];
+      },
+      async list() {
+        return ["-100", "-200"];
+      },
+    };
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-200",
+      eventId: "evt_other",
+      action: "delete",
+      score: 1,
+      reasons: [phrase],
+      evidence: [],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+    const listed = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(listed).toMatchObject({ text: "chats\n-100" });
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: `/logs -200 ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(foreign).toMatchObject({ text: "用法：/logs [chatId]" });
+    const other = await runOperatorCommand({
+      event: event({ text: "/logs -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(other).toMatchObject({ text: "没有权限" });
+    const own = await runOperatorCommand({
+      event: event({ text: "/logs", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(own).toMatchObject({ text: "no audits" });
+    expect(deps.storage.records).toHaveLength(1);
+    const noisy = await runOperatorCommand({
+      event: event({ text: `/chats ${phrase}`, direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(noisy).toMatchObject({ text: "用法：/chats" });
+    const broken = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true, actorId: "9" }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async chatsFor() {
+          throw new Error(phrase);
+        },
+      },
+      ...deps,
+    });
+    expect(broken).toMatchObject({ text: "没有权限" });
+    const off = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(off).toMatchObject({ text: "chats off" });
+    const empty = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          return [];
+        },
+      },
+      ...deps,
+    });
+    expect(empty).toMatchObject({ text: "none" });
+    const failed = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          throw new Error(phrase);
+        },
+      },
+      ...deps,
+    });
+    expect(failed).toMatchObject({ text: "参数无效" });
+    const outsider = await runOperatorCommand({
+      event: event({
+        text: "/whitelist -100 add 9",
+        direct: true,
+        actorId: "8",
+      }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async chatsFor() {
+          return [];
+        },
+      },
+      ...deps,
+    });
+    expect(outsider).toMatchObject({ text: "没有权限" });
+    const many = await runOperatorCommand({
+      event: event({ text: "/logs", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async chatsFor() {
+          return ["-100", "-300"];
+        },
+      },
+      ...deps,
+    });
+    expect(many).toMatchObject({ text: "用法：/logs [chatId]" });
+    const blocked = await runOperatorCommand({
+      event: event({
+        text: "/whitelist -200 add 9",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+    });
+    expect(blocked).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(other)).not.toContain(phrase);
+  });
 });
 
 function appealAudit(): AuditRecord {
