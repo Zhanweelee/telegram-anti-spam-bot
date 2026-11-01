@@ -18,6 +18,7 @@
     "@tasb/detector-blocklist": "workspace:*",
     "@tasb/detector-join": "workspace:*",
     "@tasb/detector-bot": "workspace:*",
+    "@tasb/detector-contact": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",
     "@tasb/detector-link": "workspace:*",

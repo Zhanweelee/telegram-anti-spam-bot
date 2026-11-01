@@ -223,6 +223,40 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(code);
   });
 
+  it("keeps a shared contact as a flag and drops the phone", async () => {
+    const phone = "13800138000";
+    const name = "机密姓名";
+    const outcome = await normalize({
+      update_id: 2008,
+      message: {
+        message_id: 13,
+        date: 1761955200,
+        chat: { id: -100593, type: "supergroup", title: "机密群名" },
+        from: { id: 92 },
+        contact: {
+          phone_number: phone,
+          first_name: name,
+          last_name: "机密姓",
+          user_id: 999001,
+          vcard: "BEGIN:VCARD",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    expect(outcome.event.message?.text).toBe("");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("机密姓");
+    expect(dumped).not.toContain("VCARD");
+    expect(dumped).not.toContain("999001");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("prefers a caption when text is missing", async () => {
     const outcome = await normalize({
       update_id: 8,

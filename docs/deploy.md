@@ -99,7 +99,7 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 - `QUOTA_ENABLED`：`true` 或 `false`，覆盖部署模式的默认开关。
 - `QUOTA_LIMIT`：1 到 1000000 的整数。非法值回到 3000。
 - `QUOTA_PERIOD`：`calendar_month` 或 `rolling_30d`。非法值回到自然月。
-- `QUOTA_BASIC`：逗号分隔的检测器 id，最多 32 个。默认是 `keyword,join,flood,repeat,link,blocklist,forward,regex`。`bot` 不在这份默认名单里。云模式超额后，`bot_join` 会停，直到把 `bot` 加进 `QUOTA_BASIC`。自部署默认不计数，这条规则一直有效。
+- `QUOTA_BASIC`：逗号分隔的检测器 id，最多 32 个。默认是 `keyword,join,flood,repeat,link,blocklist,forward,regex`。`bot` 和 `contact` 不在这份默认名单里。云模式超额后，`bot_join` 和 `shared_contact` 会停，直到把对应 id 加进 `QUOTA_BASIC`。自部署默认不计数，这些规则一直有效。
 
 计数在 isolate 内存里，最多 256 个群，重启后从 0 开始。这不是账单，也没有支付。
 

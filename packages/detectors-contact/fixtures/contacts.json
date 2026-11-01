@@ -1,0 +1,10 @@
+[
+  {
+    "name": "shared card",
+    "kind": "message",
+    "contact": true,
+    "expect": "hit"
+  },
+  { "name": "plain text", "kind": "message", "expect": "miss" },
+  { "name": "join", "kind": "chat_member", "contact": true, "expect": "miss" }
+]

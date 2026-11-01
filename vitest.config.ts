@@ -7,6 +7,7 @@ export default defineConfig({
       "packages/detectors-keyword",
       "packages/detectors-join",
       "packages/detectors-bot",
+      "packages/detectors-contact",
       "packages/detectors-rate",
       "packages/detectors-link",
       "packages/detectors-blocklist",

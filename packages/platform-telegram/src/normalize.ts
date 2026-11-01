@@ -112,6 +112,7 @@ async function messageEvent(
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
       ...(links.invites.length > 0 ? { invites: links.invites } : {}),
+      ...(isRecord(message.contact) ? { contact: true as const } : {}),
     },
   });
 }

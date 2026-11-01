@@ -1,0 +1,10 @@
+[
+  {
+    "id": "shared-card",
+    "kind": "message",
+    "contact": true,
+    "label": "spam"
+  },
+  { "id": "plain-text", "kind": "message", "label": "ham" },
+  { "id": "join", "kind": "chat_member", "label": "ham" }
+]

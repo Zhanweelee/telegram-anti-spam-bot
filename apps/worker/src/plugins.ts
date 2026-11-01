@@ -85,6 +85,12 @@ export const builtinManifests = {
     integrity:
       "9baddcf248aabed1cd0fabd714d080b8e16fda611ac23ca593c04766d59cb021",
   }),
+  contact: manifest({
+    id: "contact",
+    kind: "detector",
+    integrity:
+      "5bc05838659d8b7f142fae02d205abf729a47bb919df6010c99efeb592c39eb0",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

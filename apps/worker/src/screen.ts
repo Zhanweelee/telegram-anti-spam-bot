@@ -43,6 +43,7 @@ import {
 } from "@tasb/core";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBotDetector } from "@tasb/detector-bot";
+import { createContactDetector } from "@tasb/detector-contact";
 import {
   createForwardDetector,
   defaultForwardKinds,
@@ -277,6 +278,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.bot,
         value: createBotDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.contact,
+        value: createContactDetector(),
       },
       {
         source: "builtin",

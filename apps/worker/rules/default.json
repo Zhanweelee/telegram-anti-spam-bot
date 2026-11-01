@@ -89,6 +89,14 @@
       "detectorIds": ["bot"],
       "threshold": 1,
       "actions": ["ban"]
+    },
+    {
+      "id": "shared_contact",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["contact"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

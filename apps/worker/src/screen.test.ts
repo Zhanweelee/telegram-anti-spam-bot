@@ -304,6 +304,51 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes a shared contact and keeps the phone out of logs", async () => {
+    const phone = "13800138000";
+    const name = "机密姓名";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2008,
+        message: {
+          message_id: 13,
+          date: 1761955200,
+          chat: { id: -100593, type: "supergroup", title: "机密群名" },
+          from: { id: 92 },
+          contact: {
+            phone_number: phone,
+            first_name: name,
+            user_id: 999001,
+            vcard: "BEGIN:VCARD",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("contact_shared");
+    expect(result.decision.ruleIds).toContain("shared_contact");
+    expect(JSON.stringify(result.decision.evidence)).toContain("contact:card");
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("VCARD");
+    expect(dumped).not.toContain("999001");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("uses a chat override from the rule file and does not read storage", async () => {
     const text = "请免费领取礼品";
     const storage = countingStorage();
