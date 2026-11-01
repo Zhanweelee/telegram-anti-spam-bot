@@ -50,6 +50,9 @@ export async function normalizeUpdate(
   if (Object.hasOwn(input.update, "chat_member")) {
     return await chatMemberEvent(input.update.chat_member, updateId, input);
   }
+  if (Object.hasOwn(input.update, "chat_join_request")) {
+    return joinRequestEvent(input.update.chat_join_request, updateId, input);
+  }
   if (Object.hasOwn(input.update, "edited_message")) {
     return messageEvent(input.update.edited_message, updateId, input, true);
   }
@@ -214,6 +217,47 @@ async function chatMemberEvent(
     ...(membership ? { membership } : {}),
     ...(profile ? { profile } : {}),
   });
+}
+
+async function joinRequestEvent(
+  value: unknown,
+  updateId: number,
+  input: NormalizeInput,
+): Promise<NormalizeOutcome> {
+  if (!isRecord(value)) {
+    return { status: "ignored" };
+  }
+  const chatId = nestedId(value.chat);
+  const actor = nestedId(value.from);
+  if (!chatId || !actor) {
+    return { status: "ignored" };
+  }
+  const profile = await requestBio(value.bio);
+  const direct = isPrivateChat(value.chat);
+  return finish({
+    id: `tg_${updateId}`,
+    tenantId: input.tenantId,
+    chatId,
+    kind: "join_request" as const,
+    occurredAt: occurredAt(value.date, input.nowIso),
+    actor: { id: actor, isAdmin: new Set(input.adminUserIds).has(actor) },
+    ...(direct ? { direct: true } : {}),
+    ...(profile ? { profile } : {}),
+  });
+}
+
+async function requestBio(
+  value: unknown,
+): Promise<{ readonly text: string; readonly textSha256: string } | undefined> {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  const text = trimmed.slice(0, 256);
+  return { text, textSha256: await sha256Hex(text) };
 }
 
 async function joinProfile(

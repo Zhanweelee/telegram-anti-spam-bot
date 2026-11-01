@@ -52,6 +52,7 @@ function moderator(
     async deleteMessage() {},
     async muteActor() {},
     async banActor() {},
+    async declineJoin() {},
     async restrictActor(target) {
       if (restrict) {
         await restrict(target);

@@ -980,4 +980,40 @@ describe("link fixtures", () => {
     });
     expect(ordinaryEncoded).toBeNull();
   });
+
+  it("reads a join request bio when the event has no message", async () => {
+    const detector = createLinkDetector();
+    const bio = parseEvent({
+      id: "evt_link",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "user_1", isAdmin: false },
+      profile: {
+        text: "https://bit.ly/bio83 https://example.com/ok83",
+        textSha256: HASH,
+      },
+    });
+    const hit = await detector.detect({
+      event: bio,
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["short_link"]);
+    expect(hit?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(hit)).not.toContain("bio83");
+
+    const clean = parseEvent({
+      ...bio,
+      profile: { text: "https://example.com/ok83", textSha256: HASH },
+    });
+    expect(
+      await detector.detect({
+        event: clean,
+        logger: createMemoryLogger(),
+        signal,
+      }),
+    ).toBeNull();
+  });
 });

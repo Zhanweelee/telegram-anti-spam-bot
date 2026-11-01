@@ -116,6 +116,7 @@ function harness(options?: { failStorage?: boolean }) {
     },
     async muteActor() {},
     async banActor() {},
+    async declineJoin() {},
     async restrictActor() {},
     async releaseActor() {},
   };

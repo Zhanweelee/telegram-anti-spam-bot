@@ -1,6 +1,7 @@
 import {
   createBanAction,
   createCaptchaAction,
+  createDeclineAction,
   createDeleteAction,
   createLogAction,
   createMuteAction,
@@ -359,6 +360,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.ban,
         value: createBanAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.decline,
+        value: createDeclineAction(),
       },
       {
         source: "builtin",

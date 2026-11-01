@@ -156,4 +156,31 @@ describe("telegram captcha transport", () => {
     expect(bodies[1]).toContain('"can_send_messages":true');
     expect(bodies[1]).not.toContain("until_date");
   });
+
+  it("declines a join request without sending the bio", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    let method = "";
+    let body = "";
+    const moderator = createTelegramModerator({
+      token,
+      fetchImpl: async (input, init) => {
+        method = String(input);
+        body = String(init?.body ?? "");
+        return new Response("ok", { status: 200 });
+      },
+    });
+    await moderator.declineJoin({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "83",
+    });
+    expect(method).toBe(
+      `https://api.telegram.org/bot${token}/declineChatJoinRequest`,
+    );
+    expect(body).toContain('"chat_id":-100');
+    expect(body).toContain('"user_id":83');
+    expect(body).not.toContain(phrase);
+    expect(body).not.toContain(token);
+  });
 });

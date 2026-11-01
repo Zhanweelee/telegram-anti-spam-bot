@@ -13,6 +13,7 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   createBanAction,
+  createDeclineAction,
   createDeleteAction,
   createLogAction,
   createMuteAction,
@@ -66,6 +67,7 @@ describe("delete action", () => {
           },
           async muteActor() {},
           async banActor() {},
+          async declineJoin() {},
           async restrictActor() {},
           async releaseActor() {},
         },
@@ -115,6 +117,7 @@ function ports(): ModerationPort & {
     async banActor(target) {
       banned.push(target);
     },
+    async declineJoin() {},
     async restrictActor() {},
     async releaseActor() {},
   };
@@ -327,5 +330,65 @@ describe("log and report actions", () => {
       detail: "report_failed",
     });
     expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+});
+
+describe("decline action", () => {
+  const action = createDeclineAction();
+
+  it("declines a join request and ignores other events", async () => {
+    const declined: BanTarget[] = [];
+    const moderator = {
+      ...ports(),
+      async declineJoin(target: BanTarget) {
+        declined.push(target);
+      },
+    };
+    const request = parseEvent({
+      id: "evt_join",
+      tenantId: "local",
+      chatId: "-100",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "83", isAdmin: false },
+      profile: { text: "bio", textSha256: "ab".repeat(32) },
+    });
+    const executed = await action.execute({
+      event: request,
+      decision: {
+        action: "decline",
+        ruleIds: ["join_request"],
+        score: 1,
+        reasons: ["short_link"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(executed.status).toBe("executed");
+    expect(declined).toEqual([
+      { tenantId: "local", chatId: "-100", actorId: "83" },
+    ]);
+    const skipped = await action.execute({
+      event: messageEvent(),
+      decision: {
+        action: "decline",
+        ruleIds: ["join_request"],
+        score: 1,
+        reasons: ["short_link"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(skipped).toEqual({
+      actionId: "decline",
+      status: "failed",
+      detail: "not_join_request",
+    });
   });
 });

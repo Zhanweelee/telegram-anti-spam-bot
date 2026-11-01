@@ -82,18 +82,21 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
+  readonly declined: readonly BanTarget[];
   readonly restricted: readonly MuteTarget[];
   readonly released: readonly BanTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
+  const declined: BanTarget[] = [];
   const restricted: MuteTarget[] = [];
   const released: BanTarget[] = [];
   return {
     deleted,
     muted,
     banned,
+    declined,
     restricted,
     released,
     async deleteMessage(target) {
@@ -104,6 +107,9 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async banActor(target) {
       banned.push({ ...target });
+    },
+    async declineJoin(target) {
+      declined.push({ ...target });
     },
     async restrictActor(target) {
       restricted.push({ ...target });

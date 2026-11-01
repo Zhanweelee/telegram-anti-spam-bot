@@ -251,6 +251,92 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(audit)).not.toContain(name);
   });
 
+  it("declines a join request whose bio carries a short link", async () => {
+    const phrase = "请免费领取礼品";
+    const bio = `${phrase} https://bit.ly/bio83`;
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 5410,
+        chat_join_request: {
+          chat: {
+            id: -100589,
+            type: "supergroup",
+            title: "https://cutt.ly/old83",
+          },
+          from: { id: 83, first_name: "https://tinyurl.com/name83" },
+          user_chat_id: 83001,
+          date: 1761955200,
+          bio,
+          invite_link: { invite_link: "https://t.me/+KEEP83" },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("decline");
+    expect(result.decision.ruleIds).toContain("join_request");
+    expect(moderator.declined).toEqual([
+      { tenantId: "local", chatId: "-100589", actorId: "83" },
+    ]);
+    expect(moderator.banned).toEqual([]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain("bio83");
+    expect(logged).not.toContain("name83");
+    expect(logged).not.toContain("KEEP83");
+    expect(logged).not.toContain("old83");
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-100589",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(outcome.event.profile?.textSha256);
+    expect(JSON.stringify(audit)).not.toContain(phrase);
+    expect(JSON.stringify(audit)).not.toContain("bio83");
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5411,
+        chat_join_request: {
+          chat: {
+            id: -100590,
+            type: "supergroup",
+            title: "https://bit.ly/kept83",
+          },
+          from: { id: 83, first_name: phrase },
+          date: 1761955200,
+          bio: "https://example.com/ok83",
+          invite_link: { invite_link: "https://ow.ly/inv83" },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    const cleanModerator = createMemoryModerator();
+    const cleanResult = await screenTelegramEvent(clean.event, {
+      logger: createMemoryLogger(),
+      moderator: cleanModerator,
+    });
+    expect(cleanResult.decision.action).toBe("allow");
+    expect(cleanModerator.declined).toEqual([]);
+  });
+
   it("bans a bot added from outside and drops its username", async () => {
     const name = "广告机器人";
     const outcome = await normalizeUpdate({

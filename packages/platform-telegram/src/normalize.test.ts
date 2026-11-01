@@ -5740,4 +5740,87 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("ow.ly");
     expect(aloneDump).not.toContain("82003");
   });
+
+  it("keeps a join request bio and drops the invite link", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "JOIN83";
+    const bio = `${phrase} https://bit.ly/bio83 https://t.me/+${code}.`;
+    const labeled = await normalize({
+      update_id: 5410,
+      chat_join_request: {
+        chat: {
+          id: -101080,
+          type: "supergroup",
+          title: "https://cutt.ly/grp83",
+        },
+        from: { id: 83, first_name: "https://tinyurl.com/name83" },
+        user_chat_id: 83001,
+        date: 1761955200,
+        bio,
+        invite_link: { invite_link: "https://ow.ly/inv83" },
+        query_id: "query83",
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.kind).toBe("join_request");
+    expect(labeled.event.actor).toEqual({ id: "83", isAdmin: false });
+    expect(labeled.event.message).toBeUndefined();
+    expect(labeled.event.profile?.text).toBe(bio);
+    expect(labeled.event.profile?.textSha256).toBe(await sha256Hex(bio));
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain("name83");
+    expect(labeledDump).not.toContain("grp83");
+    expect(labeledDump).not.toContain("inv83");
+    expect(labeledDump).not.toContain("query83");
+    expect(labeledDump).not.toContain("83001");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("ow.ly");
+
+    const ordinary = await normalize({
+      update_id: 5411,
+      chat_join_request: {
+        chat: {
+          id: -101081,
+          type: "supergroup",
+          title: "https://bit.ly/kept83",
+        },
+        from: { id: 83, first_name: "免费领取" },
+        date: 1761955200,
+        bio: "https://example.com/ok83",
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.profile?.text).toBe("https://example.com/ok83");
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("kept83");
+    expect(ordinaryDump).not.toContain("免费领取");
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const empty = await normalize({
+      update_id: 5412,
+      chat_join_request: {
+        chat: { id: -101082, type: "supergroup" },
+        from: { id: 83, first_name: phrase },
+        date: 1761955200,
+        invite_link: { invite_link: `https://t.me/+${code}` },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.profile).toBeUndefined();
+    expect(empty.event.message).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain(phrase);
+    expect(emptyDump).not.toContain(code);
+    expect(emptyDump).not.toContain("t.me");
+  });
 });

@@ -2,7 +2,7 @@ import { decisionActions } from "./decision.js";
 import type { LogEntry, LogFields } from "./logger.js";
 
 const LABEL = /^[A-Za-z0-9_.:-]{1,64}$/;
-const INTERCEPT = new Set(["captcha", "delete", "mute", "ban"]);
+const INTERCEPT = new Set(["captcha", "decline", "delete", "mute", "ban"]);
 const DETECTOR_ERRORS = new Set([
   "detector_error",
   "llm_failed",

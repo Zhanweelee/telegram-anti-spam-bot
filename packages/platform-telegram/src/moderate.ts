@@ -63,6 +63,19 @@ export function createTelegramModerator(input: {
         body: silencedUntil(target, input.nowSeconds ?? unixSeconds),
       });
     },
+    async declineJoin(target) {
+      await postTelegram({
+        token: input.token,
+        method: "declineChatJoinRequest",
+        fetchImpl: input.fetchImpl,
+        missing: "decline_unavailable",
+        failed: "decline_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+    },
     async banActor(target) {
       await postTelegram({
         token: input.token,

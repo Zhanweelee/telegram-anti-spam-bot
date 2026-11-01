@@ -99,6 +99,14 @@
       "actions": ["ban"]
     },
     {
+      "id": "join_request",
+      "enabled": true,
+      "when": { "eventKind": "join_request" },
+      "detectorIds": ["keyword", "link"],
+      "threshold": 1,
+      "actions": ["decline"]
+    },
+    {
       "id": "shared_contact",
       "enabled": true,
       "when": { "eventKind": "message" },

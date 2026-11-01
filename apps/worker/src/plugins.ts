@@ -157,6 +157,12 @@ export const builtinManifests = {
     integrity:
       "4c4627812eb0ef8d47c85aee95cf8ac82d84a7562a541f8e026b896235ed9b28",
   }),
+  decline: manifest({
+    id: "decline",
+    kind: "action",
+    integrity:
+      "8a1b9516e5b4f1f7cc2447e0f31a40202a388a322dc8255c1a4bb351ef37b80e",
+  }),
   captcha: manifest({
     id: "captcha",
     kind: "action",

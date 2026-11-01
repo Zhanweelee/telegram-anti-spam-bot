@@ -9,6 +9,7 @@ const idSchema = z.string().min(1).max(128);
 export const eventKinds = [
   "message",
   "chat_member",
+  "join_request",
   "command",
   "challenge",
   "bot_membership",

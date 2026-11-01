@@ -166,6 +166,41 @@ export function createCaptchaAction(deps: CaptchaActionDeps): Action {
   });
 }
 
+export function createDeclineAction(): Action {
+  return defineAction({
+    id: "decline",
+    version: "0.1.0",
+    capabilities: ["moderation"],
+    configSchema: z.strictObject({}),
+    config: {},
+    async execute(ctx) {
+      if (ctx.dryRun) {
+        return { actionId: "decline", status: "skipped", detail: "dry_run" };
+      }
+      if (ctx.event.kind !== "join_request") {
+        return {
+          actionId: "decline",
+          status: "failed",
+          detail: "not_join_request",
+        };
+      }
+      if (ctx.event.actor.id.length === 0) {
+        return {
+          actionId: "decline",
+          status: "failed",
+          detail: "missing_actor",
+        };
+      }
+      await ctx.moderator.declineJoin({
+        tenantId: ctx.event.tenantId,
+        chatId: ctx.event.chatId,
+        actorId: ctx.event.actor.id,
+      });
+      return { actionId: "decline", status: "executed" };
+    },
+  });
+}
+
 export function createBanAction(): Action {
   return defineAction({
     id: "ban",

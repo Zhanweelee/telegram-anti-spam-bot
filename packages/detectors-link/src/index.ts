@@ -77,7 +77,8 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
     },
     async detect(ctx, parsed) {
       const message = ctx.event.message;
-      if (!message) {
+      const text = message?.text ?? ctx.event.profile?.text;
+      if (text === undefined) {
         return null;
       }
       const inviteNames = new Set(
@@ -85,12 +86,12 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldHostScan(message.text);
+      const compared = foldHostScan(text);
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
-        message.invites,
+        message?.invites,
       );
-      const hosts = mergeHosts(extractHosts(compared), message.hosts);
+      const hosts = mergeHosts(extractHosts(compared), message?.hosts);
       if (hosts.length === 0 && invites.length === 0) {
         return null;
       }

@@ -52,6 +52,36 @@ describe("receiveUpdate", () => {
     expect(JSON.stringify(result.events[0]?.actor)).not.toContain("Newbie");
   });
 
+  it("keeps a join request bio and drops the invite link", async () => {
+    const bio = "https://bit.ly/bio83";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 3,
+        chat_join_request: {
+          chat: { id: -100, title: "https://cutt.ly/grp83" },
+          from: { id: 83, first_name: "https://tinyurl.com/name83" },
+          date: 1761955200,
+          bio,
+          invite_link: { invite_link: "https://t.me/+JOIN83" },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_3",
+      kind: "join_request",
+      actor: { id: "83", isAdmin: false },
+      profile: { text: bio },
+    });
+    expect(result.events[0]?.message).toBeUndefined();
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("name83");
+    expect(dumped).not.toContain("JOIN83");
+    expect(dumped).not.toContain("grp83");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",
