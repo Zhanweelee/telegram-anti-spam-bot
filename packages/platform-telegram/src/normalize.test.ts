@@ -235,6 +235,52 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
+  it("keeps only the hostname of an inline button url", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INVITEBUTTON99";
+    const outcome = await normalize({
+      update_id: 2101,
+      message: {
+        message_id: 31,
+        date: 1761955200,
+        chat: { id: -100700, type: "supergroup" },
+        from: { id: 9 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: phrase,
+                url: `https://bit.ly/path?q=${phrase}`,
+              },
+              {
+                text: "callback",
+                callback_data: "https://evil.example/skip",
+              },
+            ],
+            [
+              {
+                text: "join",
+                url: `https://t.me/+${code}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("evil.example");
+  });
+
   it("marks a hidden telegram invite without keeping the code", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalize({
