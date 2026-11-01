@@ -41,16 +41,23 @@ export function createTelegramModerator(input: {
 }): ModerationPort {
   return {
     async deleteMessage(target) {
+      const audienceId = target.audienceId;
       await postTelegram({
         token: input.token,
-        method: "deleteMessage",
+        method: audienceId ? "deleteEphemeralMessage" : "deleteMessage",
         fetchImpl: input.fetchImpl,
         missing: "delete_unavailable",
         failed: "delete_failed",
-        body: {
-          chat_id: telegramId(target.chatId),
-          message_id: telegramId(target.messageId),
-        },
+        body: audienceId
+          ? {
+              chat_id: telegramId(target.chatId),
+              receiver_user_id: telegramId(audienceId),
+              ephemeral_message_id: telegramId(target.messageId),
+            }
+          : {
+              chat_id: telegramId(target.chatId),
+              message_id: telegramId(target.messageId),
+            },
       });
     },
     async muteActor(target) {

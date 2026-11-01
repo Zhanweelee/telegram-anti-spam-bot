@@ -58,6 +58,8 @@ export interface DeleteTarget {
   readonly tenantId: string;
   readonly chatId: string;
   readonly messageId: string;
+  /** Set when only this user can see the message. */
+  readonly audienceId?: string;
 }
 
 export interface MuteTarget {

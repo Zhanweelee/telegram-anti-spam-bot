@@ -2361,4 +2361,81 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(other.event)).not.toContain(fileId);
     expect(JSON.stringify(other.logger.entries)).not.toContain(fileId);
   });
+
+  it("deletes an ephemeral short link for the receiver only", async () => {
+    const visible = "https://bit.ly/name94";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 6310,
+        message: {
+          message_id: 0,
+          ephemeral_message_id: 63101,
+          date: 1761955200,
+          chat: { id: -100680, type: "supergroup", title: "机密群名" },
+          from: { id: 94, first_name: "from94" },
+          receiver_user: { id: 940, first_name: "recv94" },
+          text: visible,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-100680",
+        messageId: "63101",
+        audienceId: "940",
+      },
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain("name94");
+    expect(JSON.stringify(logger.entries)).not.toContain("from94");
+    expect(JSON.stringify(logger.entries)).not.toContain("recv94");
+    expect(JSON.stringify(result.decision.evidence)).not.toContain("name94");
+
+    const plain = await normalizeUpdate({
+      update: {
+        update_id: 6311,
+        message: {
+          message_id: 0,
+          ephemeral_message_id: 63102,
+          date: 1761955200,
+          chat: { id: -100681, type: "supergroup" },
+          from: { id: 94 },
+          receiver_user: { id: 940, first_name: "recv94" },
+          text: "今天站会",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    const allowed = createMemoryModerator();
+    const allow = await screenTelegramEvent(plain.event, {
+      moderator: allowed,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allow.decision.action).toBe("allow");
+    expect(allowed.deleted).toEqual([]);
+    expect(JSON.stringify(plain.event)).not.toContain("recv94");
+  });
 });

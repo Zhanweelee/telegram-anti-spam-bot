@@ -3389,6 +3389,75 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(preview.event)).not.toContain("93093");
   });
 
+  it("keeps an ephemeral message id and the receiver id", async () => {
+    const visible = "https://bit.ly/name94";
+    const linked = await normalize({
+      update_id: 6310,
+      message: {
+        message_id: 0,
+        ephemeral_message_id: 63101,
+        date: 1761955200,
+        chat: { id: -101170, type: "supergroup", title: "keep-title" },
+        from: { id: 94, first_name: "from94" },
+        receiver_user: { id: 940, first_name: "recv94" },
+        text: visible,
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.id).toBe("63101");
+    expect(linked.event.message?.audienceId).toBe("940");
+    expect(linked.event.message?.text).toBe(visible);
+    const linkedDump = JSON.stringify(linked.event);
+    expect(linkedDump).not.toContain("from94");
+    expect(linkedDump).not.toContain("recv94");
+    expect(linkedDump).not.toContain("keep-title");
+    expect(linked.event.message?.id).not.toBe("0");
+
+    const plain = await normalize({
+      update_id: 6311,
+      message: {
+        message_id: 0,
+        ephemeral_message_id: 63102,
+        date: 1761955200,
+        chat: { id: -101171, type: "supergroup" },
+        from: { id: 94 },
+        receiver_user: { id: 940, first_name: "recv94" },
+        text: "今天站会",
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.id).toBe("63102");
+    expect(plain.event.message?.audienceId).toBe("940");
+    expect(plain.event.message?.text).toBe("今天站会");
+    expect(plain.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(plain.event)).not.toContain("recv94");
+
+    const publicId = await normalize({
+      update_id: 6312,
+      message: {
+        message_id: 15,
+        ephemeral_message_id: 63103,
+        date: 1761955200,
+        chat: { id: -101172, type: "supergroup" },
+        from: { id: 94 },
+        text: "今天站会",
+      },
+    });
+    expect(publicId.status).toBe("event");
+    if (publicId.status !== "event") {
+      return;
+    }
+    expect(publicId.event.message?.id).toBe("15");
+    expect(publicId.event.message?.audienceId).toBeUndefined();
+    expect(JSON.stringify(publicId.event)).not.toContain("63103");
+  });
+
   it("keeps hostnames from hidden forward names", async () => {
     const phrase = "请免费领取礼品";
     const code = "HIDE60";

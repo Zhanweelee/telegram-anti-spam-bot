@@ -42,10 +42,12 @@ export function createDeleteAction(): Action {
           detail: "missing_message",
         };
       }
+      const audienceId = ctx.event.message?.audienceId;
       await ctx.moderator.deleteMessage({
         tenantId: ctx.event.tenantId,
         chatId: ctx.event.chatId,
         messageId,
+        ...(audienceId ? { audienceId } : {}),
       });
       return { actionId: "delete", status: "executed" };
     },

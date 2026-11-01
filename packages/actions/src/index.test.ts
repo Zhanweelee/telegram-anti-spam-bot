@@ -77,7 +77,61 @@ describe("delete action", () => {
       expect(result.status, fixture.name).toBe(fixture.status);
       expect(result.detail).toBe(fixture.detail);
       expect(deleted).toHaveLength(fixture.status === "executed" ? 1 : 0);
+      if (fixture.status === "executed") {
+        expect(deleted[0]?.audienceId).toBeUndefined();
+      }
     }
+  });
+
+  it("passes the audience id when only one user can see the message", async () => {
+    const action = createDeleteAction();
+    const deleted: DeleteTarget[] = [];
+    const event = parseEvent({
+      id: "evt_ephemeral",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "63101",
+        text: "spam",
+        textSha256: "c".repeat(64),
+        audienceId: "940",
+      },
+    });
+    const result = await action.execute({
+      event,
+      decision: {
+        action: "delete",
+        ruleIds: ["links"],
+        score: 1,
+        reasons: [],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: {
+        async deleteMessage(target) {
+          deleted.push(target);
+        },
+        async muteActor() {},
+        async banActor() {},
+        async declineJoin() {},
+        async restrictActor() {},
+        async releaseActor() {},
+      },
+      logger: { info() {}, warn() {}, error() {} },
+      signal: new AbortController().signal,
+    });
+    expect(result.status).toBe("executed");
+    expect(deleted).toEqual([
+      {
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        messageId: "63101",
+        audienceId: "940",
+      },
+    ]);
   });
 });
 

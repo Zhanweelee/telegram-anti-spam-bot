@@ -103,7 +103,12 @@ async function messageEvent(
     return { status: "ignored" };
   }
   const chatId = nestedId(message.chat);
-  const messageId = idString(message.message_id);
+  const audienceId = positiveId(nestedId(message.receiver_user));
+  const ephemeralId = positiveId(message.ephemeral_message_id);
+  const messageId =
+    ephemeralId !== null && audienceId !== null
+      ? ephemeralId
+      : idString(message.message_id);
   const actor = nestedId(message.from) ?? nestedId(message.sender_chat);
   if (!chatId || !messageId || !actor) {
     return { status: "ignored" };
@@ -129,6 +134,7 @@ async function messageEvent(
       id: messageId,
       text,
       textSha256: await sha256Hex(text),
+      ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
       ...(links.invites.length > 0 ? { invites: links.invites } : {}),
@@ -1563,6 +1569,14 @@ function idString(value: unknown): string | null {
     return value;
   }
   return null;
+}
+
+function positiveId(value: unknown): string | null {
+  const id = idString(value);
+  if (id === null || id === "0" || id.startsWith("-")) {
+    return null;
+  }
+  return id;
 }
 
 function safeId(value: unknown): number | null {

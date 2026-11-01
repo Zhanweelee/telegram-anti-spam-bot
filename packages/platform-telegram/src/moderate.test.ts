@@ -115,6 +115,17 @@ describe("telegram captcha transport", () => {
     ]);
     expect(calls[0]?.body).toContain('"message_id":9');
     expect(calls[0]?.body).not.toContain(phrase);
+    await moderator.deleteMessage({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "63101",
+      audienceId: "940",
+    });
+    expect(calls[3]?.method).toBe("deleteEphemeralMessage");
+    expect(calls[3]?.body).toContain('"ephemeral_message_id":63101');
+    expect(calls[3]?.body).toContain('"receiver_user_id":940');
+    expect(calls[3]?.body).not.toContain('"message_id"');
+    expect(calls[3]?.body).not.toContain(phrase);
     expect(calls[1]?.body).toContain('"until_date":1700003600');
     expect(calls[1]?.body).toContain('"can_send_messages":false');
     expect(calls[2]?.body).toContain('"revoke_messages":false');

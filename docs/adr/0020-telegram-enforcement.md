@@ -12,7 +12,7 @@ ADR 0004 把 mute 和 ban 留在端口上，并写明当时不发 Telegram HTTP�
 ## 决策
 
 - `createTelegramModerator` 在 token 非空时：
-  - `deleteMessage` 调用 `deleteMessage`，只带 `chat_id` 和 `message_id`。
+  - `deleteMessage` 调用 `deleteMessage`，只带 `chat_id` 和 `message_id`。只给一个用户看见的消息后来由 ADR 0125 改调 `deleteEphemeralMessage`。
   - `muteActor` 调用 `restrictChatMember`。权限与入群禁言相同，`until_date` 是当前 unix 秒加上 `durationSeconds`。
   - `banActor` 调用 `banChatMember`，`revoke_messages` 固定为 false。不顺带调用 `deleteMessage`。
 - token 为空或只有空白时，这三个方法抛出 `delete_unavailable`、`mute_unavailable`、`ban_unavailable`，并且不调用 `fetch`。Worker 在没有 token 时仍使用内存适配器，所以本地测试和未配置的部署不会打到 Telegram。

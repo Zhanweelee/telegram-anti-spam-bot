@@ -343,6 +343,36 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("93093");
   });
 
+  it("keeps an ephemeral message id and the receiver id", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 11,
+        message: {
+          message_id: 0,
+          ephemeral_message_id: 63101,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp94" },
+          from: { id: 94, first_name: "https://tinyurl.com/from94" },
+          receiver_user: { id: 940, first_name: "recv94" },
+          text: "今天站会",
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_11",
+      kind: "message",
+      message: { id: "63101", text: "今天站会", audienceId: "940" },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("from94");
+    expect(dumped).not.toContain("recv94");
+    expect(dumped).not.toContain("grp94");
+    expect(result.events[0]?.message?.id).not.toBe("0");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

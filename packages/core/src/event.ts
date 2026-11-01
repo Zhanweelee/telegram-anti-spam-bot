@@ -69,6 +69,8 @@ export const messageSchema = z
     media: mediaKindSchema.optional(),
     /** Digest of the file class and file_unique_id. The id stays out. */
     mediaSha256: sha256Schema.optional(),
+    /** Only user who can see this message. Names stay out. */
+    audienceId: idSchema.optional(),
   })
   .refine(
     (message) =>
