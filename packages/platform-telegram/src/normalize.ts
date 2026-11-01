@@ -427,8 +427,14 @@ function linkHosts(message: Record<string, unknown>): {
       continue;
     }
     for (const entity of list) {
-      if (isRecord(entity) && entity.type === "text_link") {
+      if (!isRecord(entity)) {
+        continue;
+      }
+      if (entity.type === "text_link") {
         urls.push(entity.url);
+      }
+      for (const found of preLanguageUrls(entity)) {
+        urls.push(found);
       }
     }
   }
@@ -671,17 +677,26 @@ function pushPlainUrls(value: unknown, urls: string[]): void {
   }
 }
 
+function preLanguageUrls(entity: Record<string, unknown>): string[] {
+  if (entity.type !== "pre" || typeof entity.language !== "string") {
+    return [];
+  }
+  return urlsInText(entity.language);
+}
+
 function pushTextLinks(list: unknown, urls: string[]): void {
   if (!Array.isArray(list)) {
     return;
   }
   for (const entity of list) {
-    if (
-      isRecord(entity) &&
-      entity.type === "text_link" &&
-      typeof entity.url === "string"
-    ) {
+    if (!isRecord(entity)) {
+      continue;
+    }
+    if (entity.type === "text_link" && typeof entity.url === "string") {
       urls.push(entity.url);
+    }
+    for (const found of preLanguageUrls(entity)) {
+      urls.push(found);
     }
   }
 }

@@ -4664,6 +4664,146 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(plain.event)).not.toContain("python");
   });
 
+  it("keeps a hostname from a code entity language and leaves the label out", async () => {
+    const labeled = await normalize({
+      update_id: 6610,
+      message: {
+        message_id: 450,
+        date: 1761955200,
+        chat: {
+          id: -101200,
+          type: "supergroup",
+          title: "https://cutt.ly/grp97",
+        },
+        from: { id: 97, first_name: "https://tinyurl.com/from97" },
+        text: "今天站会",
+        entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 4,
+            language: "https://bit.ly/name97",
+          },
+        ],
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain("name97");
+    expect(labeledDump).not.toContain("from97");
+    expect(labeledDump).not.toContain("grp97");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const caption = await normalize({
+      update_id: 6611,
+      message: {
+        message_id: 451,
+        date: 1761955200,
+        chat: { id: -101201, type: "supergroup", title: "keep-title" },
+        from: { id: 97, first_name: "from97" },
+        caption: "print(1)",
+        caption_entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 8,
+            language: "https://t.me/+code97",
+          },
+        ],
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.text).toBe("print(1)");
+    expect(caption.event.message?.hosts).toEqual(["t.me"]);
+    expect(caption.event.message?.invites).toEqual(["t.me"]);
+    const captionDump = JSON.stringify(caption.event);
+    expect(captionDump).not.toContain("code97");
+    expect(captionDump).not.toContain("from97");
+    expect(captionDump).not.toContain("keep-title");
+
+    const explained = await normalize({
+      update_id: 6612,
+      message: {
+        message_id: 452,
+        date: 1761955200,
+        chat: { id: -101202, type: "supergroup" },
+        from: { id: 97 },
+        poll: {
+          question: "今天站会",
+          options: [{ text: "甲", voter_count: 0 }],
+          explanation: "print(1)",
+          explanation_entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 8,
+              language: "https://bit.ly/note97",
+            },
+          ],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(explained.status).toBe("event");
+    if (explained.status !== "event") {
+      return;
+    }
+    expect(explained.event.message?.text).toBe("今天站会");
+    expect(explained.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(explained.event)).not.toContain("note97");
+
+    const plain = await normalize({
+      update_id: 6613,
+      message: {
+        message_id: 453,
+        date: 1761955200,
+        chat: { id: -101203, type: "supergroup" },
+        from: { id: 97 },
+        text: "今天站会",
+        entities: [
+          { type: "pre", offset: 0, length: 4, language: "python" },
+          {
+            type: "bold",
+            offset: 0,
+            length: 4,
+            language: "https://bit.ly/bold97",
+          },
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "https://bit.ly/icon97",
+          },
+        ],
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("今天站会");
+    expect(plain.event.message?.hosts).toBeUndefined();
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).not.toContain("python");
+    expect(plainDump).not.toContain("bold97");
+    expect(plainDump).not.toContain("icon97");
+    expect(plainDump).not.toContain("bit.ly");
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

@@ -450,6 +450,41 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp96");
   });
 
+  it("keeps a hostname from a code entity language and leaves the label out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 14,
+        message: {
+          message_id: 140,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp97" },
+          from: { id: 97, first_name: "https://tinyurl.com/from97" },
+          text: "今天站会",
+          entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 4,
+              language: "https://bit.ly/name97",
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_14",
+      kind: "message",
+      message: { id: "140", text: "今天站会", hosts: ["bit.ly"] },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("name97");
+    expect(dumped).not.toContain("from97");
+    expect(dumped).not.toContain("grp97");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

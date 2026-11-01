@@ -2635,4 +2635,90 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(ordinary.event)).not.toContain("ok96");
     expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from96");
   });
+
+  it("deletes a message whose code entity language carries a short link", async () => {
+    const screenEntity = async (
+      updateId: number,
+      chatId: number,
+      language: string,
+      text: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 97, first_name: "https://tinyurl.com/from97" },
+            text,
+            entities: [{ type: "pre", offset: 0, length: 4, language }],
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenEntity(
+      6610,
+      -100710,
+      "https://bit.ly/name97",
+      "今天站会",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.event.message?.text).toBe("今天站会");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100710", messageId: "6610" },
+    ]);
+    expect(JSON.stringify(linked.event)).not.toContain("name97");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name97");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from97");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name97",
+    );
+
+    const keyword = await screenEntity(
+      6611,
+      -100711,
+      "请免费领取礼品",
+      "今天站会",
+    );
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("免费领取");
+
+    const code = await screenEntity(6612, -100712, "python", "请免费领取礼品");
+    expect(code.result.decision.action).toBe("delete");
+    expect(code.result.decision.reasons).toContain("keyword_match");
+    expect(code.event.message?.text).toBe("请免费领取礼品");
+    expect(JSON.stringify(code.logger.entries)).not.toContain("免费领取");
+    expect(JSON.stringify(code.event)).not.toContain("python");
+
+    const ordinary = await screenEntity(
+      6613,
+      -100713,
+      "https://example.com/ok97",
+      "今天站会",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.event)).not.toContain("ok97");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from97");
+  });
 });
