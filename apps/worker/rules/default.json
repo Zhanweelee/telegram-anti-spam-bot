@@ -91,6 +91,14 @@
       "actions": ["ban"]
     },
     {
+      "id": "join_link",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["link"],
+      "threshold": 1,
+      "actions": ["ban"]
+    },
+    {
       "id": "bot_join",
       "enabled": true,
       "when": { "eventKind": "chat_member" },

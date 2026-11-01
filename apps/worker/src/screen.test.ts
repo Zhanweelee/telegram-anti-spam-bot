@@ -251,6 +251,122 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(audit)).not.toContain(name);
   });
 
+  it("bans a join whose visible name carries a short link", async () => {
+    const screenJoin = async (
+      updateId: number,
+      chatId: number,
+      user: { id: number; first_name: string; last_name?: string },
+      inviteLink?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          chat_member: {
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 1 },
+            date: 1761955200,
+            old_chat_member: { user: { id: user.id }, status: "left" },
+            new_chat_member: {
+              user: { ...user, language_code: "机密群名" },
+              status: "member",
+            },
+            ...(inviteLink ? { invite_link: { invite_link: inviteLink } } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const captchaStore = createMemoryCaptchaStore();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+        captchaStore,
+        createNonce: () => "0123456789abcdef",
+      });
+      return { outcome, logger, moderator, captchaStore, result };
+    };
+
+    const name = "https://bit.ly/name84";
+    const labeled = await screenJoin(5501, -100591, {
+      id: 86,
+      first_name: name,
+    });
+    expect(labeled.result.decision.action).toBe("ban");
+    expect(labeled.result.decision.reasons).toContain("short_link");
+    expect(labeled.result.decision.ruleIds).toContain("join_link");
+    expect(JSON.stringify(labeled.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(labeled.moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100591", actorId: "86" },
+    ]);
+    expect(labeled.moderator.restricted).toEqual([]);
+    expect(await labeled.captchaStore.get("local", "-100591", "86")).toBeNull();
+    const logged = JSON.stringify(labeled.logger.entries);
+    expect(logged).not.toContain("name84");
+    expect(logged).not.toContain("机密群名");
+    expect(JSON.stringify(labeled.result.decision.evidence)).not.toContain(
+      "name84",
+    );
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-100591",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(
+      labeled.outcome.event.profile?.textSha256,
+    );
+    expect(JSON.stringify(audit)).not.toContain("name84");
+
+    const ordinary = await screenJoin(5502, -100592, {
+      id: 86,
+      first_name: "https://example.com/ok84",
+    });
+    expect(ordinary.result.decision.action).toBe("captcha");
+    expect(ordinary.moderator.banned).toEqual([]);
+    expect(ordinary.moderator.restricted).toHaveLength(1);
+
+    const invite = await screenJoin(5503, -100593, {
+      id: 86,
+      first_name: "https://t.me/+CODE84",
+    });
+    expect(invite.result.decision.action).toBe("ban");
+    expect(invite.result.decision.reasons).toContain("invite");
+    expect(invite.result.decision.ruleIds).toContain("join_link");
+    expect(JSON.stringify(invite.result.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(invite.logger.entries)).not.toContain("CODE84");
+    expect(JSON.stringify(invite.result.decision.evidence)).not.toContain(
+      "CODE84",
+    );
+
+    const publicName = await screenJoin(5504, -100594, {
+      id: 86,
+      first_name: "https://t.me/durov",
+    });
+    expect(publicName.result.decision.action).toBe("captcha");
+    expect(publicName.moderator.banned).toEqual([]);
+
+    const joinedByLink = await screenJoin(
+      5505,
+      -100595,
+      { id: 86, first_name: "Ada" },
+      "https://t.me/+KEEP84",
+    );
+    expect(joinedByLink.result.decision.action).toBe("captcha");
+    expect(joinedByLink.moderator.banned).toEqual([]);
+    expect(JSON.stringify(joinedByLink.logger.entries)).not.toContain("KEEP84");
+    expect(JSON.stringify(joinedByLink.result)).not.toContain("KEEP84");
+  });
+
   it("declines a join request whose bio carries a short link", async () => {
     const phrase = "请免费领取礼品";
     const bio = `${phrase} https://bit.ly/bio83`;
