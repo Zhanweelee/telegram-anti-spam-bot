@@ -351,6 +351,16 @@ function linkHosts(message: Record<string, unknown>): {
   if (isRecord(checklist)) {
     lists.push(checklist.title_entities);
   }
+  const quote = message.quote;
+  if (
+    messageText(message, false).length === 0 &&
+    isRecord(quote) &&
+    quote.is_manual === true &&
+    typeof quote.text === "string" &&
+    quote.text.length > 0
+  ) {
+    lists.push(quote.entities);
+  }
   for (const list of lists) {
     if (!Array.isArray(list)) {
       continue;
@@ -507,7 +517,10 @@ function uniqueId(value: unknown): string | undefined {
   return id;
 }
 
-function messageText(message: Record<string, unknown>): string {
+function messageText(
+  message: Record<string, unknown>,
+  includeQuote = true,
+): string {
   if (typeof message.text === "string" && message.text.length > 0) {
     return message.text.slice(0, MAX_TEXT);
   }
@@ -549,6 +562,16 @@ function messageText(message: Record<string, unknown>): string {
     ) {
       return value.title.slice(0, MAX_TEXT);
     }
+  }
+  const quote = message.quote;
+  if (
+    includeQuote &&
+    isRecord(quote) &&
+    quote.is_manual === true &&
+    typeof quote.text === "string" &&
+    quote.text.length > 0
+  ) {
+    return quote.text.slice(0, MAX_TEXT);
   }
   return "";
 }

@@ -858,6 +858,124 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("免费领取");
   });
 
+  it("uses a manual quote when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INVITEQUOTE99";
+    const quoted = "免费领取";
+    const outcome = await normalize({
+      update_id: 2601,
+      message: {
+        message_id: 81,
+        date: 1761955200,
+        chat: { id: -100750, type: "supergroup" },
+        from: { id: 9 },
+        quote: {
+          text: quoted,
+          position: 3,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: quoted.length,
+              url: `https://bit.ly/path?q=${phrase}`,
+            },
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: `https://t.me/+${code}`,
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(quoted);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(quoted));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain('"position"');
+  });
+
+  it("leaves an automatic quote out of the event", async () => {
+    const outcome = await normalize({
+      update_id: 2602,
+      message: {
+        message_id: 82,
+        date: 1761955200,
+        chat: { id: -100751, type: "supergroup" },
+        from: { id: 9 },
+        quote: {
+          text: "免费领取",
+          position: 0,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/auto",
+            },
+          ],
+        },
+        reply_to_message: {
+          message_id: 1,
+          text: "免费领取",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("");
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("bit.ly");
+  });
+
+  it("keeps the message text when a manual quote is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2603,
+      message: {
+        message_id: 83,
+        date: 1761955200,
+        chat: { id: -100752, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        quote: {
+          text: "免费领取",
+          position: 0,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/quoted",
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("bit.ly");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({
