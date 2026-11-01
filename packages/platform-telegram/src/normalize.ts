@@ -505,6 +505,24 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     pushPlainUrls(value.name, urls);
   }
+  for (const field of ["poll_option_added", "poll_option_deleted"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    pushPlainUrls(value.option_text, urls);
+    pushTextLinks(value.option_text_entities, urls);
+  }
+  const addedTasks = message.checklist_tasks_added;
+  if (isRecord(addedTasks) && Array.isArray(addedTasks.tasks)) {
+    for (const task of addedTasks.tasks) {
+      if (!isRecord(task)) {
+        continue;
+      }
+      pushPlainUrls(task.text, urls);
+      pushTextLinks(task.text_entities, urls);
+    }
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
@@ -926,7 +944,42 @@ function messageText(
   if (topic.length > 0) {
     return topic;
   }
+  const added = addedServiceText(message);
+  if (added.length > 0) {
+    return added;
+  }
   return "";
+}
+
+function addedServiceText(message: Record<string, unknown>): string {
+  for (const field of ["poll_option_added", "poll_option_deleted"]) {
+    const value = message[field];
+    if (
+      isRecord(value) &&
+      typeof value.option_text === "string" &&
+      value.option_text.length > 0
+    ) {
+      return value.option_text.slice(0, MAX_TEXT);
+    }
+  }
+  const added = message.checklist_tasks_added;
+  if (!isRecord(added) || !Array.isArray(added.tasks)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const task of added.tasks) {
+    if (!isRecord(task) || typeof task.text !== "string") {
+      continue;
+    }
+    if (task.text.length === 0) {
+      continue;
+    }
+    parts.push(task.text);
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
 }
 
 function topicName(message: Record<string, unknown>): string {

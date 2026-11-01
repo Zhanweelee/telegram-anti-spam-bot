@@ -2742,6 +2742,165 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("keeps hostnames from added poll options and checklist tasks", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "OPT58";
+    const added = await normalize({
+      update_id: 3110,
+      message: {
+        message_id: 130,
+        date: 1761955200,
+        chat: { id: -100810, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll_option_added: {
+          option_persistent_id: "pid58",
+          option_text: `${phrase} https://bit.ly/opt58 https://t.me/+${code}.`,
+          option_text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://example.com/ent58",
+            },
+          ],
+          poll_message: {
+            message_id: 1,
+            date: 1761955200,
+            chat: { id: -100810, type: "supergroup" },
+            text: "https://tinyurl.com/old58",
+          },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("今天站会");
+    expect(added.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(added.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "example.com",
+    ]);
+    expect(added.event.message?.invites).toEqual(["t.me"]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain(phrase);
+    expect(addedDump).not.toContain(code);
+    expect(addedDump).not.toContain("opt58");
+    expect(addedDump).not.toContain("ent58");
+    expect(addedDump).not.toContain("pid58");
+    expect(addedDump).not.toContain("tinyurl.com");
+    expect(addedDump).not.toContain("old58");
+
+    const removed = await normalize({
+      update_id: 3111,
+      message: {
+        message_id: 131,
+        date: 1761955200,
+        chat: { id: -100811, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll_option_deleted: {
+          option_persistent_id: "https://bit.ly/pid58",
+          option_text: phrase,
+          option_text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://t.me/%2BOPT58",
+            },
+          ],
+        },
+      },
+    });
+    expect(removed.status).toBe("event");
+    if (removed.status !== "event") {
+      return;
+    }
+    expect(removed.event.message?.text).toBe("今天站会");
+    expect(removed.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(removed.event.message?.hosts).toEqual(["t.me"]);
+    expect(removed.event.message?.invites).toEqual(["t.me"]);
+    const removedDump = JSON.stringify(removed.event);
+    expect(removedDump).not.toContain(phrase);
+    expect(removedDump).not.toContain(code);
+    expect(removedDump).not.toContain("bit.ly");
+    expect(removedDump).not.toContain("pid58");
+
+    const tasks = await normalize({
+      update_id: 3112,
+      message: {
+        message_id: 132,
+        date: 1761955200,
+        chat: { id: -100812, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 58,
+              text: `${phrase} https://example.com/page58`,
+              completed_by_user: { id: 8, first_name: "Ada58" },
+              completed_by_chat: {
+                id: -1001,
+                title: "CHAT58",
+                type: "channel",
+              },
+            },
+          ],
+          checklist_message: {
+            message_id: 2,
+            date: 1761955200,
+            chat: { id: -100812, type: "supergroup" },
+            text: "https://bit.ly/old58",
+          },
+        },
+      },
+    });
+    expect(tasks.status).toBe("event");
+    if (tasks.status !== "event") {
+      return;
+    }
+    expect(tasks.event.message?.text).toBe("今天站会");
+    expect(tasks.event.message?.hosts).toEqual(["example.com"]);
+    const tasksDump = JSON.stringify(tasks.event);
+    expect(tasksDump).not.toContain(phrase);
+    expect(tasksDump).not.toContain("page58");
+    expect(tasksDump).not.toContain("bit.ly");
+    expect(tasksDump).not.toContain("old58");
+    expect(tasksDump).not.toContain("Ada58");
+    expect(tasksDump).not.toContain("CHAT58");
+
+    const asBody = "免费领取 https://bit.ly/body58";
+    const body = await normalize({
+      update_id: 3113,
+      message: {
+        message_id: 133,
+        date: 1761955200,
+        chat: { id: -100813, type: "supergroup" },
+        from: { id: 9 },
+        checklist_tasks_added: {
+          tasks: [
+            { id: 1, text: asBody },
+            { id: 2, text: "今天站会" },
+          ],
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(`${asBody} 今天站会`);
+    expect(body.event.message?.textSha256).toBe(
+      await sha256Hex(`${asBody} 今天站会`),
+    );
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({
