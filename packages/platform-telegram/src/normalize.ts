@@ -1103,6 +1103,9 @@ function walkBlocks(
     ) {
       pushRich(richText(block.text, urls), parts);
       pushRich(richText(block.credit, urls), parts);
+      if (block.type === "pre") {
+        pushPlainUrls(block.language, urls);
+      }
       continue;
     }
     if (
