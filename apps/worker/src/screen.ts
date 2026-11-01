@@ -40,6 +40,10 @@ import {
   wrapLogger,
 } from "@tasb/core";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
+import {
+  createForwardDetector,
+  defaultForwardKinds,
+} from "@tasb/detector-forward";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
@@ -82,6 +86,9 @@ const detector = createKeywordDetector({
 });
 const regexDetector = createRegexDetector({
   patterns: [...defaultRegexPatterns],
+});
+const forwardDetector = createForwardDetector({
+  kinds: [...defaultForwardKinds],
 });
 const linkDetector = createLinkDetector();
 
@@ -202,6 +209,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.regex,
         value: regexDetector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.forward,
+        value: forwardDetector,
       },
       {
         source: "builtin",

@@ -1,0 +1,8 @@
+[
+  { "text": "今天站会", "forward": "channel", "expect": "hit" },
+  { "text": "", "forward": "channel", "expect": "hit" },
+  { "text": "今天站会", "forward": "user", "expect": "miss" },
+  { "text": "今天站会", "forward": "chat", "expect": "miss" },
+  { "text": "今天站会", "forward": "hidden", "expect": "miss" },
+  { "text": "今天站会", "expect": "miss" }
+]

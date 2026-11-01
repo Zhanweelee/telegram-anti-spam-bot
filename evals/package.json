@@ -15,6 +15,7 @@
     "@tasb/detector-link": "workspace:*",
     "@tasb/detector-blocklist": "workspace:*",
     "@tasb/detector-llm": "workspace:*",
-    "@tasb/detector-regex": "workspace:*"
+    "@tasb/detector-regex": "workspace:*",
+    "@tasb/detector-forward": "workspace:*"
   }
 }

@@ -587,6 +587,55 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(enabled)).not.toContain(phrase);
   });
 
+  it("deletes a channel forward and keeps a user forward", async () => {
+    const text = "今天站会改到三点";
+    const title = "机密频道名";
+    const logger = createMemoryLogger();
+    const channel = await screenTelegramEvent(
+      parseEvent({
+        id: "tg_582",
+        tenantId: "local",
+        chatId: "-100582",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "5", isAdmin: false },
+        message: {
+          id: "9",
+          text,
+          textSha256: await sha256Hex(text),
+          forward: "channel",
+        },
+      }),
+      { logger, rateWindow: createMemoryRateWindow() },
+    );
+    expect(channel.decision.action).toBe("delete");
+    expect(channel.decision.reasons).toContain("forward_channel");
+    expect(channel.decision.evidence).toEqual([
+      { kind: "feature", summary: "forward:channel" },
+    ]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(text);
+    expect(logged).not.toContain(title);
+    const user = await screenTelegramEvent(
+      parseEvent({
+        id: "tg_583",
+        tenantId: "local",
+        chatId: "-100583",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "5", isAdmin: false },
+        message: {
+          id: "9",
+          text,
+          textSha256: await sha256Hex(text),
+          forward: "user",
+        },
+      }),
+      { rateWindow: createMemoryRateWindow() },
+    );
+    expect(user.decision.action).toBe("allow");
+  });
+
   it("leaves an unsigned external detector out of the pipeline", async () => {
     const logger = createMemoryLogger();
     const extra = {

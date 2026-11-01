@@ -14,10 +14,15 @@ export const eventKinds = [
 ] as const;
 export const eventKindSchema = z.enum(eventKinds);
 
+export const forwardKinds = ["user", "chat", "channel", "hidden"] as const;
+export const forwardKindSchema = z.enum(forwardKinds);
+
 export const messageSchema = z.strictObject({
   id: idSchema,
   text: z.string().max(4096),
   textSha256: sha256Schema,
+  /** Source class only. Titles and author names stay out. */
+  forward: forwardKindSchema.optional(),
 });
 
 export const actorSchema = z.strictObject({
@@ -46,6 +51,7 @@ export const eventSchema = z.strictObject({
 });
 
 export type EventKind = z.output<typeof eventKindSchema>;
+export type ForwardKind = z.output<typeof forwardKindSchema>;
 export type MessageContent = z.output<typeof messageSchema>;
 export type Actor = z.output<typeof actorSchema>;
 export type Event = z.output<typeof eventSchema>;

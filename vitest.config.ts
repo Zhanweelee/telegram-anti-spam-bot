@@ -11,6 +11,7 @@ export default defineConfig({
       "packages/detectors-blocklist",
       "packages/detectors-llm",
       "packages/detectors-regex",
+      "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",
       "packages/adapters-cloudflare",

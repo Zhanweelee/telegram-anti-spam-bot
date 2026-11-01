@@ -1,0 +1,10 @@
+[
+  { "id": "s1", "text": "今天站会", "forward": "channel", "label": "spam" },
+  { "id": "s2", "text": "欢迎", "forward": "channel", "label": "spam" },
+  { "id": "s3", "text": "", "forward": "channel", "label": "spam" },
+  { "id": "s4", "text": "进群看看", "forward": "channel", "label": "spam" },
+  { "id": "h1", "text": "今天站会", "label": "ham" },
+  { "id": "h2", "text": "今天站会", "forward": "user", "label": "ham" },
+  { "id": "h3", "text": "欢迎新人", "forward": "chat", "label": "ham" },
+  { "id": "h4", "text": "欢迎新人", "forward": "hidden", "label": "ham" }
+]

@@ -1,4 +1,4 @@
-import { type Event, parseEvent } from "@tasb/core";
+import { type Event, type ForwardKind, parseEvent } from "@tasb/core";
 import { sha256Hex } from "./hash.js";
 
 const MAX_TEXT = 4096;
@@ -87,6 +87,7 @@ async function messageEvent(
     return { status: "ignored" };
   }
   const text = messageText(message);
+  const forward = forwardKind(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -104,8 +105,42 @@ async function messageEvent(
       id: messageId,
       text,
       textSha256: await sha256Hex(text),
+      ...(forward ? { forward } : {}),
     },
   });
+}
+
+function forwardKind(
+  message: Record<string, unknown>,
+): ForwardKind | undefined {
+  const origin = message.forward_origin;
+  if (isRecord(origin)) {
+    switch (origin.type) {
+      case "channel":
+        return "channel";
+      case "chat":
+        return "chat";
+      case "hidden_user":
+        return "hidden";
+      case "user":
+        return "user";
+      default:
+        break;
+    }
+  }
+  if (
+    typeof message.forward_sender_name === "string" &&
+    message.forward_sender_name.length > 0
+  ) {
+    return "hidden";
+  }
+  if (isRecord(message.forward_from_chat)) {
+    return message.forward_from_chat.type === "channel" ? "channel" : "chat";
+  }
+  if (isRecord(message.forward_from)) {
+    return "user";
+  }
+  return undefined;
 }
 
 /**

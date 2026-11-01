@@ -115,6 +115,12 @@ export const builtinManifests = {
     integrity:
       "e780b923abc15091f942b22050063a686ac27b82f4eda783d0db54070106231a",
   }),
+  forward: manifest({
+    id: "forward",
+    kind: "detector",
+    integrity:
+      "bf956e266793601c8878d49d26724b3135f9c5a5e6e02ce9816fb1e33f9c548a",
+  }),
   delete: manifest({
     id: "delete",
     kind: "action",

@@ -135,6 +135,66 @@ describe("normalizeUpdate", () => {
     );
   });
 
+  it("keeps only the forward class and drops the channel title", async () => {
+    const title = "机密频道名";
+    const origin = await normalize({
+      update_id: 31,
+      message: {
+        message_id: 4,
+        date: 1761955200,
+        chat: { id: -100582, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_origin: {
+          type: "channel",
+          chat: { id: -1001, title, type: "channel" },
+        },
+      },
+    });
+    expect(origin.status).toBe("event");
+    if (origin.status !== "event") {
+      return;
+    }
+    expect(origin.event.message?.forward).toBe("channel");
+    expect(JSON.stringify(origin.event)).not.toContain(title);
+
+    const legacy = await normalize({
+      update_id: 32,
+      message: {
+        message_id: 5,
+        date: 1761955200,
+        chat: { id: -100582, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_from_chat: { id: -1001, title, type: "channel" },
+      },
+    });
+    expect(legacy.status).toBe("event");
+    if (legacy.status !== "event") {
+      return;
+    }
+    expect(legacy.event.message?.forward).toBe("channel");
+    expect(JSON.stringify(legacy.event)).not.toContain(title);
+
+    const hidden = await normalize({
+      update_id: 33,
+      message: {
+        message_id: 6,
+        date: 1761955200,
+        chat: { id: -100582, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_origin: { type: "hidden_user", sender_user_name: title },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.forward).toBe("hidden");
+    expect(JSON.stringify(hidden.event)).not.toContain(title);
+  });
+
   it("uses the supplied clock when the message has no date", async () => {
     const outcome = await normalize({
       update_id: 9,
