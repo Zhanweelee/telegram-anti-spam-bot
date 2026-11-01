@@ -1870,6 +1870,167 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("bit.ly");
   });
 
+  it("keeps hostnames from media file names and audio titles", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "FILE53";
+    const fileId = "DOCFILE53";
+    const document = await normalize({
+      update_id: 2710,
+      message: {
+        message_id: 92,
+        date: 1761955200,
+        chat: { id: -100761, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        document: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          mime_type: phrase,
+          file_name: `${phrase} https://bit.ly/doc53.pdf https://t.me/+${code}.`,
+        },
+      },
+    });
+    expect(document.status).toBe("event");
+    if (document.status !== "event") {
+      return;
+    }
+    expect(document.event.message?.text).toBe("今天站会");
+    expect(document.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(document.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(document.event.message?.invites).toEqual(["t.me"]);
+    const documentDump = JSON.stringify(document.event);
+    expect(documentDump).not.toContain(phrase);
+    expect(documentDump).not.toContain(code);
+    expect(documentDump).not.toContain("/doc53");
+    expect(documentDump).not.toContain(fileId);
+
+    const audio = await normalize({
+      update_id: 2711,
+      message: {
+        message_id: 93,
+        date: 1761955200,
+        chat: { id: -100762, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        audio: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          duration: 3,
+          title: `www.tinyurl.com/a53`,
+          file_name: `https://t.me/%2B${code}`,
+          performer: `https://is.gd/perf53`,
+        },
+      },
+    });
+    expect(audio.status).toBe("event");
+    if (audio.status !== "event") {
+      return;
+    }
+    expect(audio.event.message?.text).toBe("今天站会");
+    expect(audio.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
+    expect(audio.event.message?.invites).toEqual(["t.me"]);
+    const audioDump = JSON.stringify(audio.event);
+    expect(audioDump).not.toContain(code);
+    expect(audioDump).not.toContain("/a53");
+    expect(audioDump).not.toContain("is.gd");
+    expect(audioDump).not.toContain(fileId);
+
+    const clips = await normalize({
+      update_id: 2712,
+      message: {
+        message_id: 94,
+        date: 1761955200,
+        chat: { id: -100763, type: "supergroup" },
+        from: { id: 9 },
+        caption: "今天站会",
+        animation: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          width: 1,
+          height: 1,
+          duration: 1,
+          file_name: "https://cutt.ly/anim53.gif",
+        },
+        video: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          width: 1,
+          height: 1,
+          duration: 1,
+          file_name: "https://example.com/vid53.mp4",
+        },
+      },
+    });
+    expect(clips.status).toBe("event");
+    if (clips.status !== "event") {
+      return;
+    }
+    expect(clips.event.message?.text).toBe("今天站会");
+    expect(clips.event.message?.hosts).toEqual(["cutt.ly", "example.com"]);
+    const clipsDump = JSON.stringify(clips.event);
+    expect(clipsDump).not.toContain("/anim53");
+    expect(clipsDump).not.toContain("/vid53");
+    expect(clipsDump).not.toContain(fileId);
+
+    const asBody = "免费领取 https://bit.ly/body53.pdf";
+    const body = await normalize({
+      update_id: 2713,
+      message: {
+        message_id: 95,
+        date: 1761955200,
+        chat: { id: -100764, type: "supergroup" },
+        from: { id: 9 },
+        document: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          file_name: asBody,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain(fileId);
+
+    const sticker = await normalize({
+      update_id: 2714,
+      message: {
+        message_id: 96,
+        date: 1761955200,
+        chat: { id: -100765, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        sticker: {
+          file_id: fileId,
+          file_unique_id: fileId,
+          type: "regular",
+          width: 1,
+          height: 1,
+          is_animated: false,
+          is_video: false,
+          set_name: "https://bit.ly/set53",
+          emoji: phrase,
+        },
+      },
+    });
+    expect(sticker.status).toBe("event");
+    if (sticker.status !== "event") {
+      return;
+    }
+    expect(sticker.event.message?.text).toBe("今天站会");
+    expect(sticker.event.message?.hosts).toBeUndefined();
+    const stickerDump = JSON.stringify(sticker.event);
+    expect(stickerDump).not.toContain("bit.ly");
+    expect(stickerDump).not.toContain(phrase);
+    expect(stickerDump).not.toContain("set53");
+  });
+
   it("uses a document file name when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const fileName = "免费领取.pdf";

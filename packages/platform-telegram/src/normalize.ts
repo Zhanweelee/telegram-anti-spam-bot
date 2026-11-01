@@ -475,6 +475,16 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(venue.title, urls);
     pushPlainUrls(venue.address, urls);
   }
+  for (const field of ["animation", "video", "audio", "document"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    if (field === "audio") {
+      pushPlainUrls(value.title, urls);
+    }
+    pushPlainUrls(value.file_name, urls);
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
