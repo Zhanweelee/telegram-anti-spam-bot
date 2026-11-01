@@ -448,6 +448,16 @@ function sideUrls(message: Record<string, unknown>): string[] {
       pushTextLinks(task.text_entities, urls);
     }
   }
+  const game = message.game;
+  if (isRecord(game)) {
+    pushPlainUrls(game.description, urls);
+    pushPlainUrls(game.text, urls);
+    pushTextLinks(game.text_entities, urls);
+  }
+  const invoice = message.invoice;
+  if (isRecord(invoice)) {
+    pushPlainUrls(invoice.description, urls);
+  }
   return urls;
 }
 

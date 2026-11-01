@@ -1135,8 +1135,8 @@ describe("normalizeUpdate", () => {
         from: { id: 9 },
         game: {
           title,
-          description: phrase,
-          text: phrase,
+          description: `${phrase} https://evil.example/hide`,
+          text: `${phrase} https://t.me/+GAME45.`,
           text_entities: [
             {
               type: "text_link",
@@ -1157,11 +1157,18 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual([
+      "evil.example",
+      "t.me",
+      "bit.ly",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
     expect(outcome.event.message?.media).toBeUndefined();
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("GAME45");
+    expect(dumped).not.toContain("/game");
+    expect(dumped).not.toContain("/hide");
     expect(dumped).not.toContain(fileId);
   });
 
@@ -1177,7 +1184,7 @@ describe("normalizeUpdate", () => {
         from: { id: 9 },
         invoice: {
           title,
-          description: phrase,
+          description: `${phrase} https://tinyurl.com/inv45`,
           start_parameter: phrase,
           currency: "XTR",
           total_amount: 1,
@@ -1190,9 +1197,11 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.hosts).toEqual(["tinyurl.com"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("XTR");
+    expect(dumped).not.toContain("/inv45");
   });
 
   it("keeps a checklist title when a game is also present", async () => {
