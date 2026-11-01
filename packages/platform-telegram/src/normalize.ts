@@ -571,6 +571,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   if (isRecord(declined)) {
     pushPlainUrls(declined.comment, urls);
   }
+  pushPlainUrls(message.new_chat_title, urls);
   return urls;
 }
 
