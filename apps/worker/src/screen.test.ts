@@ -396,4 +396,18 @@ describe("screenTelegramEvent", () => {
       logger.entries.some((entry) => entry.message === "rate_window_skipped"),
     ).toBe(true);
   });
+
+  it("deletes a short link and keeps the path out of the decision", async () => {
+    const path = "secretpath";
+    const result = await screenTelegramEvent(
+      await event(`打开 https://bit.ly/${path}`),
+      {
+        logger: createMemoryLogger(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(result)).not.toContain(path);
+  });
 });

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-03
+
+- 短链接和裸 IP 默认删除。普通网址保留。见 ADR 0011。
+- Worker 不传信誉源，热路径不发远程查询。信誉源超时或抛错时这条检测放过，日志是 `reputation_failed`。
+- 评测集 `evals/cases/link.json` 的 precision 和 recall 都是 1。
+
 ### P1-02
 
 - 同一人在 10 秒内发到第 5 条，或同一内容哈希在 60 秒内出现第 3 次，默认规则会删除。见 ADR 0010。

@@ -11,6 +11,7 @@
   "dependencies": {
     "@tasb/core": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
-    "@tasb/detector-rate": "workspace:*"
+    "@tasb/detector-rate": "workspace:*",
+    "@tasb/detector-link": "workspace:*"
   }
 }

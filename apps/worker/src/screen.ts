@@ -31,6 +31,7 @@ import {
 } from "@tasb/core";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
+import { createLinkDetector } from "@tasb/detector-link";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -56,6 +57,7 @@ export const workerStorage = createMemoryStorage({ maxAudits: 200 });
 const detector = createKeywordDetector({
   keywords: ["免费领取", "加微信"],
 });
+const linkDetector = createLinkDetector();
 
 export function createWorkerLogger(): Logger {
   return wrapLogger({
@@ -137,6 +139,7 @@ export async function screenTelegramEvent(
         windowSeconds: 60,
         threshold: 3,
       }),
+      linkDetector,
     ],
     actions: [
       createDeleteAction(),
