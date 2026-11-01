@@ -21,6 +21,25 @@ describe("operator command example", () => {
     expect(help).toContain("/evals");
     expect(help).toContain("/packs");
     expect(help).toContain("/quota");
+    const quota = await runPrivateCommand({
+      text: "/quota -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["keyword", "join"],
+          };
+        },
+      },
+    });
+    expect(quota).toBe("quota -100 2/1 calendar_month basic\nkeyword,join");
+    expect(quota).not.toContain(phrase);
     expect(help).toContain("/chats");
     expect(help).toContain("/rule");
     expect(help).not.toContain(phrase);

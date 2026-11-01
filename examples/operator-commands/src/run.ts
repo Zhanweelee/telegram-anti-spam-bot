@@ -11,6 +11,7 @@ import {
   createMemoryLogger,
   type Locale,
   parseEvent,
+  type QuotaReader,
   type ReviewQueue,
   type RulePackArchive,
   type RulePackSource,
@@ -43,6 +44,7 @@ export async function runPrivateCommand(input: {
   readonly rulePackSource?: RulePackSource;
   readonly rulePackArchive?: RulePackArchive;
   readonly locale?: Locale;
+  readonly quota?: QuotaReader;
 }): Promise<string | null> {
   const result = await runOperatorCommand({
     event: parseEvent({
@@ -75,6 +77,7 @@ export async function runPrivateCommand(input: {
         }
       : {}),
     ...(input.locale ? { locale: input.locale } : {}),
+    ...(input.quota ? { quota: input.quota } : {}),
     source: {
       async loadChat() {
         return null;

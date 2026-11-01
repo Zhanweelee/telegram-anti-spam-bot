@@ -14,6 +14,7 @@ import {
 import {
   createMemoryChatDirectory,
   createMemoryQuotaStore,
+  defaultBasicDetectorIds,
   quotaPolicyFromEnv,
 } from "@tasb/cloud";
 import {
@@ -595,6 +596,36 @@ describe("handleIncomingEvent", () => {
       "quota -100 0/3000 calendar_month full",
     );
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("lists the default basic detectors when /quota is degraded", async () => {
+    const kit = deps();
+    const policy = quotaPolicyFromEnv({
+      QUOTA_ENABLED: "true",
+      QUOTA_LIMIT: "1",
+    });
+    const store = createMemoryQuotaStore();
+    const usage = {
+      tenantId: "local",
+      chatId: "-100",
+      atIso: "2026-11-01T00:00:00.000Z",
+      policy,
+    };
+    await store.consume(usage);
+    await store.consume(usage);
+    await handleIncomingEvent(
+      await incoming({ text: "/quota -100", direct: true }),
+      { ...kit, quota: { policy, store } },
+    );
+    const text = kit.reply.sent.at(-1)?.text ?? "";
+    expect(defaultBasicDetectorIds.join(",")).toBe(
+      "keyword,join,flood,repeat,link,blocklist,forward,regex",
+    );
+    expect(text).toBe(
+      `quota -100 2/1 calendar_month basic\n${defaultBasicDetectorIds.join(",")}`,
+    );
+    expect(text).not.toContain("llm");
+    expect(text).not.toContain(phrase);
   });
 
   it("lets the person who promoted the bot manage that chat", async () => {

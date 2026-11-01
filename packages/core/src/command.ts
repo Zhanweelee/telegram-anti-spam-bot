@@ -1125,7 +1125,7 @@ async function showQuota(
       return say(input, "command.quota.disabled");
     }
     const snapshot = parsed.data;
-    return say(input, "command.quota.status", {
+    const status = say(input, "command.quota.status", {
       chatId,
       used: snapshot.used,
       limit: snapshot.limit,
@@ -1135,6 +1135,14 @@ async function showQuota(
         snapshot.degraded ? "command.quota.basic" : "command.quota.full",
       ),
     });
+    const basics = snapshot.basicDetectorIds;
+    if (snapshot.degraded && basics !== undefined && basics.length > 0) {
+      return say(input, "command.quota.basics", {
+        status,
+        basic: basics.join(","),
+      });
+    }
+    return status;
   } catch {
     input.logger.warn("operator_rejected", {
       eventId: input.event.id,

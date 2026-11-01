@@ -94,7 +94,7 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 
 ## 免费额度
 
-自部署默认关闭。`DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次检测。超过之后只跑基础检测器，关键词、洪泛和频道转发还在，`llm` 停用。管理员私聊 `/quota <chatId>` 查看已用次数。见 ADR 0026。
+自部署默认关闭。`DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次检测。超过之后只跑基础检测器，关键词、洪泛和频道转发还在，`llm` 停用。管理员私聊 `/quota <chatId>` 查看已用次数。超额时下一行列出基础检测器 id，默认名单仍是 ADR 0026。见 ADR 0026 和 ADR 0042。
 
 不要把下面的变量写进本仓库的 `wrangler.jsonc`。自己的部署可以放在 `vars`，或用 `wrangler secret put`：
 
