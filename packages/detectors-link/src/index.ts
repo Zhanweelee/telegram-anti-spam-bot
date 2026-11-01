@@ -2,16 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
-  foldBracketDots,
-  foldCyrillicLookalikes,
-  foldDotLookalikes,
-  foldEncodedAlphabet,
-  foldEncodedGaps,
-  foldEncodedMiddleDot,
-  foldEncodedSeparators,
-  foldFullwidthLatin,
-  foldHostInterrupters,
-  foldMatchText,
+  foldHostScan,
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
@@ -94,23 +85,7 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldBracketDots(
-        foldEncodedAlphabet(
-          foldEncodedSeparators(
-            foldEncodedGaps(
-              foldMatchText(
-                foldDotLookalikes(
-                  foldEncodedMiddleDot(
-                    foldHostInterrupters(
-                      foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
+      const compared = foldHostScan(message.text);
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
         message.invites,

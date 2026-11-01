@@ -9,6 +9,7 @@ import {
   foldEncodedSeparators,
   foldFullwidthLatin,
   foldHostInterrupters,
+  foldHostScan,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";
@@ -58,6 +59,16 @@ describe("foldDotLookalikes", () => {
     expect(foldDotLookalikes("example.com")).toBe("example.com");
     expect(foldDotLookalikes("不是免费。领取")).toBe("不是免费。领取");
     expect(foldDotLookalikes("免 费领取")).toBe("免 费领取");
+  });
+});
+
+describe("foldHostScan", () => {
+  it("uses the body host fold on a plain label", () => {
+    expect(foldHostScan("bit\u200b.ly")).toBe("bit.ly");
+    expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
+    expect(foldHostScan("t.me%2F+SIDE72")).toBe("t.me/+SIDE72");
+    expect(foldHostScan("bit. ly")).toBe("bit. ly");
+    expect(foldHostScan("bit%255B.%255Dly")).toBe("bit%255B.%255Dly");
   });
 });
 

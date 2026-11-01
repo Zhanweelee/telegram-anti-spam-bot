@@ -264,6 +264,7 @@ export {
   foldEncodedSeparators,
   foldFullwidthLatin,
   foldHostInterrupters,
+  foldHostScan,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";

@@ -46,6 +46,31 @@ export function foldBracketDots(text: string): string {
   return text.replace(BRACKET_DOT, ".");
 }
 
+/**
+ * Fold plain text before a hostname scan.
+ * This is the link-detector order. Structured URL parsing keeps its own order.
+ * An ordinary space stays. A second percent layer stays.
+ */
+export function foldHostScan(text: string): string {
+  return foldBracketDots(
+    foldEncodedAlphabet(
+      foldEncodedSeparators(
+        foldEncodedGaps(
+          foldMatchText(
+            foldDotLookalikes(
+              foldEncodedMiddleDot(
+                foldHostInterrupters(
+                  foldFullwidthLatin(foldCyrillicLookalikes(text)),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 const CYRILLIC_LOOKALIKES: Record<string, string> = {
   "\u0406": "I",
   "\u0410": "A",

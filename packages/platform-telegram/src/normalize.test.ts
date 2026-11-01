@@ -4627,4 +4627,46 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("btn71");
     expect(dumped).not.toContain("%5B");
   });
+
+  it("folds a side label with the same host scan as the body", async () => {
+    const code = "SIDE72";
+    const outcome = await normalize({
+      update_id: 4310,
+      message: {
+        message_id: 230,
+        date: 1761955200,
+        chat: { id: -100960, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "bit\u200b.ly/btn72", url: "https://example.com" }],
+            [{ text: "b%69t.ly/enc72" }],
+            [{ text: `t.me%2F+${code}` }],
+            [{ text: "bit. ly/space72" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "example.com",
+      "t.me",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("btn72");
+    expect(dumped).not.toContain("enc72");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("space72");
+    expect(dumped).not.toContain("%69");
+    expect(dumped).not.toContain("%2F");
+    expect(dumped).not.toContain("\u200b");
+  });
 });
