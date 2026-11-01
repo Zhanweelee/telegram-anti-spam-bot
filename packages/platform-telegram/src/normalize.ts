@@ -485,6 +485,15 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     pushPlainUrls(value.file_name, urls);
   }
+  const paid = message.paid_media;
+  if (isRecord(paid) && Array.isArray(paid.paid_media)) {
+    for (const item of paid.paid_media) {
+      if (!isRecord(item) || !isRecord(item.video)) {
+        continue;
+      }
+      pushPlainUrls(item.video.file_name, urls);
+    }
+  }
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
     pushPlainUrls(quote.text, urls);
@@ -1051,6 +1060,18 @@ function mediaLabel(message: Record<string, unknown>): string {
     }
     if (typeof value.file_name === "string" && value.file_name.length > 0) {
       return value.file_name.slice(0, MAX_TEXT);
+    }
+  }
+  const paid = message.paid_media;
+  if (isRecord(paid) && Array.isArray(paid.paid_media)) {
+    for (const item of paid.paid_media) {
+      if (!isRecord(item) || !isRecord(item.video)) {
+        continue;
+      }
+      const name = item.video.file_name;
+      if (typeof name === "string" && name.length > 0) {
+        return name.slice(0, MAX_TEXT);
+      }
     }
   }
   return "";

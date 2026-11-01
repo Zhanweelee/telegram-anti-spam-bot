@@ -2901,6 +2901,152 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("keeps hostnames from paid media file names", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PAID59";
+    const labeled = await normalize({
+      update_id: 3210,
+      message: {
+        message_id: 140,
+        date: 1761955200,
+        chat: { id: -100820, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        paid_media: {
+          star_count: 59,
+          paid_media: [
+            {
+              type: "photo",
+              photo: [{ file_id: "FILE59", file_unique_id: "UNIQ59" }],
+            },
+            {
+              type: "video",
+              video: {
+                file_id: "VID59",
+                file_unique_id: "VUNIQ59",
+                mime_type: "video/mp4",
+                file_name: `${phrase} https://bit.ly/paid59 https://t.me/+${code}.`,
+              },
+            },
+            {
+              type: "live_photo",
+              live_photo: {
+                file_id: "https://tinyurl.com/live59",
+                file_unique_id: "LIVE59",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("paid59");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("FILE59");
+    expect(labeledDump).not.toContain("VID59");
+    expect(labeledDump).not.toContain("live59");
+
+    const ordinary = await normalize({
+      update_id: 3211,
+      message: {
+        message_id: 141,
+        date: 1761955200,
+        chat: { id: -100821, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "video",
+              video: {
+                file_id: "VID59B",
+                file_name: `${phrase} https://example.com/page59`,
+                mime_type: "https://is.gd/mime59",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("page59");
+    expect(ordinaryDump).not.toContain("is.gd");
+    expect(ordinaryDump).not.toContain("mime59");
+
+    const hidden = await normalize({
+      update_id: 3212,
+      message: {
+        message_id: 142,
+        date: 1761955200,
+        chat: { id: -100822, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "live_photo",
+              live_photo: { file_id: "https://bit.ly/live59" },
+            },
+            { type: "preview", width: 1, height: 1 },
+          ],
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.text).toBe("今天站会");
+    expect(hidden.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(hidden.event)).not.toContain("bit.ly");
+
+    const paidBody = "免费领取 https://bit.ly/body59";
+    const paid = await normalize({
+      update_id: 3213,
+      message: {
+        message_id: 143,
+        date: 1761955200,
+        chat: { id: -100823, type: "supergroup" },
+        from: { id: 9 },
+        paid_media: {
+          star_count: 1,
+          paid_media: [
+            {
+              type: "video",
+              video: { file_id: "VID59C", file_name: paidBody },
+            },
+          ],
+        },
+      },
+    });
+    expect(paid.status).toBe("event");
+    if (paid.status !== "event") {
+      return;
+    }
+    expect(paid.event.message?.text).toBe(paidBody);
+    expect(paid.event.message?.textSha256).toBe(await sha256Hex(paidBody));
+    expect(paid.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({
