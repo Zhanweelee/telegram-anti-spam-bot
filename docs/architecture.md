@@ -82,7 +82,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
 5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
 
-`apps/worker` 在归一化之后跑 core 流水线：关键词检测器，以及 delete、mute、ban。预过滤按租户和群从 `PolicyStore` 读取；没有记录时豁免管理员。配了 `POLICY_KV` 时白名单走 KV，否则用内存。配了 `DB` 时审计和规则文档走 D1，否则审计留在内存，最多 200 条。规则热路径仍然是缓存加包内 JSON，不读 `Storage.getRuleSet`。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的删除、禁言或封禁接口。存储失败不改变决策。说明见 ADR 0007。
+`apps/worker` 在归一化之后跑 core 流水线：关键词检测器，以及 delete、mute、ban。预过滤按租户和群从 `PolicyStore` 读取；没有记录时豁免管理员。配了 `POLICY_KV` 时白名单走 KV，否则用内存。配了 `DB` 时审计和规则文档走 D1，否则审计留在内存，最多 200 条。规则热路径仍然是缓存加包内 JSON，不读 `Storage.getRuleSet`。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的删除、禁言或封禁接口。存储失败不改变决策。管理员可以在私聊导出或删除某个租户、某个群的审计；删除不碰规则和白名单。30 天自动清理还没有做。说明见 ADR 0007 和 ADR 0008。
 
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 

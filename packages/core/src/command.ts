@@ -7,12 +7,25 @@ import {
   savePolicy,
 } from "./policy-load.js";
 import type { PolicyStore } from "./policy-store.js";
-import type { AuditRecord, Storage } from "./ports.js";
+import {
+  type AuditRecord,
+  type AuditScope,
+  auditExportDocument,
+  type Storage,
+} from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
 import { loadRuleSet, type RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
-const COMMAND_NAMES = ["help", "rules", "whitelist", "logs", "dryrun"] as const;
+const COMMAND_NAMES = [
+  "help",
+  "rules",
+  "whitelist",
+  "logs",
+  "dryrun",
+  "export",
+  "forget",
+] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
 const HELP = [
@@ -25,12 +38,15 @@ const HELP = [
   "/logs [chatId]",
   "/dryrun <chatId>",
   "/dryrun <chatId> on|off",
+  "/export [chatId]",
+  "/forget [chatId]",
 ].join("\n");
 
 const DENIED = "没有权限";
 const INVALID = "参数无效";
 const LOG_LIMIT = 10;
 const TOKEN_LIMIT = 80;
+const EXPORT_REPLY_LIMIT = 3500;
 
 export interface OperatorCommandInput {
   readonly event: Event;
@@ -113,6 +129,10 @@ async function dispatch(
       return showLogs(input, args);
     case "dryrun":
       return editDryRun(input, args);
+    case "export":
+      return exportAudits(input, args);
+    case "forget":
+      return forgetAudits(input, args);
   }
 }
 
@@ -229,6 +249,70 @@ async function showLogs(
     return "no audits";
   }
   return records.map(formatAudit).join("\n");
+}
+
+async function exportAudits(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const scope = resolveScope(input, args, "/export [chatId]");
+  if (typeof scope === "string") {
+    return scope;
+  }
+  try {
+    const records = await input.storage.exportAudits(scope);
+    const json = auditExportDocument(scope, records);
+    if (json.length > EXPORT_REPLY_LIMIT) {
+      return `导出 ${records.length} 条，超过私聊长度`;
+    }
+    return json;
+  } catch {
+    input.logger.warn("operator_rejected", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+      command: "export",
+    });
+    return INVALID;
+  }
+}
+
+async function forgetAudits(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const scope = resolveScope(input, args, "/forget [chatId]");
+  if (typeof scope === "string") {
+    return scope;
+  }
+  try {
+    const records = await input.storage.exportAudits(scope);
+    await input.storage.deleteAudits(scope);
+    return `已删除 ${records.length} 条`;
+  } catch {
+    input.logger.warn("operator_rejected", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+      command: "forget",
+    });
+    return INVALID;
+  }
+}
+
+function resolveScope(
+  input: OperatorCommandInput,
+  args: readonly string[],
+  usage: string,
+): AuditScope | string {
+  if (args.length > 1) {
+    return `用法：${usage}`;
+  }
+  const chatId = args[0];
+  if (chatId !== undefined && !isTargetId(chatId)) {
+    return INVALID;
+  }
+  return chatId === undefined
+    ? { tenantId: input.event.tenantId }
+    : { tenantId: input.event.tenantId, chatId };
 }
 
 async function editDryRun(

@@ -1,8 +1,10 @@
 import {
   type AuditRecord,
+  type AuditScope,
   auditRecordSchema,
   parseAuditQuery,
   parseAuditRecord,
+  parseAuditScope,
   parseRuleSet,
   type RuleSet,
   ruleSetSchema,
@@ -65,6 +67,27 @@ WHERE tenant_id = ? AND chat_id = ?
 ORDER BY rowid ASC
 LIMIT ?`;
 
+const deleteAuditsSql = "DELETE FROM audits WHERE tenant_id = ?";
+
+const deleteAuditsInChatSql =
+  "DELETE FROM audits WHERE tenant_id = ? AND chat_id = ?";
+
+const exportPageSize = 100;
+
+const exportAuditsSql = `SELECT rowid AS audit_rowid, tenant_id, chat_id, event_id,
+  message_id, text_sha256, action, score, reasons, evidence, rule_ids, created_at
+FROM audits
+WHERE tenant_id = ? AND rowid > ?
+ORDER BY rowid ASC
+LIMIT ${exportPageSize}`;
+
+const exportAuditsInChatSql = `SELECT rowid AS audit_rowid, tenant_id, chat_id, event_id,
+  message_id, text_sha256, action, score, reasons, evidence, rule_ids, created_at
+FROM audits
+WHERE tenant_id = ? AND chat_id = ? AND rowid > ?
+ORDER BY rowid ASC
+LIMIT ${exportPageSize}`;
+
 const readRuleSql = `SELECT document FROM rule_sets
 WHERE tenant_id = ? AND chat_id = ?`;
 
@@ -112,6 +135,22 @@ export function createD1Storage(db: SqlDatabase): Storage {
       }
       return audits;
     },
+    async exportAudits(scope) {
+      await migrationsFor(db);
+      return exportMatching(db, scope);
+    },
+    async deleteAudits(scope) {
+      await migrationsFor(db);
+      const parsed = parseAuditScope(scope);
+      if (parsed.chatId === undefined) {
+        await db.prepare(deleteAuditsSql).bind(parsed.tenantId).run();
+        return;
+      }
+      await db
+        .prepare(deleteAuditsInChatSql)
+        .bind(parsed.tenantId, parsed.chatId)
+        .run();
+    },
     async getRuleSet(tenantId, chatId) {
       await migrationsFor(db);
       const rows = await db.prepare(readRuleSql).bind(tenantId, chatId).all();
@@ -140,6 +179,50 @@ function migrationsFor(db: SqlDatabase): Promise<void> {
   });
   migrations.set(db, pending);
   return pending;
+}
+
+async function exportMatching(
+  db: SqlDatabase,
+  scope: AuditScope,
+): Promise<AuditRecord[]> {
+  const parsed = parseAuditScope(scope);
+  const audits: AuditRecord[] = [];
+  let after = 0;
+  for (;;) {
+    const rows =
+      parsed.chatId === undefined
+        ? await db.prepare(exportAuditsSql).bind(parsed.tenantId, after).all()
+        : await db
+            .prepare(exportAuditsInChatSql)
+            .bind(parsed.tenantId, parsed.chatId, after)
+            .all();
+    const page = rows.results ?? [];
+    if (page.length === 0) {
+      return audits;
+    }
+    let next = after;
+    for (const row of page) {
+      const rowId = readRowId(row.audit_rowid);
+      if (rowId !== null && rowId > next) {
+        next = rowId;
+      }
+      const audit = readAudit(row);
+      if (audit) {
+        audits.push(audit);
+      }
+    }
+    if (next === after || page.length < exportPageSize) {
+      return audits;
+    }
+    after = next;
+  }
+}
+
+function readRowId(value: unknown): number | null {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) {
+    return value;
+  }
+  return null;
 }
 
 function auditValues(record: AuditRecord): readonly (string | number | null)[] {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { decisionActionSchema } from "./decision.js";
 import { evidenceSchema } from "./evidence.js";
+import { assertNoRawContent } from "./privacy.js";
 import type { RuleSet } from "./rule.js";
 
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
@@ -32,9 +33,18 @@ export const auditQuerySchema = z.strictObject({
 
 export type AuditQuery = z.output<typeof auditQuerySchema>;
 
+export const auditScopeSchema = z.strictObject({
+  tenantId: z.string().min(1),
+  chatId: z.string().min(1).optional(),
+});
+
+export type AuditScope = z.output<typeof auditScopeSchema>;
+
 export interface Storage {
   appendAudit(record: AuditRecord): Promise<void>;
   listAudits(query: AuditQuery): Promise<readonly AuditRecord[]>;
+  exportAudits(scope: AuditScope): Promise<readonly AuditRecord[]>;
+  deleteAudits(scope: AuditScope): Promise<void>;
   getRuleSet(tenantId: string, chatId: string): Promise<RuleSet | null>;
   putRuleSet(tenantId: string, chatId: string, rules: RuleSet): Promise<void>;
 }
@@ -70,4 +80,23 @@ export function parseAuditRecord(input: unknown): AuditRecord {
 
 export function parseAuditQuery(input: unknown): AuditQuery {
   return auditQuerySchema.parse(input);
+}
+
+export function parseAuditScope(input: unknown): AuditScope {
+  return auditScopeSchema.parse(input);
+}
+
+/** JSON export of one tenant, optionally one chat. Schema rejects message text. */
+export function auditExportDocument(
+  scope: AuditScope,
+  audits: readonly AuditRecord[],
+): string {
+  const parsedScope = parseAuditScope(scope);
+  const document = {
+    tenantId: parsedScope.tenantId,
+    ...(parsedScope.chatId === undefined ? {} : { chatId: parsedScope.chatId }),
+    audits: audits.map((record) => parseAuditRecord(record)),
+  };
+  assertNoRawContent(document);
+  return JSON.stringify(document);
 }

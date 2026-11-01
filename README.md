@@ -21,7 +21,7 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 看私聊命令怎么改配置 | [examples/operator-commands](examples/operator-commands) |
 | 部署到自己的 Cloudflare | [docs/deploy.md](docs/deploy.md) |
 
-Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配了 KV 之后白名单进 KV，配了 D1 之后审计进 D1。两个绑定都可以不填，那时数据留在 isolate 内存里。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的这些文本不会改配置。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配了 KV 之后白名单进 KV，配了 D1 之后审计进 D1。两个绑定都可以不填，那时数据留在 isolate 内存里。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`、`/export`、`/forget`。群聊里的这些文本不会改配置。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
 
 ## 10 分钟跑通
 

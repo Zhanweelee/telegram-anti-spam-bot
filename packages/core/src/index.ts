@@ -70,14 +70,18 @@ export type { PolicyStore } from "./policy-store.js";
 export {
   type AuditQuery,
   type AuditRecord,
+  type AuditScope,
+  auditExportDocument,
   auditQuerySchema,
   auditRecordSchema,
+  auditScopeSchema,
   type BanTarget,
   type DeleteTarget,
   type ModerationPort,
   type MuteTarget,
   parseAuditQuery,
   parseAuditRecord,
+  parseAuditScope,
   type Storage,
 } from "./ports.js";
 export {

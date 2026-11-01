@@ -100,6 +100,12 @@ function harness(options?: { failStorage?: boolean }) {
       return null;
     },
     async putRuleSet() {},
+    async exportAudits() {
+      return records.slice();
+    },
+    async deleteAudits() {
+      records.splice(0, records.length);
+    },
   };
   const moderator: ModerationPort = {
     async deleteMessage(target) {

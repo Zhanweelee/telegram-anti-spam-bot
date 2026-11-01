@@ -95,6 +95,25 @@ function storage(): Storage & { readonly records: AuditRecord[] } {
         )
         .slice(0, query.limit);
     },
+    async exportAudits(scope) {
+      return records.filter(
+        (record) =>
+          record.tenantId === scope.tenantId &&
+          (scope.chatId === undefined || record.chatId === scope.chatId),
+      );
+    },
+    async deleteAudits(scope) {
+      for (let index = records.length - 1; index >= 0; index -= 1) {
+        const record = records[index];
+        if (
+          record &&
+          record.tenantId === scope.tenantId &&
+          (scope.chatId === undefined || record.chatId === scope.chatId)
+        ) {
+          records.splice(index, 1);
+        }
+      }
+    },
     async getRuleSet() {
       return null;
     },
@@ -475,5 +494,166 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(result.status).toBe("skip");
+  });
+
+  it("exports one chat and forgets only that chat", async () => {
+    const deps = kit();
+    const audit = {
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_1",
+      action: "delete" as const,
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword" as const, summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    await deps.storage.appendAudit(audit);
+    await deps.storage.appendAudit({
+      ...audit,
+      chatId: "-200",
+      eventId: "evt_2",
+    });
+    await deps.storage.appendAudit({
+      ...audit,
+      tenantId: "other",
+      eventId: "evt_other",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: `/forget -100 ${phrase}`, chatId: "-100" }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(skipped.status).toBe("skip");
+    expect(deps.storage.records).toHaveLength(3);
+    const denied = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(deps.storage.records).toHaveLength(3);
+    const exported = await runOperatorCommand({
+      event: event({ text: "/export -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(exported.status).toBe("reply");
+    if (exported.status === "reply") {
+      expect(JSON.parse(exported.text)).toEqual({
+        tenantId: "local",
+        chatId: "-100",
+        audits: [audit],
+      });
+      expect(exported.text).not.toContain(phrase);
+    }
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "已删除 1 条" });
+    expect(
+      await deps.storage.exportAudits({ tenantId: "local", chatId: "-100" }),
+    ).toEqual([]);
+    expect(await deps.storage.exportAudits({ tenantId: "local" })).toHaveLength(
+      1,
+    );
+    expect(await deps.storage.exportAudits({ tenantId: "other" })).toHaveLength(
+      1,
+    );
+  });
+
+  it("keeps a long export out of the reply and forgets the tenant", async () => {
+    const deps = kit();
+    const usage = await runOperatorCommand({
+      event: event({ text: "/export -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(usage).toMatchObject({ text: "用法：/export [chatId]" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/forget ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const empty = await runOperatorCommand({
+      event: event({ text: "/export", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(empty).toMatchObject({
+      text: '{"tenantId":"local","audits":[]}',
+    });
+    const audit = {
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_0",
+      action: "delete" as const,
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword" as const, summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    for (let index = 0; index < 20; index += 1) {
+      await deps.storage.appendAudit({ ...audit, eventId: `evt_${index}` });
+    }
+    const longExport = await runOperatorCommand({
+      event: event({ text: "/export -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(longExport).toMatchObject({ text: "导出 20 条，超过私聊长度" });
+    expect(JSON.stringify(longExport)).not.toContain(phrase);
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "已删除 20 条" });
+    expect(deps.storage.records).toEqual([]);
+    const again = await runOperatorCommand({
+      event: event({ text: "/forget", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(again).toMatchObject({ text: "已删除 0 条" });
+  });
+
+  it("hides storage failures from export and forget", async () => {
+    const deps = kit();
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_1",
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    deps.storage.exportAudits = () => Promise.reject(new Error(phrase));
+    const exported = await runOperatorCommand({
+      event: event({ text: "/export", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(exported).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    deps.storage.exportAudits = async () => deps.storage.records;
+    deps.storage.deleteAudits = () => Promise.reject(new Error(phrase));
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "参数无效" });
+    expect(deps.storage.records).toHaveLength(1);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 });

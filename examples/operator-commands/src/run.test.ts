@@ -33,5 +33,28 @@ describe("operator command example", () => {
     });
     expect(logs).toContain("evt_1");
     expect(logs).not.toContain(phrase);
+
+    const exported = await runPrivateCommand({
+      text: "/export -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      storage,
+    });
+    expect(exported).toContain('"audits"');
+    expect(exported).not.toContain('"text"');
+    const forgotten = await runPrivateCommand({
+      text: "/forget -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      storage,
+    });
+    expect(forgotten).toBe("已删除 1 条");
+    expect(
+      await storage.listAudits({
+        tenantId: "local",
+        chatId: "-100",
+        limit: 10,
+      }),
+    ).toEqual([]);
   });
 });

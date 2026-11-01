@@ -35,6 +35,8 @@ function countingStorage(): Storage & { reads: number } {
     },
     appendAudit: (record) => storage.appendAudit(record),
     listAudits: (query) => storage.listAudits(query),
+    exportAudits: (scope) => storage.exportAudits(scope),
+    deleteAudits: (scope) => storage.deleteAudits(scope),
     async getRuleSet(tenantId, chatId) {
       reads += 1;
       return storage.getRuleSet(tenantId, chatId);

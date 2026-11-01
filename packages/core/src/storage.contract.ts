@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { AuditRecord, Storage } from "./ports.js";
+import {
+  type AuditRecord,
+  auditExportDocument,
+  type Storage,
+} from "./ports.js";
 import type { RuleSet } from "./rule.js";
 
 const record: AuditRecord = {
@@ -124,6 +128,73 @@ export function bindStorageContract(create: () => Storage): void {
       });
       expect(listed).toEqual([]);
       expect(JSON.stringify(listed)).not.toContain(secret);
+    });
+
+    it("exports audits without message text and deletes that scope", async () => {
+      const storage = create();
+      const secret = "请免费领取礼品";
+      await storage.appendAudit(record);
+      await storage.appendAudit({
+        ...record,
+        chatId: "chat_2",
+        eventId: "evt_2",
+      });
+      await storage.appendAudit({
+        ...record,
+        tenantId: "tenant_b",
+        eventId: "evt_b",
+      });
+      await storage.putRuleSet("tenant_a", "chat_1", rules);
+      const chatExport = await storage.exportAudits({
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+      });
+      expect(chatExport).toEqual([record]);
+      const json = auditExportDocument(
+        { tenantId: "tenant_a", chatId: "chat_1" },
+        chatExport,
+      );
+      expect(JSON.parse(json)).toEqual({
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+        audits: [record],
+      });
+      expect(json).not.toContain(secret);
+      expect(json).not.toContain('"text"');
+      await storage.deleteAudits({ tenantId: "tenant_a", chatId: "chat_1" });
+      expect(
+        await storage.exportAudits({ tenantId: "tenant_a", chatId: "chat_1" }),
+      ).toEqual([]);
+      expect(
+        await storage.listAudits({
+          tenantId: "tenant_a",
+          chatId: "chat_1",
+          limit: 10,
+        }),
+      ).toEqual([]);
+      expect(await storage.exportAudits({ tenantId: "tenant_a" })).toEqual([
+        { ...record, chatId: "chat_2", eventId: "evt_2" },
+      ]);
+      expect(await storage.getRuleSet("tenant_a", "chat_1")).toEqual(rules);
+      await storage.deleteAudits({ tenantId: "tenant_a" });
+      expect(await storage.exportAudits({ tenantId: "tenant_a" })).toEqual([]);
+      expect(await storage.exportAudits({ tenantId: "tenant_b" })).toEqual([
+        { ...record, tenantId: "tenant_b", eventId: "evt_b" },
+      ]);
+    });
+
+    it("exports more audits than one list page", async () => {
+      const storage = create();
+      for (let index = 0; index < 101; index += 1) {
+        await storage.appendAudit({ ...record, eventId: `evt_${index}` });
+      }
+      const exported = await storage.exportAudits({ tenantId: "tenant_a" });
+      expect(exported).toHaveLength(101);
+      expect(exported[0]?.eventId).toBe("evt_0");
+      expect(exported[100]?.eventId).toBe("evt_100");
+      expect(
+        await storage.listAudits({ tenantId: "tenant_a", limit: 100 }),
+      ).toHaveLength(100);
     });
   });
 }

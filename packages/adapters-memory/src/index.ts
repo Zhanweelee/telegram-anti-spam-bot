@@ -9,6 +9,7 @@ import {
   type PolicyStore,
   parseAuditQuery,
   parseAuditRecord,
+  parseAuditScope,
   parseRuleSet,
   prefilterPolicySchema,
   type ReplyMessage,
@@ -37,12 +38,21 @@ export function createMemoryStorage(options?: {
     async listAudits(query: AuditQuery) {
       const parsed = parseAuditQuery(query);
       return records
-        .filter(
-          (record) =>
-            record.tenantId === parsed.tenantId &&
-            (parsed.chatId === undefined || record.chatId === parsed.chatId),
-        )
+        .filter((record) => matchesScope(record, parsed))
         .slice(0, parsed.limit);
+    },
+    async exportAudits(scope) {
+      const parsed = parseAuditScope(scope);
+      return records.filter((record) => matchesScope(record, parsed));
+    },
+    async deleteAudits(scope) {
+      const parsed = parseAuditScope(scope);
+      for (let index = records.length - 1; index >= 0; index -= 1) {
+        const record = records[index];
+        if (record && matchesScope(record, parsed)) {
+          records.splice(index, 1);
+        }
+      }
     },
     async getRuleSet(tenantId, chatId) {
       return rules.get(key(tenantId, chatId)) ?? null;
@@ -93,6 +103,16 @@ export function createMemoryPolicyStore(): PolicyStore {
       values.set(policyKey(tenantId, chatId), JSON.stringify(parsed));
     },
   };
+}
+
+function matchesScope(
+  record: AuditRecord,
+  scope: { readonly tenantId: string; readonly chatId?: string | undefined },
+): boolean {
+  return (
+    record.tenantId === scope.tenantId &&
+    (scope.chatId === undefined || record.chatId === scope.chatId)
+  );
 }
 
 function key(tenantId: string, chatId: string): string {
