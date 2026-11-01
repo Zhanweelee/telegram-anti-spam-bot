@@ -4419,4 +4419,107 @@ describe("normalizeUpdate", () => {
       ).status,
     ).toBe("ignored");
   });
+
+  it("keeps hostnames from the author signature", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "SIG68";
+    const labeled = await normalize({
+      update_id: 3910,
+      message: {
+        message_id: 190,
+        date: 1761955200,
+        chat: {
+          id: -100920,
+          type: "supergroup",
+          title: "https://bit.ly/room68",
+        },
+        from: { id: 9, first_name: "https://bit.ly/user68" },
+        text: "今天站会",
+        author_signature: `${phrase} https://bit.ly/sig68 https://t.me/+${code}.`,
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: {
+            id: -1001,
+            title: "https://bit.ly/ch68",
+            type: "channel",
+          },
+          author_signature: "https://tinyurl.com/fwd68",
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.forward).toBe("channel");
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("sig68");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("fwd68");
+    expect(labeledDump).not.toContain("room68");
+    expect(labeledDump).not.toContain("user68");
+    expect(labeledDump).not.toContain("ch68");
+
+    const earlier = await normalize({
+      update_id: 3911,
+      message: {
+        message_id: 191,
+        date: 1761955200,
+        chat: { id: -100921, type: "supergroup" },
+        from: { id: 9 },
+        document: {
+          file_id: "doc-191",
+          file_unique_id: "doc-191",
+          file_name: "会议录音",
+        },
+        author_signature: `${phrase} https://example.com/page68`,
+      },
+    });
+    expect(earlier.status).toBe("event");
+    if (earlier.status !== "event") {
+      return;
+    }
+    expect(earlier.event.message?.text).toBe("会议录音");
+    expect(earlier.event.message?.textSha256).toBe(await sha256Hex("会议录音"));
+    expect(earlier.event.message?.hosts).toEqual(["example.com"]);
+    const earlierDump = JSON.stringify(earlier.event);
+    expect(earlierDump).not.toContain(phrase);
+    expect(earlierDump).not.toContain("page68");
+    expect(earlierDump).not.toContain("doc-191");
+
+    const asBody = "免费领取 https://bit.ly/body68";
+    const body = await normalize({
+      update_id: 3912,
+      message: {
+        message_id: 192,
+        date: 1761955200,
+        chat: { id: -100922, type: "channel" },
+        sender_chat: { id: -100922, type: "channel" },
+        photo: [
+          {
+            file_id: "ph-192",
+            file_unique_id: "ph-192",
+            width: 1,
+            height: 1,
+          },
+        ],
+        author_signature: asBody,
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain("ph-192");
+  });
 });

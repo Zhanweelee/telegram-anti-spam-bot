@@ -554,6 +554,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
   }
+  pushPlainUrls(message.author_signature, urls);
   return urls;
 }
 
@@ -994,6 +995,20 @@ function messageText(
   const hidden = hiddenForwardName(message);
   if (hidden.length > 0) {
     return hidden;
+  }
+  const signature = authorSignature(message);
+  if (signature.length > 0) {
+    return signature;
+  }
+  return "";
+}
+
+function authorSignature(message: Record<string, unknown>): string {
+  if (
+    typeof message.author_signature === "string" &&
+    message.author_signature.length > 0
+  ) {
+    return message.author_signature.slice(0, MAX_TEXT);
   }
   return "";
 }
