@@ -485,6 +485,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     pushPlainUrls(value.file_name, urls);
   }
+  const quote = message.quote;
+  if (isRecord(quote) && quote.is_manual === true) {
+    pushPlainUrls(quote.text, urls);
+    pushTextLinks(quote.entities, urls);
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);

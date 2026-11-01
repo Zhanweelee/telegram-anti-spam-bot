@@ -1864,10 +1864,125 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain("免费领取");
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("/quoted");
+  });
+
+  it("keeps hostnames from a manual quote when text exists", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "QUOTE54";
+    const manual = await normalize({
+      update_id: 2610,
+      message: {
+        message_id: 84,
+        date: 1761955200,
+        chat: { id: -100753, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        quote: {
+          text: `${phrase} https://bit.ly/q54 https://t.me/+${code}.`,
+          position: 4,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://www.tinyurl.com/qt54",
+            },
+          ],
+        },
+        reply_to_message: {
+          message_id: 1,
+          text: `${phrase} https://example.com/reply54`,
+        },
+      },
+    });
+    expect(manual.status).toBe("event");
+    if (manual.status !== "event") {
+      return;
+    }
+    expect(manual.event.message?.text).toBe("今天站会");
+    expect(manual.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(manual.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "www.tinyurl.com",
+    ]);
+    expect(manual.event.message?.invites).toEqual(["t.me"]);
+    const manualDump = JSON.stringify(manual.event);
+    expect(manualDump).not.toContain(phrase);
+    expect(manualDump).not.toContain(code);
+    expect(manualDump).not.toContain("/q54");
+    expect(manualDump).not.toContain("/qt54");
+    expect(manualDump).not.toContain("example.com");
+    expect(manualDump).not.toContain('"position"');
+
+    const automatic = await normalize({
+      update_id: 2611,
+      message: {
+        message_id: 85,
+        date: 1761955200,
+        chat: { id: -100754, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        quote: {
+          text: `${phrase} https://bit.ly/auto54`,
+          position: 0,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://tinyurl.com/auto54",
+            },
+          ],
+        },
+        external_reply: {
+          origin: { type: "user", sender_user_name: phrase },
+          quote: {
+            text: "https://is.gd/ext54",
+            is_manual: true,
+          },
+        },
+      },
+    });
+    expect(automatic.status).toBe("event");
+    if (automatic.status !== "event") {
+      return;
+    }
+    expect(automatic.event.message?.text).toBe("今天站会");
+    expect(automatic.event.message?.hosts).toBeUndefined();
+    const automaticDump = JSON.stringify(automatic.event);
+    expect(automaticDump).not.toContain(phrase);
+    expect(automaticDump).not.toContain("bit.ly");
+    expect(automaticDump).not.toContain("tinyurl.com");
+    expect(automaticDump).not.toContain("is.gd");
+
+    const asBody = "免费领取 https://bit.ly/body54";
+    const body = await normalize({
+      update_id: 2612,
+      message: {
+        message_id: 86,
+        date: 1761955200,
+        chat: { id: -100755, type: "supergroup" },
+        from: { id: 9 },
+        quote: {
+          text: asBody,
+          position: 1,
+          is_manual: true,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
   it("keeps hostnames from media file names and audio titles", async () => {
@@ -2183,10 +2298,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会.pdf");
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain("免费领取");
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("/quoted");
   });
 
   it("keeps a venue title when a document file name is also present", async () => {
@@ -2521,10 +2636,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain("免费领取");
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("/quoted");
   });
 
   it("uses rich message text and keeps only link hostnames", async () => {
