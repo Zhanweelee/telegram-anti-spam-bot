@@ -125,6 +125,7 @@ describe("operator command example", () => {
       rulePackSource: packSource,
       rulePackArchive: archive,
     });
+    expect(packed?.startsWith("rules -100 community\n")).toBe(true);
     expect(packed).toContain("community_keywords enabled");
     expect(packed).not.toContain("spam_keywords");
     const cleared = await runPrivateCommand({

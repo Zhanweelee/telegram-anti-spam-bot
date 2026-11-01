@@ -283,7 +283,11 @@ async function showRules(
     switches,
     ...(pack ? { pack } : {}),
   });
-  const lines = [say(input, "command.rules.header", { chatId })];
+  const lines = [
+    pack
+      ? say(input, "command.rules.pack", { chatId, pack: pack.id })
+      : say(input, "command.rules.header", { chatId }),
+  ];
   if (rules.rules.length === 0) {
     lines.push(say(input, "command.rules.empty"));
     return lines.join("\n");

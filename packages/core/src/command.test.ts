@@ -1468,10 +1468,24 @@ describe("runOperatorCommand", () => {
     });
     expect(listed).toMatchObject({ status: "reply" });
     if (listed.status === "reply") {
+      expect(listed.text.startsWith("rules -100 community\n")).toBe(true);
       expect(listed.text).toContain(
         "community_keywords enabled threshold 2 actions delete",
       );
       expect(listed.text).not.toContain("spam_keywords");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(english).toMatchObject({ status: "reply" });
+    if (english.status === "reply") {
+      expect(english.text.startsWith("rules -100 community\n")).toBe(true);
     }
     await deps.runtime.setRuleSwitch(
       "local",
@@ -1535,8 +1549,9 @@ describe("runOperatorCommand", () => {
     });
     expect(local).toMatchObject({ status: "reply" });
     if (local.status === "reply") {
+      expect(local.text.startsWith("rules -100\n")).toBe(true);
       expect(local.text).toContain("spam_keywords disabled");
-      expect(local.text).not.toContain("community_keywords");
+      expect(local.text).not.toContain("community");
     }
     const failing = {
       async get() {
@@ -1578,6 +1593,7 @@ describe("runOperatorCommand", () => {
     });
     expect(fallback).toMatchObject({ status: "reply" });
     if (fallback.status === "reply") {
+      expect(fallback.text.startsWith("rules -100 community\n")).toBe(true);
       expect(fallback.text).toContain("spam_keywords");
       expect(fallback.text).not.toContain(phrase);
     }
