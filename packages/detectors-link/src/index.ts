@@ -2,6 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
+  foldBracketDots,
   foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
@@ -93,14 +94,16 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldEncodedAlphabet(
-        foldEncodedSeparators(
-          foldEncodedGaps(
-            foldMatchText(
-              foldDotLookalikes(
-                foldEncodedMiddleDot(
-                  foldHostInterrupters(
-                    foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+      const compared = foldBracketDots(
+        foldEncodedAlphabet(
+          foldEncodedSeparators(
+            foldEncodedGaps(
+              foldMatchText(
+                foldDotLookalikes(
+                  foldEncodedMiddleDot(
+                    foldHostInterrupters(
+                      foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+                    ),
                   ),
                 ),
               ),

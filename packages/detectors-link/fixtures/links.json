@@ -202,5 +202,16 @@
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"
+  },
+  {
+    "name": "bracket-dot",
+    "text": "bit[.]ly/free-gift",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "bracket-dot-spaced",
+    "text": "bit[ . ]ly/free-gift",
+    "expect": "miss"
   }
 ]

@@ -266,6 +266,13 @@ describe("keyword detector", () => {
     ).toBeNull();
     expect(
       await detector.detect({
+        event: messageEvent("不是免费[.]领取"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await detector.detect({
         event: messageEvent("加%25C2%25B7微信"),
         logger,
         signal,

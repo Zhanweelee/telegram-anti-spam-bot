@@ -285,5 +285,20 @@
     "id": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "label": "ham"
+  },
+  {
+    "id": "bracket-dot",
+    "text": "bit[.]ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "bracket-dot-ordinary",
+    "text": "example[.]com/docs",
+    "label": "ham"
+  },
+  {
+    "id": "bracket-dot-spaced",
+    "text": "bit[ . ]ly/offer",
+    "label": "ham"
   }
 ]

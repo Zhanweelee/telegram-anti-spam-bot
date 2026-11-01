@@ -874,4 +874,77 @@ describe("link fixtures", () => {
     });
     expect(bare).toBeNull();
   });
+
+  it("folds a bracketed dot before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("bit[.]ly/br70"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("br70");
+
+    const paren = await detector.detect({
+      event: eventFor("bit(.)ly/br70b"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(paren?.reasons).toEqual(["short_link"]);
+    expect(paren?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const invite = await detector.detect({
+      event: eventFor("t[.]me/+BR70"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("BR70");
+
+    const wide = await detector.detect({
+      event: eventFor("bit\uFF3B.\uFF3Dly/br70w"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wide?.reasons).toEqual(["short_link"]);
+    expect(wide?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const middle = await detector.detect({
+      event: eventFor("bit[\u00B7]ly/br70m"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(middle?.reasons).toEqual(["short_link"]);
+    expect(middle?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const ordinary = await detector.detect({
+      event: eventFor("example[.]com/page70"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const pub = await detector.detect({
+      event: eventFor("t[.]me/durov"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(pub).toBeNull();
+
+    const spaced = await detector.detect({
+      event: eventFor("bit[ . ]ly/sp70"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(spaced).toBeNull();
+
+    const encoded = await detector.detect({
+      event: eventFor("bit%5B.%5Dly/enc70"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encoded).toBeNull();
+  });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  foldBracketDots,
   foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
@@ -57,6 +58,20 @@ describe("foldDotLookalikes", () => {
     expect(foldDotLookalikes("example.com")).toBe("example.com");
     expect(foldDotLookalikes("不是免费。领取")).toBe("不是免费。领取");
     expect(foldDotLookalikes("免 费领取")).toBe("免 费领取");
+  });
+});
+
+describe("foldBracketDots", () => {
+  it("turns a bracketed dot into an ascii dot", () => {
+    expect(foldBracketDots("bit[.]ly")).toBe("bit.ly");
+    expect(foldBracketDots("t(.)me")).toBe("t.me");
+    expect(foldBracketDots("t{.}me")).toBe("t.me");
+    expect(foldBracketDots("bit\uFF3B.\uFF3Dly")).toBe("bit.ly");
+    expect(foldBracketDots("bit[\u3002]ly")).toBe("bit.ly");
+    expect(foldBracketDots("bit[ . ]ly")).toBe("bit[ . ]ly");
+    expect(foldBracketDots("bit%5B.%5Dly")).toBe("bit%5B.%5Dly");
+    expect(foldBracketDots("不是免费。领取")).toBe("不是免费。领取");
+    expect(foldBracketDots("免 费领取")).toBe("免 费领取");
   });
 });
 
