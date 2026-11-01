@@ -117,7 +117,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -d "{\"url\":\"https://tasb.<你的子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"edited_message\",\"chat_member\",\"callback_query\",\"my_chat_member\"],\"drop_pending_updates\":true}"
 ```
 
-把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `edited_message`、`chat_member`、`callback_query` 和 `my_chat_member`，否则编辑后的垃圾消息、入群更新、验证按钮，以及 bot 被设为管理员的事件不会送到 bot。已经设过 webhook 的部署要重设一次。见 ADR 0027。验证状态在 isolate 内存里，重启后未完成的验证会消失；限制的 `until_date` 仍会到期。同一群 10 秒内超过 30 条更新时，bot 返回 200 并且不再检测，避免 Telegram 重试。见 ADR 0024。频道转发默认会被删除。转载群把规则 `channel_forward` 的 `enabled` 改成 false，或在 `chats.json` 里整份换掉规则。见 ADR 0025。
+把 URL 换成部署输出里的地址。`allowed_updates` 要带上 `edited_message`、`chat_member`、`callback_query` 和 `my_chat_member`，否则编辑后的垃圾消息、入群更新、验证按钮，以及 bot 被设为管理员的事件不会送到 bot。已经设过 webhook 的部署要重设一次。见 ADR 0027。接入目录在没配 `POLICY_KV` 时留在内存里，重启后 `/chats` 要等下一次管理员变更。配了 `POLICY_KV` 之后，目录和白名单、规则开关在同一份 KV 里，每个租户一个键，最多 256 个群、每群 32 个用户 id，不含群名。见 ADR 0036。验证状态在 isolate 内存里，重启后未完成的验证会消失；限制的 `until_date` 仍会到期。同一群 10 秒内超过 30 条更新时，bot 返回 200 并且不再检测，避免 Telegram 重试。见 ADR 0024。频道转发默认会被删除。转载群把规则 `channel_forward` 的 `enabled` 改成 false，或在 `chats.json` 里整份换掉规则。见 ADR 0025。
 
 ## 确认
 

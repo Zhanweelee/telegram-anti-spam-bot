@@ -1,4 +1,9 @@
 import {
+  type ChatDirectory,
+  type ChatDirectoryDocument,
+  chatDirectoryDocumentSchema,
+  MAX_DIRECTORY_ACTORS,
+  MAX_DIRECTORY_CHATS,
   MAX_RULE_SWITCHES,
   type PolicyStore,
   prefilterPolicySchema,
@@ -70,7 +75,7 @@ export function createKvPolicyStore(kv: StringStore): PolicyStore {
   };
 }
 
-const DEFAULT_RUNTIME_TTL_MS = 60_000;
+const DEFAULT_KV_TTL_MS = 60_000;
 
 const emptyRuntime: RuntimeDocument = { dryRun: false, switches: [] };
 
@@ -79,7 +84,7 @@ export function createKvRuntimeStore(
   options?: { readonly now?: () => number; readonly ttlMs?: number },
 ): RuntimeStore {
   const now = options?.now ?? (() => Date.now());
-  const ttlMs = options?.ttlMs ?? DEFAULT_RUNTIME_TTL_MS;
+  const ttlMs = options?.ttlMs ?? DEFAULT_KV_TTL_MS;
   const cache = new Map<
     string,
     { readonly document: RuntimeDocument; readonly expiresAt: number }
@@ -179,4 +184,203 @@ function recordKey(tenantId: string, chatId: string): string {
 
 function runtimeKey(tenantId: string, chatId: string): string {
   return `runtime\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+const emptyDirectory: ChatDirectoryDocument = { rooms: [] };
+
+export function createKvChatDirectory(
+  kv: StringStore,
+  options?: { readonly now?: () => number; readonly ttlMs?: number },
+): ChatDirectory {
+  const now = options?.now ?? (() => Date.now());
+  const ttlMs = options?.ttlMs ?? DEFAULT_KV_TTL_MS;
+  const cache = new Map<
+    string,
+    { readonly document: ChatDirectoryDocument; readonly expiresAt: number }
+  >();
+
+  async function load(tenantId: string): Promise<ChatDirectoryDocument> {
+    const id = directoryKey(tenantId);
+    const at = now();
+    const hit = cache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.document;
+    }
+    const document = parseDirectory(await kv.get(id));
+    cache.set(id, { document, expiresAt: at + ttlMs });
+    return document;
+  }
+
+  async function save(
+    tenantId: string,
+    document: ChatDirectoryDocument,
+  ): Promise<void> {
+    const id = directoryKey(tenantId);
+    const parsed = chatDirectoryDocumentSchema.parse(document);
+    await kv.put(id, JSON.stringify(parsed));
+    cache.set(id, { document: parsed, expiresAt: now() + ttlMs });
+  }
+
+  async function update(
+    tenantId: string,
+    change: (rooms: ChatDirectoryDocument["rooms"]) => {
+      readonly rooms: ChatDirectoryDocument["rooms"];
+      readonly result: "ok" | "full";
+      readonly changed: boolean;
+    },
+  ): Promise<"ok" | "full"> {
+    if (!validTenant(tenantId)) {
+      return "ok";
+    }
+    const current = await load(tenantId);
+    const next = change(current.rooms);
+    if (next.changed) {
+      await save(tenantId, { rooms: next.rooms });
+    }
+    return next.result;
+  }
+
+  return {
+    noteBot(input) {
+      if (!validId(input.chatId)) {
+        return Promise.resolve("ok");
+      }
+      if (input.state === "gone") {
+        return update(input.tenantId, (rooms) => {
+          const next = rooms.filter((room) => room.chatId !== input.chatId);
+          return {
+            rooms: next,
+            result: "ok",
+            changed: next.length !== rooms.length,
+          };
+        });
+      }
+      if (!validId(input.actorId)) {
+        return Promise.resolve("ok");
+      }
+      return update(input.tenantId, (rooms) =>
+        grant(rooms, input.chatId, input.actorId),
+      );
+    },
+    noteMember(input) {
+      if (!validId(input.chatId) || !validId(input.actorId)) {
+        return Promise.resolve("ok");
+      }
+      return update(input.tenantId, (rooms) =>
+        input.admin
+          ? grant(rooms, input.chatId, input.actorId)
+          : revoke(rooms, input.chatId, input.actorId),
+      );
+    },
+    async chatsFor(tenantId, actorId) {
+      if (!validTenant(tenantId) || !validId(actorId)) {
+        return [];
+      }
+      const document = await load(tenantId);
+      return document.rooms
+        .filter((room) => room.actorIds.includes(actorId))
+        .map((room) => room.chatId)
+        .sort();
+    },
+    async list(tenantId) {
+      if (!validTenant(tenantId)) {
+        return [];
+      }
+      const document = await load(tenantId);
+      return document.rooms.map((room) => room.chatId).sort();
+    },
+  };
+}
+
+function grant(
+  rooms: ChatDirectoryDocument["rooms"],
+  chatId: string,
+  actorId: string,
+): {
+  readonly rooms: ChatDirectoryDocument["rooms"];
+  readonly result: "ok" | "full";
+  readonly changed: boolean;
+} {
+  if (!validId(chatId)) {
+    return { rooms, result: "ok", changed: false };
+  }
+  const index = rooms.findIndex((room) => room.chatId === chatId);
+  if (index === -1) {
+    if (rooms.length >= MAX_DIRECTORY_CHATS) {
+      return { rooms, result: "full", changed: false };
+    }
+    return {
+      rooms: [...rooms, { chatId, actorIds: [actorId] }],
+      result: "ok",
+      changed: true,
+    };
+  }
+  const room = rooms[index];
+  if (!room || room.actorIds.includes(actorId)) {
+    return { rooms, result: "ok", changed: false };
+  }
+  if (room.actorIds.length >= MAX_DIRECTORY_ACTORS) {
+    return { rooms, result: "ok", changed: false };
+  }
+  return {
+    rooms: rooms.map((item, itemIndex) =>
+      itemIndex === index
+        ? { chatId, actorIds: [...item.actorIds, actorId] }
+        : item,
+    ),
+    result: "ok",
+    changed: true,
+  };
+}
+
+function revoke(
+  rooms: ChatDirectoryDocument["rooms"],
+  chatId: string,
+  actorId: string,
+): {
+  readonly rooms: ChatDirectoryDocument["rooms"];
+  readonly result: "ok" | "full";
+  readonly changed: boolean;
+} {
+  const index = rooms.findIndex((room) => room.chatId === chatId);
+  const room = index === -1 ? undefined : rooms[index];
+  if (!room?.actorIds.includes(actorId)) {
+    return { rooms, result: "ok", changed: false };
+  }
+  return {
+    rooms: rooms.map((item, itemIndex) =>
+      itemIndex === index
+        ? {
+            chatId,
+            actorIds: item.actorIds.filter((id) => id !== actorId),
+          }
+        : item,
+    ),
+    result: "ok",
+    changed: true,
+  };
+}
+
+function parseDirectory(raw: string | null): ChatDirectoryDocument {
+  if (raw === null) {
+    return emptyDirectory;
+  }
+  try {
+    const parsed = chatDirectoryDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : emptyDirectory;
+  } catch {
+    return emptyDirectory;
+  }
+}
+
+function directoryKey(tenantId: string): string {
+  return `chats\n${tenantId.length}:${tenantId}`;
+}
+
+function validTenant(value: string): boolean {
+  return value.length > 0 && value.length <= 128 && !value.includes("\n");
+}
+
+function validId(value: string): boolean {
+  return /^-?\d{1,20}$/.test(value);
 }

@@ -14,7 +14,6 @@ import {
 import { Hono } from "hono";
 import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
 import { workerCaptcha } from "./captcha-runtime.js";
-import { workerChats } from "./chat-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
 import { allowUnsignedPlugins } from "./plugins.js";
 import { workerQuota } from "./quota-runtime.js";
@@ -155,7 +154,7 @@ export function createApp(
             policy: quotaPolicyFromEnv(c.env ?? {}),
             store: workerQuota,
           },
-          chats: workerChats,
+          chats: stores.chats,
         });
       },
       ...(c.env?.TELEGRAM_BOT_TOKEN

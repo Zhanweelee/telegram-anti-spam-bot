@@ -22,10 +22,14 @@ export {
   parseCaptchaChallenge,
   resolveChallenge,
 } from "./captcha.js";
-export type {
-  ChatDirectory,
-  ChatDirectoryResult,
-  ChatNote,
+export {
+  type ChatDirectory,
+  type ChatDirectoryDocument,
+  type ChatDirectoryResult,
+  type ChatNote,
+  chatDirectoryDocumentSchema,
+  MAX_DIRECTORY_ACTORS,
+  MAX_DIRECTORY_CHATS,
 } from "./chats.js";
 export { type Clock, createFixedClock, createSystemClock } from "./clock.js";
 export {

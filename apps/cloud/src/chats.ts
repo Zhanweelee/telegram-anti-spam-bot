@@ -1,12 +1,14 @@
-import type {
-  BotState,
-  ChatDirectory,
-  ChatDirectoryResult,
-  ChatNote,
+import {
+  type BotState,
+  type ChatDirectory,
+  type ChatDirectoryResult,
+  type ChatNote,
+  MAX_DIRECTORY_ACTORS,
+  MAX_DIRECTORY_CHATS,
 } from "@tasb/core";
 
-const maxChatsDefault = 256;
-const maxActors = 32;
+const maxChatsDefault = MAX_DIRECTORY_CHATS;
+const maxActors = MAX_DIRECTORY_ACTORS;
 
 interface Room {
   actors: string[];

@@ -1,6 +1,7 @@
 import {
   createD1ReviewQueue,
   createD1Storage,
+  createKvChatDirectory,
   createKvPolicyStore,
   createKvRuntimeStore,
   type SqlDatabase,
@@ -8,11 +9,13 @@ import {
   type StringStore,
 } from "@tasb/adapter-cloudflare";
 import type {
+  ChatDirectory,
   PolicyStore,
   ReviewQueue,
   RuntimeStore,
   Storage,
 } from "@tasb/core";
+import { workerChats } from "./chat-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
 
@@ -21,6 +24,8 @@ export interface StoreSlot {
   policyStore?: PolicyStore;
   review?: ReviewQueue;
   runtime?: RuntimeStore;
+  chats?: ChatDirectory;
+  kv?: KVNamespace;
 }
 
 const isolateSlot: StoreSlot = {};
@@ -33,16 +38,19 @@ export function resolveStores(
   readonly policyStore: PolicyStore;
   readonly review: ReviewQueue;
   readonly runtime: RuntimeStore;
+  readonly chats: ChatDirectory;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
     slot.storage = createD1Storage(sql);
     slot.review = createD1ReviewQueue(sql);
   }
-  if (env.POLICY_KV !== undefined && slot.policyStore === undefined) {
+  if (env.POLICY_KV !== undefined && slot.kv !== env.POLICY_KV) {
     const kv = adaptKv(env.POLICY_KV);
+    slot.kv = env.POLICY_KV;
     slot.policyStore = createKvPolicyStore(kv);
     slot.runtime = createKvRuntimeStore(kv);
+    slot.chats = createKvChatDirectory(kv);
   }
   return {
     storage:
@@ -61,6 +69,10 @@ export function resolveStores(
       env.POLICY_KV !== undefined && slot.runtime !== undefined
         ? slot.runtime
         : workerRuntime,
+    chats:
+      env.POLICY_KV !== undefined && slot.chats !== undefined
+        ? slot.chats
+        : workerChats,
   };
 }
 

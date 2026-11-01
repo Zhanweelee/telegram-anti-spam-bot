@@ -229,6 +229,54 @@ describe("POST /telegram/webhook", () => {
     expect([...values.values()].join("\n")).toContain("via_inline");
   });
 
+  it("stores the granting user in POLICY_KV without the chat title", async () => {
+    const title = "机密群名";
+    const values = new Map<string, string>();
+    const kv = {
+      async get(key: string) {
+        return values.get(key) ?? null;
+      },
+      async put(key: string, value: string) {
+        values.set(key, value);
+      },
+    };
+    const app = createApp();
+    const response = await app.request(
+      "/telegram/webhook",
+      {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": SECRET },
+        body: JSON.stringify({
+          update_id: 82,
+          my_chat_member: {
+            chat: { id: -100586, type: "supergroup", title },
+            from: { id: 7, first_name: title },
+            date: 1761955200,
+            old_chat_member: {
+              user: { id: 99, is_bot: true },
+              status: "left",
+            },
+            new_chat_member: {
+              user: { id: 99, is_bot: true },
+              status: "administrator",
+            },
+          },
+        }),
+      },
+      {
+        WEBHOOK_SECRET: SECRET,
+        POLICY_KV: kv as unknown as KVNamespace,
+      },
+    );
+    const raw = await response.text();
+    expect(response.status).toBe(200);
+    expect(raw).not.toContain(title);
+    const saved = [...values.values()].join("\n");
+    expect(saved).toContain("-100586");
+    expect(saved).toContain('"7"');
+    expect(saved).not.toContain(title);
+  });
+
   it("screens with the default pipeline and omits message text from the body", async () => {
     const spam = "请免费领取礼品";
     const app = createApp();

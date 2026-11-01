@@ -1,6 +1,7 @@
 import { bindPolicyStoreContract } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
+  createKvChatDirectory,
   createKvPolicyStore,
   createKvRuntimeStore,
   type StringStore,
@@ -149,6 +150,153 @@ describe("kv runtime store", () => {
     expect(await store.listRuleSwitches("local", "chat_1")).toEqual([
       { ruleId: "regex_hint", enabled: true },
     ]);
+    expect(gets).toBe(1);
+  });
+});
+
+describe("kv chat directory", () => {
+  it("remembers operators after a new store reads the same KV", async () => {
+    const backing = createMapStore();
+    const first = createKvChatDirectory(backing.store);
+    expect(
+      await first.noteBot({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "7",
+        state: "admin",
+      }),
+    ).toBe("ok");
+    const second = createKvChatDirectory(backing.store);
+    expect(await second.chatsFor("local", "7")).toEqual(["-100"]);
+    expect(await second.list("local")).toEqual(["-100"]);
+    expect(await second.chatsFor("other", "7")).toEqual([]);
+    await second.noteMember({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "8",
+      admin: true,
+    });
+    expect(await second.chatsFor("local", "8")).toEqual(["-100"]);
+    await second.noteMember({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "8",
+      admin: false,
+    });
+    expect(await second.chatsFor("local", "8")).toEqual([]);
+    expect(await second.list("local")).toEqual(["-100"]);
+    await second.noteBot({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "7",
+      state: "gone",
+    });
+    expect(await second.list("local")).toEqual([]);
+    expect(await second.chatsFor("local", "7")).toEqual([]);
+    const key = [...backing.values.keys()][0];
+    expect(key?.startsWith("chats")).toBe(true);
+  });
+
+  it("treats a corrupt directory as empty and hides the title", async () => {
+    const backing = createMapStore();
+    const title = "机密群名";
+    const store = createKvChatDirectory(backing.store);
+    await store.noteBot({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "7",
+      state: "admin",
+    });
+    const key = [...backing.values.keys()][0];
+    if (key !== undefined) {
+      backing.values.set(key, JSON.stringify({ title }));
+    }
+    const fresh = createKvChatDirectory(backing.store);
+    expect(await fresh.list("local")).toEqual([]);
+    expect(JSON.stringify(await fresh.list("local"))).not.toContain(title);
+  });
+
+  it("stops new chats at 256 and extra actors at 32", async () => {
+    const backing = createMapStore();
+    const store = createKvChatDirectory(backing.store);
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await store.noteBot({
+          tenantId: "local",
+          chatId: String(-1000 - index),
+          actorId: "7",
+          state: "admin",
+        }),
+      ).toBe("ok");
+    }
+    expect(
+      await store.noteBot({
+        tenantId: "local",
+        chatId: "-1",
+        actorId: "7",
+        state: "admin",
+      }),
+    ).toBe("full");
+    expect(await store.list("local")).toHaveLength(256);
+    expect(await store.chatsFor("local", "7")).toHaveLength(256);
+    for (let index = 0; index < 31; index += 1) {
+      expect(
+        await store.noteMember({
+          tenantId: "local",
+          chatId: "-1000",
+          actorId: String(100 + index),
+          admin: true,
+        }),
+      ).toBe("ok");
+    }
+    expect(
+      await store.noteMember({
+        tenantId: "local",
+        chatId: "-1000",
+        actorId: "999",
+        admin: true,
+      }),
+    ).toBe("ok");
+    expect(await store.chatsFor("local", "999")).toEqual([]);
+    expect(
+      await store.noteBot({
+        tenantId: "local\nextra",
+        chatId: "-100",
+        actorId: "7",
+        state: "admin",
+      }),
+    ).toBe("ok");
+    expect(await store.list("local")).toHaveLength(256);
+  });
+
+  it("reads the tenant document once per ttl", async () => {
+    const backing = createMapStore();
+    let now = 0;
+    let gets = 0;
+    const store = createKvChatDirectory(
+      {
+        async get(key) {
+          gets += 1;
+          return backing.store.get(key);
+        },
+        put: (key, value) => backing.store.put(key, value),
+      },
+      { now: () => now, ttlMs: 60_000 },
+    );
+    await store.noteBot({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "7",
+      state: "admin",
+    });
+    gets = 0;
+    expect(await store.list("local")).toEqual(["-100"]);
+    expect(await store.chatsFor("local", "7")).toEqual(["-100"]);
+    expect(gets).toBe(0);
+    now = 60_000;
+    expect(await store.chatsFor("local", "7")).toEqual(["-100"]);
+    expect(gets).toBe(1);
+    expect(await store.list("local")).toEqual(["-100"]);
     expect(gets).toBe(1);
   });
 });
