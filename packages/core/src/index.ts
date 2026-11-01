@@ -186,11 +186,24 @@ export {
   ruleWhenSchema,
 } from "./rule.js";
 export {
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
+  MAX_RULE_SUBSCRIPTIONS,
+  parseRulePackId,
+  type RulePackArchive,
+  RulePackCapacityError,
+  type RulePackSource,
+  type RuleSubscriptionStore,
+  rulePackIdSchema,
+} from "./rule-pack.js";
+export {
   DEFAULT_RULE_CACHE_TTL_SECONDS,
   type LoadRuleSetInput,
   loadRuleSet,
   openRuleSet,
+  type RulePackRequest,
   type RuleSource,
+  resolveRuleSet,
 } from "./rules-load.js";
 export type { RuntimeStore } from "./runtime.js";
 export { withTimeout } from "./timeout.js";

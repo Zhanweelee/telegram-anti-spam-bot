@@ -3,6 +3,7 @@ import {
   createMemoryCache,
   createMemoryPolicyStore,
   createMemoryReviewQueue,
+  createMemoryRuleSubscriptionStore,
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
@@ -11,6 +12,7 @@ import {
   type Locale,
   parseEvent,
   type ReviewQueue,
+  type RuleSubscriptionStore,
   runOperatorCommand,
   type Storage,
 } from "@tasb/core";
@@ -35,6 +37,7 @@ export async function runPrivateCommand(input: {
   readonly adminActorIds: readonly string[];
   readonly storage?: Storage;
   readonly review?: ReviewQueue;
+  readonly rulePacks?: RuleSubscriptionStore;
   readonly locale?: Locale;
 }): Promise<string | null> {
   const result = await runOperatorCommand({
@@ -60,6 +63,7 @@ export async function runPrivateCommand(input: {
     logger: createMemoryLogger(),
     blocklist: createMemoryBlocklistStore(),
     review: input.review ?? createMemoryReviewQueue(),
+    rulePacks: input.rulePacks ?? createMemoryRuleSubscriptionStore(),
     ...(input.locale ? { locale: input.locale } : {}),
     source: {
       async loadChat() {

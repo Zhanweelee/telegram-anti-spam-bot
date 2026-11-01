@@ -12,6 +12,7 @@ import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
+import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { fileRuleSource } from "./rules.js";
 import {
@@ -47,6 +48,7 @@ export async function handleIncomingEvent(
   const captchaStore = deps.captchaStore ?? workerCaptcha;
   const blocklist = deps.blocklist ?? workerBlocklist;
   const review = deps.review ?? workerReview;
+  const rulePacks = deps.rulePacks ?? workerRulePacks;
   if (event.kind === "challenge") {
     try {
       await resolveChallenge({
@@ -79,6 +81,7 @@ export async function handleIncomingEvent(
     logger,
     blocklist,
     review,
+    rulePacks: rulePacks.store,
     ...(deps.locale ? { locale: deps.locale } : {}),
   });
   if (outcome.status === "reply") {
@@ -105,6 +108,7 @@ export async function handleIncomingEvent(
       ? { externalDetectors: deps.externalDetectors }
       : {}),
     ...(deps.externalActions ? { externalActions: deps.externalActions } : {}),
+    rulePacks,
     blocklist,
   });
   const prompted = result.actionResults.some(

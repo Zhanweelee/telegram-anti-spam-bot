@@ -6,6 +6,8 @@ import {
   createMemoryPolicyStore,
   createMemoryReply,
   createMemoryReviewQueue,
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
@@ -395,5 +397,58 @@ describe("handleIncomingEvent", () => {
     expect(doc.cases[0]?.text).toBeUndefined();
     expect(exported).not.toContain(phrase);
     expect(await kit.storage.getRuleSet("local", "-100")).toEqual(rules);
+  });
+
+  it("shares a rule pack between the command and the next message", async () => {
+    const kit = deps();
+    const store = createMemoryRuleSubscriptionStore();
+    const archive = createMemoryRulePackArchive();
+    let calls = 0;
+    const rulePacks = {
+      store,
+      archive,
+      source: {
+        async load() {
+          calls += 1;
+          if (calls > 1) {
+            throw new Error(phrase);
+          }
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      },
+    };
+    const rateWindow = createMemoryRateWindow();
+    await handleIncomingEvent(
+      await incoming({ text: "/packs -100558 community", direct: true }),
+      { ...kit, rulePacks, rateWindow },
+    );
+    expect(kit.reply.sent.at(-1)?.text).toBe("packs -100558 community");
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100558", actorId: "5" }),
+      { ...kit, rulePacks, rateWindow },
+    );
+    expect(
+      kit.logger.entries.some((entry) => entry.fields.action === "allow"),
+    ).toBe(true);
+    const again = deps();
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100558", actorId: "5" }),
+      {
+        ...again,
+        rulePacks,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(
+      again.logger.entries.some(
+        (entry) => entry.message === "pack_update_failed",
+      ),
+    ).toBe(true);
+    expect(
+      again.logger.entries.some((entry) => entry.fields.action === "allow"),
+    ).toBe(true);
+    expect(JSON.stringify(again.logger.entries)).not.toContain(phrase);
+    expect(calls).toBe(2);
   });
 });

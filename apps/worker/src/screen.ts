@@ -23,12 +23,15 @@ import {
   type LlmClassifier,
   type Logger,
   loadPolicy,
-  loadRuleSet,
   type ModerationPort,
   type PipelineResult,
   type PolicyStore,
+  type RulePackArchive,
+  type RulePackSource,
   type RuleSource,
+  type RuleSubscriptionStore,
   type RuntimeStore,
+  resolveRuleSet,
   runPipeline,
   type Storage,
   wrapLogger,
@@ -105,6 +108,31 @@ export interface ScreenDeps {
   readonly allowUnsigned?: boolean;
   readonly externalDetectors?: readonly PluginSlot<Detector>[];
   readonly externalActions?: readonly PluginSlot<Action>[];
+  readonly rulePacks?: {
+    readonly store: RuleSubscriptionStore;
+    readonly source: RulePackSource;
+    readonly archive: RulePackArchive;
+  };
+}
+
+async function subscribedPack(
+  event: Event,
+  packs: ScreenDeps["rulePacks"],
+  logger: Logger,
+): Promise<string | null> {
+  if (!packs) {
+    return null;
+  }
+  try {
+    return await packs.store.get(event.tenantId, event.chatId);
+  } catch {
+    logger.warn("pack_store_failed", {
+      eventId: event.id,
+      tenantId: event.tenantId,
+      chatId: event.chatId,
+    });
+    return null;
+  }
 }
 
 export async function screenTelegramEvent(
@@ -112,12 +140,22 @@ export async function screenTelegramEvent(
   deps: ScreenDeps = {},
 ): Promise<PipelineResult> {
   const logger = deps.logger ?? createWorkerLogger();
-  const rules = await loadRuleSet({
+  const packId = await subscribedPack(event, deps.rulePacks, logger);
+  const rules = await resolveRuleSet({
     tenantId: event.tenantId,
     chatId: event.chatId,
     cache: deps.cache ?? workerCache,
     source: deps.source ?? fileRuleSource,
     logger,
+    ...(packId && deps.rulePacks
+      ? {
+          pack: {
+            id: packId,
+            source: deps.rulePacks.source,
+            archive: deps.rulePacks.archive,
+          },
+        }
+      : {}),
   });
   const policy = await loadPolicy({
     tenantId: event.tenantId,

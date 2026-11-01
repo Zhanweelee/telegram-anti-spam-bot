@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { Cache } from "./cache.js";
 import { createMemoryLogger } from "./logger.js";
 import {
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
+  type RulePackSource,
+} from "./rule-pack.js";
+import {
   type LoadRuleSetInput,
   loadRuleSet,
   openRuleSet,
   type RuleSource,
+  resolveRuleSet,
 } from "./rules-load.js";
 
 const valid = {
@@ -180,4 +186,180 @@ describe("loadRuleSet", () => {
     expect(local.rules).toHaveLength(1);
     expect(other.rules).toHaveLength(0);
   });
+
+  it("leaves the pack source unread until a chat opts in", async () => {
+    const cache = memoryCache();
+    const packs = countingPacks(valid);
+    const loaded = await resolveRuleSet(input(cache, source()));
+    expect(loaded.rules[0]?.id).toBe("spam_keywords");
+    expect(packs.calls).toBe(0);
+  });
+
+  it("keeps the last valid pack when a refresh fails", async () => {
+    const phrase = "社区规则里的句子";
+    const cache = memoryCache();
+    const logger = createMemoryLogger();
+    const archive = createMemoryRulePackArchive();
+    const local = source();
+    const packRules = {
+      version: 1,
+      aggregate: "max",
+      rules: [
+        {
+          id: "community_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete"],
+        },
+      ],
+    };
+    let body: unknown = packRules;
+    const packs: RulePackSource = {
+      async load() {
+        if (body instanceof Error) {
+          throw body;
+        }
+        return body;
+      },
+    };
+    const first = await resolveRuleSet({
+      ...input(cache, local, logger),
+      pack: { id: "community", source: packs, archive },
+    });
+    expect(first.rules[0]?.id).toBe("community_keywords");
+    expect(local.calls).toBe(0);
+    body = new Error(phrase);
+    const kept = await resolveRuleSet({
+      ...input(memoryCache(), local, logger),
+      pack: { id: "community", source: packs, archive },
+    });
+    expect(kept.rules[0]?.id).toBe("community_keywords");
+    expect(local.calls).toBe(0);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).toContain("pack_update_failed");
+    body = { version: 1, text: phrase };
+    const still = await resolveRuleSet({
+      ...input(memoryCache(), local, logger),
+      pack: { id: "community", source: packs, archive },
+    });
+    expect(still.rules[0]?.id).toBe("community_keywords");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+
+  it("falls back to local rules when the first pack fetch fails", async () => {
+    const logger = createMemoryLogger();
+    const packs: RulePackSource = {
+      async load() {
+        throw new Error("missing");
+      },
+    };
+    const loaded = await resolveRuleSet({
+      ...input(memoryCache(), source(), logger),
+      pack: {
+        id: "community",
+        source: packs,
+        archive: createMemoryRulePackArchive(),
+      },
+    });
+    expect(loaded.rules[0]?.id).toBe("spam_keywords");
+    expect(JSON.stringify(logger.entries)).toContain("pack_update_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain("missing");
+  });
+
+  it("serves a cached pack without reading the source again", async () => {
+    const cache = memoryCache();
+    const packs = countingPacks({
+      version: 1,
+      aggregate: "sum",
+      rules: [],
+    });
+    const archive = createMemoryRulePackArchive();
+    const base = input(cache, source());
+    await resolveRuleSet({
+      ...base,
+      pack: { id: "community", source: packs, archive },
+    });
+    await resolveRuleSet({
+      ...base,
+      pack: { id: "community", source: packs, archive },
+    });
+    expect(packs.calls).toBe(1);
+  });
+
+  it("replaces a corrupt pack cache and hides archive errors", async () => {
+    const cache = memoryCache();
+    cache.values.set("pack:local:chat_1:community", "{");
+    const logger = createMemoryLogger();
+    const archive = {
+      async get() {
+        throw new Error("archive down");
+      },
+      async put() {
+        throw new Error("archive down");
+      },
+    };
+    const packRules = {
+      version: 1,
+      aggregate: "max" as const,
+      rules: [
+        {
+          id: "community_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete" as const],
+        },
+      ],
+    };
+    const loaded = await resolveRuleSet({
+      ...input(cache, source(), logger),
+      pack: {
+        id: "community",
+        source: countingPacks(packRules),
+        archive,
+      },
+    });
+    expect(loaded.rules[0]?.id).toBe("community_keywords");
+    const failed = await resolveRuleSet({
+      ...input(memoryCache(), source(), logger),
+      pack: {
+        id: "community",
+        source: {
+          async load() {
+            throw new Error("refresh down");
+          },
+        },
+        archive,
+      },
+    });
+    expect(failed.rules[0]?.id).toBe("spam_keywords");
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("pack_cache");
+    expect(logged).toContain("pack_archive_failed");
+    expect(logged).not.toContain("archive down");
+    expect(logged).not.toContain("refresh down");
+  });
+
+  it("isolates subscriptions by tenant", async () => {
+    const store = createMemoryRuleSubscriptionStore();
+    await store.put("local", "chat_1", "community");
+    expect(await store.get("local", "chat_1")).toBe("community");
+    expect(await store.get("other", "chat_1")).toBeNull();
+    await store.put("local", "chat_1", null);
+    expect(await store.get("local", "chat_1")).toBeNull();
+  });
 });
+
+function countingPacks(body: unknown): RulePackSource & { calls: number } {
+  let calls = 0;
+  return {
+    get calls() {
+      return calls;
+    },
+    async load() {
+      calls += 1;
+      return body;
+    },
+  };
+}

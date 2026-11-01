@@ -5,6 +5,8 @@ import {
   createMemoryCaptchaStore,
   createMemoryModerator,
   createMemoryPolicyStore,
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
@@ -21,6 +23,7 @@ import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { normalizeUpdate, sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
+import { filePackSource } from "./rules.js";
 import { screenTelegramEvent } from "./screen.js";
 
 async function event(text: string, isAdmin = false, chatId = "-100") {
@@ -608,5 +611,116 @@ describe("screenTelegramEvent", () => {
       },
     );
     expect(opened.decision.action).toBe("delete");
+  });
+
+  it("keeps an opted-in pack when refresh fails and returns to local rules after opt-out", async () => {
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const store = createMemoryRuleSubscriptionStore();
+    const archive = createMemoryRulePackArchive();
+    await store.put("local", "-100558", "community");
+    let calls = 0;
+    const source = {
+      async load() {
+        calls += 1;
+        if (calls > 1) {
+          throw new Error(phrase);
+        }
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const packs = { store, source, archive };
+    const subscribed = await screenTelegramEvent(
+      await event(phrase, false, "-100558"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        rulePacks: packs,
+      },
+    );
+    expect(subscribed.decision.action).toBe("allow");
+    expect(calls).toBe(1);
+
+    const other = await screenTelegramEvent(
+      await event(phrase, false, "-100559"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        rulePacks: packs,
+      },
+    );
+    expect(other.decision.action).toBe("delete");
+    expect(calls).toBe(1);
+
+    const kept = await screenTelegramEvent(
+      await event(phrase, false, "-100558"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        rulePacks: packs,
+      },
+    );
+    expect(kept.decision.action).toBe("allow");
+    expect(calls).toBe(2);
+    expect(
+      logger.entries.some((entry) => entry.message === "pack_update_failed"),
+    ).toBe(true);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+
+    await store.put("local", "-100558", null);
+    const local = await screenTelegramEvent(
+      await event(phrase, false, "-100558"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        rulePacks: packs,
+      },
+    );
+    expect(local.decision.action).toBe("delete");
+    expect(calls).toBe(2);
+    await expect(filePackSource().load("community")).rejects.toThrow(
+      "pack_missing",
+    );
+  });
+
+  it("treats a broken pack subscription as unsubscribed", async () => {
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    let calls = 0;
+    const result = await screenTelegramEvent(
+      await event(phrase, false, "-100560"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        rulePacks: {
+          store: {
+            async get() {
+              throw new Error(phrase);
+            },
+            async put() {
+              throw new Error(phrase);
+            },
+          },
+          source: {
+            async load() {
+              calls += 1;
+              return { version: 1, aggregate: "max", rules: [] };
+            },
+          },
+          archive: createMemoryRulePackArchive(),
+        },
+      },
+    );
+    expect(result.decision.action).toBe("delete");
+    expect(calls).toBe(0);
+    expect(
+      logger.entries.some((entry) => entry.message === "pack_store_failed"),
+    ).toBe(true);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
   });
 });

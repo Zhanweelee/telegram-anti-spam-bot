@@ -1,6 +1,7 @@
 import type { Cache } from "./cache.js";
 import type { Logger } from "./logger.js";
 import { type RuleSet, ruleSetSchema } from "./rule.js";
+import type { RulePackArchive, RulePackSource } from "./rule-pack.js";
 
 export const DEFAULT_RULE_CACHE_TTL_SECONDS = 60;
 
@@ -27,6 +28,12 @@ export interface LoadRuleSetInput {
   readonly source: RuleSource;
   readonly logger: Logger;
   readonly ttlSeconds?: number;
+}
+
+export interface RulePackRequest {
+  readonly id: string;
+  readonly source: RulePackSource;
+  readonly archive: RulePackArchive;
 }
 
 export async function loadRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
@@ -80,6 +87,95 @@ export async function loadRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
   }
   await remember(input, key, parsed, ttl);
   return parsed;
+}
+
+/**
+ * Local rules unless `pack` is set. A failed pack refresh keeps the last
+ * schema-valid copy, and does not replace it with an empty ruleset.
+ */
+export async function resolveRuleSet(
+  input: LoadRuleSetInput & { readonly pack?: RulePackRequest },
+): Promise<RuleSet> {
+  const pack = input.pack;
+  if (!pack) {
+    return loadRuleSet(input);
+  }
+  const key = `pack:${input.tenantId}:${input.chatId}:${pack.id}`;
+  const ttl = input.ttlSeconds ?? DEFAULT_RULE_CACHE_TTL_SECONDS;
+  const cached = await readCache(input, key);
+  if (cached !== null) {
+    const parsed = parseCached(cached);
+    if (parsed) {
+      return parsed;
+    }
+    input.logger.warn("rules_invalid", {
+      tenantId: input.tenantId,
+      chatId: input.chatId,
+      scope: "pack_cache",
+    });
+  }
+  try {
+    const document = await pack.source.load(pack.id);
+    const parsed = parseDocument(document);
+    if (parsed) {
+      await saveArchive(input, pack, parsed);
+      await remember(input, key, parsed, ttl);
+      return parsed;
+    }
+  } catch {
+    return keepPrevious(input, pack, key, ttl);
+  }
+  return keepPrevious(input, pack, key, ttl);
+}
+
+async function keepPrevious(
+  input: LoadRuleSetInput,
+  pack: RulePackRequest,
+  key: string,
+  ttl: number,
+): Promise<RuleSet> {
+  input.logger.warn("pack_update_failed", {
+    tenantId: input.tenantId,
+    chatId: input.chatId,
+    packId: pack.id,
+  });
+  const previous = await readArchive(pack, input);
+  if (previous) {
+    await remember(input, key, previous, ttl);
+    return previous;
+  }
+  return loadRuleSet(input);
+}
+
+async function saveArchive(
+  input: LoadRuleSetInput,
+  pack: RulePackRequest,
+  rules: RuleSet,
+): Promise<void> {
+  try {
+    await pack.archive.put(input.tenantId, input.chatId, pack.id, rules);
+  } catch {
+    input.logger.warn("pack_archive_failed", {
+      tenantId: input.tenantId,
+      chatId: input.chatId,
+      packId: pack.id,
+    });
+  }
+}
+
+async function readArchive(
+  pack: RulePackRequest,
+  input: LoadRuleSetInput,
+): Promise<RuleSet | null> {
+  try {
+    const rules = await pack.archive.get(input.tenantId, input.chatId, pack.id);
+    if (!rules) {
+      return null;
+    }
+    return parseDocument(rules);
+  } catch {
+    return null;
+  }
 }
 
 async function readCache(

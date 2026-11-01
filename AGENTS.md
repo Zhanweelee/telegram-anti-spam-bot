@@ -200,3 +200,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | LlmClassifier | 最后一级分类端口。返回标签和分数。core 不发请求 | Model、Prompt |
 | Metric report | 从日志汇总的拦截率、动作、检测器错误和存储失败。标签只有 id | Dashboard、昵称维度 |
 | Plugin manifest | 插件的 id、版本、schema 和完整性摘要。外部包还要签名 | Package.json、原文配置 |
+| Rule pack | 一份可订阅的 RuleSet。默认关闭。刷新失败时保留上一份通过 schema 的规则 | 远程配置、原文规则 |

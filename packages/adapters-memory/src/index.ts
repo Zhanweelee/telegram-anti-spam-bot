@@ -213,6 +213,8 @@ export function createMemoryReply(): ReplyPort & {
 export {
   createMemoryBlocklistStore,
   createMemoryReviewQueue,
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
 } from "@tasb/core";
 
 export function createMemoryCache(nowMs: () => number = Date.now): Cache {

@@ -1,5 +1,6 @@
 import {
   createMemoryReviewQueue,
+  createMemoryRuleSubscriptionStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import { describe, expect, it } from "vitest";
@@ -17,6 +18,7 @@ describe("operator command example", () => {
     expect(help).toContain("/blocklist");
     expect(help).toContain("/appeal");
     expect(help).toContain("/evals");
+    expect(help).toContain("/packs");
     expect(help).not.toContain(phrase);
     const english = await runPrivateCommand({
       text: "/help",
@@ -84,6 +86,22 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
       storage,
     });
+    const packs = createMemoryRuleSubscriptionStore();
+    const subscribed = await runPrivateCommand({
+      text: "/packs -100 community",
+      actorId: "42",
+      adminActorIds: ["42"],
+      rulePacks: packs,
+    });
+    expect(subscribed).toBe("packs -100 community");
+    expect(await packs.get("local", "-100")).toBe("community");
+    const cleared = await runPrivateCommand({
+      text: "/packs -100 off",
+      actorId: "42",
+      adminActorIds: ["42"],
+      rulePacks: packs,
+    });
+    expect(cleared).toBe("packs -100 none");
     expect(forgotten).toBe("已删除 1 条");
     expect(await review.list({ tenantId: "local" })).toHaveLength(1);
     expect(

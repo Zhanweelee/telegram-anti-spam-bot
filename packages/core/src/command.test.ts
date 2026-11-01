@@ -13,6 +13,7 @@ import type { AuditRecord, Storage } from "./ports.js";
 import { parseAuditRecord } from "./ports.js";
 import { prefilterPolicySchema } from "./prefilter.js";
 import { createMemoryReviewQueue, type ReviewQueue } from "./review.js";
+import { createMemoryRuleSubscriptionStore } from "./rule-pack.js";
 import type { RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
@@ -1308,6 +1309,112 @@ describe("runOperatorCommand", () => {
     expect(english).toMatchObject({
       text: "40 cases, longer than a private message",
     });
+  });
+
+  it("opts a chat into a rule pack without storing the message", async () => {
+    const deps = kit();
+    const rulePacks = createMemoryRuleSubscriptionStore();
+    const missing = await runOperatorCommand({
+      event: event({ text: "/packs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const usage = await runOperatorCommand({
+      event: event({ text: "/packs", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(usage).toMatchObject({ text: "用法：/packs <chatId> [packId|off]" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/packs -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/packs -100 community", chatId: "-100" }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(skipped.status).toBe("skip");
+    expect(await rulePacks.get("local", "-100")).toBeNull();
+    const subscribed = await runOperatorCommand({
+      event: event({ text: "/packs -100 community", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(subscribed).toMatchObject({ text: "packs -100 community" });
+    expect(deps.storage.ruleWrites).toBe(0);
+    const shown = await runOperatorCommand({
+      event: event({ text: "/packs -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(shown).toMatchObject({ text: "packs -100 community" });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/packs -100 off", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      ...deps,
+    });
+    expect(cleared).toMatchObject({ text: "packs -100 none" });
+    expect(await rulePacks.get("local", "-100")).toBeNull();
+    const english = await runOperatorCommand({
+      event: event({ text: "/packs -100 extra extra", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      rulePacks,
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: "Usage: /packs <chatId> [packId|off]",
+    });
+    const failing = {
+      async get() {
+        throw new Error(phrase);
+      },
+      async put() {
+        throw new Error(phrase);
+      },
+    };
+    const broken = await runOperatorCommand({
+      event: event({ text: "/packs -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks: failing,
+      ...deps,
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    const writeFail = {
+      async get() {
+        return null;
+      },
+      async put() {
+        throw new Error(phrase);
+      },
+    };
+    const refused = await runOperatorCommand({
+      event: event({ text: "/packs -100 community", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks: writeFail,
+      ...deps,
+    });
+    expect(refused).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(
+      deps.logger.entries.some(
+        (entry) =>
+          entry.message === "operator_rejected" &&
+          entry.fields.command === "packs",
+      ),
+    ).toBe(true);
   });
 });
 

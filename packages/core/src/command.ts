@@ -27,6 +27,7 @@ import {
   type ReviewLabel,
   type ReviewQueue,
 } from "./review.js";
+import { parseRulePackId, type RuleSubscriptionStore } from "./rule-pack.js";
 import { loadRuleSet, type RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
@@ -41,6 +42,7 @@ const COMMAND_NAMES = [
   "blocklist",
   "appeal",
   "evals",
+  "packs",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -61,6 +63,7 @@ export interface OperatorCommandInput {
   readonly blocklist?: BlocklistStore;
   readonly review?: ReviewQueue;
   readonly locale?: Locale;
+  readonly rulePacks?: RuleSubscriptionStore;
 }
 
 export type OperatorCommandResult =
@@ -146,6 +149,8 @@ async function dispatch(
       return appealAudit(input, args);
     case "evals":
       return exportEvals(input, args);
+    case "packs":
+      return editPacks(input, args);
   }
 }
 
@@ -657,6 +662,81 @@ async function readAudit(
     rejectAppeal(input);
     return "failed";
   }
+}
+
+async function editPacks(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const store = input.rulePacks;
+  if (!store) {
+    rejectPacks(input);
+    return say(input, "command.invalid");
+  }
+  const chatId = args[0];
+  if (!chatId || !isTargetId(chatId) || args.length > 2) {
+    return say(input, "command.packs.usage");
+  }
+  const verb = args[1];
+  if (verb === undefined) {
+    return showPack(input, store, chatId);
+  }
+  if (verb === "off") {
+    return writePack(input, store, chatId, null);
+  }
+  const packId = parseRulePackId(verb);
+  if (!packId) {
+    return say(input, "command.invalid");
+  }
+  return writePack(input, store, chatId, packId);
+}
+
+async function showPack(
+  input: OperatorCommandInput,
+  store: RuleSubscriptionStore,
+  chatId: string,
+): Promise<string> {
+  try {
+    const packId = await store.get(input.event.tenantId, chatId);
+    return packStatus(input, chatId, packId);
+  } catch {
+    rejectPacks(input);
+    return say(input, "command.invalid");
+  }
+}
+
+async function writePack(
+  input: OperatorCommandInput,
+  store: RuleSubscriptionStore,
+  chatId: string,
+  packId: string | null,
+): Promise<string> {
+  try {
+    await store.put(input.event.tenantId, chatId, packId);
+  } catch {
+    rejectPacks(input);
+    return say(input, "command.invalid");
+  }
+  return packStatus(input, chatId, packId);
+}
+
+function packStatus(
+  input: OperatorCommandInput,
+  chatId: string,
+  packId: string | null,
+): string {
+  return say(input, "command.packs.status", {
+    chatId,
+    pack: packId ?? say(input, "command.allow.empty"),
+  });
+}
+
+function rejectPacks(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "packs",
+  });
 }
 
 function rejectAppeal(input: OperatorCommandInput): void {
