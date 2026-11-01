@@ -5035,4 +5035,122 @@ describe("normalizeUpdate", () => {
     expect(asBody.event.message?.textSha256).toBe(await sha256Hex(label));
     expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
   });
+
+  it("keeps hostnames from a game animation file name", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "GAME77";
+    const fileId = "GAMEANIM77";
+    const labeled = await normalize({
+      update_id: 4810,
+      message: {
+        message_id: 280,
+        date: 1761955200,
+        chat: { id: -101010, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        game: {
+          title: "说明",
+          description: phrase,
+          photo: [
+            {
+              file_id: "https://bit.ly/cover77",
+              file_unique_id: "COVER77",
+              width: 1,
+              height: 1,
+            },
+          ],
+          animation: {
+            file_id: `https://bit.ly/${fileId}`,
+            file_unique_id: fileId,
+            width: 1,
+            height: 1,
+            duration: 1,
+            file_name: `https://bit.ly/anim77 https://t.me/+${code}.`,
+            mime_type: "https://tinyurl.com/mime77",
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("anim77");
+    expect(labeledDump).not.toContain(fileId);
+    expect(labeledDump).not.toContain("cover77");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("mime77");
+
+    const ordinary = await normalize({
+      update_id: 4811,
+      message: {
+        message_id: 281,
+        date: 1761955200,
+        chat: { id: -101011, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        game: {
+          title: "说明",
+          description: "普通说明",
+          photo: [],
+          animation: {
+            file_id: "ANIM77B",
+            file_unique_id: "AUNIQ77",
+            file_name: "https://example.com/ok77",
+            mime_type: "https://is.gd/mime77b",
+          },
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok77");
+    expect(ordinaryDump).not.toContain("is.gd");
+    expect(ordinaryDump).not.toContain("mime77b");
+
+    const title = "今天站会";
+    const named = "免费领取 https://bit.ly/body77";
+    const asTitle = await normalize({
+      update_id: 4812,
+      message: {
+        message_id: 282,
+        date: 1761955200,
+        chat: { id: -101012, type: "supergroup" },
+        from: { id: 9 },
+        game: {
+          title,
+          description: phrase,
+          photo: [],
+          animation: {
+            file_id: "ANIM77C",
+            file_unique_id: "AUNIQ77C",
+            file_name: named,
+          },
+        },
+      },
+    });
+    expect(asTitle.status).toBe("event");
+    if (asTitle.status !== "event") {
+      return;
+    }
+    expect(asTitle.event.message?.text).toBe(title);
+    expect(asTitle.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(asTitle.event.message?.hosts).toEqual(["bit.ly"]);
+    const titleDump = JSON.stringify(asTitle.event);
+    expect(titleDump).not.toContain("免费领取");
+    expect(titleDump).not.toContain("body77");
+    expect(titleDump).not.toContain(phrase);
+  });
 });

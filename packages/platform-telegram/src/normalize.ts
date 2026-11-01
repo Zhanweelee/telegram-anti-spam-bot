@@ -482,6 +482,9 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(game.description, urls);
     pushPlainUrls(game.text, urls);
     pushTextLinks(game.text_entities, urls);
+    if (isRecord(game.animation)) {
+      pushPlainUrls(game.animation.file_name, urls);
+    }
   }
   const invoice = message.invoice;
   if (isRecord(invoice)) {
