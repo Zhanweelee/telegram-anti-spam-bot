@@ -450,12 +450,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   const game = message.game;
   if (isRecord(game)) {
+    pushPlainUrls(game.title, urls);
     pushPlainUrls(game.description, urls);
     pushPlainUrls(game.text, urls);
     pushTextLinks(game.text_entities, urls);
   }
   const invoice = message.invoice;
   if (isRecord(invoice)) {
+    pushPlainUrls(invoice.title, urls);
     pushPlainUrls(invoice.description, urls);
   }
   const venue = message.venue;

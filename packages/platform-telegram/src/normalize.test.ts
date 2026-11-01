@@ -1204,6 +1204,99 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("/inv45");
   });
 
+  it("keeps hostnames from game and invoice titles", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "TITLE51";
+    const fileId = "GAMEFILE51";
+    const game = await normalize({
+      update_id: 2410,
+      message: {
+        message_id: 64,
+        date: 1761955200,
+        chat: { id: -100733, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        game: {
+          title: `${phrase} https://bit.ly/title51 https://t.me/+${code}.`,
+          description: phrase,
+          text: phrase,
+          photo: [
+            { file_id: "abc", file_unique_id: fileId, width: 1, height: 1 },
+          ],
+        },
+      },
+    });
+    expect(game.status).toBe("event");
+    if (game.status !== "event") {
+      return;
+    }
+    expect(game.event.message?.text).toBe("今天站会");
+    expect(game.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(game.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(game.event.message?.invites).toEqual(["t.me"]);
+    const gameDump = JSON.stringify(game.event);
+    expect(gameDump).not.toContain(phrase);
+    expect(gameDump).not.toContain(code);
+    expect(gameDump).not.toContain("/title51");
+    expect(gameDump).not.toContain(fileId);
+
+    const invoice = await normalize({
+      update_id: 2411,
+      message: {
+        message_id: 65,
+        date: 1761955200,
+        chat: { id: -100734, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        invoice: {
+          title: `www.tinyurl.com/v51 https://t.me/%2B${code}`,
+          description: phrase,
+          start_parameter: phrase,
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(invoice.status).toBe("event");
+    if (invoice.status !== "event") {
+      return;
+    }
+    expect(invoice.event.message?.text).toBe("今天站会");
+    expect(invoice.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(invoice.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
+    expect(invoice.event.message?.invites).toEqual(["t.me"]);
+    const invoiceDump = JSON.stringify(invoice.event);
+    expect(invoiceDump).not.toContain(phrase);
+    expect(invoiceDump).not.toContain(code);
+    expect(invoiceDump).not.toContain("/v51");
+    expect(invoiceDump).not.toContain("XTR");
+
+    const asBody = "免费领取 https://bit.ly/body51";
+    const body = await normalize({
+      update_id: 2412,
+      message: {
+        message_id: 66,
+        date: 1761955200,
+        chat: { id: -100735, type: "supergroup" },
+        from: { id: 9 },
+        game: {
+          title: asBody,
+          description: phrase,
+          photo: [],
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    const bodyDump = JSON.stringify(body.event);
+    expect(bodyDump).not.toContain(phrase);
+  });
+
   it("keeps a checklist title when a game is also present", async () => {
     const outcome = await normalize({
       update_id: 2403,
