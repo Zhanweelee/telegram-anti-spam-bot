@@ -2400,6 +2400,106 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sticker.event)).not.toContain("stk-97");
   });
 
+  it("keeps hostnames from inline button labels", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "BTN55";
+    const labeled = await normalize({
+      update_id: 2810,
+      message: {
+        message_id: 106,
+        date: 1761955200,
+        chat: { id: -100775, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: `${phrase} https://bit.ly/btn55 https://t.me/+${code}.`,
+                url: "https://example.com/ok55",
+              },
+              {
+                text: "跳过",
+                callback_data: "https://tinyurl.com/cb55",
+              },
+            ],
+          ],
+          keyboard: [[{ text: "https://is.gd/key55" }]],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "example.com",
+    ]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("/btn55");
+    expect(labeledDump).not.toContain("/ok55");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("is.gd");
+
+    const hidden = await normalize({
+      update_id: 2811,
+      message: {
+        message_id: 107,
+        date: 1761955200,
+        chat: { id: -100776, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: phrase, callback_data: "https://bit.ly/onlycb55" }],
+          ],
+          keyboard: [[{ text: `https://tinyurl.com/${code}` }]],
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.text).toBe("今天站会");
+    expect(hidden.event.message?.hosts).toBeUndefined();
+    const hiddenDump = JSON.stringify(hidden.event);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("bit.ly");
+    expect(hiddenDump).not.toContain("tinyurl.com");
+    expect(hiddenDump).not.toContain(code);
+
+    const asBody = "免费领取 https://bit.ly/body55";
+    const body = await normalize({
+      update_id: 2812,
+      message: {
+        message_id: 108,
+        date: 1761955200,
+        chat: { id: -100777, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [[{ text: asBody }, { text: "今天站会" }]],
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(`${asBody} 今天站会`);
+    expect(body.event.message?.textSha256).toBe(
+      await sha256Hex(`${asBody} 今天站会`),
+    );
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

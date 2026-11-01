@@ -535,6 +535,11 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       if (!isRecord(button)) {
         continue;
       }
+      if (typeof button.text === "string") {
+        for (const url of urlsInText(button.text)) {
+          urls.push(url);
+        }
+      }
       if (typeof button.url === "string") {
         urls.push(button.url);
       }
