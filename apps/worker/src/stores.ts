@@ -1,6 +1,7 @@
 import {
   createD1ReviewQueue,
   createD1Storage,
+  createKvBlocklistStore,
   createKvChatDirectory,
   createKvPolicyStore,
   createKvRulePackArchive,
@@ -11,6 +12,7 @@ import {
   type StringStore,
 } from "@tasb/adapter-cloudflare";
 import type {
+  BlocklistStore,
   ChatDirectory,
   PolicyStore,
   ReviewQueue,
@@ -19,6 +21,7 @@ import type {
   RuntimeStore,
   Storage,
 } from "@tasb/core";
+import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
@@ -32,6 +35,7 @@ export interface StoreSlot {
   chats?: ChatDirectory;
   subscriptions?: RuleSubscriptionStore;
   archive?: RulePackArchive;
+  blocklist?: BlocklistStore;
   kv?: KVNamespace;
 }
 
@@ -48,6 +52,7 @@ export function resolveStores(
   readonly chats: ChatDirectory;
   readonly subscriptions: RuleSubscriptionStore;
   readonly archive: RulePackArchive;
+  readonly blocklist: BlocklistStore;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
@@ -62,6 +67,7 @@ export function resolveStores(
     slot.chats = createKvChatDirectory(kv);
     slot.subscriptions = createKvRuleSubscriptionStore(kv);
     slot.archive = createKvRulePackArchive(kv);
+    slot.blocklist = createKvBlocklistStore(kv);
   }
   return {
     storage:
@@ -92,6 +98,10 @@ export function resolveStores(
       env.POLICY_KV !== undefined && slot.archive !== undefined
         ? slot.archive
         : workerRulePacks.archive,
+    blocklist:
+      env.POLICY_KV !== undefined && slot.blocklist !== undefined
+        ? slot.blocklist
+        : workerBlocklist,
   };
 }
 

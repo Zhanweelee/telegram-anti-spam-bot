@@ -161,6 +161,7 @@ export function createApp(
             archive: stores.archive,
             source: workerRulePacks.source,
           },
+          blocklist: stores.blocklist,
         });
       },
       ...(c.env?.TELEGRAM_BOT_TOKEN

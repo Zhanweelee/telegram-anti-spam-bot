@@ -1,7 +1,14 @@
 import {
+  BlocklistCapacityError,
+  type BlocklistDocument,
+  type BlocklistStore,
+  blocklistDocumentSchema,
+  blocklistEntrySchema,
   type ChatDirectory,
   type ChatDirectoryDocument,
   chatDirectoryDocumentSchema,
+  MAX_BLOCKLIST_CHATS,
+  MAX_BLOCKLIST_ENTRIES,
   MAX_DIRECTORY_ACTORS,
   MAX_DIRECTORY_CHATS,
   MAX_RULE_SWITCHES,
@@ -41,8 +48,9 @@ export {
 
 /**
  * Cloudflare bindings adapter.
- * D1 stores audits and rule documents. KV stores prefilter policy and
- * the per-chat runtime switches and pack subscription. Workers AI is optional and stays out
+ * D1 stores audits and rule documents. KV stores prefilter policy,
+ * per-chat runtime switches, pack subscription, and the shared
+ * blocklist. Workers AI is optional and stays out
  * of the committed wrangler config. Queues and Durable Objects stay
  * unused. This module must not be imported by @tasb/core, and it does
  * not import Workers types.
@@ -327,6 +335,113 @@ function requireArchiveIds(
 ): void {
   requireSubscriptionIds(tenantId, chatId);
   rulePackIdSchema.parse(packId);
+}
+
+const emptyBlocklist: BlocklistDocument = { chats: [], entries: [] };
+
+export function createKvBlocklistStore(
+  kv: StringStore,
+  options?: { readonly now?: () => number; readonly ttlMs?: number },
+): BlocklistStore {
+  const now = options?.now ?? (() => Date.now());
+  const ttlMs = options?.ttlMs ?? DEFAULT_KV_TTL_MS;
+  const cache = new Map<
+    string,
+    { readonly document: BlocklistDocument; readonly expiresAt: number }
+  >();
+
+  async function load(tenantId: string): Promise<BlocklistDocument> {
+    requireBlocklistTenant(tenantId);
+    const id = blocklistKey(tenantId);
+    const at = now();
+    const hit = cache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.document;
+    }
+    const document = parseBlocklist(await kv.get(id));
+    cache.set(id, { document, expiresAt: at + ttlMs });
+    return document;
+  }
+
+  async function save(
+    tenantId: string,
+    document: BlocklistDocument,
+  ): Promise<void> {
+    const id = blocklistKey(tenantId);
+    const parsed = blocklistDocumentSchema.parse(document);
+    await kv.put(id, JSON.stringify(parsed));
+    cache.set(id, { document: parsed, expiresAt: now() + ttlMs });
+  }
+
+  return {
+    async isEnabled(tenantId, chatId) {
+      return (await load(tenantId)).chats.includes(chatId);
+    },
+    async setEnabled(tenantId, chatId, enabled) {
+      const current = await load(tenantId);
+      const on = current.chats.includes(chatId);
+      if (enabled === on) {
+        return;
+      }
+      if (!enabled) {
+        await save(tenantId, {
+          ...current,
+          chats: current.chats.filter((id) => id !== chatId),
+        });
+        return;
+      }
+      if (current.chats.length >= MAX_BLOCKLIST_CHATS) {
+        throw new BlocklistCapacityError();
+      }
+      await save(tenantId, { ...current, chats: [...current.chats, chatId] });
+    },
+    async has(tenantId, entry) {
+      const parsed = blocklistEntrySchema.parse(entry);
+      return (await load(tenantId)).entries.some(
+        (item) => item.kind === parsed.kind && item.value === parsed.value,
+      );
+    },
+    async add(tenantId, entry) {
+      const parsed = blocklistEntrySchema.parse(entry);
+      const current = await load(tenantId);
+      if (
+        current.entries.some(
+          (item) => item.kind === parsed.kind && item.value === parsed.value,
+        )
+      ) {
+        return;
+      }
+      if (current.entries.length >= MAX_BLOCKLIST_ENTRIES) {
+        throw new BlocklistCapacityError();
+      }
+      await save(tenantId, {
+        ...current,
+        entries: [...current.entries, parsed],
+      });
+    },
+  };
+}
+
+function parseBlocklist(raw: string | null): BlocklistDocument {
+  if (raw === null) {
+    return emptyBlocklist;
+  }
+  try {
+    const parsed = blocklistDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : emptyBlocklist;
+  } catch {
+    return emptyBlocklist;
+  }
+}
+
+function blocklistKey(tenantId: string): string {
+  return `blocklist\n${tenantId.length}:${tenantId}`;
+}
+
+function requireBlocklistTenant(tenantId: string): void {
+  if (!validTenant(tenantId)) {
+    throw new Error("invalid_id");
+  }
 }
 
 function requireSubscriptionIds(tenantId: string, chatId: string): void {

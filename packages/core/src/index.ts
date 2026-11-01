@@ -1,8 +1,10 @@
 export {
   BlocklistCapacityError,
+  type BlocklistDocument,
   type BlocklistEntry,
   type BlocklistSnapshot,
   type BlocklistStore,
+  blocklistDocumentSchema,
   blocklistEntrySchema,
   createMemoryBlocklistStore,
   MAX_BLOCKLIST_CHATS,

@@ -77,8 +77,9 @@ import { fileRuleSource } from "./rules.js";
 /**
  * Isolate-local fallback when D1 and KV are not bound. A rule miss
  * still reads the bundled files. Memory audits are capped at 200 rows.
- * Captcha challenges and the shared blocklist live in this isolate.
- * A restart drops both. Blocklist opt-in starts off.
+ * Captcha challenges stay in this isolate. The shared blocklist uses
+ * this isolate only when POLICY_KV is absent. A restart drops captcha
+ * and that memory blocklist. Opt-in starts off.
  * delete / mute / ban and restrict / release call Telegram only when
  * TELEGRAM_BOT_TOKEN is set. Without it, delete / mute / ban stay in memory.
  */

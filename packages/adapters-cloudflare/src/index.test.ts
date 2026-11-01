@@ -1,6 +1,10 @@
-import { bindPolicyStoreContract } from "@tasb/core/testing";
+import {
+  bindBlocklistStoreContract,
+  bindPolicyStoreContract,
+} from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
+  createKvBlocklistStore,
   createKvChatDirectory,
   createKvPolicyStore,
   createKvRulePackArchive,
@@ -10,6 +14,9 @@ import {
 } from "./index.js";
 
 bindPolicyStoreContract(() => createKvPolicyStore(createMapStore().store));
+bindBlocklistStoreContract(() =>
+  createKvBlocklistStore(createMapStore().store),
+);
 
 function createMapStore(): {
   readonly store: StringStore;
@@ -488,5 +495,94 @@ describe("kv rule pack archive", () => {
     expect(await archive.get("local", "-100", "community")).toEqual(
       archivedRules,
     );
+  });
+});
+
+describe("kv blocklist store", () => {
+  it("keeps opt-in and entries after a new store reads the same KV", async () => {
+    const backing = createMapStore();
+    let puts = 0;
+    const counted: StringStore = {
+      get: (key) => backing.store.get(key),
+      async put(key, value) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvBlocklistStore(counted);
+    expect(await first.isEnabled("local", "-100")).toBe(false);
+    await first.setEnabled("local", "-100", false);
+    expect(puts).toBe(0);
+    await first.setEnabled("local", "-100", true);
+    await first.add("local", { kind: "actor", value: "user_9" });
+    expect(puts).toBe(2);
+    await first.setEnabled("local", "-100", true);
+    await first.add("local", { kind: "actor", value: "user_9" });
+    expect(puts).toBe(2);
+    const key = [...backing.values.keys()][0];
+    expect(key?.startsWith("blocklist")).toBe(true);
+    const second = createKvBlocklistStore(backing.store);
+    expect(await second.isEnabled("local", "-100")).toBe(true);
+    expect(await second.has("local", { kind: "actor", value: "user_9" })).toBe(
+      true,
+    );
+    await second.setEnabled("local", "-100", false);
+    expect(await second.isEnabled("local", "-100")).toBe(false);
+    expect(await second.has("local", { kind: "actor", value: "user_9" })).toBe(
+      true,
+    );
+  });
+
+  it("does not rewrite a corrupt document and hides the text", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    const store = createKvBlocklistStore(backing.store);
+    await store.setEnabled("local", "-100", true);
+    const key = [...backing.values.keys()][0];
+    if (key !== undefined) {
+      backing.values.set(key, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvBlocklistStore(backing.store);
+    expect(await fresh.isEnabled("local", "-100")).toBe(false);
+    expect(await fresh.has("local", { kind: "actor", value: "user_9" })).toBe(
+      false,
+    );
+    expect(
+      JSON.stringify(await fresh.isEnabled("local", "-100")),
+    ).not.toContain(secret);
+    expect(key === undefined ? "" : backing.values.get(key)).toContain(secret);
+  });
+
+  it("reads KV once per ttl and skips an unchanged write", async () => {
+    const backing = createMapStore();
+    let now = 0;
+    let gets = 0;
+    let puts = 0;
+    const store = createKvBlocklistStore(
+      {
+        async get(key) {
+          gets += 1;
+          return backing.store.get(key);
+        },
+        async put(key, value) {
+          puts += 1;
+          await backing.store.put(key, value);
+        },
+      },
+      { now: () => now, ttlMs: 60_000 },
+    );
+    await store.setEnabled("local", "-100", true);
+    expect(puts).toBe(1);
+    gets = 0;
+    puts = 0;
+    expect(await store.isEnabled("local", "-100")).toBe(true);
+    await store.setEnabled("local", "-100", true);
+    expect(gets).toBe(0);
+    expect(puts).toBe(0);
+    now = 60_000;
+    await store.setEnabled("local", "-100", true);
+    expect(gets).toBe(1);
+    expect(puts).toBe(0);
+    expect(await store.isEnabled("local", "-100")).toBe(true);
   });
 });

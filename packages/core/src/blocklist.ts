@@ -20,6 +20,13 @@ export const blocklistEntrySchema = z.discriminatedUnion("kind", [
 
 export type BlocklistEntry = z.output<typeof blocklistEntrySchema>;
 
+export const blocklistDocumentSchema = z.strictObject({
+  chats: z.array(z.string().min(1).max(128)).max(MAX_BLOCKLIST_CHATS),
+  entries: z.array(blocklistEntrySchema).max(MAX_BLOCKLIST_ENTRIES),
+});
+
+export type BlocklistDocument = z.output<typeof blocklistDocumentSchema>;
+
 export interface BlocklistSnapshotEntry {
   readonly tenantId: string;
   readonly kind: BlocklistEntry["kind"];

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
@@ -15,6 +16,7 @@ describe("resolveStores", () => {
     expect(stores.chats).toBe(workerChats);
     expect(stores.subscriptions).toBe(workerRulePacks.store);
     expect(stores.archive).toBe(workerRulePacks.archive);
+    expect(stores.blocklist).toBe(workerBlocklist);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -66,6 +68,8 @@ describe("resolveStores", () => {
     expect(first.subscriptions).not.toBe(workerRulePacks.store);
     expect(first.archive).toBe(second.archive);
     expect(first.archive).not.toBe(workerRulePacks.archive);
+    expect(first.blocklist).toBe(second.blocklist);
+    expect(first.blocklist).not.toBe(workerBlocklist);
     expect(
       await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
     ).toBe(true);
@@ -131,6 +135,16 @@ describe("resolveStores", () => {
       ],
     });
     expect([...values.keys()].some((key) => key.startsWith("pack-rules"))).toBe(
+      true,
+    );
+    await first.blocklist.setEnabled("local", "-100", true);
+    await first.blocklist.add("local", { kind: "actor", value: "user_9" });
+    const listed = resolveStores(env, {});
+    expect(await listed.blocklist.isEnabled("local", "-100")).toBe(true);
+    expect(
+      await listed.blocklist.has("local", { kind: "actor", value: "user_9" }),
+    ).toBe(true);
+    expect([...values.keys()].some((key) => key.startsWith("blocklist"))).toBe(
       true,
     );
     expect(await first.storage.getRuleSet("local", "chat_1")).toBeNull();
