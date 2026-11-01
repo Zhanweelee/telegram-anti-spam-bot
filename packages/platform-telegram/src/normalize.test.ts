@@ -150,6 +150,81 @@ describe("normalizeUpdate", () => {
     expect((await normalize(null)).status).toBe("invalid");
   });
 
+  it("normalizes a chat_member fixture onto the joining user", async () => {
+    const outcome = await normalize(load("chat-member.json"));
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.kind).toBe("chat_member");
+    expect(outcome.event.message).toBeUndefined();
+    expect(outcome.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(outcome.event.chatId).toBe("-100123");
+    expect(outcome.event.occurredAt).toBe(
+      new Date(1761955200 * 1000).toISOString(),
+    );
+    expect(JSON.stringify(outcome.event)).not.toContain("Newbie");
+    expect(outcome.event.actor.id).not.toBe("1");
+  });
+
+  it("treats creator and administrator status as admins", async () => {
+    const outcome = await normalize({
+      update_id: 2002,
+      chat_member: {
+        chat: { id: -100123 },
+        from: { id: 1 },
+        date: 1761955200,
+        new_chat_member: {
+          user: { id: 77 },
+          status: "administrator",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor).toEqual({ id: "77", isAdmin: true });
+  });
+
+  it("marks a configured admin id on a membership change", async () => {
+    const outcome = await normalize(
+      {
+        update_id: 2003,
+        chat_member: {
+          chat: { id: 5 },
+          date: 1761955200,
+          new_chat_member: { user: { id: 77 }, status: "member" },
+        },
+      },
+      ["77"],
+    );
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor.isAdmin).toBe(true);
+  });
+
+  it("ignores incomplete membership updates and my_chat_member", async () => {
+    expect(
+      (await normalize({ update_id: 4, chat_member: { chat: { id: 1 } } }))
+        .status,
+    ).toBe("ignored");
+    expect(
+      (
+        await normalize({
+          update_id: 5,
+          my_chat_member: {
+            chat: { id: 1 },
+            date: 1761955200,
+            new_chat_member: { user: { id: 2 }, status: "member" },
+          },
+        })
+      ).status,
+    ).toBe("ignored");
+  });
+
   it("ignores unsupported update types and incomplete messages", async () => {
     expect(
       (await normalize({ update_id: 1, callback_query: { id: "1" } })).status,

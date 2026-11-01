@@ -24,6 +24,33 @@ describe("receiveUpdate", () => {
     expect(JSON.stringify(result.body)).not.toContain("hello");
   });
 
+  it("turns a chat_member update into a join event without a message", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 2,
+        chat_member: {
+          chat: { id: -100 },
+          from: { id: 1, first_name: "Admin" },
+          date: 1761955200,
+          new_chat_member: {
+            user: { id: 77, first_name: "Newbie" },
+            status: "member",
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_2",
+      kind: "chat_member",
+      actor: { id: "77", isAdmin: false },
+    });
+    expect(result.events[0]?.message).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("Newbie");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

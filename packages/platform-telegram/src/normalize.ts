@@ -25,10 +25,20 @@ export async function normalizeUpdate(
   if (updateId === null || updateId < 0) {
     return { status: "invalid" };
   }
+  if (Object.hasOwn(input.update, "chat_member")) {
+    return chatMemberEvent(input.update.chat_member, updateId, input);
+  }
   if (!Object.hasOwn(input.update, "message")) {
     return { status: "ignored" };
   }
-  const message = input.update.message;
+  return messageEvent(input.update.message, updateId, input);
+}
+
+async function messageEvent(
+  message: unknown,
+  updateId: number,
+  input: NormalizeInput,
+): Promise<NormalizeOutcome> {
   if (!isRecord(message)) {
     return { status: "ignored" };
   }
@@ -39,7 +49,7 @@ export async function normalizeUpdate(
     return { status: "ignored" };
   }
   const text = messageText(message);
-  const draft = {
+  return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
     chatId,
@@ -54,7 +64,43 @@ export async function normalizeUpdate(
       text,
       textSha256: await sha256Hex(text),
     },
-  };
+  });
+}
+
+/**
+ * The actor is the member whose status changed (`new_chat_member.user`),
+ * not `from`. `from` is whoever performed the action, often an admin.
+ */
+function chatMemberEvent(
+  value: unknown,
+  updateId: number,
+  input: NormalizeInput,
+): NormalizeOutcome {
+  if (!isRecord(value) || !isRecord(value.new_chat_member)) {
+    return { status: "ignored" };
+  }
+  const chatId = nestedId(value.chat);
+  const actor = nestedId(value.new_chat_member.user);
+  if (!chatId || !actor) {
+    return { status: "ignored" };
+  }
+  const status = value.new_chat_member.status;
+  const admins = new Set(input.adminUserIds);
+  return finish({
+    id: `tg_${updateId}`,
+    tenantId: input.tenantId,
+    chatId,
+    kind: "chat_member" as const,
+    occurredAt: occurredAt(value.date, input.nowIso),
+    actor: {
+      id: actor,
+      isAdmin:
+        status === "administrator" || status === "creator" || admins.has(actor),
+    },
+  });
+}
+
+function finish(draft: unknown): NormalizeOutcome {
   try {
     return { status: "event", event: parseEvent(draft) };
   } catch {

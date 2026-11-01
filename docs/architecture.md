@@ -70,7 +70,7 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 1. 读取 `X-Telegram-Bot-Api-Secret-Token`。`WEBHOOK_SECRET` 未配置、请求头缺失或不相等时返回 401，不调用 `onEvent`。比较时对两侧做 SHA-256，再按固定长度逐字节异或。密钥最长 256 字符，和 Telegram 的 `secret_token` 限制一致。
 2. 正文超过 64 KiB 返回 413。JSON 无法解析，或缺少 `update_id`，返回 400。
-3. 目前只把 `message` 收成 `kind: "message"` 的 `Event`。`edited_message`、`callback_query` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。入群事件留给 P0-02。
+3. `message` 收成 `kind: "message"`。`chat_member` 收成 `kind: "chat_member"`，不带 `message`。主体是 `new_chat_member.user`；`from` 只表示谁执行了操作。`new_chat_member.status` 为 `administrator` 或 `creator` 时 `actor.isAdmin` 为 true。`edited_message`、`my_chat_member`、`callback_query` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。要收到入群更新，设置 webhook 时把 `chat_member` 放进 `allowed_updates`。
 4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
 5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
 

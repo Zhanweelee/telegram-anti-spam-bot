@@ -123,6 +123,23 @@ describe("handleTelegramWebhook", () => {
     expect(calls).toBe(0);
   });
 
+  it("normalizes a join and hides display names from the response", async () => {
+    const { response, events, calls } = await post(
+      fixture("chat-member.json"),
+      {
+        header: SECRET,
+      },
+    );
+    const raw = await response.text();
+    expect(response.status).toBe(200);
+    expect(raw).not.toContain("Newbie");
+    expect(JSON.parse(raw)).toEqual({ ok: true });
+    expect(calls).toBe(1);
+    expect(events[0]?.kind).toBe("chat_member");
+    expect(events[0]?.message).toBeUndefined();
+    expect(events[0]?.actor).toEqual({ id: "77", isAdmin: false });
+  });
+
   it("normalizes a valid fixture and hides the text from the response", async () => {
     const { response, events, calls } = await post(
       fixture("message-admin.json"),

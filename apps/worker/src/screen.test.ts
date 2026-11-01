@@ -1,5 +1,6 @@
 import { createMemoryLogger, parseEvent } from "@tasb/core";
-import { sha256Hex } from "@tasb/platform-telegram";
+import { createKeywordDetector } from "@tasb/detector-keyword";
+import { normalizeUpdate, sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { screenTelegramEvent } from "./screen.js";
 
@@ -34,6 +35,43 @@ describe("screenTelegramEvent", () => {
 
     const empty = await screenTelegramEvent(await event(""));
     expect(empty.decision.action).toBe("allow");
+  });
+
+  it("lets a join with no text through the pipeline", async () => {
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2001,
+        chat_member: {
+          chat: { id: -100123 },
+          from: { id: 1, first_name: "Admin" },
+          date: 1761955200,
+          new_chat_member: {
+            user: { id: 77, first_name: "Newbie" },
+            status: "member",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const detector = createKeywordDetector({ keywords: ["免费领取"] });
+    const logger = createMemoryLogger();
+    expect(
+      await detector.detect({
+        event: outcome.event,
+        logger,
+        signal: { aborted: false },
+      }),
+    ).toBeNull();
+    const result = await screenTelegramEvent(outcome.event, logger);
+    expect(result.decision.action).toBe("allow");
+    expect(result.detectorErrors).toEqual([]);
+    expect(JSON.stringify(logger.entries)).not.toContain("Newbie");
   });
 
   it("exempts admins before the keyword detector", async () => {

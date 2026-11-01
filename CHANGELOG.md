@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### P0-02
+
+- `chat_member` 更新归一化成 `kind: "chat_member"` 的 Event，不带消息正文。主体是状态变化的用户。
+- 没有文本时关键词检测器返回 null，流水线放行且不抛错。
+
 ### P0-01
 
 - `POST /telegram/webhook` 校验 `X-Telegram-Bot-Api-Secret-Token`。密钥未配置或不匹配时返回 401，不进入流水线。

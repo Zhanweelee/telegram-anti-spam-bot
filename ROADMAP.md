@@ -48,7 +48,7 @@
 - 合法更新在 Worker 内归一化成 `Event`。core 的测试仍不 import Telegram 类型。
 - 用 fixture 更新覆盖普通消息、没有文本的消息、管理员消息。
 
-### P0-02 入群事件 — todo
+### P0-02 入群事件 — done
 
 验收：
 
@@ -192,3 +192,9 @@
 - 做了什么：`POST /telegram/webhook` 校验 secret，把 `message` 更新归一化成 Event。fixture 覆盖普通消息、没有文本的消息、管理员消息。Worker 把事件送进内存流水线，不调用 Telegram 删除接口。
 - 学到什么：免费计划的外部子请求很少，热路径不该为了判断管理员去打 `getChatMember`。`JSON.parse` 的异常文本会带回正文，不能写进日志。鉴权要放在读大 body 之前。
 - 下一步：做 P0-02，把 `chat_member` 收成 `kind: "chat_member"`，并确认没有文本时关键词检测器返回 null、流水线不抛错。
+
+### 2026-11-01 P0-02
+
+- 做了什么：`chat_member` 收成没有正文的 Event。检测对象是 `new_chat_member.user`，管理员拉人进群时不会把管理员当成新成员。关键词检测器对这种事件返回 null，默认流水线放行。
+- 学到什么：Telegram 的 `from` 是操作者，入群反垃圾要看的是被改变状态的用户。`my_chat_member` 仍忽略，避免把 bot 自己的身份变化送进同一条规则。
+- 下一步：做 P0-03，按群加载规则，热路径先读缓存，schema 失败时该群 fail-open。

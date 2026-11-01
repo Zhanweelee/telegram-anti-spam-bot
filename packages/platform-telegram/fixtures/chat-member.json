@@ -1,0 +1,16 @@
+{
+  "update_id": 2001,
+  "chat_member": {
+    "chat": { "id": -100123, "type": "supergroup", "title": "demo" },
+    "from": { "id": 1, "is_bot": false, "first_name": "Admin" },
+    "date": 1761955200,
+    "old_chat_member": {
+      "user": { "id": 77, "is_bot": false, "first_name": "Newbie" },
+      "status": "left"
+    },
+    "new_chat_member": {
+      "user": { "id": 77, "is_bot": false, "first_name": "Newbie" },
+      "status": "member"
+    }
+  }
+}
