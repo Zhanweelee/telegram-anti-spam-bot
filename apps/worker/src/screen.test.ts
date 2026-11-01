@@ -1968,4 +1968,87 @@ describe("screenTelegramEvent", () => {
     expect(ended.result.decision.action).toBe("allow");
     expect(JSON.stringify(ended.result)).not.toContain("机密群名");
   });
+
+  it("deletes an owner change whose visible name carries a short link", async () => {
+    const screenOwner = async (
+      updateId: number,
+      chatId: number,
+      owner: Record<string, unknown> | undefined,
+      field: "chat_owner_changed" | "chat_owner_left",
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 89, first_name: "https://tinyurl.com/from87" },
+            [field]: owner ? { new_owner: owner } : {},
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result };
+    };
+
+    const linked = await screenOwner(
+      5710,
+      -100620,
+      { id: 89, first_name: "https://bit.ly/name87" },
+      "chat_owner_changed",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100620", messageId: "5710" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name87");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from87");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name87",
+    );
+
+    const named = await screenOwner(
+      5711,
+      -100621,
+      { id: 89, first_name: "广告员免费领取礼品" },
+      "chat_owner_left",
+    );
+    expect(named.result.decision.action).toBe("delete");
+    expect(named.result.decision.reasons).toContain("keyword_match");
+    expect(JSON.stringify(named.logger.entries)).not.toContain("免费领取");
+
+    const ordinary = await screenOwner(
+      5712,
+      -100622,
+      { id: 89, first_name: "https://example.com/ok87" },
+      "chat_owner_changed",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+
+    const departed = await screenOwner(
+      5713,
+      -100623,
+      undefined,
+      "chat_owner_left",
+    );
+    expect(departed.result.decision.action).toBe("allow");
+    expect(JSON.stringify(departed.result)).not.toContain("from87");
+    expect(JSON.stringify(departed.logger.entries)).not.toContain("机密群名");
+  });
 });

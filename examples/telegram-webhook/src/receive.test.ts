@@ -147,6 +147,36 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("duration");
   });
 
+  it("keeps an owner change name and drops the sender name", async () => {
+    const visible = "https://bit.ly/name87";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 6,
+        message: {
+          message_id: 60,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp87" },
+          from: { id: 89, first_name: "https://tinyurl.com/from87" },
+          chat_owner_changed: {
+            new_owner: { id: 89001, first_name: visible, language_code: "zh" },
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_6",
+      kind: "message",
+      message: { id: "60", text: visible },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("from87");
+    expect(dumped).not.toContain("grp87");
+    expect(dumped).not.toContain("89001");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

@@ -1187,6 +1187,12 @@ function memberNames(message: Record<string, unknown>): string {
   if (isRecord(invited)) {
     pushUserLabels(invited.users, parts);
   }
+  for (const field of ["chat_owner_changed", "chat_owner_left"]) {
+    const value = message[field];
+    if (isRecord(value)) {
+      pushUserLabels([value.new_owner], parts);
+    }
+  }
   if (parts.length === 0) {
     return "";
   }
