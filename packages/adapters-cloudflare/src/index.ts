@@ -7,10 +7,12 @@ import {
   MAX_RULE_SWITCHES,
   type PolicyStore,
   prefilterPolicySchema,
+  type RulePackArchive,
   type RuleSubscriptionStore,
   type RuntimeDocument,
   type RuntimeStore,
   rulePackIdSchema,
+  ruleSetSchema,
   ruleSubscriptionDocumentSchema,
   ruleSwitchSchema,
   runtimeDocumentSchema,
@@ -248,6 +250,83 @@ function parseSubscription(raw: string | null): string | null {
 
 function packKey(tenantId: string, chatId: string): string {
   return `pack\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+export const MAX_RULE_PACK_ARCHIVE_CHARS = 16_384;
+
+export function createKvRulePackArchive(
+  kv: StringStore,
+  options?: {
+    readonly now?: () => number;
+    readonly ttlMs?: number;
+    readonly maxChars?: number;
+  },
+): RulePackArchive {
+  const now = options?.now ?? (() => Date.now());
+  const ttlMs = options?.ttlMs ?? DEFAULT_KV_TTL_MS;
+  const maxChars = options?.maxChars ?? MAX_RULE_PACK_ARCHIVE_CHARS;
+  const cache = new Map<
+    string,
+    { readonly raw: string | null; readonly expiresAt: number }
+  >();
+
+  async function loadRaw(id: string): Promise<string | null> {
+    const at = now();
+    const hit = cache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.raw;
+    }
+    const raw = await kv.get(id);
+    cache.set(id, { raw, expiresAt: at + ttlMs });
+    return raw;
+  }
+
+  return {
+    async get(tenantId, chatId, packId) {
+      requireArchiveIds(tenantId, chatId, packId);
+      return parseArchived(await loadRaw(archiveKey(tenantId, chatId, packId)));
+    },
+    async put(tenantId, chatId, packId, rules) {
+      requireArchiveIds(tenantId, chatId, packId);
+      const raw = JSON.stringify(ruleSetSchema.parse(rules));
+      if (raw.length > maxChars) {
+        throw new Error("pack_archive_too_large");
+      }
+      const id = archiveKey(tenantId, chatId, packId);
+      if ((await loadRaw(id)) === raw) {
+        return;
+      }
+      await kv.put(id, raw);
+      cache.set(id, { raw, expiresAt: now() + ttlMs });
+    },
+  };
+}
+
+function parseArchived(
+  raw: string | null,
+): ReturnType<typeof ruleSetSchema.parse> | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = ruleSetSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function archiveKey(tenantId: string, chatId: string, packId: string): string {
+  return `pack-rules\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}${packId.length}:${packId}`;
+}
+
+function requireArchiveIds(
+  tenantId: string,
+  chatId: string,
+  packId: string,
+): void {
+  requireSubscriptionIds(tenantId, chatId);
+  rulePackIdSchema.parse(packId);
 }
 
 function requireSubscriptionIds(tenantId: string, chatId: string): void {

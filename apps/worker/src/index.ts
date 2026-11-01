@@ -158,7 +158,7 @@ export function createApp(
           chats: stores.chats,
           rulePacks: {
             store: stores.subscriptions,
-            archive: workerRulePacks.archive,
+            archive: stores.archive,
             source: workerRulePacks.source,
           },
         });

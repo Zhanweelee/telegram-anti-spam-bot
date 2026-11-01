@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createKvChatDirectory,
   createKvPolicyStore,
+  createKvRulePackArchive,
   createKvRuleSubscriptionStore,
   createKvRuntimeStore,
   type StringStore,
@@ -385,5 +386,107 @@ describe("kv rule subscriptions", () => {
     expect(gets).toBe(1);
     expect(await store.get("local", "-100")).toBe("community");
     expect(gets).toBe(1);
+  });
+});
+
+const archivedRules = {
+  version: 1 as const,
+  aggregate: "max" as const,
+  rules: [
+    {
+      id: "spam_keywords",
+      enabled: true,
+      detectorIds: ["keyword"],
+      threshold: 1,
+      actions: ["delete" as const],
+    },
+  ],
+};
+
+describe("kv rule pack archive", () => {
+  it("keeps the last rules after a new archive reads the same KV", async () => {
+    const backing = createMapStore();
+    let puts = 0;
+    const counted: StringStore = {
+      get: (key) => backing.store.get(key),
+      async put(key, value) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRulePackArchive(counted);
+    expect(await first.get("local", "-100", "community")).toBeNull();
+    await first.put("local", "-100", "community", archivedRules);
+    expect(puts).toBe(1);
+    await first.put("local", "-100", "community", archivedRules);
+    expect(puts).toBe(1);
+    const key = [...backing.values.keys()][0];
+    expect(key?.startsWith("pack-rules")).toBe(true);
+    const second = createKvRulePackArchive(backing.store);
+    expect(await second.get("local", "-100", "community")).toEqual(
+      archivedRules,
+    );
+  });
+
+  it("does not rewrite a corrupt document and hides the text", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    const archive = createKvRulePackArchive(backing.store);
+    await archive.put("local", "-100", "community", archivedRules);
+    const key = [...backing.values.keys()][0];
+    if (key !== undefined) {
+      backing.values.set(key, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRulePackArchive(backing.store);
+    expect(await fresh.get("local", "-100", "community")).toBeNull();
+    expect(
+      JSON.stringify(await fresh.get("local", "-100", "community")),
+    ).not.toContain(secret);
+    expect(key === undefined ? "" : backing.values.get(key)).toContain(secret);
+  });
+
+  it("skips a document above the character cap", async () => {
+    const backing = createMapStore();
+    const archive = createKvRulePackArchive(backing.store, { maxChars: 32 });
+    await expect(
+      archive.put("local", "-100", "community", archivedRules),
+    ).rejects.toThrow("pack_archive_too_large");
+    expect(backing.values.size).toBe(0);
+    const fresh = createKvRulePackArchive(backing.store);
+    expect(await fresh.get("local", "-100", "community")).toBeNull();
+  });
+
+  it("reads KV once per ttl when the rules are unchanged", async () => {
+    const backing = createMapStore();
+    let now = 0;
+    let gets = 0;
+    let puts = 0;
+    const archive = createKvRulePackArchive(
+      {
+        async get(key) {
+          gets += 1;
+          return backing.store.get(key);
+        },
+        async put(key, value) {
+          puts += 1;
+          await backing.store.put(key, value);
+        },
+      },
+      { now: () => now, ttlMs: 60_000 },
+    );
+    await archive.put("local", "-100", "community", archivedRules);
+    expect(puts).toBe(1);
+    gets = 0;
+    puts = 0;
+    await archive.put("local", "-100", "community", archivedRules);
+    expect(gets).toBe(0);
+    expect(puts).toBe(0);
+    now = 60_000;
+    await archive.put("local", "-100", "community", archivedRules);
+    expect(gets).toBe(1);
+    expect(puts).toBe(0);
+    expect(await archive.get("local", "-100", "community")).toEqual(
+      archivedRules,
+    );
   });
 });

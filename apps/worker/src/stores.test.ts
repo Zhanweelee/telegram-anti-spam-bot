@@ -14,6 +14,7 @@ describe("resolveStores", () => {
     expect(stores.runtime).toBe(workerRuntime);
     expect(stores.chats).toBe(workerChats);
     expect(stores.subscriptions).toBe(workerRulePacks.store);
+    expect(stores.archive).toBe(workerRulePacks.archive);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -63,6 +64,8 @@ describe("resolveStores", () => {
     expect(first.chats).not.toBe(workerChats);
     expect(first.subscriptions).toBe(second.subscriptions);
     expect(first.subscriptions).not.toBe(workerRulePacks.store);
+    expect(first.archive).toBe(second.archive);
+    expect(first.archive).not.toBe(workerRulePacks.archive);
     expect(
       await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
     ).toBe(true);
@@ -97,7 +100,39 @@ describe("resolveStores", () => {
     await first.subscriptions.put("local", "-100", "community");
     const packs = resolveStores(env, {});
     expect(await packs.subscriptions.get("local", "-100")).toBe("community");
-    expect([...values.keys()].some((key) => key.startsWith("pack"))).toBe(true);
+    expect([...values.keys()].some((key) => key.startsWith("pack\n"))).toBe(
+      true,
+    );
+    await first.archive.put("local", "-100", "community", {
+      version: 1,
+      aggregate: "max",
+      rules: [
+        {
+          id: "spam_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete"],
+        },
+      ],
+    });
+    const archived = resolveStores(env, {});
+    expect(await archived.archive.get("local", "-100", "community")).toEqual({
+      version: 1,
+      aggregate: "max",
+      rules: [
+        {
+          id: "spam_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete"],
+        },
+      ],
+    });
+    expect([...values.keys()].some((key) => key.startsWith("pack-rules"))).toBe(
+      true,
+    );
     expect(await first.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(await second.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(queries.filter((sql) => sql.startsWith("CREATE TABLE"))).toEqual([

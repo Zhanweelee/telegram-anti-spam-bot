@@ -3,6 +3,7 @@ import {
   createD1Storage,
   createKvChatDirectory,
   createKvPolicyStore,
+  createKvRulePackArchive,
   createKvRuleSubscriptionStore,
   createKvRuntimeStore,
   type SqlDatabase,
@@ -13,6 +14,7 @@ import type {
   ChatDirectory,
   PolicyStore,
   ReviewQueue,
+  RulePackArchive,
   RuleSubscriptionStore,
   RuntimeStore,
   Storage,
@@ -29,6 +31,7 @@ export interface StoreSlot {
   runtime?: RuntimeStore;
   chats?: ChatDirectory;
   subscriptions?: RuleSubscriptionStore;
+  archive?: RulePackArchive;
   kv?: KVNamespace;
 }
 
@@ -44,6 +47,7 @@ export function resolveStores(
   readonly runtime: RuntimeStore;
   readonly chats: ChatDirectory;
   readonly subscriptions: RuleSubscriptionStore;
+  readonly archive: RulePackArchive;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
@@ -57,6 +61,7 @@ export function resolveStores(
     slot.runtime = createKvRuntimeStore(kv);
     slot.chats = createKvChatDirectory(kv);
     slot.subscriptions = createKvRuleSubscriptionStore(kv);
+    slot.archive = createKvRulePackArchive(kv);
   }
   return {
     storage:
@@ -83,6 +88,10 @@ export function resolveStores(
       env.POLICY_KV !== undefined && slot.subscriptions !== undefined
         ? slot.subscriptions
         : workerRulePacks.store,
+    archive:
+      env.POLICY_KV !== undefined && slot.archive !== undefined
+        ? slot.archive
+        : workerRulePacks.archive,
   };
 }
 

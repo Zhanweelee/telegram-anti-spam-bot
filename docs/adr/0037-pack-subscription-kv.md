@@ -29,3 +29,4 @@ ADR 0019 把订阅和上一份通过 schema 的规则都放在 isolate 内存里
 - 没配时行为和 ADR 0019 一样。
 - 其它 isolate 最多晚 60 秒看见 `/packs off`。发出命令的那一个 isolate 立刻生效。
 - 提交的 `wrangler.jsonc` 仍不写 KV id。
+- 上一份规则后来由 ADR 0046 在 JSON 变化时写入同一份 KV。

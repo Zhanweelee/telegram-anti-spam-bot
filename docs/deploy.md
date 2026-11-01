@@ -90,7 +90,7 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 
 外部插件默认必须带 HMAC 签名。自部署要临时加载未签名插件时，把 secret `ALLOW_UNSIGNED_PLUGINS` 设为 `true`。公共 bot 的 `DEPLOYMENT_MODE=cloud` 会忽略这个值。签名密钥不要写进仓库。
 
-社区规则在 `apps/worker/rules/packs.json`。提交的文件是空对象。管理员在私聊用 `/packs <chatId> <packId>` 之后，这个群才改用其中一份。`/packs <chatId> off` 立刻回到 `default.json` 或 `chats.json`。没配 `POLICY_KV` 时，订阅和上一份成功的规则都在 isolate 内存里，重启后需要重新订阅。配了之后，订阅指针和白名单、规则开关在同一份 KV 里，每个群一个键，重启还在。上一份成功的规则仍在内存，要等下一次成功读取 `packs.json` 才补上。热路径不会去拉远程地址。见 ADR 0037。订阅之后，私聊 `/rules` 列出正在执行的那一份，包括规则开关，标题带上 pack id。每一行标明 `file` 或 `switch`。未订阅时标题仍只有群 id。读订阅失败时回复参数无效。见 ADR 0038、ADR 0039 和 ADR 0040。额度打开并且这个群已经超额时，不在基础检测器里的规则行末尾是 `paused`，标题末尾带上窗口结束时间。查看不计数。见 ADR 0041 和 ADR 0044。自部署默认不打开额度。
+社区规则在 `apps/worker/rules/packs.json`。提交的文件是空对象。管理员在私聊用 `/packs <chatId> <packId>` 之后，这个群才改用其中一份。`/packs <chatId> off` 立刻回到 `default.json` 或 `chats.json`。没配 `POLICY_KV` 时，订阅和上一份成功的规则都在 isolate 内存里，重启后需要重新订阅。配了之后，订阅指针和白名单、规则开关在同一份 KV 里，每个群一个键，重启还在。上一份成功的规则在内容变化时写进同一个 KV，键前缀是 `pack-rules`，本 isolate 缓存 60 秒。超过 16384 个字符不写，坏文档不回写。热路径不会去拉远程地址。见 ADR 0037 和 ADR 0046。订阅之后，私聊 `/rules` 列出正在执行的那一份，包括规则开关，标题带上 pack id。每一行标明 `file` 或 `switch`。未订阅时标题仍只有群 id。读订阅失败时回复参数无效。见 ADR 0038、ADR 0039 和 ADR 0040。额度打开并且这个群已经超额时，不在基础检测器里的规则行末尾是 `paused`，标题末尾带上窗口结束时间。查看不计数。见 ADR 0041 和 ADR 0044。自部署默认不打开额度。
 
 ## 免费额度
 
