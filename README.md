@@ -19,7 +19,7 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 跑一条最小检测 | [examples/minimal-pipeline](examples/minimal-pipeline) |
 | 看 webhook 怎么收事件 | [examples/telegram-webhook](examples/telegram-webhook) |
 
-Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。入群事件没有正文，关键词检测器会直接放过。删除接口、D1 和一键部署还在后面的 P0 任务里。默认流水线只在单次请求的内存里做关键词判定，不会调用 Telegram 的 `deleteMessage`。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。删除接口、D1 和一键部署还在后面的 P0 任务里。默认流水线不会调用 Telegram 的 `deleteMessage`。
 
 ## 10 分钟跑通
 

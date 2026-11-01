@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P0-03
+
+- Worker 从 `apps/worker/rules/default.json` 读取默认 RuleSet，`chats.json` 按 `chatId` 整份覆盖。
+- `loadRuleSet` 先读 `Cache`。未命中不调用 `Storage.getRuleSet`。
+- 规则 schema 失败或来源抛错时该群 fail-open，日志只有 `rules_invalid`，不含原文或文档内容。
+
 ### P0-02
 
 - `chat_member` 更新归一化成 `kind: "chat_member"` 的 Event，不带消息正文。主体是状态变化的用户。

@@ -78,7 +78,7 @@ export function createApp(
           await options.onEvent(event);
           return;
         }
-        await screenTelegramEvent(event, logger);
+        await screenTelegramEvent(event, { logger });
       },
     });
   });

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "aggregate": "max",
+  "rules": [
+    {
+      "id": "spam_keywords",
+      "enabled": true,
+      "detectorIds": ["keyword"],
+      "threshold": 1,
+      "actions": ["delete"]
+    }
+  ]
+}

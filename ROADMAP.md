@@ -55,7 +55,7 @@
 - `chat_member` 变成 `kind: "chat_member"` 的 Event。
 - 没有文本时关键词检测器返回 null，流水线不抛错。
 
-### P0-03 按群加载规则 — todo
+### P0-03 按群加载规则 — done
 
 验收：
 
@@ -198,3 +198,9 @@
 - 做了什么：`chat_member` 收成没有正文的 Event。检测对象是 `new_chat_member.user`，管理员拉人进群时不会把管理员当成新成员。关键词检测器对这种事件返回 null，默认流水线放行。
 - 学到什么：Telegram 的 `from` 是操作者，入群反垃圾要看的是被改变状态的用户。`my_chat_member` 仍忽略，避免把 bot 自己的身份变化送进同一条规则。
 - 下一步：做 P0-03，按群加载规则，热路径先读缓存，schema 失败时该群 fail-open。
+
+### 2026-11-01 P0-03
+
+- 做了什么：默认规则和按群覆盖放进 JSON 配置。`loadRuleSet` 先读缓存端口，未命中读 `RuleSource`，不读 Storage。schema 失败时该群得到空规则集并放行。
+- 学到什么：缓存故障应该留下已经解析的规则，schema 故障才 fail-open。zod 的错误文本会回显文档，所以只能记 `rules_invalid`。
+- 下一步：做 P0-04，在 ADR 之后给 `ModerationPort` 增加 mute 和 ban。

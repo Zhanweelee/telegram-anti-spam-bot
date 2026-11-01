@@ -54,6 +54,10 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 规则是 JSON，由 `ruleSetSchema` 校验。版本字段目前只有 `1`。YAML 解析器还没有引入。
 
+`loadRuleSet` 先读 `Cache`。未命中才向 `RuleSource` 要该群的文档，没有覆盖时再要默认文档。校验失败或来源抛错时返回空规则集，流水线放行，日志代码是 `rules_invalid`，不写异常文本。缓存读写失败只记 `rules_cache_failed`，已经解析好的规则仍然使用。这条路径不调用 `Storage.getRuleSet`，所以热路径不会为了规则去打 D1。
+
+Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`。群覆盖是整份替换。缓存目前是进程内内存，接口留给以后的 KV。
+
 ## 多租户
 
 每条事件、规则和审计都带 `tenantId` 与 `chatId`。Self-host 是「一个租户、不计费」的配置，不是另一套程序。租户如何开通、额度如何扣，只允许出现在 `apps/cloud`。

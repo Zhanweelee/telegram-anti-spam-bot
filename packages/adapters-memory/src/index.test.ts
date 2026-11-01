@@ -1,6 +1,10 @@
 import { parseRuleSet } from "@tasb/core";
 import { describe, expect, it } from "vitest";
-import { createMemoryModerator, createMemoryStorage } from "./index.js";
+import {
+  createMemoryCache,
+  createMemoryModerator,
+  createMemoryStorage,
+} from "./index.js";
 
 const record = {
   tenantId: "tenant_a",
@@ -54,6 +58,16 @@ describe("memory adapter", () => {
       "spam_keywords",
     );
     expect(await storage.getRuleSet("tenant_b", "chat_1")).toBeNull();
+  });
+
+  it("expires cache entries from the injected clock", async () => {
+    let now = 1_000;
+    const cache = createMemoryCache(() => now);
+    await cache.set("rules:local:chat", "ok", 10);
+    expect(await cache.get("rules:local:chat")).toBe("ok");
+    now = 11_000;
+    expect(await cache.get("rules:local:chat")).toBeNull();
+    expect(await cache.get("missing")).toBeNull();
   });
 
   it("records deletions", async () => {

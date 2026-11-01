@@ -1,3 +1,4 @@
+export type { Cache } from "./cache.js";
 export { type Clock, createFixedClock, createSystemClock } from "./clock.js";
 export {
   type Decision,
@@ -82,4 +83,11 @@ export {
   ruleSetSchema,
   ruleWhenSchema,
 } from "./rule.js";
+export {
+  DEFAULT_RULE_CACHE_TTL_SECONDS,
+  type LoadRuleSetInput,
+  loadRuleSet,
+  openRuleSet,
+  type RuleSource,
+} from "./rules-load.js";
 export { withTimeout } from "./timeout.js";

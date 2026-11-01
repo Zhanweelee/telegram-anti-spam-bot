@@ -1,6 +1,7 @@
 import {
   type AuditQuery,
   type AuditRecord,
+  type Cache,
   type DeleteTarget,
   type ModerationPort,
   parseAuditQuery,
@@ -53,4 +54,24 @@ export function createMemoryModerator(): ModerationPort & {
 
 function key(tenantId: string, chatId: string): string {
   return `${tenantId}\n${chatId}`;
+}
+
+export function createMemoryCache(nowMs: () => number = Date.now): Cache {
+  const values = new Map<string, { value: string; expiresAt: number }>();
+  return {
+    async get(key) {
+      const hit = values.get(key);
+      if (!hit) {
+        return null;
+      }
+      if (nowMs() >= hit.expiresAt) {
+        values.delete(key);
+        return null;
+      }
+      return hit.value;
+    },
+    async set(key, value, ttlSeconds) {
+      values.set(key, { value, expiresAt: nowMs() + ttlSeconds * 1000 });
+    },
+  };
 }
