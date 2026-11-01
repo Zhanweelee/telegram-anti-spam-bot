@@ -50,6 +50,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "regex_hint",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "new_member",
       "enabled": true,
       "when": { "eventKind": "chat_member" },

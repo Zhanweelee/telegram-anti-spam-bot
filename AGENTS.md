@@ -54,6 +54,7 @@ apps/cloud 不被 core 依赖
 ```text
 packages/core                 领域类型与流水线
 packages/detectors-keyword    关键词检测器
+packages/detectors-regex      正则检测器。默认关闭，只接受短的安全子集
 packages/detectors-join       入群检测器
 packages/detectors-rate       洪泛与重复
 packages/detectors-link       链接与域名信誉

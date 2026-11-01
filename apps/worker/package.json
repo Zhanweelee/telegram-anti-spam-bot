@@ -20,6 +20,7 @@
     "@tasb/detector-rate": "workspace:*",
     "@tasb/detector-link": "workspace:*",
     "@tasb/detector-llm": "workspace:*",
+    "@tasb/detector-regex": "workspace:*",
     "@tasb/platform-telegram": "workspace:*",
     "hono": "4.13.16"
   },

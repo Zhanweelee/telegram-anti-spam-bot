@@ -30,6 +30,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-regex/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -64,6 +68,7 @@ const rules = [
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
       /^@tasb\/detector-llm$/,
+      /^@tasb\/detector-regex$/,
       /^@tasb\/actions$/,
       /^@tasb\/adapter-memory$/,
       /^@tasb\/adapter-cloudflare$/,
@@ -84,6 +89,7 @@ const rules = [
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
       /^@tasb\/detector-llm$/,
+      /^@tasb\/detector-regex$/,
       /^node:/,
       /^vitest$/,
     ],

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-10
+
+- 增加 `@tasb/detector-regex`。模式在创建时限定为短的安全子集。见 ADR 0023。
+- 命中只记 `regex:hit`。匹配抛错记 `regex_failed` 并放过，日志不含原文和模式。
+- 默认规则 `regex_hint` 关闭。`chats.json` 整份替换的群不会自动带上它。
+
 ### P1-09
 
 - `edited_message` 收成内部消息，并带 `edited: true`。同一套规则会处理它。见 ADR 0022。

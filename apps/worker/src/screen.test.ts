@@ -533,6 +533,60 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(hit)).not.toContain(phrase);
   });
 
+  it("leaves the regex detector idle until a chat enables it", async () => {
+    const phrase = "加微x看看";
+    const logger = createMemoryLogger();
+    const idle = await screenTelegramEvent(
+      await event(phrase, false, "-100570"),
+      {
+        logger,
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(idle.decision.action).toBe("allow");
+    expect(idle.decision.reasons).not.toContain("regex_match");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "regex_hint",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["regex"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const enabledLog = createMemoryLogger();
+    const enabled = await screenTelegramEvent(
+      await event(phrase, false, "-100571"),
+      {
+        logger: enabledLog,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(enabled.decision.action).toBe("delete");
+    expect(enabled.decision.reasons).toContain("regex_match");
+    expect(enabled.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    const logged = JSON.stringify(enabledLog.entries);
+    expect(logged).not.toContain(phrase);
+    expect(JSON.stringify(enabled)).not.toContain(phrase);
+  });
+
   it("leaves an unsigned external detector out of the pipeline", async () => {
     const logger = createMemoryLogger();
     const extra = {

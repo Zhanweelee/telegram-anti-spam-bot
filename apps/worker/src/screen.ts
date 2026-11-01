@@ -49,6 +49,10 @@ import {
   createRepeatDetector,
   type RateWindow,
 } from "@tasb/detector-rate";
+import {
+  createRegexDetector,
+  defaultRegexPatterns,
+} from "@tasb/detector-regex";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
@@ -75,6 +79,9 @@ export const workerStorage = createMemoryStorage({ maxAudits: 200 });
 
 const detector = createKeywordDetector({
   keywords: ["免费领取", "加微信"],
+});
+const regexDetector = createRegexDetector({
+  patterns: [...defaultRegexPatterns],
 });
 const linkDetector = createLinkDetector();
 
@@ -190,6 +197,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.keyword,
         value: detector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.regex,
+        value: regexDetector,
       },
       {
         source: "builtin",

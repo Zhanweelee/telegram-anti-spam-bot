@@ -109,6 +109,12 @@ export const builtinManifests = {
     integrity:
       "5075ceed6b1156151821db7cf800d5954a3711ead005bf4fd3257ba21beab7c4",
   }),
+  regex: manifest({
+    id: "regex",
+    kind: "detector",
+    integrity:
+      "e780b923abc15091f942b22050063a686ac27b82f4eda783d0db54070106231a",
+  }),
   delete: manifest({
     id: "delete",
     kind: "action",
