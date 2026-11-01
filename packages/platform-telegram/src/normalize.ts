@@ -341,33 +341,58 @@ function linkHosts(message: Record<string, unknown>): {
   const invites: string[] = [];
   const seenHosts = new Set<string>();
   const seenInvites = new Set<string>();
+  const urls: unknown[] = [];
   for (const list of [message.entities, message.caption_entities]) {
     if (!Array.isArray(list)) {
       continue;
     }
     for (const entity of list) {
-      if (!isRecord(entity) || entity.type !== "text_link") {
-        continue;
-      }
-      const link = hostFromUrl(entity.url);
-      if (!link) {
-        continue;
-      }
-      if (!seenHosts.has(link.host) && hosts.length < MAX_HOSTS) {
-        seenHosts.add(link.host);
-        hosts.push(link.host);
-      }
-      if (
-        link.invite &&
-        !seenInvites.has(link.host) &&
-        invites.length < MAX_HOSTS
-      ) {
-        seenInvites.add(link.host);
-        invites.push(link.host);
+      if (isRecord(entity) && entity.type === "text_link") {
+        urls.push(entity.url);
       }
     }
   }
+  for (const url of buttonUrls(message)) {
+    urls.push(url);
+  }
+  for (const url of urls) {
+    const link = hostFromUrl(url);
+    if (!link) {
+      continue;
+    }
+    if (!seenHosts.has(link.host) && hosts.length < MAX_HOSTS) {
+      seenHosts.add(link.host);
+      hosts.push(link.host);
+    }
+    if (
+      link.invite &&
+      !seenInvites.has(link.host) &&
+      invites.length < MAX_HOSTS
+    ) {
+      seenInvites.add(link.host);
+      invites.push(link.host);
+    }
+  }
   return { hosts, invites };
+}
+
+function buttonUrls(message: Record<string, unknown>): unknown[] {
+  const markup = message.reply_markup;
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return [];
+  }
+  const urls: unknown[] = [];
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (isRecord(button) && typeof button.url === "string") {
+        urls.push(button.url);
+      }
+    }
+  }
+  return urls;
 }
 
 function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
