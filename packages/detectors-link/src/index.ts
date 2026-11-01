@@ -2,6 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
+  foldMatchText,
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
@@ -82,11 +83,12 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
+      const compared = foldMatchText(message.text);
       const invites = mergeHosts(
-        extractInviteHosts(message.text, inviteNames),
+        extractInviteHosts(compared, inviteNames),
         message.invites,
       );
-      const hosts = mergeHosts(extractHosts(message.text), message.hosts);
+      const hosts = mergeHosts(extractHosts(compared), message.hosts);
       if (hosts.length === 0 && invites.length === 0) {
         return null;
       }

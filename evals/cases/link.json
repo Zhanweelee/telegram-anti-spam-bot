@@ -70,5 +70,15 @@
     "text": "点这里",
     "invites": ["t.me"],
     "label": "spam"
+  },
+  {
+    "id": "folded-short",
+    "text": "bit\u200b.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "spaced-short",
+    "text": "bit. ly/offer",
+    "label": "ham"
   }
 ]

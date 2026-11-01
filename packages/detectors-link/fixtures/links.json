@@ -12,6 +12,23 @@
     "reason": "short_link"
   },
   {
+    "name": "folded-short",
+    "text": "看 bit\u200b.ly/free-gift",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "selector-short",
+    "text": "bit\uFE0F.ly/abc",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "spaced-short",
+    "text": "bit. ly/abc",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"

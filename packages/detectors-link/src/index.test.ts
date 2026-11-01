@@ -169,6 +169,36 @@ describe("link fixtures", () => {
     expect(capped).toBeNull();
   });
 
+  it("folds gaps before reading a short link or an invite", async () => {
+    const code = "INVITEFOLD99";
+    const detector = createLinkDetector();
+    const logger = createMemoryLogger();
+    const broken = await detector.detect({
+      event: eventFor("https://bit.\nly/foldsecret"),
+      logger,
+      signal,
+    });
+    expect(broken?.reasons).toEqual(["short_link"]);
+    expect(broken?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const spaced = await detector.detect({
+      event: eventFor("https://bit. ly/foldsecret"),
+      logger,
+      signal,
+    });
+    expect(spaced).toBeNull();
+    const invite = await detector.detect({
+      event: eventFor(`https://t.me/+IN\u200b${code}`),
+      logger,
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    const dumped = JSON.stringify({ invite, logs: logger.entries });
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("foldsecret");
+    expect(dumped).not.toContain("\u200b");
+  });
+
   it("scores a telegram invite and keeps the code out of evidence", async () => {
     const code = "INVITESECRET99";
     const detector = createLinkDetector();
