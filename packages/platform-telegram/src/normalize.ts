@@ -424,6 +424,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   const urls: string[] = [];
   const poll = message.poll;
   if (isRecord(poll)) {
+    pushPlainUrls(poll.question, urls);
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (!isRecord(option)) {
@@ -438,14 +439,23 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(poll.description, urls);
     pushTextLinks(poll.description_entities, urls);
   }
+  for (const field of ["giveaway", "giveaway_winners"]) {
+    const value = message[field];
+    if (isRecord(value)) {
+      pushPlainUrls(value.prize_description, urls);
+    }
+  }
   const checklist = message.checklist;
-  if (isRecord(checklist) && Array.isArray(checklist.tasks)) {
-    for (const task of checklist.tasks) {
-      if (!isRecord(task)) {
-        continue;
+  if (isRecord(checklist)) {
+    pushPlainUrls(checklist.title, urls);
+    if (Array.isArray(checklist.tasks)) {
+      for (const task of checklist.tasks) {
+        if (!isRecord(task)) {
+          continue;
+        }
+        pushPlainUrls(task.text, urls);
+        pushTextLinks(task.text_entities, urls);
       }
-      pushPlainUrls(task.text, urls);
-      pushTextLinks(task.text_entities, urls);
     }
   }
   const game = message.game;

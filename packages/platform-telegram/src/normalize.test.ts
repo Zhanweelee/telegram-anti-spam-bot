@@ -1016,6 +1016,154 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("/task");
   });
 
+  it("keeps hostnames from question, prize, and checklist titles", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PLAIN52";
+    const poll = await normalize({
+      update_id: 2310,
+      message: {
+        message_id: 54,
+        date: 1761955200,
+        chat: { id: -100723, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll: {
+          question: `${phrase} https://bit.ly/q52 https://t.me/+${code}.`,
+          options: [
+            {
+              text: phrase,
+              voter_count: 0,
+              added_by_user: { id: 52, first_name: phrase },
+            },
+          ],
+        },
+      },
+    });
+    expect(poll.status).toBe("event");
+    if (poll.status !== "event") {
+      return;
+    }
+    expect(poll.event.message?.text).toBe("今天站会");
+    expect(poll.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(poll.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(poll.event.message?.invites).toEqual(["t.me"]);
+    const pollDump = JSON.stringify(poll.event);
+    expect(pollDump).not.toContain(phrase);
+    expect(pollDump).not.toContain(code);
+    expect(pollDump).not.toContain("/q52");
+
+    const giveaway = await normalize({
+      update_id: 2311,
+      message: {
+        message_id: 55,
+        date: 1761955200,
+        chat: { id: -100724, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        giveaway: {
+          chats: [{ id: -1001, type: "channel", title: phrase }],
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+          prize_description: `www.tinyurl.com/p52 https://t.me/%2B${code}`,
+        },
+      },
+    });
+    expect(giveaway.status).toBe("event");
+    if (giveaway.status !== "event") {
+      return;
+    }
+    expect(giveaway.event.message?.text).toBe("今天站会");
+    expect(giveaway.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
+    expect(giveaway.event.message?.invites).toEqual(["t.me"]);
+    const giveawayDump = JSON.stringify(giveaway.event);
+    expect(giveawayDump).not.toContain(phrase);
+    expect(giveawayDump).not.toContain(code);
+    expect(giveawayDump).not.toContain("/p52");
+    expect(giveawayDump).not.toContain("-1001");
+
+    const winners = await normalize({
+      update_id: 2312,
+      message: {
+        message_id: 56,
+        date: 1761955200,
+        chat: { id: -100725, type: "supergroup" },
+        from: { id: 9 },
+        caption: "今天站会",
+        giveaway_winners: {
+          chat: { id: -1002, type: "channel", title: phrase },
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+          winners: [{ id: 5252, is_bot: false, first_name: phrase }],
+          prize_description: `https://cutt.ly/win52`,
+        },
+      },
+    });
+    expect(winners.status).toBe("event");
+    if (winners.status !== "event") {
+      return;
+    }
+    expect(winners.event.message?.text).toBe("今天站会");
+    expect(winners.event.message?.hosts).toEqual(["cutt.ly"]);
+    const winnersDump = JSON.stringify(winners.event);
+    expect(winnersDump).not.toContain(phrase);
+    expect(winnersDump).not.toContain("/win52");
+    expect(winnersDump).not.toContain("5252");
+
+    const checklist = await normalize({
+      update_id: 2313,
+      message: {
+        message_id: 57,
+        date: 1761955200,
+        chat: { id: -100726, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        checklist: {
+          title: `${phrase} https://is.gd/list52`,
+          title_entities: [{ type: "bold", offset: 0, length: 2 }],
+          tasks: [
+            {
+              id: 1,
+              text: phrase,
+              completed_by_user: { id: 52, first_name: phrase },
+            },
+          ],
+        },
+      },
+    });
+    expect(checklist.status).toBe("event");
+    if (checklist.status !== "event") {
+      return;
+    }
+    expect(checklist.event.message?.text).toBe("今天站会");
+    expect(checklist.event.message?.hosts).toEqual(["is.gd"]);
+    const checklistDump = JSON.stringify(checklist.event);
+    expect(checklistDump).not.toContain(phrase);
+    expect(checklistDump).not.toContain("/list52");
+
+    const asBody = `免费领取 https://bit.ly/body52`;
+    const body = await normalize({
+      update_id: 2314,
+      message: {
+        message_id: 58,
+        date: 1761955200,
+        chat: { id: -100727, type: "supergroup" },
+        from: { id: 9 },
+        poll: {
+          question: asBody,
+          options: [{ text: phrase, voter_count: 0 }],
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain(phrase);
+  });
+
   it("keeps hostnames from poll options and descriptions", async () => {
     const phrase = "请免费领取礼品";
     const code = "POLLSIDE44";
