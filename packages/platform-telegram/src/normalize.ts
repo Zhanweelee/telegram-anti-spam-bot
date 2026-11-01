@@ -563,6 +563,10 @@ function messageText(
       return value.title.slice(0, MAX_TEXT);
     }
   }
+  const label = mediaLabel(message);
+  if (label.length > 0) {
+    return label;
+  }
   const quote = message.quote;
   if (
     includeQuote &&
@@ -572,6 +576,26 @@ function messageText(
     quote.text.length > 0
   ) {
     return quote.text.slice(0, MAX_TEXT);
+  }
+  return "";
+}
+
+function mediaLabel(message: Record<string, unknown>): string {
+  for (const field of ["animation", "video", "audio", "document"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    if (
+      field === "audio" &&
+      typeof value.title === "string" &&
+      value.title.length > 0
+    ) {
+      return value.title.slice(0, MAX_TEXT);
+    }
+    if (typeof value.file_name === "string" && value.file_name.length > 0) {
+      return value.file_name.slice(0, MAX_TEXT);
+    }
   }
   return "";
 }

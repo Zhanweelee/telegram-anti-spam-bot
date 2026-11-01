@@ -976,6 +976,260 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("bit.ly");
   });
 
+  it("uses a document file name when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const fileName = "免费领取.pdf";
+    const outcome = await normalize({
+      update_id: 2701,
+      message: {
+        message_id: 91,
+        date: 1761955200,
+        chat: { id: -100760, type: "supergroup" },
+        from: { id: 9 },
+        document: {
+          file_id: phrase,
+          file_unique_id: "doc-91",
+          mime_type: phrase,
+          file_name: fileName,
+          thumbnail: {
+            file_id: phrase,
+            file_unique_id: phrase,
+            width: 1,
+            height: 1,
+          },
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(fileName);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(fileName));
+    expect(outcome.event.message?.media).toBe("document");
+    expect(outcome.event.message?.mediaSha256).toBe(
+      await sha256Hex("document\ndoc-91"),
+    );
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("doc-91");
+  });
+
+  it("uses an audio title and leaves the performer out", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 2702,
+      message: {
+        message_id: 92,
+        date: 1761955200,
+        chat: { id: -100761, type: "supergroup" },
+        from: { id: 9 },
+        audio: {
+          duration: 3,
+          title: "免费领取",
+          file_name: "加微信.mp3",
+          performer: phrase,
+          mime_type: "audio/mpeg",
+          file_id: phrase,
+          file_unique_id: "aud-92",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("免费领取"));
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("加微信");
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("aud-92");
+  });
+
+  it("uses an audio file name when the title is missing", async () => {
+    const outcome = await normalize({
+      update_id: 2703,
+      message: {
+        message_id: 93,
+        date: 1761955200,
+        chat: { id: -100762, type: "supergroup" },
+        from: { id: 9 },
+        audio: {
+          duration: 3,
+          file_name: "免费领取.mp3",
+          performer: "请免费领取礼品",
+          file_unique_id: "aud-93",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取.mp3");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("请免费领取礼品");
+  });
+
+  it("keeps the caption when a document file name is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2704,
+      message: {
+        message_id: 94,
+        date: 1761955200,
+        chat: { id: -100763, type: "supergroup" },
+        from: { id: 9 },
+        caption: "今天站会",
+        document: {
+          file_name: "免费领取.pdf",
+          file_unique_id: "doc-94",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+  });
+
+  it("uses a file name before a manual quote", async () => {
+    const outcome = await normalize({
+      update_id: 2705,
+      message: {
+        message_id: 95,
+        date: 1761955200,
+        chat: { id: -100764, type: "supergroup" },
+        from: { id: 9 },
+        document: {
+          file_name: "今天站会.pdf",
+          file_unique_id: "doc-95",
+        },
+        quote: {
+          text: "免费领取",
+          position: 0,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/quoted",
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会.pdf");
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("bit.ly");
+  });
+
+  it("keeps a venue title when a document file name is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2706,
+      message: {
+        message_id: 96,
+        date: 1761955200,
+        chat: { id: -100765, type: "supergroup" },
+        from: { id: 9 },
+        venue: {
+          location: { latitude: 1, longitude: 2 },
+          title: "今天站会",
+          address: "路",
+        },
+        document: {
+          file_name: "免费领取.pdf",
+          file_unique_id: "doc-96",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+  });
+
+  it("uses an animation file name before a video file name", async () => {
+    const outcome = await normalize({
+      update_id: 2709,
+      message: {
+        message_id: 99,
+        date: 1761955200,
+        chat: { id: -100768, type: "supergroup" },
+        from: { id: 9 },
+        animation: {
+          file_name: "免费领取.mp4",
+          file_unique_id: "an-99",
+        },
+        video: {
+          file_name: "加微信.mp4",
+          file_unique_id: "vid-99",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取.mp4");
+    expect(outcome.event.message?.media).toBe("animation");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("加微信");
+    expect(dumped).not.toContain("an-99");
+    expect(dumped).not.toContain("vid-99");
+  });
+
+  it("leaves sticker names and unlabeled voice out of the text", async () => {
+    const sticker = await normalize({
+      update_id: 2707,
+      message: {
+        message_id: 97,
+        date: 1761955200,
+        chat: { id: -100766, type: "supergroup" },
+        from: { id: 9 },
+        sticker: {
+          file_unique_id: "stk-97",
+          width: 64,
+          height: 64,
+          emoji: "😀",
+          set_name: "免费领取",
+        },
+      },
+    });
+    const voice = await normalize({
+      update_id: 2708,
+      message: {
+        message_id: 98,
+        date: 1761955200,
+        chat: { id: -100767, type: "supergroup" },
+        from: { id: 9 },
+        voice: { duration: 1, file_unique_id: "voice-98" },
+      },
+    });
+    expect(sticker.status).toBe("event");
+    expect(voice.status).toBe("event");
+    if (sticker.status !== "event" || voice.status !== "event") {
+      return;
+    }
+    expect(sticker.event.message?.text).toBe("");
+    expect(voice.event.message?.text).toBe("");
+    expect(JSON.stringify(sticker.event)).not.toContain("免费领取");
+    expect(JSON.stringify(sticker.event)).not.toContain("stk-97");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({
