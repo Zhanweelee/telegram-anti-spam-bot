@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P0-06
+
+- 配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。
+- 群聊里的命令不改白名单，也不改 dry-run，消息仍进入检测流水线。
+- `/logs` 只返回审计摘要。回复走 `ReplyPort`；未配置 bot token 时不请求 Telegram。见 ADR 0006。
+
 ### P0-05
 
 - `PolicyStore` 按 `tenantId` + `chatId` 保存预过滤策略。`loadPolicy` 先读缓存，缺记录时使用调用方的 fallback。

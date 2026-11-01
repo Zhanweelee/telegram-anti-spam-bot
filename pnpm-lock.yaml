@@ -84,6 +84,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/sdk
 
+  examples/operator-commands:
+    dependencies:
+      '@tasb/adapter-memory':
+        specifier: workspace:*
+        version: link:../../packages/adapters-memory
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   examples/telegram-webhook:
     dependencies:
       '@tasb/core':

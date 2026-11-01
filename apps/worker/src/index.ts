@@ -1,7 +1,11 @@
 import type { Event, Logger } from "@tasb/core";
-import { handleTelegramWebhook } from "@tasb/platform-telegram";
+import {
+  createTelegramReply,
+  handleTelegramWebhook,
+} from "@tasb/platform-telegram";
 import { Hono } from "hono";
-import { createWorkerLogger, screenTelegramEvent } from "./screen.js";
+import { handleIncomingEvent } from "./operate.js";
+import { createWorkerLogger } from "./screen.js";
 
 export type DeploymentMode = "self-host" | "cloud";
 
@@ -10,6 +14,7 @@ export type WorkerBindings = {
   WEBHOOK_SECRET?: string;
   TENANT_ID?: string;
   ADMIN_USER_IDS?: string;
+  TELEGRAM_BOT_TOKEN?: string;
 };
 
 export interface CreateAppOptions {
@@ -78,7 +83,11 @@ export function createApp(
           await options.onEvent(event);
           return;
         }
-        await screenTelegramEvent(event, { logger });
+        await handleIncomingEvent(event, {
+          logger,
+          adminActorIds: parseAdminUserIds(c.env?.ADMIN_USER_IDS),
+          reply: createTelegramReply({ token: c.env?.TELEGRAM_BOT_TOKEN }),
+        });
       },
     });
   });

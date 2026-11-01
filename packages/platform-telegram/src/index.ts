@@ -6,6 +6,7 @@
  */
 export { sha256Hex } from "./hash.js";
 export { type NormalizeOutcome, normalizeUpdate } from "./normalize.js";
+export { createTelegramReply } from "./reply.js";
 export { secretsMatch } from "./secret.js";
 export {
   handleTelegramWebhook,

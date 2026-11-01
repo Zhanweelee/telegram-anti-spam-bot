@@ -49,6 +49,7 @@ async function messageEvent(
     return { status: "ignored" };
   }
   const text = messageText(message);
+  const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -59,6 +60,7 @@ async function messageEvent(
       id: actor,
       isAdmin: actorIsAdmin(message, new Set(input.adminUserIds)),
     },
+    ...(direct ? { direct: true } : {}),
     message: {
       id: messageId,
       text,
@@ -86,6 +88,7 @@ function chatMemberEvent(
   }
   const status = value.new_chat_member.status;
   const admins = new Set(input.adminUserIds);
+  const direct = isPrivateChat(value.chat);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -97,7 +100,12 @@ function chatMemberEvent(
       isAdmin:
         status === "administrator" || status === "creator" || admins.has(actor),
     },
+    ...(direct ? { direct: true } : {}),
   });
+}
+
+function isPrivateChat(chat: unknown): boolean {
+  return isRecord(chat) && chat.type === "private";
 }
 
 function finish(draft: unknown): NormalizeOutcome {

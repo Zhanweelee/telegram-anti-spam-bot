@@ -11,6 +11,7 @@ export default defineConfig({
       "packages/sdk",
       "packages/platform-telegram",
       "examples/minimal-pipeline",
+      "examples/operator-commands",
       "examples/telegram-webhook",
       "evals",
       "apps/worker",

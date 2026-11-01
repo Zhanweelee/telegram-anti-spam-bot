@@ -1,3 +1,4 @@
+import { createMemoryLogger } from "@tasb/core";
 import { describe, expect, it } from "vitest";
 import {
   createApp,
@@ -147,6 +148,36 @@ describe("POST /telegram/webhook", () => {
     expect(seen).toEqual([
       { chatId: "-100123", isAdmin: true, tenantId: "acme" },
     ]);
+  });
+
+  it("does not echo a private command when the bot token is unset", async () => {
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const app = createApp({ logger });
+    const response = await app.request(
+      "/telegram/webhook",
+      {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": SECRET },
+        body: JSON.stringify({
+          update_id: 80,
+          message: {
+            message_id: 1,
+            date: 1761955200,
+            chat: { id: 42, type: "private" },
+            from: { id: 42 },
+            text: `/help ${phrase}`,
+          },
+        }),
+      },
+      { WEBHOOK_SECRET: SECRET, ADMIN_USER_IDS: "42" },
+    );
+    const raw = await response.text();
+    expect(response.status).toBe(200);
+    expect(raw).not.toContain(phrase);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("reply_failed");
+    expect(logged).not.toContain(phrase);
   });
 
   it("screens with the default pipeline and omits message text from the body", async () => {

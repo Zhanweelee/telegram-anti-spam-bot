@@ -1,0 +1,65 @@
+import {
+  createMemoryCache,
+  createMemoryPolicyStore,
+  createMemoryRuntimeStore,
+  createMemoryStorage,
+} from "@tasb/adapter-memory";
+import {
+  createMemoryLogger,
+  parseEvent,
+  runOperatorCommand,
+  type Storage,
+} from "@tasb/core";
+
+const rules = {
+  version: 1,
+  aggregate: "max",
+  rules: [
+    {
+      id: "spam_keywords",
+      enabled: true,
+      detectorIds: ["keyword"],
+      threshold: 1,
+      actions: ["delete"],
+    },
+  ],
+};
+
+export async function runPrivateCommand(input: {
+  readonly text: string;
+  readonly actorId: string;
+  readonly adminActorIds: readonly string[];
+  readonly storage?: Storage;
+}): Promise<string | null> {
+  const result = await runOperatorCommand({
+    event: parseEvent({
+      id: "evt_demo",
+      tenantId: "local",
+      chatId: input.actorId,
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: input.actorId, isAdmin: false },
+      direct: true,
+      message: {
+        id: "1",
+        text: input.text,
+        textSha256: "ab".repeat(32),
+      },
+    }),
+    adminActorIds: input.adminActorIds,
+    cache: createMemoryCache(),
+    policyStore: createMemoryPolicyStore(),
+    runtime: createMemoryRuntimeStore(),
+    storage: input.storage ?? createMemoryStorage(),
+    logger: createMemoryLogger(),
+    source: {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return rules;
+      },
+    },
+  });
+  return result.status === "reply" ? result.text : null;
+}

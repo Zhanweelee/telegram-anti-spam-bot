@@ -21,11 +21,37 @@ export interface LoadPolicyInput {
   readonly ttlSeconds?: number;
 }
 
+export function policyCacheKey(tenantId: string, chatId: string): string {
+  return `policy:${tenantId}:${chatId}`;
+}
+
+export async function savePolicy(input: {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly policy: PrefilterPolicy;
+  readonly cache: Cache;
+  readonly store: PolicyStore;
+  readonly logger: Logger;
+  readonly ttlSeconds?: number;
+}): Promise<void> {
+  const policy = prefilterPolicySchema.parse(input.policy);
+  await input.store.put(input.tenantId, input.chatId, policy);
+  await remember(
+    input.logger,
+    input.cache,
+    input.tenantId,
+    input.chatId,
+    policyCacheKey(input.tenantId, input.chatId),
+    policy,
+    input.ttlSeconds ?? DEFAULT_POLICY_CACHE_TTL_SECONDS,
+  );
+}
+
 export async function loadPolicy(
   input: LoadPolicyInput,
 ): Promise<PrefilterPolicy> {
   const fallback = prefilterPolicySchema.parse(input.fallback);
-  const key = `policy:${input.tenantId}:${input.chatId}`;
+  const key = policyCacheKey(input.tenantId, input.chatId);
   const ttl = input.ttlSeconds ?? DEFAULT_POLICY_CACHE_TTL_SECONDS;
   const cached = await readCache(input, key);
   if (cached !== null) {
@@ -48,12 +74,28 @@ export async function loadPolicy(
       tenantId: input.tenantId,
       chatId: input.chatId,
     });
-    await remember(input, key, fallback, ttl);
+    await remember(
+      input.logger,
+      input.cache,
+      input.tenantId,
+      input.chatId,
+      key,
+      fallback,
+      ttl,
+    );
     return copyPolicy(fallback);
   }
 
   if (stored === null) {
-    await remember(input, key, fallback, ttl);
+    await remember(
+      input.logger,
+      input.cache,
+      input.tenantId,
+      input.chatId,
+      key,
+      fallback,
+      ttl,
+    );
     return copyPolicy(fallback);
   }
   const parsed = prefilterPolicySchema.safeParse(stored);
@@ -63,10 +105,26 @@ export async function loadPolicy(
       chatId: input.chatId,
       scope: "store",
     });
-    await remember(input, key, fallback, ttl);
+    await remember(
+      input.logger,
+      input.cache,
+      input.tenantId,
+      input.chatId,
+      key,
+      fallback,
+      ttl,
+    );
     return copyPolicy(fallback);
   }
-  await remember(input, key, parsed.data, ttl);
+  await remember(
+    input.logger,
+    input.cache,
+    input.tenantId,
+    input.chatId,
+    key,
+    parsed.data,
+    ttl,
+  );
   return copyPolicy(parsed.data);
 }
 
@@ -87,17 +145,20 @@ async function readCache(
 }
 
 async function remember(
-  input: LoadPolicyInput,
+  logger: Logger,
+  cache: Cache,
+  tenantId: string,
+  chatId: string,
   key: string,
   policy: PrefilterPolicy,
   ttl: number,
 ): Promise<void> {
   try {
-    await input.cache.set(key, JSON.stringify(policy), ttl);
+    await cache.set(key, JSON.stringify(policy), ttl);
   } catch {
-    input.logger.warn("policy_cache_failed", {
-      tenantId: input.tenantId,
-      chatId: input.chatId,
+    logger.warn("policy_cache_failed", {
+      tenantId,
+      chatId,
       op: "set",
     });
   }

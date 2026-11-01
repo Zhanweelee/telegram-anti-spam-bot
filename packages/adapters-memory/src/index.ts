@@ -11,11 +11,16 @@ import {
   parseAuditRecord,
   parseRuleSet,
   prefilterPolicySchema,
+  type ReplyMessage,
+  type ReplyPort,
   type RuleSet,
+  type RuntimeStore,
   type Storage,
 } from "@tasb/core";
 
-export function createMemoryStorage(): Storage & {
+export function createMemoryStorage(options?: {
+  readonly maxAudits?: number;
+}): Storage & {
   readonly records: readonly AuditRecord[];
 } {
   const records: AuditRecord[] = [];
@@ -24,6 +29,10 @@ export function createMemoryStorage(): Storage & {
     records,
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
+      const cap = options?.maxAudits;
+      if (cap !== undefined && records.length > cap) {
+        records.splice(0, records.length - cap);
+      }
     },
     async listAudits(query: AuditQuery) {
       const parsed = parseAuditQuery(query);
@@ -92,6 +101,39 @@ function key(tenantId: string, chatId: string): string {
 
 function policyKey(tenantId: string, chatId: string): string {
   return `${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+export function createMemoryRuntimeStore(): RuntimeStore {
+  const dryRun = new Set<string>();
+  return {
+    async getDryRun(tenantId, chatId) {
+      return dryRun.has(key(tenantId, chatId));
+    },
+    async setDryRun(tenantId, chatId, enabled) {
+      const id = key(tenantId, chatId);
+      if (enabled) {
+        dryRun.add(id);
+        return;
+      }
+      dryRun.delete(id);
+    },
+  };
+}
+
+export function createMemoryReply(): ReplyPort & {
+  readonly sent: readonly ReplyMessage[];
+} {
+  const sent: ReplyMessage[] = [];
+  return {
+    sent,
+    async send(message) {
+      sent.push({
+        tenantId: message.tenantId,
+        chatId: message.chatId,
+        text: message.text,
+      });
+    },
+  };
 }
 
 export function createMemoryCache(nowMs: () => number = Date.now): Cache {

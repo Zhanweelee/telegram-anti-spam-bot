@@ -186,3 +186,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Dry-run | 算出决策但不执行动作、不写审计 | Shadow |
 | Fail-open | 检测器失败时放过消息 | Fail-safe（含糊） |
 | Deployment mode | 只存在于 worker 的 `self-host` 或 `cloud` | Environment |
+| Direct | 与 bot 的私聊，事件字段 `direct` | Private（平台词）、DM |

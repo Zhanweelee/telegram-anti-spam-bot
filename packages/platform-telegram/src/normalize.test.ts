@@ -79,6 +79,32 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("公告");
   });
 
+  it("marks a private chat as direct and leaves groups unset", async () => {
+    const privateOutcome = await normalize({
+      update_id: 30,
+      message: {
+        message_id: 1,
+        date: 1761955200,
+        chat: { id: 42, type: "private" },
+        from: { id: 42, is_bot: false, first_name: "Ada" },
+        text: "/help",
+      },
+    });
+    expect(privateOutcome.status).toBe("event");
+    if (privateOutcome.status !== "event") {
+      return;
+    }
+    expect(privateOutcome.event.direct).toBe(true);
+    expect(privateOutcome.event.chatId).toBe("42");
+
+    const groupOutcome = await normalize(load("message.json"));
+    expect(groupOutcome.status).toBe("event");
+    if (groupOutcome.status !== "event") {
+      return;
+    }
+    expect(groupOutcome.event.direct).toBeUndefined();
+  });
+
   it("marks configured admin user ids without calling Telegram", async () => {
     const outcome = await normalize(load("message.json"), ["42"]);
     expect(outcome.status).toBe("event");

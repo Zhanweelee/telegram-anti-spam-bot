@@ -7,6 +7,7 @@ import {
   createMemoryCache,
   createMemoryModerator,
   createMemoryPolicyStore,
+  createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
@@ -19,6 +20,7 @@ import {
   type PipelineResult,
   type PolicyStore,
   type RuleSource,
+  type RuntimeStore,
   runPipeline,
   type Storage,
   wrapLogger,
@@ -27,11 +29,14 @@ import { createKeywordDetector } from "@tasb/detector-keyword";
 import { fileRuleSource } from "./rules.js";
 
 /**
- * Isolate-local cache. A miss reads the bundled rule files, not D1.
- * The moderator is still per request and does not call Telegram.
+ * Isolate-local cache, policy, dry-run, and audits. A rule miss reads
+ * the bundled files, not D1. The moderator is still per request and
+ * does not call Telegram. Audits are capped at 200 rows.
  */
-const ruleCache = createMemoryCache();
-const defaultPolicyStore = createMemoryPolicyStore();
+export const workerCache = createMemoryCache();
+export const workerPolicyStore = createMemoryPolicyStore();
+export const workerRuntime = createMemoryRuntimeStore();
+export const workerStorage = createMemoryStorage({ maxAudits: 200 });
 
 const detector = createKeywordDetector({
   keywords: ["免费领取", "加微信"],
@@ -57,6 +62,7 @@ export interface ScreenDeps {
   readonly source?: RuleSource;
   readonly storage?: Storage;
   readonly policyStore?: PolicyStore;
+  readonly runtime?: RuntimeStore;
 }
 
 export async function screenTelegramEvent(
@@ -67,29 +73,42 @@ export async function screenTelegramEvent(
   const rules = await loadRuleSet({
     tenantId: event.tenantId,
     chatId: event.chatId,
-    cache: deps.cache ?? ruleCache,
+    cache: deps.cache ?? workerCache,
     source: deps.source ?? fileRuleSource,
     logger,
   });
   const policy = await loadPolicy({
     tenantId: event.tenantId,
     chatId: event.chatId,
-    cache: deps.cache ?? ruleCache,
-    store: deps.policyStore ?? defaultPolicyStore,
+    cache: deps.cache ?? workerCache,
+    store: deps.policyStore ?? workerPolicyStore,
     logger,
     fallback: defaultPrefilterPolicy,
   });
+  let dryRun = false;
+  try {
+    dryRun = await (deps.runtime ?? workerRuntime).getDryRun(
+      event.tenantId,
+      event.chatId,
+    );
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const result = await runPipeline({
     event,
     rules,
     policy,
+    dryRun,
     detectors: [detector],
     actions: [
       createDeleteAction(),
       createMuteAction({ durationSeconds: 60 * 60 }),
       createBanAction(),
     ],
-    storage: deps.storage ?? createMemoryStorage(),
+    storage: deps.storage ?? workerStorage,
     moderator: createMemoryModerator(),
     logger,
   });

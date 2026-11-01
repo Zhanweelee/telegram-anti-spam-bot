@@ -5,6 +5,8 @@ import {
   createMemoryCache,
   createMemoryModerator,
   createMemoryPolicyStore,
+  createMemoryReply,
+  createMemoryRuntimeStore,
   createMemoryStorage,
 } from "./index.js";
 
@@ -90,6 +92,32 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", actorId: "u" },
     ]);
     expect(moderator.deleted).toEqual([]);
+  });
+
+  it("keeps dry-run and replies isolated by tenant and chat", async () => {
+    const runtime = createMemoryRuntimeStore();
+    await runtime.setDryRun("tenant_a", "chat_1", true);
+    expect(await runtime.getDryRun("tenant_a", "chat_1")).toBe(true);
+    expect(await runtime.getDryRun("tenant_a", "chat_2")).toBe(false);
+    await runtime.setDryRun("tenant_a", "chat_1", false);
+    expect(await runtime.getDryRun("tenant_a", "chat_1")).toBe(false);
+
+    const reply = createMemoryReply();
+    await reply.send({ tenantId: "tenant_a", chatId: "42", text: "命令：" });
+    expect(reply.sent).toEqual([
+      { tenantId: "tenant_a", chatId: "42", text: "命令：" },
+    ]);
+  });
+
+  it("drops the oldest audits past the cap", async () => {
+    const storage = createMemoryStorage({ maxAudits: 2 });
+    for (const eventId of ["evt_1", "evt_2", "evt_3"]) {
+      await storage.appendAudit({ ...record, eventId });
+    }
+    expect(storage.records.map((item) => item.eventId)).toEqual([
+      "evt_2",
+      "evt_3",
+    ]);
   });
 
   it("records deletions", async () => {

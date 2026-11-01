@@ -1,6 +1,12 @@
 export type { Cache } from "./cache.js";
 export { type Clock, createFixedClock, createSystemClock } from "./clock.js";
 export {
+  type OperatorCommandInput,
+  type OperatorCommandResult,
+  parseOperatorCommand,
+  runOperatorCommand,
+} from "./command.js";
+export {
   type Decision,
   type DecisionAction,
   type DetectorHit,
@@ -57,6 +63,8 @@ export {
   defaultPrefilterPolicy,
   type LoadPolicyInput,
   loadPolicy,
+  policyCacheKey,
+  savePolicy,
 } from "./policy-load.js";
 export type { PolicyStore } from "./policy-store.js";
 export {
@@ -81,6 +89,7 @@ export {
   prefilterPolicySchema,
 } from "./prefilter.js";
 export { assertNoRawContent, redactExactText } from "./privacy.js";
+export type { ReplyMessage, ReplyPort } from "./reply.js";
 export {
   type AggregateStrategy,
   aggregateScores,
@@ -101,4 +110,5 @@ export {
   openRuleSet,
   type RuleSource,
 } from "./rules-load.js";
+export type { RuntimeStore } from "./runtime.js";
 export { withTimeout } from "./timeout.js";

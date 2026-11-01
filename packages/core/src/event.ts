@@ -27,6 +27,8 @@ export const eventSchema = z.strictObject({
   kind: eventKindSchema,
   occurredAt: isoSchema,
   actor: actorSchema,
+  /** True when the event is a private conversation with the bot. */
+  direct: z.boolean().optional(),
   message: messageSchema.optional(),
 });
 

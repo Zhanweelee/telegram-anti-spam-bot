@@ -58,7 +58,9 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`。群覆盖是整份替换。缓存目前是进程内内存，接口留给以后的 KV。
 
-`loadPolicy` 同样先读 `Cache`，键是 `policy:<tenantId>:<chatId>`。未命中再读 `PolicyStore`。该群没有记录时使用调用方给的 fallback。Worker 的 fallback 是豁免管理员、空白名单。某个群把 `exemptAdmins` 存成 false 之后，只关闭这一群的豁免。白名单不跨租户、不跨群。存储抛错时记 `policy_store_failed` 并使用 fallback，不写异常文本。坏掉的缓存不当成「没有策略」，会再读一次存储。`put` 不会清缓存，默认 60 秒后才看见新策略。这条路径也不读 D1。说明见 ADR 0005。
+`loadPolicy` 同样先读 `Cache`，键是 `policy:<tenantId>:<chatId>`。未命中再读 `PolicyStore`。该群没有记录时使用调用方给的 fallback。Worker 的 fallback 是豁免管理员、空白名单。某个群把 `exemptAdmins` 存成 false 之后，只关闭这一群的豁免。白名单不跨租户、不跨群。存储抛错时记 `policy_store_failed` 并使用 fallback，不写异常文本。坏掉的缓存不当成「没有策略」，会再读一次存储。`put` 本身不清缓存。`savePolicy` 会在写入后覆盖这条缓存，私聊命令用的是它。说明见 ADR 0005 和 ADR 0006。
+
+`direct === true` 的事件才进入管理命令。群里的 `/whitelist`、`/dryrun` 仍走检测流水线，不写策略，也不改 dry-run。dry-run 存在 `RuntimeStore`，按 tenant + chat 读取。`/logs` 只返回审计摘要，不包含证据原文。回复经 `ReplyPort` 送出。
 
 ## 多租户
 
