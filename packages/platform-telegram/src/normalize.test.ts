@@ -327,14 +327,19 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("点下面");
-    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "login.example",
+      "app.example",
+    ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("evil.example");
-    expect(dumped).not.toContain("login.example");
-    expect(dumped).not.toContain("app.example");
+    expect(dumped).not.toContain("/start");
+    expect(dumped).not.toContain("/open");
   });
 
   it("folds gaps inside a structured invite before classifying it", async () => {
@@ -1652,7 +1657,9 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
-  it("uses a login button label and leaves the login url unread", async () => {
+  it("keeps only the hostname of a login url and a web app", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "LOGINHOST41";
     const outcome = await normalize({
       update_id: 2803,
       message: {
@@ -1660,16 +1667,21 @@ describe("normalizeUpdate", () => {
         date: 1761955200,
         chat: { id: -100772, type: "supergroup" },
         from: { id: 9 },
+        text: "点下面",
         reply_markup: {
           inline_keyboard: [
             [
               {
                 text: "免费领取",
-                login_url: { url: "https://bit.ly/only" },
+                login_url: { url: `https://t.me/%2B${code}` },
               },
               {
                 text: "加微信",
-                web_app: { url: "https://bit.ly/app" },
+                web_app: { url: "https://bit.ly/only" },
+              },
+              {
+                text: "skip",
+                callback_data: `https://evil.example/${phrase}`,
               },
             ],
           ],
@@ -1680,10 +1692,14 @@ describe("normalizeUpdate", () => {
     if (outcome.status !== "event") {
       return;
     }
-    expect(outcome.event.message?.text).toBe("免费领取 加微信");
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = JSON.stringify(outcome.event);
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("evil.example");
+    expect(dumped).not.toContain("/only");
   });
 
   it("keeps a file name when a button label is also present", async () => {

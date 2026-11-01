@@ -420,6 +420,14 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       if (isRecord(copied) && typeof copied.text === "string") {
         urls.push(copied.text);
       }
+      const login = button.login_url;
+      if (isRecord(login) && typeof login.url === "string") {
+        urls.push(login.url);
+      }
+      const app = button.web_app;
+      if (isRecord(app) && typeof app.url === "string") {
+        urls.push(app.url);
+      }
     }
   }
   return urls;
