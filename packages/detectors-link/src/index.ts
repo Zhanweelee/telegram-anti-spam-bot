@@ -56,6 +56,10 @@ export const defaultShorteners = [
 const token =
   /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
 
+function foldEncodedDots(text: string): string {
+  return text.replace(/%2E/gi, ".");
+}
+
 export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
   return defineDetector({
     id: "link",
@@ -84,7 +88,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldEncodedGaps(foldMatchText(message.text));
+      const compared = foldEncodedDots(
+        foldEncodedGaps(foldMatchText(message.text)),
+      );
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
         message.invites,

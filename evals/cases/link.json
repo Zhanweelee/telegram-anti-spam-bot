@@ -105,5 +105,15 @@
     "id": "double-encoded-dot",
     "text": "bit%252Ely/offer",
     "label": "ham"
+  },
+  {
+    "id": "encoded-dot",
+    "text": "bit%2Ely/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-plain",
+    "text": "example%2Ecom/docs",
+    "label": "ham"
   }
 ]
