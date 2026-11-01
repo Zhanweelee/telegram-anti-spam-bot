@@ -494,6 +494,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
       pushPlainUrls(item.video.file_name, urls);
     }
   }
+  const origin = message.forward_origin;
+  if (isRecord(origin) && origin.type === "hidden_user") {
+    pushPlainUrls(origin.sender_user_name, urls);
+  }
+  pushPlainUrls(message.forward_sender_name, urls);
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
     pushPlainUrls(quote.text, urls);
@@ -956,6 +961,29 @@ function messageText(
   const added = addedServiceText(message);
   if (added.length > 0) {
     return added;
+  }
+  const hidden = hiddenForwardName(message);
+  if (hidden.length > 0) {
+    return hidden;
+  }
+  return "";
+}
+
+function hiddenForwardName(message: Record<string, unknown>): string {
+  const origin = message.forward_origin;
+  if (
+    isRecord(origin) &&
+    origin.type === "hidden_user" &&
+    typeof origin.sender_user_name === "string" &&
+    origin.sender_user_name.length > 0
+  ) {
+    return origin.sender_user_name.slice(0, MAX_TEXT);
+  }
+  if (
+    typeof message.forward_sender_name === "string" &&
+    message.forward_sender_name.length > 0
+  ) {
+    return message.forward_sender_name.slice(0, MAX_TEXT);
   }
   return "";
 }

@@ -3047,6 +3047,133 @@ describe("normalizeUpdate", () => {
     expect(paid.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("keeps hostnames from hidden forward names", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "HIDE60";
+    const labeled = await normalize({
+      update_id: 3310,
+      message: {
+        message_id: 150,
+        date: 1761955200,
+        chat: { id: -100830, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_origin: {
+          type: "hidden_user",
+          date: 1761955200,
+          sender_user_name: `${phrase} https://bit.ly/hide60 https://t.me/+${code}.`,
+        },
+        external_reply: {
+          origin: {
+            type: "hidden_user",
+            sender_user_name: "https://tinyurl.com/ext60",
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.forward).toBe("hidden");
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("hide60");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("ext60");
+
+    const legacy = await normalize({
+      update_id: 3311,
+      message: {
+        message_id: 151,
+        date: 1761955200,
+        chat: { id: -100831, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_sender_name: `${phrase} https://example.com/page60`,
+        forward_from: {
+          id: 8,
+          is_bot: false,
+          first_name: "https://bit.ly/user60",
+        },
+      },
+    });
+    expect(legacy.status).toBe("event");
+    if (legacy.status !== "event") {
+      return;
+    }
+    expect(legacy.event.message?.text).toBe("今天站会");
+    expect(legacy.event.message?.forward).toBe("hidden");
+    expect(legacy.event.message?.hosts).toEqual(["example.com"]);
+    const legacyDump = JSON.stringify(legacy.event);
+    expect(legacyDump).not.toContain(phrase);
+    expect(legacyDump).not.toContain("page60");
+    expect(legacyDump).not.toContain("bit.ly");
+    expect(legacyDump).not.toContain("user60");
+
+    const channel = await normalize({
+      update_id: 3312,
+      message: {
+        message_id: 152,
+        date: 1761955200,
+        chat: { id: -100832, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: {
+            id: -1001,
+            title: "https://bit.ly/ch60",
+            type: "channel",
+          },
+          author_signature: "https://tinyurl.com/sig60",
+        },
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.text).toBe("今天站会");
+    expect(channel.event.message?.forward).toBe("channel");
+    expect(channel.event.message?.hosts).toBeUndefined();
+    const channelDump = JSON.stringify(channel.event);
+    expect(channelDump).not.toContain("bit.ly");
+    expect(channelDump).not.toContain("tinyurl.com");
+    expect(channelDump).not.toContain("ch60");
+    expect(channelDump).not.toContain("sig60");
+
+    const asBody = "免费领取 https://bit.ly/body60";
+    const body = await normalize({
+      update_id: 3313,
+      message: {
+        message_id: 153,
+        date: 1761955200,
+        chat: { id: -100833, type: "supergroup" },
+        from: { id: 9 },
+        forward_origin: {
+          type: "hidden_user",
+          date: 1761955200,
+          sender_user_name: asBody,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.forward).toBe("hidden");
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({
