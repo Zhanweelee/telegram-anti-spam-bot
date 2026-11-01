@@ -570,4 +570,41 @@ describe("link fixtures", () => {
     });
     expect(period?.evidence[0]?.summary).toBe("short_link:bit.ly");
   });
+
+  it("folds fullwidth latin letters before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("\uFF42\uFF49\uFF54.ly/lat63"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("lat63");
+
+    const invite = await detector.detect({
+      event: eventFor("\uFF54.\uFF4D\uFF45/+LAT63"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("LAT63");
+
+    const ordinary = await detector.detect({
+      event: eventFor("example.\uFF43\uFF4F\uFF4D/page63"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const ip = await detector.detect({
+      event: eventFor("http://\uFF12\uFF10\uFF13.0.113.9/ip63"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(ip)).not.toContain("ip63");
+  });
 });

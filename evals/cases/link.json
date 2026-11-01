@@ -180,5 +180,20 @@
     "id": "middle-dot-ordinary",
     "text": "https://example\u00B7com/docs",
     "label": "ham"
+  },
+  {
+    "id": "fullwidth-shortener",
+    "text": "\uFF42\uFF49\uFF54.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "fullwidth-ordinary",
+    "text": "example.\uFF43\uFF4F\uFF4D/docs",
+    "label": "ham"
+  },
+  {
+    "id": "fullwidth-ip",
+    "text": "http://\uFF12\uFF10\uFF13.0.113.9/x",
+    "label": "spam"
   }
 ]

@@ -34,6 +34,31 @@ export function foldDotLookalikes(text: string): string {
 }
 
 /**
+ * Fold fullwidth Latin letters to ASCII.
+ * Fullwidth digits, U+FF0B, and other characters stay.
+ */
+export function foldFullwidthLatin(text: string): string {
+  let out = "";
+  for (const char of text) {
+    const code = char.codePointAt(0);
+    if (code === undefined) {
+      out += char;
+      continue;
+    }
+    if (code >= 0xff21 && code <= 0xff3a) {
+      out += String.fromCodePoint(code - 0xff21 + 0x41);
+      continue;
+    }
+    if (code >= 0xff41 && code <= 0xff5a) {
+      out += String.fromCodePoint(code - 0xff41 + 0x61);
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
+/**
  * Drop percent-encoded characters that `foldMatchText` would remove.
  * A second layer written as `%25HH` is removed the same way.
  * `%20`, `%2E`, `%2520`, and `%252E` stay. A third layer stays.

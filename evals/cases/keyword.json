@@ -11,5 +11,6 @@
   { "id": "h3", "text": "hello team", "label": "ham" },
   { "id": "h4", "text": "", "label": "ham" },
   { "id": "s8", "text": "免\u00B7费领取", "label": "spam" },
-  { "id": "h5", "text": "不是免费。领取", "label": "ham" }
+  { "id": "h5", "text": "不是免费。领取", "label": "ham" },
+  { "id": "h6", "text": "免\uFF21费领取", "label": "ham" }
 ]

@@ -1,6 +1,7 @@
 import {
   type Detector,
   defineDetector,
+  foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
 } from "@tasb/core";
@@ -30,14 +31,22 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
       const caseSensitive = parsed.caseSensitive === true;
       const matched = parsed.keywords.filter((keyword) => {
         const needle = foldInterpuncts(
-          foldMatchText(caseSensitive ? keyword : keyword.toLocaleLowerCase()),
+          foldMatchText(
+            foldFullwidthLatin(
+              caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+            ),
+          ),
         );
         if (needle.length === 0) {
           return false;
         }
         return texts.some((text) => {
           const haystack = foldInterpuncts(
-            foldMatchText(caseSensitive ? text : text.toLocaleLowerCase()),
+            foldMatchText(
+              foldFullwidthLatin(
+                caseSensitive ? text : text.toLocaleLowerCase(),
+              ),
+            ),
           );
           return haystack.includes(needle);
         });
@@ -51,7 +60,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         reasons: ["keyword_match"],
         evidence: matched.map((keyword) => ({
           kind: "keyword" as const,
-          summary: `keyword:${foldInterpuncts(foldMatchText(keyword)).slice(0, 80)}`,
+          summary: `keyword:${foldInterpuncts(foldMatchText(foldFullwidthLatin(keyword))).slice(0, 80)}`,
         })),
       };
     },

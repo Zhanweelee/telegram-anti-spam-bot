@@ -6,6 +6,7 @@ import {
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
+  foldFullwidthLatin,
   foldMatchText,
   withTimeout,
 } from "@tasb/core";
@@ -89,7 +90,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       );
       const compared = foldEncodedAlphabet(
         foldEncodedSeparators(
-          foldEncodedGaps(foldMatchText(foldDotLookalikes(message.text))),
+          foldEncodedGaps(
+            foldMatchText(foldDotLookalikes(foldFullwidthLatin(message.text))),
+          ),
         ),
       );
       const invites = mergeHosts(

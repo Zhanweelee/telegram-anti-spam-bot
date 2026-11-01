@@ -4,6 +4,7 @@ import {
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
+  foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";
@@ -53,6 +54,22 @@ describe("foldDotLookalikes", () => {
     expect(foldDotLookalikes("example.com")).toBe("example.com");
     expect(foldDotLookalikes("不是免费。领取")).toBe("不是免费。领取");
     expect(foldDotLookalikes("免 费领取")).toBe("免 费领取");
+  });
+});
+
+describe("foldFullwidthLatin", () => {
+  it("folds fullwidth letters and keeps digits and other characters", () => {
+    expect(foldFullwidthLatin("\uFF42\uFF49\uFF54.\uFF4C\uFF59")).toBe(
+      "bit.ly",
+    );
+    expect(foldFullwidthLatin("\uFF34.\uFF4D\uFF45")).toBe("T.me");
+    expect(foldFullwidthLatin("\uFF12\uFF10\uFF13.0.113.9")).toBe(
+      "\uFF12\uFF10\uFF13.0.113.9",
+    );
+    expect(foldFullwidthLatin("免费领取")).toBe("免费领取");
+    expect(foldFullwidthLatin("免\uFF21费领取")).toBe("免A费领取");
+    expect(foldFullwidthLatin("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
+    expect(foldFullwidthLatin("不是免费。领取")).toBe("不是免费。领取");
   });
 });
 

@@ -1,6 +1,7 @@
 import {
   type Detector,
   defineDetector,
+  foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
 } from "@tasb/core";
@@ -66,7 +67,9 @@ export function createRegexDetector(config: RegexConfig): Detector {
       for (const expression of compiled) {
         let matched = false;
         try {
-          matched = expression.test(foldInterpuncts(foldMatchText(text)));
+          matched = expression.test(
+            foldInterpuncts(foldMatchText(foldFullwidthLatin(text))),
+          );
         } catch {
           ctx.logger.warn("regex_failed", {
             detectorId: "regex",

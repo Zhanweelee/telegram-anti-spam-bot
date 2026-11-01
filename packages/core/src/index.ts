@@ -259,6 +259,7 @@ export {
   foldEncodedAlphabet,
   foldEncodedGaps,
   foldEncodedSeparators,
+  foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";

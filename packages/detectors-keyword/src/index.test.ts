@@ -65,6 +65,43 @@ describe("keyword detector", () => {
     expect(await detector.detect({ event: member, logger, signal })).toBeNull();
   });
 
+  it("folds fullwidth latin letters before matching", async () => {
+    const vip = createKeywordDetector({ keywords: ["VIP"] });
+    const hit = await vip.detect({
+      event: messageEvent("\uFF56\uFF49\uFF50"),
+      logger,
+      signal,
+    });
+    expect(hit?.evidence[0]?.summary).toBe("keyword:VIP");
+    const sensitive = createKeywordDetector({
+      keywords: ["VIP"],
+      caseSensitive: true,
+    });
+    expect(
+      await sensitive.detect({
+        event: messageEvent("\uFF56\uFF49\uFF50"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      (
+        await sensitive.detect({
+          event: messageEvent("\uFF36\uFF29\uFF30"),
+          logger,
+          signal,
+        })
+      )?.evidence[0]?.summary,
+    ).toBe("keyword:VIP");
+    expect(
+      await detector.detect({
+        event: messageEvent("免\uFF21费领取"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
   it("matches a join profile without copying the whole name", async () => {
     const name = "广告员免费领取礼品";
     const hit = await detector.detect({
