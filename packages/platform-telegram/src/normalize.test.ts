@@ -281,6 +281,62 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
+  it("keeps only the hostname when copy_text is one url", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INVITECOPY99";
+    const outcome = await normalize({
+      update_id: 2102,
+      message: {
+        message_id: 32,
+        date: 1761955200,
+        chat: { id: -100701, type: "supergroup" },
+        from: { id: 9 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "copy",
+                copy_text: { text: `https://bit.ly/path?q=${phrase}` },
+              },
+              {
+                text: phrase,
+                copy_text: { text: `${phrase} https://evil.example/hide` },
+              },
+            ],
+            [
+              {
+                text: "join",
+                copy_text: { text: `https://t.me/+${code}` },
+              },
+              {
+                text: "login",
+                login_url: { url: "https://login.example/start" },
+              },
+              {
+                text: "app",
+                web_app: { url: "https://app.example/open" },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("evil.example");
+    expect(dumped).not.toContain("login.example");
+    expect(dumped).not.toContain("app.example");
+  });
+
   it("marks a hidden telegram invite without keeping the code", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalize({

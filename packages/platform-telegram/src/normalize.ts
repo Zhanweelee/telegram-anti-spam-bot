@@ -387,8 +387,15 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       continue;
     }
     for (const button of row) {
-      if (isRecord(button) && typeof button.url === "string") {
+      if (!isRecord(button)) {
+        continue;
+      }
+      if (typeof button.url === "string") {
         urls.push(button.url);
+      }
+      const copied = button.copy_text;
+      if (isRecord(copied) && typeof copied.text === "string") {
+        urls.push(copied.text);
       }
     }
   }
