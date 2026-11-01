@@ -9,4 +9,11 @@ describe("foldMatchText", () => {
     expect(foldMatchText("免 费领取")).toBe("免 费领取");
     expect(foldMatchText("加\u00ad微\u180e信")).toBe("加微信");
   });
+
+  it("drops unicode spaces and line breaks while keeping a normal space", () => {
+    expect(foldMatchText("免\u00a0费\u3000领取")).toBe("免费领取");
+    expect(foldMatchText("免\n费\t领取")).toBe("免费领取");
+    expect(foldMatchText("加\u2000微\u202f信")).toBe("加微信");
+    expect(foldMatchText("免 费领取")).toBe("免 费领取");
+  });
 });
