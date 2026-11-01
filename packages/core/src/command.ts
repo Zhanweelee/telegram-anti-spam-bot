@@ -297,10 +297,15 @@ async function showRules(
       input,
       rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
     );
+    const override = switches.some((item) => item.ruleId === rule.id);
     lines.push(
       say(input, "command.rules.line", {
         id: rule.id,
         state,
+        source: say(
+          input,
+          override ? "command.rule.switch" : "command.rule.file",
+        ),
         threshold: rule.threshold,
         actions: rule.actions.join(","),
       }),

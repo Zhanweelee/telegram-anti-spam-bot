@@ -374,7 +374,7 @@ describe("runOperatorCommand", () => {
     });
     expect(rules).toMatchObject({ status: "reply" });
     if (rules.status === "reply") {
-      expect(rules.text).toContain("spam_keywords enabled threshold 1");
+      expect(rules.text).toContain("spam_keywords enabled file threshold 1");
       expect(rules.text).not.toContain(phrase);
     }
     const help = await runOperatorCommand({
@@ -1470,7 +1470,7 @@ describe("runOperatorCommand", () => {
     if (listed.status === "reply") {
       expect(listed.text.startsWith("rules -100 community\n")).toBe(true);
       expect(listed.text).toContain(
-        "community_keywords enabled threshold 2 actions delete",
+        "community_keywords enabled file threshold 2 actions delete",
       );
       expect(listed.text).not.toContain("spam_keywords");
     }
@@ -1491,6 +1491,24 @@ describe("runOperatorCommand", () => {
       "local",
       "-100",
       "community_keywords",
+      true,
+    );
+    const same = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(same).toMatchObject({ status: "reply" });
+    if (same.status === "reply") {
+      expect(same.text).toContain("community_keywords enabled switch");
+    }
+    await deps.runtime.setRuleSwitch(
+      "local",
+      "-100",
+      "community_keywords",
       false,
     );
     const switched = await runOperatorCommand({
@@ -1503,7 +1521,7 @@ describe("runOperatorCommand", () => {
     });
     expect(switched).toMatchObject({ status: "reply" });
     if (switched.status === "reply") {
-      expect(switched.text).toContain("community_keywords disabled");
+      expect(switched.text).toContain("community_keywords disabled switch");
     }
     const fileToggle = await runOperatorCommand({
       event: event({ text: "/rule -100 spam_keywords off", direct: true }),
@@ -1550,7 +1568,7 @@ describe("runOperatorCommand", () => {
     expect(local).toMatchObject({ status: "reply" });
     if (local.status === "reply") {
       expect(local.text.startsWith("rules -100\n")).toBe(true);
-      expect(local.text).toContain("spam_keywords disabled");
+      expect(local.text).toContain("spam_keywords disabled switch");
       expect(local.text).not.toContain("community");
     }
     const failing = {
@@ -1885,8 +1903,8 @@ describe("runOperatorCommand", () => {
     });
     expect(listed).toMatchObject({ status: "reply" });
     if (listed.status === "reply") {
-      expect(listed.text).toContain("via_inline enabled");
-      expect(listed.text).toContain("spam_keywords enabled");
+      expect(listed.text).toContain("via_inline enabled switch");
+      expect(listed.text).toContain("spam_keywords enabled file");
     }
     const reset = await runOperatorCommand({
       ...deps,
@@ -1902,6 +1920,18 @@ describe("runOperatorCommand", () => {
     expect(reset).toMatchObject({
       text: "rule -100 via_inline disabled file",
     });
+    const restored = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(restored).toMatchObject({ status: "reply" });
+    if (restored.status === "reply") {
+      expect(restored.text).toContain("via_inline disabled file");
+      expect(restored.text).not.toContain("via_inline disabled switch");
+    }
     const off = await runOperatorCommand({
       ...deps,
       event: event({

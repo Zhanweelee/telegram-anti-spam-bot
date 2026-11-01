@@ -88,7 +88,8 @@ const zh = {
   "command.rules.header": "rules {chatId}",
   "command.rules.pack": "rules {chatId} {pack}",
   "command.rules.empty": "none",
-  "command.rules.line": "{id} {state} threshold {threshold} actions {actions}",
+  "command.rules.line":
+    "{id} {state} {source} threshold {threshold} actions {actions}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
   "command.rule.usage": "用法：/rule [chatId] <ruleId> [on|off|reset]",
@@ -145,7 +146,8 @@ const en = {
   "command.rules.header": "rules {chatId}",
   "command.rules.pack": "rules {chatId} {pack}",
   "command.rules.empty": "none",
-  "command.rules.line": "{id} {state} threshold {threshold} actions {actions}",
+  "command.rules.line":
+    "{id} {state} {source} threshold {threshold} actions {actions}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
   "command.rule.usage": "Usage: /rule [chatId] <ruleId> [on|off|reset]",
