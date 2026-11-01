@@ -1,6 +1,7 @@
 import {
   type Event,
   type ForwardKind,
+  foldMatchText,
   type MediaKind,
   parseEvent,
 } from "@tasb/core";
@@ -431,7 +432,7 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   }
   let url: URL;
   try {
-    url = new URL(value);
+    url = new URL(foldMatchText(value));
   } catch {
     return null;
   }

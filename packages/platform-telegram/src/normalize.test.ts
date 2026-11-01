@@ -337,6 +337,82 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("app.example");
   });
 
+  it("folds gaps inside a structured invite before classifying it", async () => {
+    const phrase = "请免费领取礼品";
+    const zwsp = "INVITEFOLD33";
+    const selector = "INVITEFE0F33";
+    const nbsp = "INVITENBSP33";
+    const outcome = await normalize({
+      update_id: 3333,
+      message: {
+        message_id: 33,
+        date: 1761955200,
+        chat: { id: -100733, type: "supergroup" },
+        from: { id: 9 },
+        text: "点下面",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://telegram.me/joinchat/IN\uFE0F${selector}`,
+          },
+        ],
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: phrase,
+                url: `https://t.me/+IN\u200b${zwsp}`,
+              },
+            ],
+            [
+              {
+                text: "copy",
+                copy_text: {
+                  text: `https://telegram.dog/addlist/IN\u00A0${nbsp}`,
+                },
+              },
+              {
+                text: "spaced",
+                url: "https://bit. ly/only",
+              },
+              {
+                text: "short",
+                url: "https://tinyurl\u00A0.com/only",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点下面");
+    expect(outcome.event.message?.hosts).toEqual([
+      "telegram.me",
+      "t.me",
+      "telegram.dog",
+      "tinyurl.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual([
+      "telegram.me",
+      "t.me",
+      "telegram.dog",
+    ]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(zwsp);
+    expect(dumped).not.toContain(selector);
+    expect(dumped).not.toContain(nbsp);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("\u200b");
+    expect(dumped).not.toContain("\uFE0F");
+    expect(dumped).not.toContain("\u00A0");
+  });
+
   it("marks a hidden telegram invite without keeping the code", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalize({
