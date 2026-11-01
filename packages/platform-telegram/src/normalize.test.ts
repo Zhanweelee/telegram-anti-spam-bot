@@ -2500,6 +2500,144 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("keeps hostnames from gift messages", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "GIFT56";
+    const labeled = await normalize({
+      update_id: 2910,
+      message: {
+        message_id: 110,
+        date: 1761955200,
+        chat: { id: -100785, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        gift: {
+          gift: {
+            id: "g56",
+            sticker: {
+              file_id: "FILE56",
+              file_unique_id: "UNIQ56",
+              set_name: "https://tinyurl.com/stk56",
+            },
+            star_count: 56,
+          },
+          text: `${phrase} https://bit.ly/gift56 https://t.me/+${code}.`,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://example.com/ent56",
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "example.com",
+    ]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("gift56");
+    expect(labeledDump).not.toContain("ent56");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("FILE56");
+    expect(labeledDump).not.toContain("UNIQ56");
+
+    const upgraded = await normalize({
+      update_id: 2911,
+      message: {
+        message_id: 111,
+        date: 1761955200,
+        chat: { id: -100786, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        unique_gift: {
+          gift: { name: "NFT56" },
+          origin: "transfer",
+          text: phrase,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://t.me/%2BGIFT56",
+            },
+          ],
+          last_resale_currency: "XTR",
+          last_resale_amount: 56,
+        },
+      },
+    });
+    expect(upgraded.status).toBe("event");
+    if (upgraded.status !== "event") {
+      return;
+    }
+    expect(upgraded.event.message?.text).toBe("今天站会");
+    expect(upgraded.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(upgraded.event.message?.hosts).toEqual(["t.me"]);
+    expect(upgraded.event.message?.invites).toEqual(["t.me"]);
+    const upgradedDump = JSON.stringify(upgraded.event);
+    expect(upgradedDump).not.toContain(phrase);
+    expect(upgradedDump).not.toContain(code);
+    expect(upgradedDump).not.toContain("NFT56");
+    expect(upgradedDump).not.toContain("XTR");
+
+    const ordinary = await normalize({
+      update_id: 2912,
+      message: {
+        message_id: 112,
+        date: 1761955200,
+        chat: { id: -100787, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        gift_upgrade_sent: {
+          text: `${phrase} https://example.com/page56`,
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("page56");
+
+    const asBody = "免费领取 https://bit.ly/body56";
+    const body = await normalize({
+      update_id: 2913,
+      message: {
+        message_id: 113,
+        date: 1761955200,
+        chat: { id: -100788, type: "supergroup" },
+        from: { id: 9 },
+        gift: { text: asBody, is_private: true },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

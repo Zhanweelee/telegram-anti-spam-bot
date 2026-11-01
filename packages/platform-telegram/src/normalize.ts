@@ -490,6 +490,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(quote.text, urls);
     pushTextLinks(quote.entities, urls);
   }
+  for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    pushPlainUrls(value.text, urls);
+    pushTextLinks(value.entities, urls);
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
@@ -902,6 +910,24 @@ function messageText(
     quote.text.length > 0
   ) {
     return quote.text.slice(0, MAX_TEXT);
+  }
+  const gift = giftText(message);
+  if (gift.length > 0) {
+    return gift;
+  }
+  return "";
+}
+
+function giftText(message: Record<string, unknown>): string {
+  for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
+    const value = message[field];
+    if (
+      isRecord(value) &&
+      typeof value.text === "string" &&
+      value.text.length > 0
+    ) {
+      return value.text.slice(0, MAX_TEXT);
+    }
   }
   return "";
 }
