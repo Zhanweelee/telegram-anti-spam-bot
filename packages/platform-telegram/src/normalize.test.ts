@@ -5433,4 +5433,124 @@ describe("normalizeUpdate", () => {
     expect(both.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(both.event)).not.toContain("both79");
   });
+
+  it("keeps hostnames from a declined suggested post comment", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "CMT80";
+    const labeled = await normalize({
+      update_id: 5110,
+      message: {
+        message_id: 310,
+        date: 1761955200,
+        chat: { id: -101040, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        suggested_post_declined: {
+          comment: `${phrase} https://bit.ly/cmt80 https://t.me/+${code}.`,
+          suggested_post_message: {
+            message_id: 1,
+            date: 1761955200,
+            chat: { id: -101040, type: "supergroup" },
+            text: "https://cutt.ly/nest80",
+            caption: "https://ow.ly/cap80",
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("cmt80");
+    expect(labeledDump).not.toContain("nest80");
+    expect(labeledDump).not.toContain("cap80");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("ow.ly");
+
+    const ordinary = await normalize({
+      update_id: 5111,
+      message: {
+        message_id: 311,
+        date: 1761955200,
+        chat: { id: -101041, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        suggested_post_declined: {
+          comment: "https://example.com/ok80",
+          suggested_post_message: {
+            text: "https://bit.ly/onlypost80",
+          },
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok80");
+    expect(ordinaryDump).not.toContain("onlypost80");
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const comment = "免费领取 https://bit.ly/body80";
+    const asBody = await normalize({
+      update_id: 5112,
+      message: {
+        message_id: 312,
+        date: 1761955200,
+        chat: { id: -101042, type: "supergroup" },
+        from: { id: 9 },
+        suggested_post_declined: {
+          comment,
+          suggested_post_message: { text: phrase },
+        },
+      },
+    });
+    expect(asBody.status).toBe("event");
+    if (asBody.status !== "event") {
+      return;
+    }
+    expect(asBody.event.message?.text).toBe(comment);
+    expect(asBody.event.message?.textSha256).toBe(await sha256Hex(comment));
+    expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
+    const bodyDump = JSON.stringify(asBody.event);
+    expect(bodyDump).not.toContain(phrase);
+
+    const earlier = await normalize({
+      update_id: 5113,
+      message: {
+        message_id: 313,
+        date: 1761955200,
+        chat: { id: -101043, type: "supergroup" },
+        from: { id: 9 },
+        author_signature: "https://tinyurl.com/sig80",
+        sender_tag: "https://is.gd/tag80",
+        suggested_post_declined: {
+          comment: "今天站会",
+          suggested_post_message: { text: "https://rb.gy/post80" },
+        },
+      },
+    });
+    expect(earlier.status).toBe("event");
+    if (earlier.status !== "event") {
+      return;
+    }
+    expect(earlier.event.message?.text).toBe("今天站会");
+    expect(earlier.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(earlier.event.message?.hosts).toEqual(["tinyurl.com", "is.gd"]);
+    const earlierDump = JSON.stringify(earlier.event);
+    expect(earlierDump).not.toContain("sig80");
+    expect(earlierDump).not.toContain("tag80");
+    expect(earlierDump).not.toContain("post80");
+    expect(earlierDump).not.toContain("rb.gy");
+  });
 });

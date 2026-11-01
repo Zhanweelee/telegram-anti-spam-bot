@@ -567,6 +567,10 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(message.author_signature, urls);
   pushPlainUrls(message.sender_tag, urls);
+  const declined = message.suggested_post_declined;
+  if (isRecord(declined)) {
+    pushPlainUrls(declined.comment, urls);
+  }
   return urls;
 }
 
@@ -1093,6 +1097,10 @@ function messageText(
   if (topic.length > 0) {
     return topic;
   }
+  const comment = declineComment(message);
+  if (comment.length > 0) {
+    return comment;
+  }
   const added = addedServiceText(message);
   if (added.length > 0) {
     return added;
@@ -1177,6 +1185,18 @@ function addedServiceText(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function declineComment(message: Record<string, unknown>): string {
+  const declined = message.suggested_post_declined;
+  if (
+    isRecord(declined) &&
+    typeof declined.comment === "string" &&
+    declined.comment.length > 0
+  ) {
+    return declined.comment.slice(0, MAX_TEXT);
+  }
+  return "";
 }
 
 function topicName(message: Record<string, unknown>): string {
