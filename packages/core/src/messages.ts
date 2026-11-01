@@ -57,6 +57,8 @@ export const messageKeys = [
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
+  "command.chats.line",
+  "command.chats.more",
 ] as const;
 
 export type MessageKey = (typeof messageKeys)[number];
@@ -144,6 +146,8 @@ const zh = {
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
+  "command.chats.line": "{id} {used}/{limit}",
+  "command.chats.more": "+{count}",
 } satisfies Record<MessageKey, string>;
 
 const en = {
@@ -207,6 +211,8 @@ const en = {
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
+  "command.chats.line": "{id} {used}/{limit}",
+  "command.chats.more": "+{count}",
 } satisfies Record<MessageKey, string>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { zh, en };

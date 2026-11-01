@@ -8,6 +8,7 @@ import {
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
+  type ChatDirectory,
   createMemoryLogger,
   type Locale,
   parseEvent,
@@ -45,6 +46,7 @@ export async function runPrivateCommand(input: {
   readonly rulePackArchive?: RulePackArchive;
   readonly locale?: Locale;
   readonly quota?: QuotaReader;
+  readonly chats?: ChatDirectory;
 }): Promise<string | null> {
   const result = await runOperatorCommand({
     event: parseEvent({
@@ -78,6 +80,7 @@ export async function runPrivateCommand(input: {
       : {}),
     ...(input.locale ? { locale: input.locale } : {}),
     ...(input.quota ? { quota: input.quota } : {}),
+    ...(input.chats ? { chats: input.chats } : {}),
     source: {
       async loadChat() {
         return null;

@@ -688,4 +688,47 @@ describe("handleIncomingEvent", () => {
     );
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });
+
+  it("lists each granted chat with its quota and does not count the command", async () => {
+    const kit = deps();
+    const chats = createMemoryChatDirectory();
+    const policy = quotaPolicyFromEnv({
+      QUOTA_ENABLED: "true",
+      QUOTA_LIMIT: "1",
+    });
+    const store = createMemoryQuotaStore();
+    const usage = {
+      tenantId: "local",
+      chatId: "-100586",
+      atIso: "2026-11-01T00:00:00.000Z",
+      policy,
+    };
+    await store.consume(usage);
+    await store.consume(usage);
+    const before = await store.read(usage);
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_bot",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+      }),
+      { ...kit, chats },
+    );
+    await handleIncomingEvent(
+      await incoming({ text: "/chats", direct: true, actorId: "7" }),
+      {
+        ...kit,
+        chats,
+        adminActorIds: ["42"],
+        quota: { policy, store },
+      },
+    );
+    expect(kit.reply.sent.at(-1)?.text).toBe("chats\n-100586 2/1");
+    expect(await store.read(usage)).toEqual(before);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
 });

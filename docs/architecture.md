@@ -71,7 +71,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 `DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次。超过之后，只留下 `QUOTA_BASIC` 里的检测器，默认不含 `llm`。自部署默认关闭。`QUOTA_ENABLED` 可以覆盖。计数在 isolate 内存，最多 256 个群，重启清零。放不下或抛错时不降级。管理员消息不计数。`/quota <chatId>` 只读。状态行末尾带窗口结束时间。超额时下一行列出基础检测器 id，默认名单仍是 ADR 0026。见 ADR 0042 和 ADR 0043。支付和 Telegram Stars 没有实现。
 
-接入目录也在 `apps/cloud`。授予 bot 管理员的人，以及之后被标成管理员的人，只能在私聊操作自己的群。`ADMIN_USER_IDS` 仍可操作全部群。`/chats` 只返回群 id。目录最多 256 个群、每群 32 人。没配 `POLICY_KV` 时重启清空。配了之后按租户一个键留在同一份 KV 里，本 isolate 缓存 60 秒。见 ADR 0027 和 ADR 0036。
+接入目录也在 `apps/cloud`。授予 bot 管理员的人，以及之后被标成管理员的人，只能在私聊操作自己的群。`ADMIN_USER_IDS` 仍可操作全部群。`/chats` 返回群 id。额度打开时每一行带上已用次数和上限，每个群只读一次，不计数。读失败的那一行只留群 id。名单超过私聊长度时末尾是 `+` 和省略条数。目录最多 256 个群、每群 32 人。没配 `POLICY_KV` 时重启清空。配了之后按租户一个键留在同一份 KV 里，本 isolate 缓存 60 秒。见 ADR 0027、ADR 0036 和 ADR 0045。
 
 ## 隐私
 

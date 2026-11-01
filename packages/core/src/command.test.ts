@@ -2296,6 +2296,157 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(empty).toMatchObject({ text: "none" });
+    const counted = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota: {
+        async read(_tenantId, chatId) {
+          if (chatId === "-100") {
+            return {
+              enabled: true,
+              used: 2,
+              limit: 1,
+              period: "calendar_month",
+              degraded: true,
+              resetsAt: "2026-12-01T00:00:00.000Z",
+              basicDetectorIds: ["keyword"],
+            };
+          }
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(counted).toMatchObject({
+      text: "chats\n-100 2/1\n-200 0/3000",
+    });
+    expect(JSON.stringify(counted)).not.toContain("until");
+    expect(JSON.stringify(counted)).not.toContain("basic");
+    expect(JSON.stringify(counted)).not.toContain(phrase);
+    const english = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      chats: directory,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(english).toMatchObject({ text: "chats\n-100 2/1\n-200 2/1" });
+    const reads: string[] = [];
+    const scoped = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota: {
+        async read(_tenantId, chatId) {
+          reads.push(chatId);
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(reads).toEqual(["-100"]);
+    expect(scoped).toMatchObject({ text: "chats\n-100 2/1" });
+    const brokenQuota = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota: {
+        async read(_tenantId, chatId) {
+          if (chatId === "-100") {
+            throw new Error(phrase);
+          }
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(brokenQuota).toMatchObject({
+      text: "chats\n-100\n-200 0/3000",
+    });
+    expect(JSON.stringify(brokenQuota)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).toContain("quota_failed");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const disabled = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota: {
+        async read() {
+          return {
+            enabled: false,
+            used: 4,
+            limit: 1,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(disabled).toMatchObject({ text: "chats\n-100\n-200" });
+    const ids = Array.from(
+      { length: 200 },
+      (_, index) => `-${100000000000 + index}`,
+    );
+    const long = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          return ids;
+        },
+      },
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(long).toMatchObject({ status: "reply" });
+    if (long.status === "reply") {
+      expect(long.text.length).toBeLessThanOrEqual(3500);
+      expect(long.text.startsWith("chats\n-100000000000 0/3000\n")).toBe(true);
+      expect(long.text).toMatch(/\n\+\d+$/);
+      expect(long.text).not.toContain(phrase);
+    }
     const failed = await runOperatorCommand({
       event: event({ text: "/chats", direct: true }),
       adminActorIds: ["42"],

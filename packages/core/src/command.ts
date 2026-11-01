@@ -1185,7 +1185,11 @@ async function showChats(
     if (ids.length === 0) {
       return say(input, "command.chats.empty");
     }
-    return say(input, "command.chats.body", { chats: ids.join("\n") });
+    const lines: string[] = [];
+    for (const id of ids) {
+      lines.push(await chatQuotaLine(input, id));
+    }
+    return fitChatLines(input, lines);
   } catch {
     input.logger.warn("operator_rejected", {
       eventId: input.event.id,
@@ -1193,6 +1197,59 @@ async function showChats(
       command: "chats",
     });
     return say(input, "command.invalid");
+  }
+}
+
+function fitChatLines(
+  input: OperatorCommandInput,
+  lines: readonly string[],
+): string {
+  const full = say(input, "command.chats.body", { chats: lines.join("\n") });
+  if (full.length <= EXPORT_REPLY_LIMIT) {
+    return full;
+  }
+  for (let kept = lines.length - 1; kept >= 0; kept -= 1) {
+    const omitted = lines.length - kept;
+    const more = say(input, "command.chats.more", { count: omitted });
+    const body =
+      kept === 0 ? more : `${lines.slice(0, kept).join("\n")}\n${more}`;
+    const text = say(input, "command.chats.body", { chats: body });
+    if (text.length <= EXPORT_REPLY_LIMIT) {
+      return text;
+    }
+  }
+  return say(input, "command.chats.body", {
+    chats: say(input, "command.chats.more", { count: lines.length }),
+  });
+}
+
+async function chatQuotaLine(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const reader = input.quota;
+  if (!reader) {
+    return chatId;
+  }
+  try {
+    const parsed = quotaSnapshotSchema.safeParse(
+      await reader.read(input.event.tenantId, chatId, input.event.occurredAt),
+    );
+    if (!parsed.success) {
+      warnQuota(input, chatId);
+      return chatId;
+    }
+    if (!parsed.data.enabled) {
+      return chatId;
+    }
+    return say(input, "command.chats.line", {
+      id: chatId,
+      used: parsed.data.used,
+      limit: parsed.data.limit,
+    });
+  } catch {
+    warnQuota(input, chatId);
+    return chatId;
   }
 }
 

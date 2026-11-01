@@ -68,6 +68,38 @@ describe("operator command example", () => {
       "spam_keywords enabled file threshold 1 actions delete paused",
     );
     expect(rules).not.toContain(phrase);
+    const chats = await runPrivateCommand({
+      text: "/chats",
+      actorId: "42",
+      adminActorIds: ["42"],
+      chats: {
+        async noteBot() {
+          return "ok" as const;
+        },
+        async noteMember() {
+          return "ok" as const;
+        },
+        async chatsFor() {
+          return ["-100"];
+        },
+        async list() {
+          return ["-100"];
+        },
+      },
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+          };
+        },
+      },
+    });
+    expect(chats).toBe("chats\n-100 2/1");
+    expect(chats).not.toContain(phrase);
     expect(help).toContain("/chats");
     expect(help).toContain("/rule");
     expect(help).not.toContain(phrase);
