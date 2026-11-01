@@ -1230,6 +1230,199 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sticker.event)).not.toContain("stk-97");
   });
 
+  it("uses inline button text when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 2801,
+      message: {
+        message_id: 101,
+        date: 1761955200,
+        chat: { id: -100770, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "免费领取",
+                url: `https://example.com/docs?token=${phrase}`,
+              },
+              {
+                text: "callback",
+                callback_data: phrase,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取 callback");
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("免费领取 callback"),
+    );
+    expect(outcome.event.message?.hosts).toEqual(["example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+  });
+
+  it("joins button labels and leaves the copy payload out", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 2802,
+      message: {
+        message_id: 102,
+        date: 1761955200,
+        chat: { id: -100771, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "今天站会",
+                copy_text: { text: `${phrase} https://evil.example/hide` },
+              },
+              { text: "", url: "https://example.com/empty" },
+              { text: "免费领取", url: "https://example.com/a" },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会 免费领取");
+    expect(outcome.event.message?.hosts).toEqual(["example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("evil.example");
+  });
+
+  it("uses a login button label and leaves the login url unread", async () => {
+    const outcome = await normalize({
+      update_id: 2803,
+      message: {
+        message_id: 103,
+        date: 1761955200,
+        chat: { id: -100772, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "免费领取",
+                login_url: { url: "https://bit.ly/only" },
+              },
+              {
+                text: "加微信",
+                web_app: { url: "https://bit.ly/app" },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("免费领取 加微信");
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("bit.ly");
+  });
+
+  it("keeps a file name when a button label is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2804,
+      message: {
+        message_id: 104,
+        date: 1761955200,
+        chat: { id: -100773, type: "supergroup" },
+        from: { id: 9 },
+        document: {
+          file_name: "今天站会.pdf",
+          file_unique_id: "doc-104",
+        },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "免费领取", url: "https://example.com/a" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会.pdf");
+    expect(outcome.event.message?.hosts).toEqual(["example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+  });
+
+  it("uses button text before a manual quote", async () => {
+    const outcome = await normalize({
+      update_id: 2805,
+      message: {
+        message_id: 105,
+        date: 1761955200,
+        chat: { id: -100774, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          inline_keyboard: [[{ text: "今天站会" }]],
+        },
+        quote: {
+          text: "免费领取",
+          position: 0,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/quoted",
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("bit.ly");
+  });
+
+  it("leaves a reply keyboard out of the text", async () => {
+    const outcome = await normalize({
+      update_id: 2806,
+      message: {
+        message_id: 106,
+        date: 1761955200,
+        chat: { id: -100775, type: "supergroup" },
+        from: { id: 9 },
+        reply_markup: {
+          keyboard: [[{ text: "免费领取" }]],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("");
+    expect(JSON.stringify(outcome.event)).not.toContain("免费领取");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({

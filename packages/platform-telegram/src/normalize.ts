@@ -567,6 +567,10 @@ function messageText(
   if (label.length > 0) {
     return label;
   }
+  const buttons = buttonLabel(message);
+  if (buttons.length > 0) {
+    return buttons;
+  }
   const quote = message.quote;
   if (
     includeQuote &&
@@ -578,6 +582,32 @@ function messageText(
     return quote.text.slice(0, MAX_TEXT);
   }
   return "";
+}
+
+function buttonLabel(message: Record<string, unknown>): string {
+  const markup = message.reply_markup;
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (!isRecord(button) || typeof button.text !== "string") {
+        continue;
+      }
+      if (button.text.length === 0) {
+        continue;
+      }
+      parts.push(button.text);
+    }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
 }
 
 function mediaLabel(message: Record<string, unknown>): string {
