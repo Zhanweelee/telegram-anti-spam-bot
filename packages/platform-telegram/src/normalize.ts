@@ -381,6 +381,9 @@ function linkHosts(message: Record<string, unknown>): {
   for (const url of richUrls(message)) {
     urls.push(url);
   }
+  for (const url of sideUrls(message)) {
+    urls.push(url);
+  }
   for (const url of urls) {
     const link = hostFromUrl(url);
     if (!link) {
@@ -415,6 +418,61 @@ function urlsInText(text: string): string[] {
     found.push(/^https?:\/\//i.test(raw) ? raw : `http://${raw}`);
   }
   return found;
+}
+
+function sideUrls(message: Record<string, unknown>): string[] {
+  const urls: string[] = [];
+  const poll = message.poll;
+  if (isRecord(poll)) {
+    if (Array.isArray(poll.options)) {
+      for (const option of poll.options) {
+        if (!isRecord(option)) {
+          continue;
+        }
+        pushPlainUrls(option.text, urls);
+        pushTextLinks(option.text_entities, urls);
+      }
+    }
+    pushPlainUrls(poll.explanation, urls);
+    pushTextLinks(poll.explanation_entities, urls);
+    pushPlainUrls(poll.description, urls);
+    pushTextLinks(poll.description_entities, urls);
+  }
+  const checklist = message.checklist;
+  if (isRecord(checklist) && Array.isArray(checklist.tasks)) {
+    for (const task of checklist.tasks) {
+      if (!isRecord(task)) {
+        continue;
+      }
+      pushPlainUrls(task.text, urls);
+      pushTextLinks(task.text_entities, urls);
+    }
+  }
+  return urls;
+}
+
+function pushPlainUrls(value: unknown, urls: string[]): void {
+  if (typeof value !== "string") {
+    return;
+  }
+  for (const url of urlsInText(value)) {
+    urls.push(url);
+  }
+}
+
+function pushTextLinks(list: unknown, urls: string[]): void {
+  if (!Array.isArray(list)) {
+    return;
+  }
+  for (const entity of list) {
+    if (
+      isRecord(entity) &&
+      entity.type === "text_link" &&
+      typeof entity.url === "string"
+    ) {
+      urls.push(entity.url);
+    }
+  }
 }
 
 function buttonUrls(message: Record<string, unknown>): unknown[] {

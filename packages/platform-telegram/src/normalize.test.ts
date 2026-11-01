@@ -982,7 +982,7 @@ describe("normalizeUpdate", () => {
           tasks: [
             {
               id: 7,
-              text: phrase,
+              text: `${phrase} https://cutt.ly/task44`,
               text_entities: [
                 {
                   type: "text_link",
@@ -1003,12 +1003,99 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
-    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "cutt.ly",
+      "evil.example",
+    ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
-    expect(dumped).not.toContain("evil.example");
+    expect(dumped).not.toContain("/task");
+  });
+
+  it("keeps hostnames from poll options and descriptions", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "POLLSIDE44";
+    const encoded = "POLLENC44";
+    const outcome = await normalize({
+      update_id: 2303,
+      message: {
+        message_id: 53,
+        date: 1761955200,
+        chat: { id: -100722, type: "supergroup" },
+        from: { id: 9 },
+        poll: {
+          question: "今天站会",
+          options: [
+            {
+              text: `${phrase} https://bit.ly/opt44`,
+              voter_count: 0,
+              added_by_user: { id: 44, first_name: phrase },
+            },
+            {
+              text: "甲",
+              voter_count: 0,
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 1,
+                  url: "https://is.gd/hidden44",
+                },
+              ],
+            },
+          ],
+          explanation: `${phrase} https://t.me/+${code}.`,
+          explanation_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://tinyurl.com/ex44",
+            },
+          ],
+          description: `${phrase} https://example.com/desc44`,
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: `https://t.me/%2B${encoded}`,
+            },
+          ],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "is.gd",
+      "t.me",
+      "tinyurl.com",
+      "example.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(encoded);
+    expect(dumped).not.toContain("/opt44");
+    expect(dumped).not.toContain("/hidden44");
+    expect(dumped).not.toContain("/ex44");
+    expect(dumped).not.toContain("/desc44");
   });
 
   it("keeps a poll question when a checklist is also present", async () => {
