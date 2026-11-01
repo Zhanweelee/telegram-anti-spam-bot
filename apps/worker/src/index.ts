@@ -138,6 +138,7 @@ export function createApp(
           storage: stores.storage,
           policyStore: stores.policyStore,
           review: stores.review,
+          runtime: stores.runtime,
           ...(locale ? { locale } : {}),
           ...(allowUnsigned ? { allowUnsigned: true } : {}),
           ...(ai

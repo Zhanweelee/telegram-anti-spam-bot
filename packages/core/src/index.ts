@@ -235,5 +235,12 @@ export {
   type RuleSource,
   resolveRuleSet,
 } from "./rules-load.js";
-export type { RuleSwitch, RuntimeStore } from "./runtime.js";
+export {
+  MAX_RULE_SWITCHES,
+  type RuleSwitch,
+  type RuntimeDocument,
+  type RuntimeStore,
+  ruleSwitchSchema,
+  runtimeDocumentSchema,
+} from "./runtime.js";
 export { withTimeout } from "./timeout.js";

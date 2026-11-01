@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { workerReview } from "./review-runtime.js";
-import { workerPolicyStore, workerStorage } from "./screen.js";
+import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
 import { resolveStores, type StoreSlot } from "./stores.js";
 
 describe("resolveStores", () => {
@@ -9,6 +9,7 @@ describe("resolveStores", () => {
     expect(stores.storage).toBe(workerStorage);
     expect(stores.policyStore).toBe(workerPolicyStore);
     expect(stores.review).toBe(workerReview);
+    expect(stores.runtime).toBe(workerRuntime);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -52,11 +53,26 @@ describe("resolveStores", () => {
     expect(first.policyStore).not.toBe(workerPolicyStore);
     expect(first.review).toBe(second.review);
     expect(first.review).not.toBe(workerReview);
+    expect(first.runtime).toBe(second.runtime);
+    expect(first.runtime).not.toBe(workerRuntime);
+    expect(
+      await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
+    ).toBe(true);
+    const restarted = resolveStores(env, {});
+    expect(await restarted.runtime.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(1);
+    expect(values.size).toBe(2);
+    expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
+      true,
+    );
+    expect([...values.keys()].some((key) => key.startsWith("runtime"))).toBe(
+      true,
+    );
     expect(await first.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(await second.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(queries.filter((sql) => sql.startsWith("CREATE TABLE"))).toEqual([

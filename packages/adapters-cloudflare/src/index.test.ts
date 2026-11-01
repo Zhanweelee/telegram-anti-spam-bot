@@ -1,6 +1,10 @@
 import { bindPolicyStoreContract } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
-import { createKvPolicyStore, type StringStore } from "./index.js";
+import {
+  createKvPolicyStore,
+  createKvRuntimeStore,
+  type StringStore,
+} from "./index.js";
 
 bindPolicyStoreContract(() => createKvPolicyStore(createMapStore().store));
 
@@ -44,5 +48,107 @@ describe("kv policy store", () => {
       backing.values.set(key, "{");
     }
     expect(await store.get("tenant_a", "chat_1")).toBeNull();
+  });
+});
+
+describe("kv runtime store", () => {
+  it("keeps dry-run and rule switches after a new store reads the same KV", async () => {
+    const backing = createMapStore();
+    const first = createKvRuntimeStore(backing.store);
+    expect(await first.getDryRun("local", "-100")).toBe(false);
+    expect(backing.values.size).toBe(0);
+    await first.setDryRun("local", "-100", true);
+    expect(await first.setRuleSwitch("local", "-100", "via_inline", true)).toBe(
+      true,
+    );
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getDryRun("local", "-100")).toBe(true);
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    await second.setDryRun("local", "-100", false);
+    expect(await second.getDryRun("local", "-100")).toBe(false);
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    await second.clearRuleSwitch("local", "-100", "via_inline");
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([]);
+
+    const policy = createKvPolicyStore(backing.store);
+    await policy.put("local", "-100", {
+      exemptAdmins: true,
+      allowActorIds: [],
+    });
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([]);
+    expect(await policy.get("local", "-100")).toMatchObject({
+      exemptAdmins: true,
+    });
+  });
+
+  it("treats a corrupt document as empty and hides the text", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    const store = createKvRuntimeStore(backing.store);
+    await store.setDryRun("local", "chat_1", true);
+    const key = [...backing.values.keys()][0];
+    expect(key?.startsWith("runtime")).toBe(true);
+    if (key !== undefined) {
+      backing.values.set(key, JSON.stringify({ dryRun: true, text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getDryRun("local", "chat_1")).toBe(false);
+    expect(await fresh.listRuleSwitches("local", "chat_1")).toEqual([]);
+    expect(
+      JSON.stringify(await fresh.listRuleSwitches("local", "chat_1")),
+    ).not.toContain(secret);
+  });
+
+  it("keeps at most 32 switches and does not write the rejected id", async () => {
+    const backing = createMapStore();
+    const store = createKvRuntimeStore(backing.store);
+    for (let index = 0; index < 32; index += 1) {
+      expect(
+        await store.setRuleSwitch("local", "full", `rule_${index}`, true),
+      ).toBe(true);
+    }
+    expect(await store.setRuleSwitch("local", "full", "rule_extra", true)).toBe(
+      false,
+    );
+    expect(await store.setRuleSwitch("local", "full", "rule_0", false)).toBe(
+      true,
+    );
+    const saved = [...backing.values.values()].join("\n");
+    expect(saved).not.toContain("rule_extra");
+    expect(await store.listRuleSwitches("local", "full")).toHaveLength(32);
+  });
+
+  it("reads KV once per ttl for both dry-run and switches", async () => {
+    const backing = createMapStore();
+    let now = 0;
+    let gets = 0;
+    const store = createKvRuntimeStore(
+      {
+        async get(key) {
+          gets += 1;
+          return backing.store.get(key);
+        },
+        put: (key, value) => backing.store.put(key, value),
+      },
+      { now: () => now, ttlMs: 60_000 },
+    );
+    await store.setRuleSwitch("local", "chat_1", "regex_hint", true);
+    gets = 0;
+    expect(await store.listRuleSwitches("local", "chat_1")).toEqual([
+      { ruleId: "regex_hint", enabled: true },
+    ]);
+    expect(await store.getDryRun("local", "chat_1")).toBe(false);
+    expect(gets).toBe(0);
+    now = 60_000;
+    expect(await store.getDryRun("local", "chat_1")).toBe(false);
+    expect(gets).toBe(1);
+    expect(await store.listRuleSwitches("local", "chat_1")).toEqual([
+      { ruleId: "regex_hint", enabled: true },
+    ]);
+    expect(gets).toBe(1);
   });
 });

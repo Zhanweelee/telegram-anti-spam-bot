@@ -63,7 +63,7 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 正则规则 `regex_hint` 同样是关闭的。要打开时只改这条规则的 `enabled`，或在私聊用 `/rule`。模式列表在检测器里，创建时就会拒绝过长或带嵌套量词的写法。见 ADR 0023。
 
-`/rule [chatId] <ruleId> on|off|reset` 只改这一群这一条已有规则的启用状态。开关在 isolate 内存里，每个群最多 32 条，一共最多 256 个群，重启后回到文件里的 `enabled`。不新增 wrangler 变量。见 ADR 0034。
+`/rule [chatId] <ruleId> on|off|reset` 只改这一群这一条已有规则的启用状态。没配 `POLICY_KV` 时，开关在 isolate 内存里，最多 256 个群、每个群 32 条，重启后回到文件。配了 `POLICY_KV` 之后，开关和 dry-run 写进那个 KV，每个群一个键，最多 32 条，重启还在。热路径用本 isolate 的 60 秒缓存，不按每条消息读 KV。不新增绑定。见 ADR 0034 和 ADR 0035。
 
 ## 部署
 

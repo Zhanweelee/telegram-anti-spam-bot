@@ -190,6 +190,45 @@ describe("POST /telegram/webhook", () => {
     expect(logged).not.toContain(phrase);
   });
 
+  it("stores a private rule switch in POLICY_KV", async () => {
+    const values = new Map<string, string>();
+    const kv = {
+      async get(key: string) {
+        return values.get(key) ?? null;
+      },
+      async put(key: string, value: string) {
+        values.set(key, value);
+      },
+    };
+    const app = createApp();
+    const response = await app.request(
+      "/telegram/webhook",
+      {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": SECRET },
+        body: JSON.stringify({
+          update_id: 81,
+          message: {
+            message_id: 2,
+            date: 1761955200,
+            chat: { id: 42, type: "private" },
+            from: { id: 42 },
+            text: "/rule -100 via_inline on",
+          },
+        }),
+      },
+      {
+        WEBHOOK_SECRET: SECRET,
+        ADMIN_USER_IDS: "42",
+        POLICY_KV: kv as unknown as KVNamespace,
+      },
+    );
+    const raw = await response.text();
+    expect(response.status).toBe(200);
+    expect(raw).not.toContain("via_inline");
+    expect([...values.values()].join("\n")).toContain("via_inline");
+  });
+
   it("screens with the default pipeline and omits message text from the body", async () => {
     const spam = "请免费领取礼品";
     const app = createApp();

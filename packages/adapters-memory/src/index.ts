@@ -7,6 +7,7 @@ import {
   type CaptchaStore,
   type DeleteTarget,
   isExpired,
+  MAX_RULE_SWITCHES,
   type ModerationPort,
   type MuteTarget,
   type PolicyStore,
@@ -178,7 +179,6 @@ function policyKey(tenantId: string, chatId: string): string {
 }
 
 const MAX_SWITCH_CHATS = 256;
-const MAX_SWITCHES_PER_CHAT = 32;
 
 export function createMemoryRuntimeStore(): RuntimeStore {
   const dryRun = new Set<string>();
@@ -215,7 +215,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
         saved = new Map();
         switches.set(id, saved);
       }
-      if (!saved.has(ruleId) && saved.size >= MAX_SWITCHES_PER_CHAT) {
+      if (!saved.has(ruleId) && saved.size >= MAX_RULE_SWITCHES) {
         return false;
       }
       saved.set(ruleId, enabled);
