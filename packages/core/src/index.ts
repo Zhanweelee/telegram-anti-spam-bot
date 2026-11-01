@@ -160,6 +160,14 @@ export {
 export { assertNoRawContent, redactExactText } from "./privacy.js";
 export type { ReplyMessage, ReplyPort } from "./reply.js";
 export {
+  buildReportNotice,
+  createMemoryNotifier,
+  formatReportNotice,
+  type Notifier,
+  type ReportNotice,
+  reportNoticeSchema,
+} from "./report.js";
+export {
   buildReviewSample,
   createMemoryReviewQueue,
   MAX_REVIEW_SAMPLES,

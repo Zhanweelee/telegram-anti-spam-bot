@@ -1,0 +1,22 @@
+[
+  {
+    "name": "dry_run",
+    "dryRun": true,
+    "hasNotifier": true,
+    "status": "skipped",
+    "detail": "dry_run"
+  },
+  {
+    "name": "unavailable",
+    "dryRun": false,
+    "hasNotifier": false,
+    "status": "failed",
+    "detail": "report_unavailable"
+  },
+  {
+    "name": "executed",
+    "dryRun": false,
+    "hasNotifier": true,
+    "status": "executed"
+  }
+]

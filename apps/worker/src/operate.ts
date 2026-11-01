@@ -13,6 +13,7 @@ import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { workerRulePacks } from "./pack-runtime.js";
+import { adminNotifier } from "./report.js";
 import { workerReview } from "./review-runtime.js";
 import { fileRuleSource } from "./rules.js";
 import {
@@ -49,6 +50,12 @@ export async function handleIncomingEvent(
   const blocklist = deps.blocklist ?? workerBlocklist;
   const review = deps.review ?? workerReview;
   const rulePacks = deps.rulePacks ?? workerRulePacks;
+  const reportActorId = (deps.adminActorIds ?? []).find((id) => id.length > 0);
+  const notifier =
+    deps.notifier ??
+    (deps.reply && reportActorId
+      ? adminNotifier(deps.reply, reportActorId)
+      : undefined);
   if (event.kind === "challenge") {
     try {
       await resolveChallenge({
@@ -110,6 +117,7 @@ export async function handleIncomingEvent(
     ...(deps.externalActions ? { externalActions: deps.externalActions } : {}),
     rulePacks,
     blocklist,
+    ...(notifier ? { notifier } : {}),
   });
   const prompted = result.actionResults.some(
     (item) => item.actionId === "captcha" && item.status === "executed",

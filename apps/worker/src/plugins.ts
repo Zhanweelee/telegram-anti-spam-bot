@@ -133,6 +133,18 @@ export const builtinManifests = {
     integrity:
       "691e59a13ec3cbbaa89067434789b6d25a59f3355badfee2d99c7f1ea6093008",
   }),
+  log: manifest({
+    id: "log",
+    kind: "action",
+    integrity:
+      "49e97a90c8d3fc387d63d35e26691e58ee70a0da8a6e65340830adeb48609853",
+  }),
+  report: manifest({
+    id: "report",
+    kind: "action",
+    integrity:
+      "37571b39efd10deda3f3e2d285e96ddac357afd619dda4c123c1d59fab5672c3",
+  }),
 } as const;
 
 async function integrityFor(value: unknown): Promise<string> {

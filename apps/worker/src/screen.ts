@@ -2,7 +2,9 @@ import {
   createBanAction,
   createCaptchaAction,
   createDeleteAction,
+  createLogAction,
   createMuteAction,
+  createReportAction,
 } from "@tasb/actions";
 import {
   createMemoryCache,
@@ -24,6 +26,7 @@ import {
   type Logger,
   loadPolicy,
   type ModerationPort,
+  type Notifier,
   type PipelineResult,
   type PolicyStore,
   type RulePackArchive,
@@ -108,6 +111,7 @@ export interface ScreenDeps {
   readonly allowUnsigned?: boolean;
   readonly externalDetectors?: readonly PluginSlot<Detector>[];
   readonly externalActions?: readonly PluginSlot<Action>[];
+  readonly notifier?: Notifier;
   readonly rulePacks?: {
     readonly store: RuleSubscriptionStore;
     readonly source: RulePackSource;
@@ -251,6 +255,18 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.ban,
         value: createBanAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.log,
+        value: createLogAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.report,
+        value: createReportAction(
+          deps.notifier ? { notifier: deps.notifier } : {},
+        ),
       },
       {
         source: "builtin",

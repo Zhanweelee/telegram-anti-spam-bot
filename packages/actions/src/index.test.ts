@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type BanTarget,
+  createMemoryLogger,
   type DeleteTarget,
   type Event,
   type ModerationPort,
@@ -13,7 +14,9 @@ import { describe, expect, it } from "vitest";
 import {
   createBanAction,
   createDeleteAction,
+  createLogAction,
   createMuteAction,
+  createReportAction,
 } from "./index.js";
 
 const fixtures = JSON.parse(
@@ -204,5 +207,125 @@ describe("mute and ban actions", () => {
 
   it("rejects a non-positive mute duration", () => {
     expect(() => createMuteAction({ durationSeconds: 0 })).toThrow();
+  });
+});
+
+const logFixtures = JSON.parse(
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../fixtures/log.json"),
+    "utf8",
+  ),
+) as {
+  name: string;
+  dryRun: boolean;
+  status: string;
+  detail?: string;
+}[];
+
+const reportFixtures = JSON.parse(
+  readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "../fixtures/report.json"),
+    "utf8",
+  ),
+) as {
+  name: string;
+  dryRun: boolean;
+  hasNotifier: boolean;
+  status: string;
+  detail?: string;
+}[];
+
+const phrase = "请免费领取礼品";
+
+describe("log and report actions", () => {
+  it("follows log fixtures and keeps the message out of the log", async () => {
+    const action = createLogAction();
+    for (const fixture of logFixtures) {
+      const logger = createMemoryLogger();
+      const event = messageEvent();
+      const result = await action.execute({
+        event: {
+          ...event,
+          message: event.message
+            ? { ...event.message, text: phrase }
+            : undefined,
+        },
+        decision: {
+          action: "log",
+          ruleIds: ["spam_keywords"],
+          score: 1,
+          reasons: ["keyword_match", phrase],
+          evidence: [{ kind: "keyword", summary: phrase }],
+        },
+        dryRun: fixture.dryRun,
+        moderator: ports(),
+        logger,
+        signal: { aborted: false },
+      });
+      expect(result.status, fixture.name).toBe(fixture.status);
+      expect(result.detail).toBe(fixture.detail);
+      expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    }
+  });
+
+  it("follows report fixtures and hides notifier failures", async () => {
+    for (const fixture of reportFixtures) {
+      const notices: string[] = [];
+      const action = createReportAction(
+        fixture.hasNotifier
+          ? {
+              notifier: {
+                async notify(notice) {
+                  notices.push(JSON.stringify(notice));
+                },
+              },
+            }
+          : {},
+      );
+      const logger = createMemoryLogger();
+      const result = await action.execute({
+        event: messageEvent(),
+        decision: {
+          action: "report",
+          ruleIds: ["spam_keywords"],
+          score: 1,
+          reasons: ["keyword_match"],
+          evidence: [],
+        },
+        dryRun: fixture.dryRun,
+        moderator: ports(),
+        logger,
+        signal: { aborted: false },
+      });
+      expect(result.status, fixture.name).toBe(fixture.status);
+      expect(result.detail).toBe(fixture.detail);
+    }
+    const logger = createMemoryLogger();
+    const failed = await createReportAction({
+      notifier: {
+        async notify() {
+          throw new Error(phrase);
+        },
+      },
+    }).execute({
+      event: messageEvent(),
+      decision: {
+        action: "report",
+        ruleIds: ["spam_keywords"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: ports(),
+      logger,
+      signal: { aborted: false },
+    });
+    expect(failed).toEqual({
+      actionId: "report",
+      status: "failed",
+      detail: "report_failed",
+    });
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
   });
 });

@@ -16,6 +16,7 @@ import {
   createMemoryLogger,
   type Detector,
   type LlmClassifier,
+  type Notifier,
   parseEvent,
   type RuleSource,
   type Storage,
@@ -860,5 +861,56 @@ describe("screenTelegramEvent", () => {
     const logged = JSON.stringify(logger.entries);
     expect(logged).not.toContain(phrase);
     expect(logged).not.toContain(token);
+  });
+
+  it("logs and reports without copying the message", async () => {
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const notices: string[] = [];
+    const notifier: Notifier = {
+      async notify(notice) {
+        notices.push(JSON.stringify(notice));
+      },
+    };
+    const source: RuleSource = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "watch",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["log", "report"],
+            },
+          ],
+        };
+      },
+    };
+    const result = await screenTelegramEvent(
+      await event(phrase, false, "-100566"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source,
+        notifier,
+      },
+    );
+    expect(result.decision.action).toBe("report");
+    expect(result.actionResults.map((item) => item.status)).toEqual([
+      "executed",
+      "executed",
+    ]);
+    expect(notices[0]).toContain("keyword_match");
+    expect(notices[0]).not.toContain(phrase);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).toContain("moderation_logged");
+    expect(logged).not.toContain(phrase);
   });
 });

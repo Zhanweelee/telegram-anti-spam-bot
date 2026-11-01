@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-08
+
+- `log` 写一条不含原文的结构化日志。`report` 通过 `Notifier` 通知，正文只有群、事件、分数、规则和 reason。见 ADR 0021。
+- 配了管理员和 bot token 时，上报发给第一个管理员，只发一条。没有通知端口时动作失败，决策保留。
+- 默认规则不自动上报。
+
 ### P1-07
 
 - 配了 `TELEGRAM_BOT_TOKEN` 之后，delete、mute、ban 各发一次 Telegram 请求。见 ADR 0020。

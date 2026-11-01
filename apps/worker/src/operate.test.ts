@@ -451,4 +451,40 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(again.logger.entries)).not.toContain(phrase);
     expect(calls).toBe(2);
   });
+
+  it("reports a hit to the first admin without the message", async () => {
+    const kit = deps();
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100567", actorId: "5" }),
+      {
+        ...kit,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source: {
+          async loadChat() {
+            return null;
+          },
+          async loadDefault() {
+            return {
+              version: 1,
+              aggregate: "max",
+              rules: [
+                {
+                  id: "watch",
+                  enabled: true,
+                  detectorIds: ["keyword"],
+                  threshold: 1,
+                  actions: ["report"],
+                },
+              ],
+            };
+          },
+        },
+      },
+    );
+    expect(kit.reply.sent).toHaveLength(1);
+    expect(kit.reply.sent[0]?.chatId).toBe("42");
+    expect(kit.reply.sent[0]?.text).toContain("keyword_match");
+    expect(kit.reply.sent[0]?.text).not.toContain(phrase);
+  });
 });

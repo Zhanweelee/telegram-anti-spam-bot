@@ -46,7 +46,7 @@ Event
 
 检测器抛错或超时：默认 fail-open（当作没命中，并记一条 `detector_error`）。`failureMode: "closed"` 时把该检测器当作 score 1。配置错误（重复插件、非法超时、非法事件）直接抛出，不吞掉。
 
-动作抛错同样不推翻已经做出的决策，结果记为 `failed`。
+动作抛错同样不推翻已经做出的决策，结果记为 `failed`。`log` 写一条不含原文的日志。`report` 调用 `Notifier`，通知里没有消息原文和证据摘要。见 ADR 0021。
 
 ## 插件
 

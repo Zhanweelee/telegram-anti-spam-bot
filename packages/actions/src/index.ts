@@ -1,9 +1,11 @@
 import {
   type Action,
   beginChallenge,
+  buildReportNotice,
   type CaptchaStore,
   type Clock,
   defineAction,
+  type Notifier,
   type Storage,
 } from "@tasb/core";
 import { z } from "zod";
@@ -180,6 +182,76 @@ export function createBanAction(): Action {
         actorId: ctx.event.actor.id,
       });
       return { actionId: "ban", status: "executed" };
+    },
+  });
+}
+
+export function createLogAction(): Action {
+  return defineAction({
+    id: "log",
+    version: "0.1.0",
+    capabilities: ["observe"],
+    configSchema: z.strictObject({}),
+    config: {},
+    async execute(ctx) {
+      if (ctx.dryRun) {
+        return { actionId: "log", status: "skipped", detail: "dry_run" };
+      }
+      const notice = buildReportNotice(ctx.event, ctx.decision);
+      ctx.logger.info("moderation_logged", {
+        eventId: notice.eventId,
+        tenantId: notice.tenantId,
+        chatId: notice.chatId,
+        score: notice.score,
+        rules: notice.ruleIds.join(",") || "none",
+        reasons: notice.reasons.join(",") || "none",
+      });
+      return { actionId: "log", status: "executed" };
+    },
+  });
+}
+
+export function createReportAction(
+  deps: { readonly notifier?: Notifier } = {},
+): Action {
+  return defineAction({
+    id: "report",
+    version: "0.1.0",
+    capabilities: ["notify"],
+    configSchema: z.strictObject({}),
+    config: {},
+    async execute(ctx) {
+      if (ctx.dryRun) {
+        return { actionId: "report", status: "skipped", detail: "dry_run" };
+      }
+      const notifier = deps.notifier;
+      if (!notifier) {
+        return {
+          actionId: "report",
+          status: "failed",
+          detail: "report_unavailable",
+        };
+      }
+      try {
+        const notice = buildReportNotice(ctx.event, ctx.decision);
+        await notifier.notify(notice);
+        ctx.logger.info("moderation_reported", {
+          eventId: notice.eventId,
+          chatId: notice.chatId,
+        });
+        return { actionId: "report", status: "executed" };
+      } catch {
+        ctx.logger.warn("report_failed", {
+          eventId: ctx.event.id,
+          tenantId: ctx.event.tenantId,
+          chatId: ctx.event.chatId,
+        });
+        return {
+          actionId: "report",
+          status: "failed",
+          detail: "report_failed",
+        };
+      }
     },
   });
 }
