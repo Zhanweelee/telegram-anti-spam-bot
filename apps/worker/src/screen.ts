@@ -12,6 +12,7 @@ import {
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
+import { degradeRules, type QuotaPolicy, type QuotaStore } from "@tasb/cloud";
 import {
   type Action,
   type BlocklistStore,
@@ -31,6 +32,7 @@ import {
   type PolicyStore,
   type RulePackArchive,
   type RulePackSource,
+  type RuleSet,
   type RuleSource,
   type RuleSubscriptionStore,
   type RuntimeStore,
@@ -131,6 +133,10 @@ export interface ScreenDeps {
     readonly source: RulePackSource;
     readonly archive: RulePackArchive;
   };
+  readonly quota?: {
+    readonly policy: QuotaPolicy;
+    readonly store: QuotaStore;
+  };
 }
 
 async function subscribedPack(
@@ -153,13 +159,58 @@ async function subscribedPack(
   }
 }
 
+async function applyQuota(
+  event: Event,
+  rules: RuleSet,
+  quota: ScreenDeps["quota"],
+  logger: Logger,
+): Promise<RuleSet> {
+  if (!quota?.policy.enabled || event.actor.isAdmin) {
+    return rules;
+  }
+  try {
+    const snapshot = await quota.store.consume({
+      tenantId: event.tenantId,
+      chatId: event.chatId,
+      atIso: event.occurredAt,
+      policy: quota.policy,
+    });
+    if (!snapshot) {
+      logger.warn("quota_skipped", {
+        eventId: event.id,
+        tenantId: event.tenantId,
+        chatId: event.chatId,
+      });
+      return rules;
+    }
+    if (!snapshot.degraded) {
+      return rules;
+    }
+    logger.warn("quota_degraded", {
+      eventId: event.id,
+      tenantId: event.tenantId,
+      chatId: event.chatId,
+      used: snapshot.used,
+      limit: snapshot.limit,
+    });
+    return degradeRules(rules, quota.policy.basicDetectorIds);
+  } catch {
+    logger.warn("quota_failed", {
+      eventId: event.id,
+      tenantId: event.tenantId,
+      chatId: event.chatId,
+    });
+    return rules;
+  }
+}
+
 export async function screenTelegramEvent(
   event: Event,
   deps: ScreenDeps = {},
 ): Promise<PipelineResult> {
   const logger = deps.logger ?? createWorkerLogger();
   const packId = await subscribedPack(event, deps.rulePacks, logger);
-  const rules = await resolveRuleSet({
+  const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
     chatId: event.chatId,
     cache: deps.cache ?? workerCache,
@@ -175,6 +226,7 @@ export async function screenTelegramEvent(
         }
       : {}),
   });
+  const rules = await applyQuota(event, loaded, deps.quota, logger);
   const policy = await loadPolicy({
     tenantId: event.tenantId,
     chatId: event.chatId,

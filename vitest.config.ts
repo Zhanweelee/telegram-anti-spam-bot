@@ -23,6 +23,7 @@ export default defineConfig({
       "examples/plugin-manifest",
       "evals",
       "apps/worker",
+      "apps/cloud",
     ],
   },
 });

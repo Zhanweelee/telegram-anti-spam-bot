@@ -50,6 +50,7 @@ export async function handleIncomingEvent(
   const blocklist = deps.blocklist ?? workerBlocklist;
   const review = deps.review ?? workerReview;
   const rulePacks = deps.rulePacks ?? workerRulePacks;
+  const quota = deps.quota;
   const reportActorId = (deps.adminActorIds ?? []).find((id) => id.length > 0);
   const notifier =
     deps.notifier ??
@@ -90,6 +91,20 @@ export async function handleIncomingEvent(
     review,
     rulePacks: rulePacks.store,
     ...(deps.locale ? { locale: deps.locale } : {}),
+    ...(quota
+      ? {
+          quota: {
+            async read(tenantId, chatId, atIso) {
+              return quota.store.read({
+                tenantId,
+                chatId,
+                atIso,
+                policy: quota.policy,
+              });
+            },
+          },
+        }
+      : {}),
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
@@ -117,6 +132,7 @@ export async function handleIncomingEvent(
     ...(deps.externalActions ? { externalActions: deps.externalActions } : {}),
     rulePacks,
     blocklist,
+    ...(quota ? { quota } : {}),
     ...(notifier ? { notifier } : {}),
   });
   const prompted = result.actionResults.some(

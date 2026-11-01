@@ -3,7 +3,7 @@
 TASB 是一个 Telegram 反垃圾 bot。运行形态有两种，核心只有一份。
 
 - **Self-host**：用户把 `apps/worker` 部署到自己的 Cloudflare 账号。单租户，没有计费。
-- **Cloud**：维护者部署公共 bot。用户把 bot 拉进群并授予管理员权限即接入。额度、租户目录放在 `apps/cloud`，以后才实现。
+- **Cloud**：维护者部署公共 bot。用户把 bot 拉进群并授予管理员权限即接入。免费额度的配置在 `apps/cloud`。支付还没有实现。
 
 核心通过端口接收存储、时钟、日志和处罚能力。它不读取 `DEPLOYMENT_MODE`，也没有 `self-host` / `cloud` 分支。
 
@@ -14,9 +14,10 @@ apps/worker
   ├─▶ packages/platform-telegram ─▶ packages/core
   ├─▶ packages/adapters-cloudflare ─▶ packages/core
   ├─▶ packages/detectors-* ─▶ packages/core
-  └─▶ packages/actions ─▶ packages/core
+  ├─▶ packages/actions ─▶ packages/core
+  └─▶ apps/cloud ─▶ packages/core
 
-apps/cloud ─▶ （未来的租户/额度模块；谁都不许反向依赖它）
+apps/cloud 只放租户目录和免费额度。core 不引用它，也不读取部署模式。
 
 examples / evals / packages/sdk ─▶ core 与插件
 
@@ -66,7 +67,9 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 ## 多租户
 
-每条事件、规则和审计都带 `tenantId` 与 `chatId`。Self-host 是「一个租户、不计费」的配置，不是另一套程序。租户如何开通、额度如何扣，只允许出现在 `apps/cloud`。
+每条事件、规则和审计都带 `tenantId` 与 `chatId`。Self-host 是「一个租户、默认不计额度」的配置，不是另一套程序。免费额度的开关、次数、周期和基础检测器只放在 `apps/cloud`。core 只认识一份只读快照。见 ADR 0026。
+
+`DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次。超过之后，只留下 `QUOTA_BASIC` 里的检测器，默认不含 `llm`。自部署默认关闭。`QUOTA_ENABLED` 可以覆盖。计数在 isolate 内存，最多 256 个群，重启清零。放不下或抛错时不降级。管理员消息不计数。`/quota <chatId>` 只读。支付和 Telegram Stars 没有实现。
 
 ## 隐私
 

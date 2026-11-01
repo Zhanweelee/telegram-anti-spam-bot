@@ -1416,6 +1416,113 @@ describe("runOperatorCommand", () => {
       ),
     ).toBe(true);
   });
+
+  it("reports a configurable quota without echoing extra text", async () => {
+    const deps = kit();
+    const missing = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(missing).toMatchObject({ text: "quota off" });
+    const usage = await runOperatorCommand({
+      event: event({ text: `/quota -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(usage).toMatchObject({ text: "用法：/quota <chatId>" });
+    expect(JSON.stringify(usage)).not.toContain(phrase);
+    const shown = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(shown).toMatchObject({
+      text: "quota -100 2/1 calendar_month basic",
+    });
+    const english = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 1,
+            limit: 3000,
+            period: "rolling_30d",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: "Quota -100 1/3000 rolling_30d full",
+    });
+    const broken = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          throw new Error(phrase);
+        },
+      },
+      ...deps,
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const off = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: false,
+            used: 0,
+            limit: 1,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(off).toMatchObject({ text: "quota off" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: "/quota nope", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return null;
+        },
+      },
+      ...deps,
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+  });
 });
 
 function appealAudit(): AuditRecord {

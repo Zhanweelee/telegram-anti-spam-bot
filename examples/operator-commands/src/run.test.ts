@@ -19,6 +19,7 @@ describe("operator command example", () => {
     expect(help).toContain("/appeal");
     expect(help).toContain("/evals");
     expect(help).toContain("/packs");
+    expect(help).toContain("/quota");
     expect(help).not.toContain(phrase);
     const english = await runPrivateCommand({
       text: "/help",

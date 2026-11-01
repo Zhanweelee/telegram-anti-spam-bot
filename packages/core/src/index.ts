@@ -161,6 +161,14 @@ export {
   prefilterPolicySchema,
 } from "./prefilter.js";
 export { assertNoRawContent, redactExactText } from "./privacy.js";
+export {
+  type QuotaPeriod,
+  type QuotaReader,
+  type QuotaSnapshot,
+  quotaPeriodSchema,
+  quotaPeriods,
+  quotaSnapshotSchema,
+} from "./quota.js";
 export type { ReplyMessage, ReplyPort } from "./reply.js";
 export {
   buildReportNotice,

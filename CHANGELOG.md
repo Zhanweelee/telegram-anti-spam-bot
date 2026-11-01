@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P2-03
+
+- 免费额度做成配置。云模式默认每群每个 UTC 自然月 3000 次，超额只留基础检测器。见 ADR 0026。
+- 自部署默认关闭。`QUOTA_ENABLED`、`QUOTA_LIMIT`、`QUOTA_PERIOD`、`QUOTA_BASIC` 可以覆盖。
+- `/quota <chatId>` 只读已用次数。没有接支付。
+
 ### P1-11
 
 - 消息可以带 `forward` 类别：`user`、`chat`、`channel`、`hidden`。见 ADR 0025。

@@ -10,6 +10,7 @@ import {
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
+import { createMemoryQuotaStore, quotaPolicyFromEnv } from "@tasb/cloud";
 import {
   type BlocklistStore,
   canonicalPluginPayload,
@@ -634,6 +635,94 @@ describe("screenTelegramEvent", () => {
       { rateWindow: createMemoryRateWindow() },
     );
     expect(user.decision.action).toBe("allow");
+  });
+
+  it("keeps keyword deletes after the free quota drops llm", async () => {
+    const phrase = "请免费领取礼品";
+    let calls = 0;
+    const llm: LlmClassifier = {
+      async classify() {
+        calls += 1;
+        return { label: "NEGATIVE", score: 0.99 };
+      },
+    };
+    const quota = {
+      policy: quotaPolicyFromEnv({
+        QUOTA_ENABLED: "true",
+        QUOTA_LIMIT: "1",
+        QUOTA_BASIC: "keyword",
+      }),
+      store: createMemoryQuotaStore(),
+    };
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "spam_keywords",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+            {
+              id: "llm_hint",
+              enabled: true,
+              detectorIds: ["llm"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const logger = createMemoryLogger();
+    const first = await screenTelegramEvent(
+      await event(phrase, false, "-100584"),
+      {
+        logger,
+        llm,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        quota,
+      },
+    );
+    expect(first.decision.action).toBe("delete");
+    expect(calls).toBe(1);
+    const second = await screenTelegramEvent(
+      await event(phrase, false, "-100584"),
+      {
+        logger,
+        llm,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        quota,
+      },
+    );
+    expect(second.decision.action).toBe("delete");
+    expect(second.decision.reasons).toContain("keyword_match");
+    expect(second.decision.reasons).not.toContain("llm");
+    expect(calls).toBe(1);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    const other = await screenTelegramEvent(
+      await event("hello", false, "-100585"),
+      {
+        llm,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        quota,
+      },
+    );
+    expect(calls).toBe(2);
+    expect(other.decision.reasons).toContain("llm");
   });
 
   it("leaves an unsigned external detector out of the pipeline", async () => {

@@ -77,9 +77,13 @@ const rules = [
       /^@tasb\/actions$/,
       /^@tasb\/adapter-memory$/,
       /^@tasb\/adapter-cloudflare$/,
+      /^@tasb\/cloud$/,
     ],
   },
-  { prefix: "apps/cloud/", allow: [/^\.{1,2}\//] },
+  {
+    prefix: "apps/cloud/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
   {
     prefix: "examples/",
     allow: [/^\.{1,2}\//, /^@tasb\//, /^node:/, /^vitest$/],

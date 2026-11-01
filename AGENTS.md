@@ -66,7 +66,7 @@ packages/adapters-cloudflare  D1 审计与 KV 白名单
 packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  Node 侧测试帮手（sha256、构造事件）
 apps/worker                   Hono 入口
-apps/cloud                    云租户模块。禁止在这里擅自写计费
+apps/cloud                    云租户模块。免费额度配置在这里。支付仍不实现
 examples/minimal-pipeline     端到端例子
 evals                         评测集。检测器变更必须跑
 docs/adr                      ADR
@@ -127,13 +127,13 @@ pnpm --filter @tasb/example-minimal-pipeline test
 - 把消息原文写入存储、日志、评测基线或错误字符串。
 - 跳过测试或降低覆盖率门槛来让 CI 变绿。
 - 没有 ADR 就改公共接口、加依赖、或让 core 感知部署模式。
-- 在 `apps/cloud` 里实现扣费、定价或支付。
+- 在 `apps/cloud` 里实现扣费、定价或支付。免费额度的默认值写在 ADR 0026。
 
 ## 必须停下来问人
 
 遇到下面任何一项，停止实现，把问题和可选方案写出来：
 
-- 计费、付费、Telegram Stars、免费额度的具体数字
+- 付费、Telegram Stars，或改掉 ADR 0026 里已经定下的免费额度默认值
 - 改变数据保留策略（初始 30 天写在 ADR 0003，改它也要问）
 - 破坏性迁移或删数据
 - 新增要付费的第三方服务

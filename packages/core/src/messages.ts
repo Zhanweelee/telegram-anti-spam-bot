@@ -38,6 +38,11 @@ export const messageKeys = [
   "command.evals.too_long",
   "command.packs.usage",
   "command.packs.status",
+  "command.quota.usage",
+  "command.quota.disabled",
+  "command.quota.status",
+  "command.quota.basic",
+  "command.quota.full",
 ] as const;
 
 export type MessageKey = (typeof messageKeys)[number];
@@ -60,6 +65,7 @@ const syntax = [
   "/appeal <chatId> <eventId> false|confirm",
   "/evals [chatId]",
   "/packs <chatId> [packId|off]",
+  "/quota <chatId>",
 ].join("\n");
 
 const zh = {
@@ -102,6 +108,11 @@ const zh = {
   "command.evals.too_long": "评测样本 {count} 条，超过私聊长度",
   "command.packs.usage": "用法：/packs <chatId> [packId|off]",
   "command.packs.status": "packs {chatId} {pack}",
+  "command.quota.usage": "用法：/quota <chatId>",
+  "command.quota.disabled": "quota off",
+  "command.quota.status": "quota {chatId} {used}/{limit} {period} {state}",
+  "command.quota.basic": "basic",
+  "command.quota.full": "full",
 } satisfies Record<MessageKey, string>;
 
 const en = {
@@ -145,6 +156,11 @@ const en = {
   "command.evals.too_long": "{count} cases, longer than a private message",
   "command.packs.usage": "Usage: /packs <chatId> [packId|off]",
   "command.packs.status": "Pack {chatId} {pack}",
+  "command.quota.usage": "Usage: /quota <chatId>",
+  "command.quota.disabled": "Quota off",
+  "command.quota.status": "Quota {chatId} {used}/{limit} {period} {state}",
+  "command.quota.basic": "basic",
+  "command.quota.full": "full",
 } satisfies Record<MessageKey, string>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { zh, en };

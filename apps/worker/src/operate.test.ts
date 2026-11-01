@@ -11,6 +11,7 @@ import {
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
+import { createMemoryQuotaStore, quotaPolicyFromEnv } from "@tasb/cloud";
 import {
   type BlocklistStore,
   createFixedClock,
@@ -486,5 +487,40 @@ describe("handleIncomingEvent", () => {
     expect(kit.reply.sent[0]?.chatId).toBe("42");
     expect(kit.reply.sent[0]?.text).toContain("keyword_match");
     expect(kit.reply.sent[0]?.text).not.toContain(phrase);
+  });
+
+  it("answers /quota from configuration and does not echo the text", async () => {
+    const kit = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/quota -100 ${phrase}`, direct: true }),
+      {
+        ...kit,
+        quota: {
+          policy: quotaPolicyFromEnv({
+            QUOTA_ENABLED: "true",
+            QUOTA_LIMIT: "3000",
+          }),
+          store: createMemoryQuotaStore(),
+        },
+      },
+    );
+    expect(kit.reply.sent[0]?.text).toBe("用法：/quota <chatId>");
+    await handleIncomingEvent(
+      await incoming({ text: "/quota -100", direct: true }),
+      {
+        ...kit,
+        quota: {
+          policy: quotaPolicyFromEnv({
+            QUOTA_ENABLED: "true",
+            QUOTA_LIMIT: "3000",
+          }),
+          store: createMemoryQuotaStore(),
+        },
+      },
+    );
+    expect(kit.reply.sent[1]?.text).toBe(
+      "quota -100 0/3000 calendar_month full",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });
 });

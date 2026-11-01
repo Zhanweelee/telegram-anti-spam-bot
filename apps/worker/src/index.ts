@@ -1,4 +1,5 @@
 import { createWorkersAiClassifier } from "@tasb/adapter-cloudflare";
+import { quotaPolicyFromEnv } from "@tasb/cloud";
 import {
   createSystemClock,
   type Event,
@@ -15,6 +16,7 @@ import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
 import { allowUnsignedPlugins } from "./plugins.js";
+import { workerQuota } from "./quota-runtime.js";
 import { createWorkerLogger } from "./screen.js";
 import { resolveStores } from "./stores.js";
 
@@ -147,6 +149,10 @@ export function createApp(
           ...(c.env?.TELEGRAM_BOT_TOKEN
             ? { botToken: c.env.TELEGRAM_BOT_TOKEN }
             : {}),
+          quota: {
+            policy: quotaPolicyFromEnv(c.env ?? {}),
+            store: workerQuota,
+          },
         });
       },
       ...(c.env?.TELEGRAM_BOT_TOKEN

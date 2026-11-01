@@ -90,6 +90,19 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 
 社区规则在 `apps/worker/rules/packs.json`。提交的文件是空对象。管理员在私聊用 `/packs <chatId> <packId>` 之后，这个群才改用其中一份。`/packs <chatId> off` 立刻回到 `default.json` 或 `chats.json`。订阅和上一份成功的规则都在 isolate 内存里，重启后需要重新订阅。热路径不会去拉远程地址。
 
+## 免费额度
+
+自部署默认关闭。`DEPLOYMENT_MODE=cloud` 时默认打开：每个群每个 UTC 自然月 3000 次检测。超过之后只跑基础检测器，关键词、洪泛和频道转发还在，`llm` 停用。管理员私聊 `/quota <chatId>` 查看已用次数。见 ADR 0026。
+
+不要把下面的变量写进本仓库的 `wrangler.jsonc`。自己的部署可以放在 `vars`，或用 `wrangler secret put`：
+
+- `QUOTA_ENABLED`：`true` 或 `false`，覆盖部署模式的默认开关。
+- `QUOTA_LIMIT`：1 到 1000000 的整数。非法值回到 3000。
+- `QUOTA_PERIOD`：`calendar_month` 或 `rolling_30d`。非法值回到自然月。
+- `QUOTA_BASIC`：逗号分隔的检测器 id，最多 32 个。默认是 `keyword,join,flood,repeat,link,blocklist,forward,regex`。
+
+计数在 isolate 内存里，最多 256 个群，重启后从 0 开始。这不是账单，也没有支付。
+
 
 
 部署结束时 Wrangler 会打印 `https://tasb.<你的子域>.workers.dev`。免费套餐使用这个地址即可。

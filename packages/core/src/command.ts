@@ -22,6 +22,7 @@ import {
   type Storage,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
+import { type QuotaReader, quotaSnapshotSchema } from "./quota.js";
 import {
   buildReviewSample,
   type ReviewLabel,
@@ -43,6 +44,7 @@ const COMMAND_NAMES = [
   "appeal",
   "evals",
   "packs",
+  "quota",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -64,6 +66,7 @@ export interface OperatorCommandInput {
   readonly review?: ReviewQueue;
   readonly locale?: Locale;
   readonly rulePacks?: RuleSubscriptionStore;
+  readonly quota?: QuotaReader;
 }
 
 export type OperatorCommandResult =
@@ -151,6 +154,8 @@ async function dispatch(
       return exportEvals(input, args);
     case "packs":
       return editPacks(input, args);
+    case "quota":
+      return showQuota(input, args);
   }
 }
 
@@ -729,6 +734,49 @@ function packStatus(
     chatId,
     pack: packId ?? say(input, "command.allow.empty"),
   });
+}
+
+async function showQuota(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const reader = input.quota;
+  if (!reader) {
+    return say(input, "command.quota.disabled");
+  }
+  if (args.length !== 1) {
+    return say(input, "command.quota.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  try {
+    const parsed = quotaSnapshotSchema.safeParse(
+      await reader.read(input.event.tenantId, chatId, input.event.occurredAt),
+    );
+    if (!parsed.success || !parsed.data.enabled) {
+      return say(input, "command.quota.disabled");
+    }
+    const snapshot = parsed.data;
+    return say(input, "command.quota.status", {
+      chatId,
+      used: snapshot.used,
+      limit: snapshot.limit,
+      period: snapshot.period,
+      state: say(
+        input,
+        snapshot.degraded ? "command.quota.basic" : "command.quota.full",
+      ),
+    });
+  } catch {
+    input.logger.warn("operator_rejected", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+      command: "quota",
+    });
+    return say(input, "command.invalid");
+  }
 }
 
 function rejectPacks(input: OperatorCommandInput): void {
