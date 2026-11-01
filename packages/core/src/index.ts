@@ -83,6 +83,12 @@ export {
   translate,
 } from "./messages.js";
 export {
+  aggregateMetrics,
+  type ChatMetrics,
+  type MetricCounts,
+  type MetricReport,
+} from "./metrics.js";
+export {
   DEFAULT_DETECTOR_TIMEOUT_MS,
   type DetectorError,
   type FailureMode,

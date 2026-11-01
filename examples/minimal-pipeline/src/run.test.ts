@@ -8,6 +8,10 @@ describe("minimal pipeline", () => {
     expect(spam.result.actionResults[0]?.status).toBe("executed");
     expect(spam.deleted).toBe(1);
     expect(JSON.stringify(spam.audits)).not.toContain("限时免费领取");
+    expect(spam.metrics.totals.intercepted).toBe(1);
+    expect(spam.metrics.totals.actions).toEqual({ delete: 1 });
+    expect(spam.metrics.totals.interceptRate).toBe(1);
+    expect(JSON.stringify(spam.metrics)).not.toContain("限时免费领取");
 
     const ham = await screen("今晚八点见");
     expect(ham.result.decision.action).toBe("allow");
@@ -21,5 +25,8 @@ describe("minimal pipeline", () => {
     expect(result.result.actionResults[0]?.status).toBe("skipped");
     expect(result.deleted).toBe(0);
     expect(result.audits).toHaveLength(0);
+    expect(result.metrics.totals.dryRun).toBe(1);
+    expect(result.metrics.totals.intercepted).toBe(0);
+    expect(result.metrics.totals.screened).toBe(0);
   });
 });

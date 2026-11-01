@@ -197,3 +197,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Review sample | 一条待审核的误判或确认。只有哈希和特征，不含原文 | Feedback、原文样本 |
 | Feedback case | 从审核样本导出的评测条目。确认是 spam，误判是 ham。只有哈希和特征 | 原文样本 |
 | LlmClassifier | 最后一级分类端口。返回标签和分数。core 不发请求 | Model、Prompt |
+| Metric report | 从日志汇总的拦截率、动作、检测器错误和存储失败。标签只有 id | Dashboard、昵称维度 |

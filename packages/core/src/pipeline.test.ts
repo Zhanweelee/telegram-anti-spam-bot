@@ -253,6 +253,14 @@ describe("runPipeline", () => {
     expect(JSON.stringify(openKit.logger.entries)).not.toContain(
       "点击免费领取",
     );
+    expect(
+      openKit.logger.entries.some(
+        (item) =>
+          item.message === "detector_error" &&
+          item.fields.tenantId === "tenant_1" &&
+          item.fields.chatId === "chat_1",
+      ),
+    ).toBe(true);
 
     const closedKit = harness();
     const closedResult = await runPipeline({

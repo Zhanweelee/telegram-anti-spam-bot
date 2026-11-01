@@ -116,6 +116,7 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         } catch {
           ctx.logger.warn("reputation_failed", {
             eventId: ctx.event.id,
+            tenantId: ctx.event.tenantId,
             chatId: ctx.event.chatId,
             detectorId: "link",
           });

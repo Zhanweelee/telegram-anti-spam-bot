@@ -259,6 +259,7 @@ async function runDetector(
         "detector_invalid_hit",
         failureMode,
         logger,
+        event,
       );
     }
     return { hit: parsed.data, error: null };
@@ -267,7 +268,7 @@ async function runDetector(
       error instanceof Error && error.message === "detector_timeout"
         ? "detector_timeout"
         : "detector_failed";
-    return failedDetector(detector.id, code, failureMode, logger);
+    return failedDetector(detector.id, code, failureMode, logger, event);
   } finally {
     readTimers().clearTimeout(killer);
   }
@@ -302,8 +303,14 @@ function failedDetector(
   code: DetectorError["code"],
   failureMode: FailureMode,
   logger: Logger,
+  event: Event,
 ): { hit: DetectorHit | null; error: DetectorError } {
-  logger.warn("detector_error", { detectorId, code });
+  logger.warn("detector_error", {
+    detectorId,
+    code,
+    tenantId: event.tenantId,
+    chatId: event.chatId,
+  });
   const error = { detectorId, code };
   if (failureMode === "closed") {
     return {
@@ -459,6 +466,8 @@ async function persistAudit(input: {
   } catch (error) {
     const fields: LogFields = {
       eventId: input.event.id,
+      tenantId: input.event.tenantId,
+      chatId: input.event.chatId,
       code:
         error instanceof RawContentError
           ? "raw_content_rejected"

@@ -58,6 +58,7 @@ function createRateDetector(
       } catch {
         ctx.logger.warn("rate_window_failed", {
           eventId: ctx.event.id,
+          tenantId: ctx.event.tenantId,
           chatId: ctx.event.chatId,
           detectorId: id,
         });

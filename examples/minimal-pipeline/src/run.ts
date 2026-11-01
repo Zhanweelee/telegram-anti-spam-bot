@@ -6,10 +6,12 @@ import {
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
+  aggregateMetrics,
   createFixedClock,
   createMemoryLogger,
   defaultPrefilterPolicy,
   loadPolicy,
+  type MetricReport,
   type PipelineResult,
   parseRuleSet,
   runPipeline,
@@ -38,6 +40,7 @@ export async function screen(
   result: PipelineResult;
   audits: readonly unknown[];
   deleted: number;
+  metrics: MetricReport;
 }> {
   const storage = createMemoryStorage();
   const moderator = createMemoryModerator();
@@ -66,5 +69,10 @@ export async function screen(
     clock: createFixedClock("2026-11-01T00:00:00Z"),
     dryRun: options?.dryRun ?? false,
   });
-  return { result, audits: storage.records, deleted: moderator.deleted.length };
+  return {
+    result,
+    audits: storage.records,
+    deleted: moderator.deleted.length,
+    metrics: aggregateMetrics(logger.entries),
+  };
 }

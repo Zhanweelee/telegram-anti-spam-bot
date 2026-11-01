@@ -55,6 +55,7 @@ export function createLlmDetector(deps: LlmDetectorDeps = {}): Detector {
       } catch {
         ctx.logger.warn("llm_failed", {
           eventId: ctx.event.id,
+          tenantId: ctx.event.tenantId,
           chatId: ctx.event.chatId,
           detectorId: "llm",
         });

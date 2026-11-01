@@ -102,6 +102,7 @@ function summaryFor(entry: BlocklistEntry): string {
 function warn(ctx: DetectContext): void {
   ctx.logger.warn("blocklist_failed", {
     eventId: ctx.event.id,
+    tenantId: ctx.event.tenantId,
     chatId: ctx.event.chatId,
     detectorId: "blocklist",
   });

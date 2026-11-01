@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P2-04
+
+- `aggregateMetrics` 从日志汇总拦截率、动作计数、检测器错误和存储失败。见 ADR 0017。
+- 分组标签只接受租户 id 和群 id。原文、昵称和带空格的值不会进入结果。
+- dry-run 不计入拦截率。`log` 和 `report` 只计入动作。检测器失败日志带上 `tenantId`。
+
 ### P2-02
 
 - 管理员可以用 `/evals` 把申诉导出成评测样本。确认记为 spam，误判记为 ham。见 ADR 0016。
