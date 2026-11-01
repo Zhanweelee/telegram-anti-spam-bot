@@ -10,6 +10,7 @@ export const messageKeys = [
   "command.rules.pack",
   "command.rules.empty",
   "command.rules.line",
+  "command.rules.paused",
   "command.rules.enabled",
   "command.rules.disabled",
   "command.rule.usage",
@@ -90,6 +91,7 @@ const zh = {
   "command.rules.empty": "none",
   "command.rules.line":
     "{id} {state} {source} threshold {threshold} actions {actions}",
+  "command.rules.paused": "paused",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
   "command.rule.usage": "用法：/rule [chatId] <ruleId> [on|off|reset]",
@@ -148,6 +150,7 @@ const en = {
   "command.rules.empty": "none",
   "command.rules.line":
     "{id} {state} {source} threshold {threshold} actions {actions}",
+  "command.rules.paused": "paused",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
   "command.rule.usage": "Usage: /rule [chatId] <ruleId> [on|off|reset]",

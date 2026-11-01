@@ -1619,6 +1619,151 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("marks rules the free quota would drop without counting", async () => {
+    const deps = kit();
+    const source = quotaRules();
+    let reads = 0;
+    const quota = {
+      async read() {
+        reads += 1;
+        return {
+          enabled: true,
+          used: 2,
+          limit: 1,
+          period: "calendar_month" as const,
+          degraded: true,
+          basicDetectorIds: ["keyword"],
+        };
+      },
+    };
+    const listed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota,
+    });
+    expect(reads).toBe(1);
+    expect(listed).toMatchObject({ status: "reply" });
+    if (listed.status === "reply") {
+      expect(listed.text).toContain(
+        "spam_keywords enabled file threshold 1 actions delete\n",
+      );
+      expect(listed.text).toContain(
+        "llm_hint disabled file threshold 1 actions log paused",
+      );
+      expect(listed.text).toContain(
+        "mixed enabled file threshold 1 actions delete paused",
+      );
+      expect(listed.text).not.toContain(
+        "spam_keywords enabled file threshold 1 actions delete paused",
+      );
+    }
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      source,
+      quota,
+    });
+    expect(english).toMatchObject({ status: "reply" });
+    if (english.status === "reply") {
+      expect(english.text).toContain(
+        "llm_hint disabled file threshold 1 actions log paused",
+      );
+    }
+    const open = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 1,
+            limit: 1,
+            period: "calendar_month",
+            degraded: false,
+            basicDetectorIds: ["keyword"],
+          };
+        },
+      },
+    });
+    expect(open).toMatchObject({ status: "reply" });
+    if (open.status === "reply") {
+      expect(open.text).not.toContain("paused");
+    }
+    const disabled = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          return {
+            enabled: false,
+            used: 0,
+            limit: 1,
+            period: "calendar_month",
+            degraded: false,
+          };
+        },
+      },
+    });
+    expect(disabled).toMatchObject({ status: "reply" });
+    if (disabled.status === "reply") {
+      expect(disabled.text).not.toContain("paused");
+    }
+    const plain = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+    });
+    expect(plain).toMatchObject({ status: "reply" });
+    if (plain.status === "reply") {
+      expect(plain.text).not.toContain("paused");
+    }
+    const invalid = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          return { text: phrase };
+        },
+      },
+    });
+    expect(invalid).toMatchObject({ status: "reply" });
+    if (invalid.status === "reply") {
+      expect(invalid.text).toContain("llm_hint disabled file");
+      expect(invalid.text).not.toContain("paused");
+      expect(invalid.text).not.toContain(phrase);
+    }
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ status: "reply" });
+    if (broken.status === "reply") {
+      expect(broken.text).toContain("llm_hint disabled file");
+      expect(broken.text).not.toContain("paused");
+      expect(broken.text).not.toContain(phrase);
+    }
+    expect(JSON.stringify(deps.logger.entries)).toContain("quota_failed");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
   it("reports a configurable quota without echoing extra text", async () => {
     const deps = kit();
     const missing = await runOperatorCommand({
@@ -2150,6 +2295,43 @@ function countingStore(
     async has(tenantId, entry) {
       onRead();
       return inner.has(tenantId, entry);
+    },
+  };
+}
+
+function quotaRules(): RuleSource {
+  return {
+    async loadChat() {
+      return null;
+    },
+    async loadDefault() {
+      return {
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "spam_keywords",
+            enabled: true,
+            detectorIds: ["keyword"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+          {
+            id: "llm_hint",
+            enabled: false,
+            detectorIds: ["llm"],
+            threshold: 1,
+            actions: ["log"],
+          },
+          {
+            id: "mixed",
+            enabled: true,
+            detectorIds: ["keyword", "llm"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      };
     },
   };
 }

@@ -498,6 +498,70 @@ describe("handleIncomingEvent", () => {
     expect(kit.reply.sent[0]?.text).not.toContain(phrase);
   });
 
+  it("marks paused rules after the free quota without counting the command", async () => {
+    const kit = deps();
+    const policy = quotaPolicyFromEnv({
+      QUOTA_ENABLED: "true",
+      QUOTA_LIMIT: "1",
+      QUOTA_BASIC: "keyword",
+    });
+    const store = createMemoryQuotaStore();
+    const usage = {
+      tenantId: "local",
+      chatId: "-100",
+      atIso: "2026-11-01T00:00:00.000Z",
+      policy,
+    };
+    await store.consume(usage);
+    await store.consume(usage);
+    const before = await store.read(usage);
+    await handleIncomingEvent(
+      await incoming({ text: "/rules -100", direct: true }),
+      {
+        ...kit,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source: {
+          async loadChat() {
+            return null;
+          },
+          async loadDefault() {
+            return {
+              version: 1,
+              aggregate: "max",
+              rules: [
+                {
+                  id: "spam_keywords",
+                  enabled: true,
+                  detectorIds: ["keyword"],
+                  threshold: 1,
+                  actions: ["delete"],
+                },
+                {
+                  id: "llm_hint",
+                  enabled: false,
+                  detectorIds: ["llm"],
+                  threshold: 1,
+                  actions: ["log"],
+                },
+              ],
+            };
+          },
+        },
+        quota: { policy, store },
+      },
+    );
+    const text = kit.reply.sent.at(-1)?.text ?? "";
+    expect(text).toContain(
+      "spam_keywords enabled file threshold 1 actions delete\n",
+    );
+    expect(text).toContain(
+      "llm_hint disabled file threshold 1 actions log paused",
+    );
+    expect(await store.read(usage)).toEqual(before);
+    expect(text).not.toContain(phrase);
+  });
+
   it("answers /quota from configuration and does not echo the text", async () => {
     const kit = deps();
     await handleIncomingEvent(

@@ -106,12 +106,19 @@ export async function handleIncomingEvent(
       ? {
           quota: {
             async read(tenantId, chatId, atIso) {
-              return quota.store.read({
+              const snapshot = await quota.store.read({
                 tenantId,
                 chatId,
                 atIso,
                 policy: quota.policy,
               });
+              if (!snapshot) {
+                return snapshot;
+              }
+              return {
+                ...snapshot,
+                basicDetectorIds: [...quota.policy.basicDetectorIds],
+              };
             },
           },
         }

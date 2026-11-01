@@ -23,12 +23,17 @@ import {
   type Storage,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
-import { type QuotaReader, quotaSnapshotSchema } from "./quota.js";
+import {
+  type QuotaReader,
+  quotaSnapshotSchema,
+  ruleSurvivesQuota,
+} from "./quota.js";
 import {
   buildReviewSample,
   type ReviewLabel,
   type ReviewQueue,
 } from "./review.js";
+import type { RuleSet } from "./rule.js";
 import {
   parseRulePackId,
   type RulePackArchive,
@@ -283,6 +288,7 @@ async function showRules(
     switches,
     ...(pack ? { pack } : {}),
   });
+  const paused = await quotaPausedIds(input, chatId, rules);
   const lines = [
     pack
       ? say(input, "command.rules.pack", { chatId, pack: pack.id })
@@ -298,17 +304,20 @@ async function showRules(
       rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
     );
     const override = switches.some((item) => item.ruleId === rule.id);
+    const line = say(input, "command.rules.line", {
+      id: rule.id,
+      state,
+      source: say(
+        input,
+        override ? "command.rule.switch" : "command.rule.file",
+      ),
+      threshold: rule.threshold,
+      actions: rule.actions.join(","),
+    });
     lines.push(
-      say(input, "command.rules.line", {
-        id: rule.id,
-        state,
-        source: say(
-          input,
-          override ? "command.rule.switch" : "command.rule.file",
-        ),
-        threshold: rule.threshold,
-        actions: rule.actions.join(","),
-      }),
+      paused.has(rule.id)
+        ? `${line} ${say(input, "command.rules.paused")}`
+        : line,
     );
   }
   return lines.join("\n");
@@ -1190,6 +1199,46 @@ async function commandPack(
     });
     return "failed";
   }
+}
+
+async function quotaPausedIds(
+  input: OperatorCommandInput,
+  chatId: string,
+  rules: RuleSet,
+): Promise<ReadonlySet<string>> {
+  const reader = input.quota;
+  if (!reader) {
+    return new Set();
+  }
+  try {
+    const parsed = quotaSnapshotSchema.safeParse(
+      await reader.read(input.event.tenantId, chatId, input.event.occurredAt),
+    );
+    if (!parsed.success) {
+      warnQuota(input, chatId);
+      return new Set();
+    }
+    const basic = parsed.data.basicDetectorIds;
+    if (!parsed.data.enabled || !parsed.data.degraded || !basic) {
+      return new Set();
+    }
+    return new Set(
+      rules.rules
+        .filter((rule) => !ruleSurvivesQuota(rule.detectorIds, basic))
+        .map((rule) => rule.id),
+    );
+  } catch {
+    warnQuota(input, chatId);
+    return new Set();
+  }
+}
+
+function warnQuota(input: OperatorCommandInput, chatId: string): void {
+  input.logger.warn("quota_failed", {
+    eventId: input.event.id,
+    tenantId: input.event.tenantId,
+    chatId,
+  });
 }
 
 function rejectPacks(input: OperatorCommandInput): void {

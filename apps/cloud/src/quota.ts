@@ -3,6 +3,7 @@ import {
   type QuotaSnapshot,
   quotaPeriods,
   type RuleSet,
+  ruleSurvivesQuota,
 } from "@tasb/core";
 import { z } from "zod";
 
@@ -84,12 +85,11 @@ export function degradeRules(
   rules: RuleSet,
   basicDetectorIds: readonly string[],
 ): RuleSet {
-  const allowed = new Set(basicDetectorIds);
   return {
     version: rules.version,
     aggregate: rules.aggregate,
     rules: rules.rules.filter((rule) =>
-      rule.detectorIds.every((id) => allowed.has(id)),
+      ruleSurvivesQuota(rule.detectorIds, basicDetectorIds),
     ),
   };
 }

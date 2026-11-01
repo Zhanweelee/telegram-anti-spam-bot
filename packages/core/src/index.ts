@@ -182,6 +182,7 @@ export {
   quotaPeriodSchema,
   quotaPeriods,
   quotaSnapshotSchema,
+  ruleSurvivesQuota,
 } from "./quota.js";
 export type { ReplyMessage, ReplyPort } from "./reply.js";
 export {
