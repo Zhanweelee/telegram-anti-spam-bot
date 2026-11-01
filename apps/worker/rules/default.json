@@ -67,6 +67,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "via_inline",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["via"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "new_member",
       "enabled": true,
       "when": { "eventKind": "chat_member" },

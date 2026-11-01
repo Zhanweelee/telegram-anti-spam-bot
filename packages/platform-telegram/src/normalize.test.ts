@@ -257,6 +257,36 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("keeps an inline bot as a flag and drops its username", async () => {
+    const name = "机密代发";
+    const outcome = await normalize({
+      update_id: 2009,
+      message: {
+        message_id: 14,
+        date: 1761955200,
+        chat: { id: -100594, type: "supergroup", title: "机密群名" },
+        from: { id: 93 },
+        text: "今天站会",
+        via_bot: {
+          id: 999002,
+          is_bot: true,
+          first_name: name,
+          username: name,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.via).toBe(true);
+    expect(outcome.event.message?.text).toBe("今天站会");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("999002");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("prefers a caption when text is missing", async () => {
     const outcome = await normalize({
       update_id: 8,

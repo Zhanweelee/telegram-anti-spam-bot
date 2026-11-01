@@ -349,6 +349,90 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("leaves inline bots alone until a chat enables the rule", async () => {
+    const name = "机密代发";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2009,
+        message: {
+          message_id: 14,
+          date: 1761955200,
+          chat: { id: -100594, type: "supergroup", title: "机密群名" },
+          from: { id: 93 },
+          text: "今天站会",
+          via_bot: {
+            id: 999002,
+            is_bot: true,
+            first_name: name,
+            username: name,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.via).toBe(true);
+    const logger = createMemoryLogger();
+    const idle = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(idle.decision.action).toBe("allow");
+    expect(idle.decision.reasons).not.toContain("via_bot");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "via_inline",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["via"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const enabledLog = createMemoryLogger();
+    const enabled = await screenTelegramEvent(
+      {
+        ...outcome.event,
+        id: "tg_2010",
+        chatId: "-100595",
+      },
+      {
+        logger: enabledLog,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(enabled.decision.action).toBe("delete");
+    expect(enabled.decision.reasons).toContain("via_bot");
+    expect(enabled.decision.ruleIds).toContain("via_inline");
+    expect(JSON.stringify(enabled.decision.evidence)).toContain("via:bot");
+    const dumped = JSON.stringify({
+      idle,
+      enabled,
+      logs: [...logger.entries, ...enabledLog.entries],
+    });
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("999002");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("uses a chat override from the rule file and does not read storage", async () => {
     const text = "请免费领取礼品";
     const storage = countingStorage();

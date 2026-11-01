@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-17
+
+- 经 inline bot 发出的消息可以带 `message.via`。见 ADR 0033。
+- bot 用户名和 id 不进入事件或日志。证据是 `via:bot`。
+- 默认规则 `via_inline` 关闭。打开后才删除。云额度的基础检测器名单没有改。
+
 ### P1-16
 
 - 共享名片会被删除。见 ADR 0032。

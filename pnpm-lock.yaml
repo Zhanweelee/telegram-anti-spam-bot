@@ -83,6 +83,9 @@ importers:
       '@tasb/detector-regex':
         specifier: workspace:*
         version: link:../../packages/detectors-regex
+      '@tasb/detector-via':
+        specifier: workspace:*
+        version: link:../../packages/detectors-via
       '@tasb/platform-telegram':
         specifier: workspace:*
         version: link:../../packages/platform-telegram
@@ -129,6 +132,9 @@ importers:
       '@tasb/detector-regex':
         specifier: workspace:*
         version: link:../packages/detectors-regex
+      '@tasb/detector-via':
+        specifier: workspace:*
+        version: link:../packages/detectors-via
 
   examples/minimal-pipeline:
     dependencies:
@@ -284,6 +290,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-regex:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-via:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

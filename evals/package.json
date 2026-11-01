@@ -18,6 +18,7 @@
     "@tasb/detector-regex": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/detector-bot": "workspace:*",
-    "@tasb/detector-contact": "workspace:*"
+    "@tasb/detector-contact": "workspace:*",
+    "@tasb/detector-via": "workspace:*"
   }
 }

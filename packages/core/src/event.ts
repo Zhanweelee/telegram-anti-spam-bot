@@ -48,6 +48,8 @@ export const messageSchema = z.strictObject({
   invites: z.array(hostnameSchema).min(1).max(8).optional(),
   /** Shared contact card. Phone numbers and names stay out. */
   contact: z.literal(true).optional(),
+  /** Sent through an inline bot. The bot username stays out. */
+  via: z.literal(true).optional(),
 });
 
 export const profileSchema = z.strictObject({

@@ -1,0 +1,5 @@
+[
+  { "id": "inline", "kind": "message", "via": true, "label": "spam" },
+  { "id": "plain", "kind": "message", "label": "ham" },
+  { "id": "join", "kind": "chat_member", "label": "ham" }
+]

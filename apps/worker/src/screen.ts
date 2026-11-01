@@ -61,6 +61,7 @@ import {
   createRegexDetector,
   defaultRegexPatterns,
 } from "@tasb/detector-regex";
+import { createViaDetector } from "@tasb/detector-via";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
@@ -283,6 +284,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.contact,
         value: createContactDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.via,
+        value: createViaDetector(),
       },
       {
         source: "builtin",
