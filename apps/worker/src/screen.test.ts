@@ -2122,4 +2122,83 @@ describe("screenTelegramEvent", () => {
     expect(ordinary.moderator.deleted).toEqual([]);
     expect(JSON.stringify(ordinary.result)).not.toContain("90909");
   });
+
+  it("deletes a mathematical expression that carries a short link", async () => {
+    const screenMath = async (
+      updateId: number,
+      chatId: number,
+      blocks: readonly Record<string, unknown>[],
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 91, first_name: "https://tinyurl.com/from91" },
+            rich_message: { blocks },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenMath(5910, -100640, [
+      {
+        type: "mathematical_expression",
+        expression: "LATEXSECRET91 https://bit.ly/name91",
+      },
+    ]);
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.event.message?.text).toBe("");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100640", messageId: "5910" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name91");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain(
+      "LATEXSECRET91",
+    );
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from91");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name91",
+    );
+
+    const keyword = await screenMath(5911, -100641, [
+      {
+        type: "mathematical_expression",
+        expression: "请免费领取礼品",
+      },
+    ]);
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.event.message?.text).toBe("");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+
+    const ordinary = await screenMath(5912, -100642, [
+      {
+        type: "mathematical_expression",
+        expression: "https://example.com/ok91",
+      },
+    ]);
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.event)).not.toContain("ok91");
+  });
 });

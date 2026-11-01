@@ -3971,6 +3971,87 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
+  it("keeps hostnames from a mathematical expression and drops the source", async () => {
+    const secret = "LATEXSECRET91";
+    const code = "MATH91";
+    const labeled = await normalize({
+      update_id: 5910,
+      message: {
+        message_id: 410,
+        date: 1761955200,
+        chat: {
+          id: -101140,
+          type: "supergroup",
+          title: "https://cutt.ly/grp91",
+        },
+        from: { id: 9, first_name: "https://tinyurl.com/from91" },
+        rich_message: {
+          blocks: [
+            {
+              type: "mathematical_expression",
+              expression: `${secret} https://bit.ly/name91 https://t.me/+${code}.`,
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(secret);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("name91");
+    expect(labeledDump).not.toContain("from91");
+    expect(labeledDump).not.toContain("grp91");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const inline = await normalize({
+      update_id: 5911,
+      message: {
+        message_id: 411,
+        date: 1761955200,
+        chat: {
+          id: -101141,
+          type: "supergroup",
+          title: "https://bit.ly/kept91",
+        },
+        from: { id: 9 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                "今天站会",
+                {
+                  type: "mathematical_expression",
+                  expression: `https://example.com/ok91 ${secret}`,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(inline.status).toBe("event");
+    if (inline.status !== "event") {
+      return;
+    }
+    expect(inline.event.message?.text).toBe("今天站会");
+    expect(inline.event.message?.hosts).toEqual(["example.com"]);
+    const inlineDump = JSON.stringify(inline.event);
+    expect(inlineDump).not.toContain(secret);
+    expect(inlineDump).not.toContain("ok91");
+    expect(inlineDump).not.toContain("kept91");
+    expect(inlineDump).not.toContain("bit.ly");
+  });
+
   it("leaves a reply keyboard out of the text", async () => {
     const outcome = await normalize({
       update_id: 2806,

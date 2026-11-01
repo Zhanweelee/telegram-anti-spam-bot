@@ -912,6 +912,10 @@ function walkBlocks(
     if (!isRecord(block)) {
       continue;
     }
+    if (block.type === "mathematical_expression") {
+      pushPlainUrls(block.expression, urls);
+      continue;
+    }
     if (block.type === "buttons" && Array.isArray(block.buttons)) {
       for (const button of block.buttons) {
         const label = richButton(button, urls);
@@ -1041,6 +1045,10 @@ function richText(value: unknown, urls: string[]): string {
   }
   if (value.type === "button") {
     return richButton(value.button, urls);
+  }
+  if (value.type === "mathematical_expression") {
+    pushPlainUrls(value.expression, urls);
+    return "";
   }
   if ("text" in value) {
     return richText(value.text, urls);

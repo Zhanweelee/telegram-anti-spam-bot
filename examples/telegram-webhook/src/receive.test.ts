@@ -211,6 +211,41 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("90909");
   });
 
+  it("keeps a hostname from a mathematical expression and drops the source", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 8,
+        message: {
+          message_id: 80,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp91" },
+          from: { id: 91, first_name: "https://tinyurl.com/from91" },
+          rich_message: {
+            blocks: [
+              {
+                type: "mathematical_expression",
+                expression: "LATEXSECRET91 https://bit.ly/name91",
+              },
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_8",
+      kind: "message",
+      message: { id: "80", text: "", hosts: ["bit.ly"] },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("LATEXSECRET91");
+    expect(dumped).not.toContain("name91");
+    expect(dumped).not.toContain("from91");
+    expect(dumped).not.toContain("grp91");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",
