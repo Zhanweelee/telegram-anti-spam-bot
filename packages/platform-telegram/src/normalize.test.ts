@@ -2044,12 +2044,16 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(audio.event.message?.text).toBe("今天站会");
-    expect(audio.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
+    expect(audio.event.message?.hosts).toEqual([
+      "www.tinyurl.com",
+      "t.me",
+      "is.gd",
+    ]);
     expect(audio.event.message?.invites).toEqual(["t.me"]);
     const audioDump = JSON.stringify(audio.event);
     expect(audioDump).not.toContain(code);
     expect(audioDump).not.toContain("/a53");
-    expect(audioDump).not.toContain("is.gd");
+    expect(audioDump).not.toContain("perf53");
     expect(audioDump).not.toContain(fileId);
 
     const clips = await normalize({
@@ -3172,6 +3176,127 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.forward).toBe("hidden");
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
+  it("keeps hostnames from audio performers", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PERF61";
+    const labeled = await normalize({
+      update_id: 3410,
+      message: {
+        message_id: 160,
+        date: 1761955200,
+        chat: { id: -100840, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        audio: {
+          file_id: "https://tinyurl.com/id61",
+          file_unique_id: "aud-160",
+          duration: 3,
+          mime_type: phrase,
+          performer: `${phrase} https://bit.ly/perf61 https://t.me/+${code}.`,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("perf61");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("id61");
+
+    const ordinary = await normalize({
+      update_id: 3411,
+      message: {
+        message_id: 161,
+        date: 1761955200,
+        chat: { id: -100841, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        audio: {
+          file_id: "aud-161",
+          file_unique_id: "aud-161",
+          duration: 3,
+          title: "会议录音",
+          performer: `${phrase} https://example.com/page61`,
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("page61");
+    expect(ordinaryDump).not.toContain("会议录音");
+
+    const sticker = await normalize({
+      update_id: 3412,
+      message: {
+        message_id: 162,
+        date: 1761955200,
+        chat: { id: -100842, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        sticker: {
+          file_id: "stk-162",
+          file_unique_id: "stk-162",
+          type: "regular",
+          width: 1,
+          height: 1,
+          is_animated: false,
+          is_video: false,
+          set_name: "https://bit.ly/set61",
+          emoji: phrase,
+        },
+      },
+    });
+    expect(sticker.status).toBe("event");
+    if (sticker.status !== "event") {
+      return;
+    }
+    expect(sticker.event.message?.text).toBe("今天站会");
+    expect(sticker.event.message?.hosts).toBeUndefined();
+    const stickerDump = JSON.stringify(sticker.event);
+    expect(stickerDump).not.toContain(phrase);
+    expect(stickerDump).not.toContain("bit.ly");
+    expect(stickerDump).not.toContain("set61");
+
+    const asBody = "免费领取 https://bit.ly/body61";
+    const body = await normalize({
+      update_id: 3413,
+      message: {
+        message_id: 163,
+        date: 1761955200,
+        chat: { id: -100843, type: "supergroup" },
+        from: { id: 9 },
+        audio: {
+          file_id: "aud-163",
+          file_unique_id: "aud-163",
+          duration: 3,
+          performer: asBody,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain("aud-163");
   });
 
   it("uses inline button text when earlier text is missing", async () => {

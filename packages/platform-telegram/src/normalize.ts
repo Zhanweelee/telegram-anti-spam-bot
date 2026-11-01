@@ -482,6 +482,9 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     if (field === "audio") {
       pushPlainUrls(value.title, urls);
+      pushPlainUrls(value.file_name, urls);
+      pushPlainUrls(value.performer, urls);
+      continue;
     }
     pushPlainUrls(value.file_name, urls);
   }
@@ -936,6 +939,10 @@ function messageText(
   if (label.length > 0) {
     return label;
   }
+  const performer = performerName(message);
+  if (performer.length > 0) {
+    return performer;
+  }
   const buttons = buttonLabel(message);
   if (buttons.length > 0) {
     return buttons;
@@ -1071,6 +1078,18 @@ function buttonLabel(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function performerName(message: Record<string, unknown>): string {
+  const audio = message.audio;
+  if (
+    isRecord(audio) &&
+    typeof audio.performer === "string" &&
+    audio.performer.length > 0
+  ) {
+    return audio.performer.slice(0, MAX_TEXT);
+  }
+  return "";
 }
 
 function mediaLabel(message: Record<string, unknown>): string {
