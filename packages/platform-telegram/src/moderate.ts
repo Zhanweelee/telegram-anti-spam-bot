@@ -40,25 +40,51 @@ export function createTelegramModerator(input: {
   readonly nowSeconds?: () => number;
 }): ModerationPort {
   return {
-    async deleteMessage() {},
-    async muteActor() {},
-    async banActor() {},
+    async deleteMessage(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteMessage",
+        fetchImpl: input.fetchImpl,
+        missing: "delete_unavailable",
+        failed: "delete_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+        },
+      });
+    },
+    async muteActor(target) {
+      await postTelegram({
+        token: input.token,
+        method: "restrictChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "mute_unavailable",
+        failed: "mute_failed",
+        body: silencedUntil(target, input.nowSeconds ?? unixSeconds),
+      });
+    },
+    async banActor(target) {
+      await postTelegram({
+        token: input.token,
+        method: "banChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "ban_unavailable",
+        failed: "ban_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+          revoke_messages: false,
+        },
+      });
+    },
     async restrictActor(target) {
-      const until =
-        (input.nowSeconds ?? unixSeconds)() + target.durationSeconds;
       await postTelegram({
         token: input.token,
         method: "restrictChatMember",
         fetchImpl: input.fetchImpl,
         missing: "restrict_unavailable",
         failed: "restrict_failed",
-        body: {
-          chat_id: telegramId(target.chatId),
-          user_id: telegramId(target.actorId),
-          permissions: silenced,
-          until_date: until,
-          use_independent_chat_permissions: true,
-        },
+        body: silencedUntil(target, input.nowSeconds ?? unixSeconds),
       });
     },
     async releaseActor(target) {
@@ -150,6 +176,25 @@ async function postTelegram(input: {
   if (!response.ok) {
     throw new Error(input.failed);
   }
+}
+
+function silencedUntil(
+  target: MuteTarget,
+  nowSeconds: () => number,
+): {
+  readonly chat_id: string | number;
+  readonly user_id: string | number;
+  readonly permissions: typeof silenced;
+  readonly until_date: number;
+  readonly use_independent_chat_permissions: true;
+} {
+  return {
+    chat_id: telegramId(target.chatId),
+    user_id: telegramId(target.actorId),
+    permissions: silenced,
+    until_date: nowSeconds() + target.durationSeconds,
+    use_independent_chat_permissions: true,
+  };
 }
 
 function unixSeconds(): number {

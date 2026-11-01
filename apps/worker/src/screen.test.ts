@@ -7,6 +7,7 @@ import {
   createMemoryPolicyStore,
   createMemoryRulePackArchive,
   createMemoryRuleSubscriptionStore,
+  createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
@@ -722,5 +723,142 @@ describe("screenTelegramEvent", () => {
       logger.entries.some((entry) => entry.message === "pack_store_failed"),
     ).toBe(true);
     expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+
+  it("asks Telegram to delete, mute, or ban once when a token is set", async () => {
+    const phrase = "请免费领取礼品";
+    const token = "bot-token";
+    const calls: { method: string; body: string }[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      calls.push({
+        method: url.slice(url.lastIndexOf("/") + 1),
+        body: String(init?.body ?? ""),
+      });
+      return new Response("{}", { status: 200 });
+    };
+    const deleted = await screenTelegramEvent(
+      await event(phrase, false, "-100561"),
+      {
+        logger: createMemoryLogger(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        botToken: token,
+        fetchImpl,
+      },
+    );
+    expect(deleted.actionResults[0]?.status).toBe("executed");
+    expect(calls.map((call) => call.method)).toEqual(["deleteMessage"]);
+    expect(calls[0]?.body).toContain('"message_id":9');
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+
+    calls.length = 0;
+    const muteRules = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "quiet",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["mute"],
+            },
+          ],
+        };
+      },
+    };
+    const muted = await screenTelegramEvent(
+      await event(phrase, false, "-100562"),
+      {
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source: muteRules,
+        botToken: token,
+        fetchImpl,
+      },
+    );
+    expect(muted.decision.action).toBe("mute");
+    expect(calls.map((call) => call.method)).toEqual(["restrictChatMember"]);
+
+    calls.length = 0;
+    const banned = await screenTelegramEvent(
+      await event(phrase, false, "-100563"),
+      {
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source: {
+          async loadChat() {
+            return null;
+          },
+          async loadDefault() {
+            return {
+              version: 1,
+              aggregate: "max",
+              rules: [
+                {
+                  id: "drop",
+                  enabled: true,
+                  detectorIds: ["keyword"],
+                  threshold: 1,
+                  actions: ["ban"],
+                },
+              ],
+            };
+          },
+        },
+        botToken: token,
+        fetchImpl,
+      },
+    );
+    expect(banned.decision.action).toBe("ban");
+    expect(calls.map((call) => call.method)).toEqual(["banChatMember"]);
+    expect(calls[0]?.body).toContain('"revoke_messages":false');
+
+    const runtime = createMemoryRuntimeStore();
+    await runtime.setDryRun("local", "-100564", true);
+    let dryCalls = 0;
+    const dry = await screenTelegramEvent(
+      await event(phrase, false, "-100564"),
+      {
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        runtime,
+        botToken: token,
+        fetchImpl: async () => {
+          dryCalls += 1;
+          return new Response("ok");
+        },
+      },
+    );
+    expect(dry.dryRun).toBe(true);
+    expect(dryCalls).toBe(0);
+
+    const logger = createMemoryLogger();
+    const failed = await screenTelegramEvent(
+      await event(phrase, false, "-100565"),
+      {
+        logger,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        botToken: token,
+        fetchImpl: async () => new Response(phrase, { status: 400 }),
+      },
+    );
+    expect(failed.decision.action).toBe("delete");
+    expect(failed.actionResults[0]).toEqual({
+      actionId: "delete",
+      status: "failed",
+      detail: "action_failed",
+    });
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain(token);
   });
 });

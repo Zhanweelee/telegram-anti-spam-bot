@@ -5,7 +5,7 @@
 
 ## 背景
 
-P1-01 要求新成员在通过验证前不能发言。超时和通过都要留下不含原文的审计。检测器失败不能把人困在群里。core 仍然不能出现 Telegram 类型。mute 和 ban 按 ADR 0004 继续不发 HTTP。
+P1-01 要求新成员在通过验证前不能发言。超时和通过都要留下不含原文的审计。检测器失败不能把人困在群里。core 仍然不能出现 Telegram 类型。delete、mute、ban 的 HTTP 见 ADR 0020。
 
 ## 决策
 
@@ -15,7 +15,7 @@ P1-01 要求新成员在通过验证前不能发言。超时和通过都要留�
 - `join` 检测器只在 `membership === "join"` 时返回 score 1。默认规则 `new_member` 的动作是 `captcha`，阈值 1。管理员仍走预过滤，不验证。
 - 平台适配层把「从群外成为 member 或 restricted，且不是 bot」标成 join。按钮 `callback_data` 为 `c:` 加 nonce 时收成 challenge。其它回调忽略，但在配置了 token 时仍应答，清掉转圈。
 - 有 `TELEGRAM_BOT_TOKEN` 时，`restrictActor` / `releaseActor` 调用 `restrictChatMember`，按钮用一次 `sendMessage`。没有 token 时限制直接失败，动作回滚挑战。按钮发送失败时解除限制并删除挑战。
-- delete、mute、ban 仍不发 HTTP。
+- delete、mute、ban 的 HTTP 不在这一项里，见 ADR 0020。
 - 挑战放在 isolate 内存。账号只保留一个 Cron，`*/15 * * * *`，调用 `expireChallenges`。它不解除 Telegram 限制，`until_date` 自己到期。
 
 ## 备选

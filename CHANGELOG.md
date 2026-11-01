@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### P1-07
+
+- 配了 `TELEGRAM_BOT_TOKEN` 之后，delete、mute、ban 各发一次 Telegram 请求。见 ADR 0020。
+- ban 不撤回该成员的历史消息。没有 token 时不发请求。接口失败保留决策，日志不写 token、响应正文和消息原文。
+
 ### P3-03
 
 - 群可以用 `/packs` 自愿订阅一份规则包。默认不订阅。见 ADR 0019。

@@ -57,7 +57,78 @@ describe("telegram captcha transport", () => {
         chatId: "-100",
         messageId: "1",
       }),
-    ).resolves.toBeUndefined();
+    ).rejects.toThrow("delete_unavailable");
+    await expect(
+      moderator.muteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        durationSeconds: 3600,
+      }),
+    ).rejects.toThrow("mute_unavailable");
+    await expect(
+      moderator.banActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("ban_unavailable");
+    expect(called).toBe(false);
+  });
+
+  it("deletes, mutes, and bans with one call each and drops the response body", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token,
+      nowSeconds: () => 1_700_000_000,
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        calls.push({
+          method: url.slice(url.lastIndexOf("/") + 1),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(phrase, { status: 200 });
+      },
+    });
+    await moderator.deleteMessage({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "9",
+    });
+    await moderator.muteActor({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      durationSeconds: 3600,
+    });
+    await moderator.banActor({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      "deleteMessage",
+      "restrictChatMember",
+      "banChatMember",
+    ]);
+    expect(calls[0]?.body).toContain('"message_id":9');
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[1]?.body).toContain('"until_date":1700003600');
+    expect(calls[1]?.body).toContain('"can_send_messages":false');
+    expect(calls[2]?.body).toContain('"revoke_messages":false');
+    expect(calls[2]?.body).not.toContain("message_id");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () => new Response(token + phrase, { status: 400 }),
+      }).deleteMessage({
+        tenantId: "local",
+        chatId: "-100",
+        messageId: "9",
+      }),
+    ).rejects.toThrow("delete_failed");
   });
 
   it("sends one button and releases with speaking permissions", async () => {

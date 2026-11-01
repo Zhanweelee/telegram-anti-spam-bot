@@ -62,8 +62,8 @@ import { fileRuleSource } from "./rules.js";
  * still reads the bundled files. Memory audits are capped at 200 rows.
  * Captcha challenges and the shared blocklist live in this isolate.
  * A restart drops both. Blocklist opt-in starts off.
- * delete / mute / ban still do not call Telegram. restrict / release
- * call Telegram only when TELEGRAM_BOT_TOKEN is set.
+ * delete / mute / ban and restrict / release call Telegram only when
+ * TELEGRAM_BOT_TOKEN is set. Without it, delete / mute / ban stay in memory.
  */
 export const workerCache = createMemoryCache();
 export const workerPolicyStore = createMemoryPolicyStore();
