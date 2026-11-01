@@ -7,6 +7,7 @@ import {
   foldEncodedGaps,
   foldEncodedSeparators,
   foldFullwidthLatin,
+  foldHostInterrupters,
   foldMatchText,
   type MediaKind,
   parseEvent,
@@ -414,7 +415,7 @@ const COPY_URL =
 function urlsInText(text: string): string[] {
   const found: string[] = [];
   const folded = foldDotLookalikes(
-    foldFullwidthLatin(foldCyrillicLookalikes(text)),
+    foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
   );
   for (const match of folded.matchAll(new RegExp(COPY_URL.source, "gi"))) {
     const raw = match[0]?.replace(/[),.;!?]+$/g, "");
@@ -633,8 +634,10 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
         foldEncodedSeparators(
           foldMatchText(
             foldDotLookalikes(
-              foldFullwidthLatin(
-                foldCyrillicLookalikes(foldEncodedGaps(value)),
+              foldHostInterrupters(
+                foldFullwidthLatin(
+                  foldCyrillicLookalikes(foldEncodedGaps(value)),
+                ),
               ),
             ),
           ),

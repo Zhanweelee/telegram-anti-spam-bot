@@ -660,4 +660,39 @@ describe("link fixtures", () => {
     });
     expect(te).toBeNull();
   });
+
+  it("drops letters that split a hostname instead of reading the tail", async () => {
+    const detector = createLinkDetector();
+    const infix = await detector.detect({
+      event: eventFor("b\u0442it.ly/lat66"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(infix?.reasons).toEqual(["short_link"]);
+    expect(infix?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(infix)).not.toContain("lat66");
+
+    const cjk = await detector.detect({
+      event: eventFor("点击bit.ly/cjk66"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(cjk?.reasons).toEqual(["short_link"]);
+    expect(cjk?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(cjk)).not.toContain("cjk66");
+
+    const glued = await detector.detect({
+      event: eventFor("x\u0442bit.ly/glue66"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+
+    const bareTe = await detector.detect({
+      event: eventFor("\u0442.me/+NO66"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bareTe).toBeNull();
+  });
 });

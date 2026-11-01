@@ -65,6 +65,29 @@ export function foldCyrillicLookalikes(text: string): string {
 }
 
 /**
+ * Letters that would split an ASCII hostname into a shorter tail.
+ * ASCII letters stay. These letters are removed, not mapped.
+ */
+const HOST_INTERRUPTER =
+  /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Latin}]/u;
+
+/**
+ * Drop Cyrillic, Greek, and non-ASCII Latin letters before a hostname scan.
+ * CJK, Hangul, kana, and ASCII stay. Cyrillic т does not become t.
+ */
+export function foldHostInterrupters(text: string): string {
+  let out = "";
+  for (const char of text) {
+    const code = char.codePointAt(0);
+    if (code !== undefined && code > 0x7f && HOST_INTERRUPTER.test(char)) {
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
+/**
  * Fold fullwidth Latin letters to ASCII.
  * Fullwidth digits, U+FF0B, and other characters stay.
  */

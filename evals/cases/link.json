@@ -220,5 +220,20 @@
     "id": "ukrainian-greeting",
     "text": "привіт",
     "label": "ham"
+  },
+  {
+    "id": "interrupter-infix",
+    "text": "b\u0442it.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "interrupter-cjk",
+    "text": "点击bit.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "interrupter-glued",
+    "text": "x\u0442bit.ly/offer",
+    "label": "ham"
   }
 ]

@@ -3410,6 +3410,32 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("btn65");
   });
 
+  it("drops a letter that splits a host in button text", async () => {
+    const outcome = await normalize({
+      update_id: 3613,
+      message: {
+        message_id: 183,
+        date: 1761955200,
+        chat: { id: -100890, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "b\u0442it.ly/btn66", url: "https://example.com" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("btn66");
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

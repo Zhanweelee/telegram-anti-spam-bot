@@ -6,6 +6,7 @@ import {
   foldEncodedGaps,
   foldEncodedSeparators,
   foldFullwidthLatin,
+  foldHostInterrupters,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";
@@ -91,6 +92,20 @@ describe("foldCyrillicLookalikes", () => {
     expect(foldCyrillicLookalikes("\u0442.me")).toBe("\u0442.me");
     expect(foldCyrillicLookalikes("免费领取")).toBe("免费领取");
     expect(foldCyrillicLookalikes("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
+  });
+});
+
+describe("foldHostInterrupters", () => {
+  it("drops letters that split a label and keeps mapped latin", () => {
+    expect(foldHostInterrupters("b\u0442it.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("b\u03BFit.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("b\u00E9it.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("\u0442.me")).toBe(".me");
+    expect(foldHostInterrupters("bit.ly")).toBe("bit.ly");
+    expect(foldHostInterrupters("点击bit.ly")).toBe("点击bit.ly");
+    expect(foldHostInterrupters("안녕bit.ly")).toBe("안녕bit.ly");
+    expect(foldHostInterrupters("あbit.ly")).toBe("あbit.ly");
+    expect(foldHostInterrupters("免费领取")).toBe("免费领取");
   });
 });
 

@@ -8,6 +8,7 @@ import {
   foldEncodedGaps,
   foldEncodedSeparators,
   foldFullwidthLatin,
+  foldHostInterrupters,
   foldMatchText,
   withTimeout,
 } from "@tasb/core";
@@ -94,7 +95,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           foldEncodedGaps(
             foldMatchText(
               foldDotLookalikes(
-                foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+                foldHostInterrupters(
+                  foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+                ),
               ),
             ),
           ),
