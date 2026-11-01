@@ -85,7 +85,7 @@ packages/detectors-regex      正则检测器。默认关闭，证据只记 rege
 packages/detectors-forward     转发来源。默认删除频道转发
 packages/detectors-join       入群检测器
 packages/detectors-rate       洪泛与重复。窗口在 isolate 内存。无正文的文件按摘要计重复
-packages/detectors-link       短链接、裸 IP、可选信誉源。按钮网址解析前折叠，点状间隔号、一层间隔号编码、全角拉丁字母、七个西里尔字母、乌克兰语 і、%2E、%2F、%2B 和两层字母 %HH 收成原字符。夹在标签里的其余西里尔、希腊、亚美尼亚文和非 ASCII 拉丁字母会去掉。`[.]`、`(.)` 和 `{.}` 收成点。`tg://join` 和 `tg://addlist` 记成 `t.me` 邀请
+packages/detectors-link       短链接、裸 IP、可选信誉源。按钮网址解析前折叠，点状间隔号、一层间隔号编码、全角拉丁字母、七个西里尔字母、乌克兰语 і、%2E、%2F、%2B 和两层字母 %HH 收成原字符。夹在标签里的其余西里尔、希腊、亚美尼亚文和非 ASCII 拉丁字母会去掉。`[.]`、`(.)`、`{.}` 和一层 `%5B.%5D` 收成点。`tg://join` 和 `tg://addlist` 记成 `t.me` 邀请
 packages/detectors-blocklist  跨群黑名单。默认关闭，只存标识或哈希。配了 KV 后留在 POLICY_KV
 packages/actions              内置动作（delete / mute / ban / captcha）
 packages/adapters-memory      测试用存储、策略、处罚和回复

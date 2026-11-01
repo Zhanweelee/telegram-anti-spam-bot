@@ -213,5 +213,16 @@
     "name": "bracket-dot-spaced",
     "text": "bit[ . ]ly/free-gift",
     "expect": "miss"
+  },
+  {
+    "name": "encoded-bracket-dot",
+    "text": "bit%5B.%5Dly/free-gift",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "encoded-bracket-doubled",
+    "text": "bit%255B.%255Dly/free-gift",
+    "expect": "miss"
   }
 ]

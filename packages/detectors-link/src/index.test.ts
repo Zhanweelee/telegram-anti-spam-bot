@@ -945,6 +945,39 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(encoded).toBeNull();
+    expect(encoded?.reasons).toEqual(["short_link"]);
+    expect(encoded?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(encoded)).not.toContain("enc70");
+
+    const encodedParen = await detector.detect({
+      event: eventFor("t%28.%29me/+ENC71"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encodedParen?.reasons).toEqual(["invite"]);
+    expect(encodedParen?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(encodedParen)).not.toContain("ENC71");
+
+    const dotted = await detector.detect({
+      event: eventFor("bit%5B%2E%5Dly/enc71"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["short_link"]);
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const doubled = await detector.detect({
+      event: eventFor("bit%255B.%255Dly/dbl71"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(doubled).toBeNull();
+
+    const ordinaryEncoded = await detector.detect({
+      event: eventFor("example%5B.%5Dcom/page71"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinaryEncoded).toBeNull();
   });
 });

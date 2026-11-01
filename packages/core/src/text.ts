@@ -35,12 +35,13 @@ export function foldDotLookalikes(text: string): string {
 
 /**
  * Bracket pairs that stand in for a dot in a hostname.
- * A space inside the brackets stays. A bare ideographic full stop stays.
+ * One percent-encoded pair counts. A second layer and a space inside stay.
+ * A bare ideographic full stop stays.
  */
 const BRACKET_DOT =
-  /[[\uFF3B][.。][\]\uFF3D]|[(\uFF08][.。][)\uFF09]|[{\uFF5B][.。][}\uFF5D]/g;
+  /(?:[[\uFF3B]|%5B)(?:\.|。|%2E)(?:[\]\uFF3D]|%5D)|(?:[(\uFF08]|%28)(?:\.|。|%2E)(?:[)\uFF09]|%29)|(?:[{\uFF5B]|%7B)(?:\.|。|%2E)(?:[}\uFF5D]|%7D)/gi;
 
-/** Turn `[.]`, `(.)`, and `{.}` into `.` before a hostname scan. */
+/** Turn `[.]`, `(.)`, `{.}`, and one encoded pair into `.` before a hostname scan. */
 export function foldBracketDots(text: string): string {
   return text.replace(BRACKET_DOT, ".");
 }

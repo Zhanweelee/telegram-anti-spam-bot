@@ -300,5 +300,20 @@
     "id": "bracket-dot-spaced",
     "text": "bit[ . ]ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-dot",
+    "text": "bit%5B.%5Dly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-ordinary",
+    "text": "example%5B.%5Dcom/docs",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-doubled",
+    "text": "bit%255B.%255Dly/offer",
+    "label": "ham"
   }
 ]

@@ -69,7 +69,12 @@ describe("foldBracketDots", () => {
     expect(foldBracketDots("bit\uFF3B.\uFF3Dly")).toBe("bit.ly");
     expect(foldBracketDots("bit[\u3002]ly")).toBe("bit.ly");
     expect(foldBracketDots("bit[ . ]ly")).toBe("bit[ . ]ly");
-    expect(foldBracketDots("bit%5B.%5Dly")).toBe("bit%5B.%5Dly");
+    expect(foldBracketDots("bit%5B.%5Dly")).toBe("bit.ly");
+    expect(foldBracketDots("bit%5b.%5dly")).toBe("bit.ly");
+    expect(foldBracketDots("t%28.%29me")).toBe("t.me");
+    expect(foldBracketDots("t%7B%2E%7Dme")).toBe("t.me");
+    expect(foldBracketDots("bit%255B.%255Dly")).toBe("bit%255B.%255Dly");
+    expect(foldBracketDots("bit%5B%252E%5Dly")).toBe("bit%5B%252E%5Dly");
     expect(foldBracketDots("不是免费。领取")).toBe("不是免费。领取");
     expect(foldBracketDots("免 费领取")).toBe("免 费领取");
   });

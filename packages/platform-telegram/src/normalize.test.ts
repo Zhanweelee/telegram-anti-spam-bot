@@ -4599,4 +4599,32 @@ describe("normalizeUpdate", () => {
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain("btn70");
   });
+
+  it("folds an encoded bracket dot in button text down to an ascii host", async () => {
+    const outcome = await normalize({
+      update_id: 4210,
+      message: {
+        message_id: 220,
+        date: 1761955200,
+        chat: { id: -100950, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "bit%5B.%5Dly/btn71", url: "https://example.com" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("btn71");
+    expect(dumped).not.toContain("%5B");
+  });
 });
