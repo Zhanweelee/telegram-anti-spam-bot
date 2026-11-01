@@ -1225,6 +1225,67 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("免费领取");
   });
 
+  it("keeps only the hostname of a link preview", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PREVIEW48";
+    const outcome = await normalize({
+      update_id: 2501,
+      message: {
+        message_id: 71,
+        date: 1761955200,
+        chat: { id: -100740, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        link_preview_options: {
+          url: `https://bit.ly/preview?q=${phrase}`,
+          prefer_small_media: true,
+          show_above_text: true,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("/preview");
+    expect(dumped).not.toContain("prefer_small_media");
+    expect(dumped).not.toContain("show_above_text");
+
+    const invite = await normalize({
+      update_id: 2502,
+      message: {
+        message_id: 72,
+        date: 1761955200,
+        chat: { id: -100741, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        link_preview_options: {
+          url: `https://t.me/%2B${code}`,
+        },
+        external_reply: {
+          origin: { type: "hidden_user", sender_user_name: phrase },
+          link_preview_options: { url: "https://tinyurl.com/other" },
+        },
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.text).toBe("今天站会");
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    const inviteDump = JSON.stringify(invite.event);
+    expect(inviteDump).not.toContain(phrase);
+    expect(inviteDump).not.toContain(code);
+    expect(inviteDump).not.toContain("tinyurl.com");
+  });
+
   it("uses a venue title when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const title = "免费领取";
