@@ -1,0 +1,15 @@
+{
+  "name": "@tasb/evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/core": "workspace:*",
+    "@tasb/detector-keyword": "workspace:*"
+  }
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "dry_run",
+    "dryRun": true,
+    "hasMessage": true,
+    "status": "skipped",
+    "detail": "dry_run"
+  },
+  {
+    "name": "missing_message",
+    "dryRun": false,
+    "hasMessage": false,
+    "status": "failed",
+    "detail": "missing_message"
+  },
+  {
+    "name": "executed",
+    "dryRun": false,
+    "hasMessage": true,
+    "status": "executed"
+  }
+]

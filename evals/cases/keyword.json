@@ -1,0 +1,10 @@
+[
+  { "id": "s1", "text": "点击免费领取", "label": "spam" },
+  { "id": "s2", "text": "加微信领福利", "label": "spam" },
+  { "id": "s3", "text": "免费领取内部资料", "label": "spam" },
+  { "id": "s4", "text": "加微信", "label": "spam" },
+  { "id": "h1", "text": "今天站会改到三点", "label": "ham" },
+  { "id": "h2", "text": "欢迎新人看置顶", "label": "ham" },
+  { "id": "h3", "text": "hello team", "label": "ham" },
+  { "id": "h4", "text": "", "label": "ham" }
+]

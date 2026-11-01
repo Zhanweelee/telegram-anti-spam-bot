@@ -1,0 +1,21 @@
+name: Bug
+description: 行为与文档或测试不符
+title: "fix: "
+labels: []
+body:
+  - type: textarea
+    attributes:
+      label: 发生了什么
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 期望
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 复现步骤
+      description: 不要贴 token、webhook secret 或消息原文。用哈希或改写后的例子。
+    validations:
+      required: true

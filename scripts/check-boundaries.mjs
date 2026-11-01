@@ -1,0 +1,130 @@
+import { readdir, readFile } from "node:fs/promises";
+import { join, relative } from "node:path";
+
+const root = join(import.meta.dirname, "..");
+
+const rules = [
+  { prefix: "packages/core/", allow: [/^\.{1,2}\//, /^zod$/, /^vitest$/] },
+  {
+    prefix: "packages/detectors-keyword/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
+    prefix: "packages/actions/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
+    prefix: "packages/adapters-memory/",
+    allow: [/^\.{1,2}\//, /^@tasb\/core$/, /^vitest$/],
+  },
+  {
+    prefix: "packages/adapters-cloudflare/",
+    allow: [/^\.{1,2}\//, /^@tasb\/core$/],
+  },
+  {
+    prefix: "packages/platform-telegram/",
+    allow: [/^\.{1,2}\//, /^@tasb\/core$/],
+  },
+  {
+    prefix: "packages/sdk/",
+    allow: [/^\.{1,2}\//, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  { prefix: "apps/worker/", allow: [/^\.{1,2}\//, /^hono$/, /^vitest$/] },
+  { prefix: "apps/cloud/", allow: [/^\.{1,2}\//] },
+  {
+    prefix: "examples/",
+    allow: [/^\.{1,2}\//, /^@tasb\//, /^node:/, /^vitest$/],
+  },
+  {
+    prefix: "evals/",
+    allow: [
+      /^\.{1,2}\//,
+      /^@tasb\/core$/,
+      /^@tasb\/detector-keyword$/,
+      /^node:/,
+      /^vitest$/,
+    ],
+  },
+];
+
+const importPattern =
+  /(?:import|export)\s+(?:type\s+)?(?:[^"'`]*?\s+from\s+)?["']([^"']+)["']/g;
+const dynamicPattern = /import\(\s*["']([^"']+)["']\s*\)/g;
+
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
+}
+
+async function walk(directory, files) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    if (
+      entry.name === "node_modules" ||
+      entry.name === "dist" ||
+      entry.name === "coverage"
+    ) {
+      continue;
+    }
+    const full = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await walk(full, files);
+      continue;
+    }
+    if (entry.name === "vitest.config.ts") {
+      continue;
+    }
+    if (
+      entry.name.endsWith(".ts") ||
+      entry.name.endsWith(".tsx") ||
+      entry.name.endsWith(".mjs")
+    ) {
+      files.push(full);
+    }
+  }
+}
+
+function specifiers(source) {
+  const cleaned = stripComments(source);
+  const found = [];
+  for (const pattern of [importPattern, dynamicPattern]) {
+    pattern.lastIndex = 0;
+    let match = pattern.exec(cleaned);
+    while (match) {
+      const value = match[1];
+      if (value) {
+        found.push(value);
+      }
+      match = pattern.exec(cleaned);
+    }
+  }
+  return found;
+}
+
+const files = [];
+for (const folder of ["packages", "apps", "examples", "evals"]) {
+  await walk(join(root, folder), files);
+}
+
+const violations = [];
+for (const file of files) {
+  const rel = relative(root, file).replaceAll("\\", "/");
+  const rule = rules.find((item) => rel.startsWith(item.prefix));
+  if (!rule) {
+    continue;
+  }
+  const source = await readFile(file, "utf8");
+  for (const specifier of specifiers(source)) {
+    if (!rule.allow.some((pattern) => pattern.test(specifier))) {
+      violations.push(`${rel}: forbidden import "${specifier}"`);
+    }
+  }
+}
+
+if (violations.length > 0) {
+  console.error(violations.join("\n"));
+  process.exit(1);
+}
+
+console.log(`boundaries ok (${files.length} files)`);

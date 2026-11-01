@@ -1,0 +1,12 @@
+---
+description: 密钥、日志脱敏和数据最小化
+alwaysApply: true
+---
+
+禁止提交 token、webhook secret、`.env`。示例只放空变量名。
+
+禁止记录或存储消息原文。审计只有哈希、规则 id 和短证据。日志字段禁止 `text`、`body`、`caption`、`raw`、`messageText`、`content`。
+
+不要把 `Error.message` 写进日志。Webhook 在 P0 必须校验 secret token。导出与删除必须按 tenant 限定范围。
+
+改变保留期之前停下来问维护者。当前初始值是 ADR 0003 的 30 天。

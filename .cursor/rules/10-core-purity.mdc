@@ -1,0 +1,11 @@
+---
+description: core 保持纯领域逻辑
+globs: packages/core/**/*.ts
+alwaysApply: false
+---
+
+`packages/core` 禁止 I/O，禁止 import `hono`、`grammy`、`wrangler`、`@cloudflare/*`、`node:*` 和其他 `@tasb/*` 包。唯一允许的运行时依赖是 `zod`。
+
+时间通过 `Clock` 注入。日志只带原始类型字段。不要把 `Event.message.text` 放进 `AuditRecord`、错误 message 或日志。
+
+检测器失败在流水线里捕获。配置错误可以抛。新增公共类型要更新 `src/index.ts`、docs 和 Changeset。覆盖率保持 ≥ 90%。

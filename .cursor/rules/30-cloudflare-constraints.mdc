@@ -1,0 +1,11 @@
+---
+description: Workers 免费额度下的适配层约束
+globs: packages/adapters-cloudflare/**/*.ts,apps/worker/**/*.ts
+alwaysApply: false
+---
+
+先读 `docs/limits.md`。免费计划的硬约束：HTTP CPU 10 ms，KV 每天 1,000 次写，D1 每天 100,000 行写，队列大约每天 3,000 条完整投递，Cron 全账号 5 个。
+
+热路径读 KV 或内存，不要每条消息写 D1。审计批量写，allow 和 dry-run 不写。D1 / KV / 队列失败时 fail-open，避免 Telegram 重试风暴。
+
+LLM 和队列不是默认路径。`DEPLOYMENT_MODE` 只留在 worker，不要传进 core。密钥用 Workers Secrets，不要写进 wrangler vars。
