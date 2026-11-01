@@ -5958,4 +5958,119 @@ describe("normalizeUpdate", () => {
     expect(leftDump).not.toContain("bit.ly");
     expect(leftDump).not.toContain("87004");
   });
+
+  it("keeps a video chat invite name and drops the sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "VID86";
+    const visible = `${phrase} https://bit.ly/name86 https://t.me/+${code}.`;
+    const labeled = await normalize({
+      update_id: 5610,
+      message: {
+        message_id: 350,
+        date: 1761955200,
+        chat: {
+          id: -101100,
+          type: "supergroup",
+          title: "https://cutt.ly/grp86",
+        },
+        from: { id: 88, first_name: "https://tinyurl.com/from86" },
+        text: "今天站会",
+        video_chat_participants_invited: {
+          users: [
+            {
+              id: 88001,
+              is_bot: false,
+              first_name: visible,
+              last_name: "https://ow.ly/last86",
+              username: "user86",
+              language_code: "zh",
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("name86");
+    expect(labeledDump).not.toContain("last86");
+    expect(labeledDump).not.toContain("user86");
+    expect(labeledDump).not.toContain("from86");
+    expect(labeledDump).not.toContain("grp86");
+    expect(labeledDump).not.toContain("88001");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const ordinary = await normalize({
+      update_id: 5611,
+      message: {
+        message_id: 351,
+        date: 1761955200,
+        chat: {
+          id: -101101,
+          type: "supergroup",
+          title: "https://bit.ly/kept86",
+        },
+        from: { id: 88, first_name: phrase },
+        text: "今天站会",
+        video_chat_participants_invited: {
+          users: [{ id: 88, first_name: "https://example.com/ok86" }],
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok86");
+    expect(ordinaryDump).not.toContain("kept86");
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const names = "Ada https://bit.ly/body86 skip86";
+    const alone = await normalize({
+      update_id: 5612,
+      message: {
+        message_id: 352,
+        date: 1761955200,
+        chat: { id: -101102, type: "supergroup", title: phrase },
+        from: { id: 88, first_name: "https://tinyurl.com/from86b" },
+        video_chat_participants_invited: {
+          users: [
+            { id: 88002, first_name: "Ada", language_code: "en" },
+            {
+              id: 88003,
+              last_name: "https://bit.ly/body86",
+              username: "skip86",
+            },
+          ],
+        },
+        video_chat_ended: { duration: 86 },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe(names);
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain(phrase);
+    expect(aloneDump).not.toContain("from86b");
+    expect(aloneDump).not.toContain("88002");
+    expect(aloneDump).not.toContain("88003");
+    expect(aloneDump).not.toContain("tinyurl.com");
+  });
 });

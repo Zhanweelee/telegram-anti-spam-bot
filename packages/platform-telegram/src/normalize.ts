@@ -1181,30 +1181,37 @@ function messageText(
 }
 
 function memberNames(message: Record<string, unknown>): string {
-  const members = message.new_chat_members;
-  if (!Array.isArray(members)) {
-    return "";
-  }
   const parts: string[] = [];
-  for (const member of members) {
-    if (!isRecord(member)) {
-      continue;
-    }
-    for (const key of ["first_name", "last_name", "username"]) {
-      const value = member[key];
-      if (typeof value !== "string") {
-        continue;
-      }
-      const trimmed = value.trim();
-      if (trimmed.length > 0) {
-        parts.push(trimmed);
-      }
-    }
+  pushUserLabels(message.new_chat_members, parts);
+  const invited = message.video_chat_participants_invited;
+  if (isRecord(invited)) {
+    pushUserLabels(invited.users, parts);
   }
   if (parts.length === 0) {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function pushUserLabels(value: unknown, parts: string[]): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  for (const member of value) {
+    if (!isRecord(member)) {
+      continue;
+    }
+    for (const key of ["first_name", "last_name", "username"]) {
+      const label = member[key];
+      if (typeof label !== "string") {
+        continue;
+      }
+      const trimmed = label.trim();
+      if (trimmed.length > 0) {
+        parts.push(trimmed);
+      }
+    }
+  }
 }
 
 function senderTag(message: Record<string, unknown>): string {

@@ -115,6 +115,38 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("87004");
   });
 
+  it("keeps a video chat invite name and drops the sender name", async () => {
+    const visible = "https://bit.ly/name86";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 5,
+        message: {
+          message_id: 50,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp86" },
+          from: { id: 88, first_name: "https://tinyurl.com/from86" },
+          video_chat_participants_invited: {
+            users: [{ id: 88001, first_name: visible, language_code: "zh" }],
+          },
+          video_chat_ended: { duration: 86 },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_5",
+      kind: "message",
+      message: { id: "50", text: visible },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("from86");
+    expect(dumped).not.toContain("grp86");
+    expect(dumped).not.toContain("88001");
+    expect(dumped).not.toContain("duration");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

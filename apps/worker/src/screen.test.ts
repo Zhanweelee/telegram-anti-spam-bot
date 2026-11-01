@@ -1894,4 +1894,78 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(left.logger.entries)).not.toContain("left85");
     expect(JSON.stringify(left.result)).not.toContain("left85");
   });
+
+  it("deletes a video chat invite whose visible name carries a short link", async () => {
+    const screenInvite = async (
+      updateId: number,
+      chatId: number,
+      users: readonly Record<string, unknown>[],
+      extra?: Record<string, unknown>,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 88, first_name: "https://tinyurl.com/from86" },
+            video_chat_participants_invited: { users },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result };
+    };
+
+    const linked = await screenInvite(5610, -100610, [
+      { id: 88, first_name: "https://bit.ly/name86" },
+    ]);
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100610", messageId: "5610" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name86");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from86");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name86",
+    );
+
+    const named = await screenInvite(5611, -100611, [
+      { id: 88, first_name: "广告员免费领取礼品" },
+    ]);
+    expect(named.result.decision.action).toBe("delete");
+    expect(named.result.decision.reasons).toContain("keyword_match");
+    expect(JSON.stringify(named.logger.entries)).not.toContain("免费领取");
+
+    const ordinary = await screenInvite(5612, -100612, [
+      { id: 88, first_name: "https://example.com/ok86" },
+    ]);
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+
+    const ended = await screenInvite(
+      5613,
+      -100613,
+      [{ id: 88, first_name: "Ada" }],
+      { video_chat_ended: { duration: 86 } },
+    );
+    expect(ended.result.decision.action).toBe("allow");
+    expect(JSON.stringify(ended.result)).not.toContain("机密群名");
+  });
 });
