@@ -14,5 +14,6 @@
   { "id": "h5", "text": "不是免费。领取", "label": "ham" },
   { "id": "h6", "text": "免\uFF21费领取", "label": "ham" },
   { "id": "h7", "text": "привет", "label": "ham" },
-  { "id": "h8", "text": "привіт", "label": "ham" }
+  { "id": "h8", "text": "привіт", "label": "ham" },
+  { "id": "s9", "text": "加%C2%B7微信", "label": "spam" }
 ]

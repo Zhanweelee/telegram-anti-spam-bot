@@ -13,5 +13,6 @@
   { "id": "s8", "text": "加\u00B7微信", "label": "spam" },
   { "id": "s9", "text": "加微\uFF38", "label": "spam" },
   { "id": "s10", "text": "\uFF54.\uFF4D\uFF45/+abc", "label": "spam" },
-  { "id": "s11", "text": "加微\u0445", "label": "spam" }
+  { "id": "s11", "text": "加微\u0445", "label": "spam" },
+  { "id": "s12", "text": "加%C2%B7微信", "label": "spam" }
 ]

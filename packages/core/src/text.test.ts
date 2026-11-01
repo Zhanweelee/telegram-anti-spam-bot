@@ -4,6 +4,7 @@ import {
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
+  foldEncodedMiddleDot,
   foldEncodedSeparators,
   foldFullwidthLatin,
   foldHostInterrupters,
@@ -143,6 +144,17 @@ describe("foldEncodedGaps", () => {
     expect(foldEncodedGaps("免费领取")).toBe("免费领取");
     expect(foldMatchText("免%E2%80%8B费领取")).toBe("免%E2%80%8B费领取");
     expect(foldEncodedGaps("IN%E2%80%8BVITE")).not.toContain("\u200b");
+  });
+});
+
+describe("foldEncodedMiddleDot", () => {
+  it("turns one encoded middle dot into U+00B7", () => {
+    expect(foldEncodedMiddleDot("bit%C2%B7ly")).toBe("bit\u00B7ly");
+    expect(foldEncodedMiddleDot("bit%c2%b7ly")).toBe("bit\u00B7ly");
+    expect(foldEncodedMiddleDot("bit%C2%b7ly")).toBe("bit\u00B7ly");
+    expect(foldEncodedMiddleDot("bit%25C2%25B7ly")).toBe("bit%25C2%25B7ly");
+    expect(foldEncodedMiddleDot("免费领取")).toBe("免费领取");
+    expect(foldEncodedMiddleDot("不是免费。领取")).toBe("不是免费。领取");
   });
 });
 

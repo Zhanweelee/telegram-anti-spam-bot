@@ -259,6 +259,7 @@ export {
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
+  foldEncodedMiddleDot,
   foldEncodedSeparators,
   foldFullwidthLatin,
   foldHostInterrupters,

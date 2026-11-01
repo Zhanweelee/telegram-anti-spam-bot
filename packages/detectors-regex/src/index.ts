@@ -2,6 +2,7 @@ import {
   type Detector,
   defineDetector,
   foldCyrillicLookalikes,
+  foldEncodedMiddleDot,
   foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
@@ -70,7 +71,9 @@ export function createRegexDetector(config: RegexConfig): Detector {
         try {
           matched = expression.test(
             foldInterpuncts(
-              foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+              foldEncodedMiddleDot(
+                foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+              ),
             ),
           );
         } catch {

@@ -235,5 +235,20 @@
     "id": "interrupter-glued",
     "text": "x\u0442bit.ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "encoded-middle-dot",
+    "text": "bit%C2%B7ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-middle-dot-ordinary",
+    "text": "example%C2%B7com/docs",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-middle-dot-doubled",
+    "text": "bit%25C2%25B7ly/offer",
+    "label": "ham"
   }
 ]

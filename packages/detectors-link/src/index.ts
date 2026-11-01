@@ -6,6 +6,7 @@ import {
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
+  foldEncodedMiddleDot,
   foldEncodedSeparators,
   foldFullwidthLatin,
   foldHostInterrupters,
@@ -95,8 +96,10 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           foldEncodedGaps(
             foldMatchText(
               foldDotLookalikes(
-                foldHostInterrupters(
-                  foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+                foldEncodedMiddleDot(
+                  foldHostInterrupters(
+                    foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+                  ),
                 ),
               ),
             ),

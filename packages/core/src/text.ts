@@ -134,6 +134,11 @@ export function foldEncodedGaps(text: string): string {
   return out;
 }
 
+/** Turn one `%C2%B7` into U+00B7. A second layer stays. */
+export function foldEncodedMiddleDot(text: string): string {
+  return text.replace(/%C2%B7/gi, "\u00B7");
+}
+
 /** Turn one `%2E`, `%2F`, or `%2B` into `.`, `/`, or `+`. A second layer stays. */
 export function foldEncodedSeparators(text: string): string {
   return text.replace(/%2E/gi, ".").replace(/%2F/gi, "/").replace(/%2B/gi, "+");

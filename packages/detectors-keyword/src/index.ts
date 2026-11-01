@@ -2,6 +2,7 @@ import {
   type Detector,
   defineDetector,
   foldCyrillicLookalikes,
+  foldEncodedMiddleDot,
   foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
@@ -32,10 +33,12 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
       const caseSensitive = parsed.caseSensitive === true;
       const matched = parsed.keywords.filter((keyword) => {
         const needle = foldInterpuncts(
-          foldMatchText(
-            foldFullwidthLatin(
-              foldCyrillicLookalikes(
-                caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+          foldEncodedMiddleDot(
+            foldMatchText(
+              foldFullwidthLatin(
+                foldCyrillicLookalikes(
+                  caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+                ),
               ),
             ),
           ),
@@ -45,10 +48,12 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         }
         return texts.some((text) => {
           const haystack = foldInterpuncts(
-            foldMatchText(
-              foldFullwidthLatin(
-                foldCyrillicLookalikes(
-                  caseSensitive ? text : text.toLocaleLowerCase(),
+            foldEncodedMiddleDot(
+              foldMatchText(
+                foldFullwidthLatin(
+                  foldCyrillicLookalikes(
+                    caseSensitive ? text : text.toLocaleLowerCase(),
+                  ),
                 ),
               ),
             ),
@@ -65,7 +70,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         reasons: ["keyword_match"],
         evidence: matched.map((keyword) => ({
           kind: "keyword" as const,
-          summary: `keyword:${foldInterpuncts(foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(keyword)))).slice(0, 80)}`,
+          summary: `keyword:${foldInterpuncts(foldEncodedMiddleDot(foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(keyword))))).slice(0, 80)}`,
         })),
       };
     },

@@ -235,6 +235,30 @@ describe("keyword detector", () => {
     expect(JSON.stringify(matched)).not.toContain("\u200b");
   });
 
+  it("folds one encoded middle dot before matching", async () => {
+    const hit = await detector.detect({
+      event: messageEvent("加%C2%B7微信"),
+      logger,
+      signal,
+    });
+    expect(hit?.evidence[0]?.summary).toBe("keyword:加微信");
+    expect(JSON.stringify(hit)).not.toContain("%C2%B7");
+    expect(
+      await detector.detect({
+        event: messageEvent("不是免费。领取"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await detector.detect({
+        event: messageEvent("加%25C2%25B7微信"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
   it("rejects an empty keyword list", () => {
     expect(() => createKeywordDetector({ keywords: [] })).toThrow();
   });

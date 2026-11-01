@@ -695,4 +695,40 @@ describe("link fixtures", () => {
     });
     expect(bareTe).toBeNull();
   });
+
+  it("folds one encoded middle dot before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("bit%C2%B7ly/lat67"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("lat67");
+    expect(JSON.stringify(short)).not.toContain("%C2%B7");
+
+    const invite = await detector.detect({
+      event: eventFor("t%c2%b7me/+LAT67"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("LAT67");
+
+    const ordinary = await detector.detect({
+      event: eventFor("example%C2%B7com/page67"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const doubled = await detector.detect({
+      event: eventFor("bit%25C2%25B7ly/dbl67"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(doubled).toBeNull();
+  });
 });
