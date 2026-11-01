@@ -51,6 +51,53 @@ export function bindBlocklistStoreContract(create: () => BlocklistStore): void {
       ).toBe(true);
     });
 
+    it("removes one entry and frees a slot without turning the chat off", async () => {
+      const store = create();
+      await store.setEnabled("tenant_a", "chat_1", true);
+      await store.add("tenant_a", { kind: "actor", value: "user_9" });
+      await store.add("tenant_a", { kind: "hash", value: hash });
+      await store.add("tenant_b", { kind: "actor", value: "user_9" });
+      expect(
+        await store.remove("tenant_a", { kind: "actor", value: "user_9" }),
+      ).toBe(true);
+      expect(
+        await store.has("tenant_a", { kind: "actor", value: "user_9" }),
+      ).toBe(false);
+      expect(await store.has("tenant_a", { kind: "hash", value: hash })).toBe(
+        true,
+      );
+      expect(await store.isEnabled("tenant_a", "chat_1")).toBe(true);
+      expect(
+        await store.has("tenant_b", { kind: "actor", value: "user_9" }),
+      ).toBe(true);
+      expect(
+        await store.remove("tenant_a", { kind: "actor", value: "user_9" }),
+      ).toBe(false);
+      await expect(
+        store.remove("tenant_a", { kind: "actor", value: phrase }),
+      ).rejects.toThrow();
+      expect(await store.has("tenant_a", { kind: "hash", value: hash })).toBe(
+        true,
+      );
+
+      for (let index = 0; index < MAX_BLOCKLIST_ENTRIES - 1; index += 1) {
+        await store.add("tenant_a", { kind: "actor", value: `u${index}` });
+      }
+      await expect(
+        store.add("tenant_a", { kind: "actor", value: "overflow" }),
+      ).rejects.toThrow("blocklist_full");
+      expect(
+        await store.remove("tenant_a", { kind: "hash", value: hash }),
+      ).toBe(true);
+      await store.add("tenant_a", { kind: "actor", value: "overflow" });
+      expect(
+        await store.has("tenant_a", { kind: "actor", value: "overflow" }),
+      ).toBe(true);
+      expect(await store.has("tenant_a", { kind: "hash", value: hash })).toBe(
+        false,
+      );
+    });
+
     it("keeps shared entries after a chat turns off", async () => {
       const store = create();
       await store.setEnabled("tenant_a", "chat_1", true);

@@ -851,6 +851,70 @@ describe("runOperatorCommand", () => {
     );
   });
 
+  it("removes one shared entry without echoing the identifier", async () => {
+    const deps = kit();
+    const blocklist = createMemoryBlocklistStore();
+    const hash = "cd".repeat(32);
+    await blocklist.add("local", { kind: "actor", value: "user_9" });
+    await blocklist.add("local", { kind: "hash", value: hash });
+    await blocklist.setEnabled("local", "-100", true);
+    const removed = await runOperatorCommand({
+      event: event({
+        text: "/blocklist -100 remove actor user_9",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(removed).toMatchObject({ text: "blocklist -100 on\nremoved" });
+    expect(JSON.stringify(removed)).not.toContain("user_9");
+    expect(
+      await blocklist.has("local", { kind: "actor", value: "user_9" }),
+    ).toBe(false);
+    expect(await blocklist.has("local", { kind: "hash", value: hash })).toBe(
+      true,
+    );
+    expect(await blocklist.isEnabled("local", "-100")).toBe(true);
+    const hashed = await runOperatorCommand({
+      event: event({
+        text: `/blocklist -100 remove hash ${hash.toUpperCase()}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(hashed).toMatchObject({ text: "blocklist -100 on\nremoved" });
+    expect(JSON.stringify(hashed)).not.toContain(hash);
+    expect(await blocklist.has("local", { kind: "hash", value: hash })).toBe(
+      false,
+    );
+    const absent = await runOperatorCommand({
+      event: event({
+        text: "/blocklist -100 remove actor user_9",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(absent).toMatchObject({ text: "blocklist -100 on\nabsent" });
+    expect(JSON.stringify(absent)).not.toContain("user_9");
+    const raw = await runOperatorCommand({
+      event: event({
+        text: `/blocklist -100 remove actor ${phrase}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(raw).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(raw)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
   it("rejects raw text and a missing or full blocklist without echoing it", async () => {
     const deps = kit();
     const blocklist = createMemoryBlocklistStore();
@@ -877,7 +941,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(spaced).toMatchObject({
-      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
     });
     expect(JSON.stringify(spaced)).not.toContain("hello");
 
@@ -888,7 +952,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(usage).toMatchObject({
-      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
     });
     const badChat = await runOperatorCommand({
       event: event({ text: "/blocklist abc", direct: true }),
@@ -904,7 +968,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(badOp).toMatchObject({
-      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
     });
 
     const help = await runOperatorCommand({
@@ -943,7 +1007,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(extra).toMatchObject({
-      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
     });
     const wrongKind = await runOperatorCommand({
       event: event({ text: "/blocklist -100 add note 9", direct: true }),
@@ -952,7 +1016,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(wrongKind).toMatchObject({
-      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>|remove actor <id>|remove hash <sha256>]",
     });
 
     const addedThenUnreadable = createMemoryBlocklistStore();
@@ -963,6 +1027,7 @@ describe("runOperatorCommand", () => {
       setEnabled: (tenantId, chatId, enabled) =>
         addedThenUnreadable.setEnabled(tenantId, chatId, enabled),
       add: (tenantId, entry) => addedThenUnreadable.add(tenantId, entry),
+      remove: (tenantId, entry) => addedThenUnreadable.remove(tenantId, entry),
       has: (tenantId, entry) => addedThenUnreadable.has(tenantId, entry),
     };
     const hidden = await runOperatorCommand({
@@ -987,6 +1052,9 @@ describe("runOperatorCommand", () => {
       },
       async add() {
         throw new Error(phrase);
+      },
+      async remove() {
+        return false;
       },
     };
     const rejectedAdd = await runOperatorCommand({
@@ -2771,6 +2839,7 @@ function countingStore(
     setEnabled: (tenantId, chatId, enabled) =>
       inner.setEnabled(tenantId, chatId, enabled),
     add: (tenantId, entry) => inner.add(tenantId, entry),
+    remove: (tenantId, entry) => inner.remove(tenantId, entry),
     async has(tenantId, entry) {
       onRead();
       return inner.has(tenantId, entry);
@@ -2852,6 +2921,9 @@ function failingStore(phrase: string): BlocklistStore & { reads: number } {
       throw new Error(phrase);
     },
     async add() {
+      throw new Error(phrase);
+    },
+    async remove() {
       throw new Error(phrase);
     },
   };

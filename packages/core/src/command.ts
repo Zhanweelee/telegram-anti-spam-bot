@@ -861,7 +861,7 @@ async function editBlocklist(
       ? say(input, "command.invalid")
       : formatBlocklist(input, chatId, enabled);
   }
-  if (op !== "add" || args.length !== 4) {
+  if ((op !== "add" && op !== "remove") || args.length !== 4) {
     return say(input, "command.blocklist.usage");
   }
   const kind = args[2];
@@ -876,6 +876,23 @@ async function editBlocklist(
   const parsed = blocklistEntrySchema.safeParse(candidate);
   if (!parsed.success) {
     return say(input, "command.invalid");
+  }
+  if (op === "remove") {
+    const removed = await removeBlocklist(input, () =>
+      store.remove(input.event.tenantId, parsed.data),
+    );
+    if (removed === null) {
+      return say(input, "command.invalid");
+    }
+    const enabled = await readEnabled(input, store, chatId);
+    if (enabled === null) {
+      return say(input, "command.invalid");
+    }
+    return say(
+      input,
+      removed ? "command.blocklist.removed" : "command.blocklist.absent",
+      { status: formatBlocklist(input, chatId, enabled) },
+    );
   }
   const wrote = await writeBlocklist(input, () =>
     store.add(input.event.tenantId, parsed.data),
@@ -899,6 +916,18 @@ async function readEnabled(
 ): Promise<boolean | null> {
   try {
     return await store.isEnabled(input.event.tenantId, chatId);
+  } catch {
+    rejectBlocklist(input);
+    return null;
+  }
+}
+
+async function removeBlocklist(
+  input: OperatorCommandInput,
+  run: () => Promise<boolean>,
+): Promise<boolean | null> {
+  try {
+    return await run();
   } catch {
     rejectBlocklist(input);
     return null;

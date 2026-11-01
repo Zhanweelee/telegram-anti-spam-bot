@@ -65,7 +65,7 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 `/rule [chatId] <ruleId> on|off|reset` 只改这一群这一条已有规则的启用状态。没配 `POLICY_KV` 时，开关在 isolate 内存里，最多 256 个群、每个群 32 条，重启后回到文件。配了 `POLICY_KV` 之后，开关和 dry-run 写进那个 KV，每个群一个键，最多 32 条，重启还在。热路径用本 isolate 的 60 秒缓存，不按每条消息读 KV。不新增绑定。见 ADR 0034 和 ADR 0035。
 
-`/blocklist <chatId> on|off` 和 `add actor`、`add hash` 只改这个租户的共享名单。没配 `POLICY_KV` 时，开关和条目在 isolate 内存里，最多 128 个群、256 条，重启后清空。配了之后每个租户一个键，只在真的变化时写，重启还在。热路径用本 isolate 的 60 秒缓存。发出关闭的那次请求之后，下一条消息不再读名单。不新增绑定。见 ADR 0012 和 ADR 0047。
+`/blocklist <chatId> on|off`、`add` 和 `remove` 只改这个租户的共享名单。`remove` 删一条 actor id 或哈希，回复不回显这条标识。名单里没有它时不写。没配 `POLICY_KV` 时，开关和条目在 isolate 内存里，最多 128 个群、256 条，重启后清空。配了之后每个租户一个键，只在真的变化时写，重启还在。热路径用本 isolate 的 60 秒缓存。发出关闭的那次请求之后，下一条消息不再读名单。不新增绑定。见 ADR 0012、ADR 0047 和 ADR 0048。
 
 ## 部署
 

@@ -48,6 +48,7 @@ export interface BlocklistStore {
   setEnabled(tenantId: string, chatId: string, enabled: boolean): Promise<void>;
   has(tenantId: string, entry: BlocklistEntry): Promise<boolean>;
   add(tenantId: string, entry: BlocklistEntry): Promise<void>;
+  remove(tenantId: string, entry: BlocklistEntry): Promise<boolean>;
 }
 
 export class BlocklistCapacityError extends Error {
@@ -103,6 +104,16 @@ export function createMemoryBlocklistStore(): BlocklistStore & {
         throw new BlocklistCapacityError();
       }
       set.add(id);
+    },
+    async remove(tenantId, entry) {
+      const parsed = parseBlocklistEntry(entry);
+      const set = entries.get(tenantId);
+      const id = entryId(parsed);
+      if (!set?.has(id)) {
+        return false;
+      }
+      set.delete(id);
+      return true;
     },
     snapshot() {
       const listed: BlocklistSnapshotEntry[] = [];

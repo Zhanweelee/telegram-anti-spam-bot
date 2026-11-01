@@ -419,7 +419,30 @@ export function createKvBlocklistStore(
         entries: [...current.entries, parsed],
       });
     },
+    async remove(tenantId, entry) {
+      const parsed = blocklistEntrySchema.parse(entry);
+      const current = await load(tenantId);
+      if (!sameBlocklistEntry(current.entries, parsed)) {
+        return false;
+      }
+      await save(tenantId, {
+        ...current,
+        entries: current.entries.filter(
+          (item) => item.kind !== parsed.kind || item.value !== parsed.value,
+        ),
+      });
+      return true;
+    },
   };
+}
+
+function sameBlocklistEntry(
+  entries: readonly { kind: string; value: string }[],
+  entry: { kind: string; value: string },
+): boolean {
+  return entries.some(
+    (item) => item.kind === entry.kind && item.value === entry.value,
+  );
 }
 
 function parseBlocklist(raw: string | null): BlocklistDocument {

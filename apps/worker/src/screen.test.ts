@@ -882,6 +882,7 @@ describe("screenTelegramEvent", () => {
       setEnabled: (tenantId, chatId, enabled) =>
         blocklist.setEnabled(tenantId, chatId, enabled),
       add: (tenantId, entry) => blocklist.add(tenantId, entry),
+      remove: (tenantId, entry) => blocklist.remove(tenantId, entry),
       async has(tenantId, entry) {
         reads += 1;
         return blocklist.has(tenantId, entry);

@@ -69,6 +69,7 @@ function countingStore(): {
     setEnabled: (tenantId, chatId, enabled) =>
       inner.setEnabled(tenantId, chatId, enabled),
     add: (tenantId, entry) => inner.add(tenantId, entry),
+    remove: (tenantId, entry) => inner.remove(tenantId, entry),
     async has(tenantId, entry) {
       reads += 1;
       return inner.has(tenantId, entry);
@@ -148,6 +149,9 @@ describe("blocklist fixtures", () => {
       async add() {
         return undefined;
       },
+      async remove() {
+        return false;
+      },
     };
     const detector = createBlocklistDetector({ store: closed });
     const missed = await detector.detect({
@@ -175,6 +179,9 @@ describe("blocklist fixtures", () => {
       },
       async add() {
         return undefined;
+      },
+      async remove() {
+        return false;
       },
     };
     const failed = await createBlocklistDetector({ store: open }).detect({
