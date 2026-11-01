@@ -616,6 +616,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(declined.comment, urls);
   }
   pushPlainUrls(message.new_chat_title, urls);
+  pushPlainUrls(memberNames(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -1172,7 +1173,38 @@ function messageText(
   if (tag.length > 0) {
     return tag;
   }
+  const members = memberNames(message);
+  if (members.length > 0) {
+    return members;
+  }
   return "";
+}
+
+function memberNames(message: Record<string, unknown>): string {
+  const members = message.new_chat_members;
+  if (!Array.isArray(members)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const member of members) {
+    if (!isRecord(member)) {
+      continue;
+    }
+    for (const key of ["first_name", "last_name", "username"]) {
+      const value = member[key];
+      if (typeof value !== "string") {
+        continue;
+      }
+      const trimmed = value.trim();
+      if (trimmed.length > 0) {
+        parts.push(trimmed);
+      }
+    }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
 }
 
 function senderTag(message: Record<string, unknown>): string {

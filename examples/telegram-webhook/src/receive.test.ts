@@ -82,6 +82,39 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp83");
   });
 
+  it("keeps a join service message name and drops the sender name", async () => {
+    const visible = "https://bit.ly/name85";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 4,
+        message: {
+          message_id: 40,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp85" },
+          from: { id: 87, first_name: "https://tinyurl.com/from85" },
+          new_chat_members: [
+            { id: 87001, first_name: visible, language_code: "zh" },
+          ],
+          left_chat_member: { id: 87004, first_name: "https://bit.ly/left85" },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_4",
+      kind: "message",
+      message: { id: "40", text: visible },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("from85");
+    expect(dumped).not.toContain("left85");
+    expect(dumped).not.toContain("grp85");
+    expect(dumped).not.toContain("87001");
+    expect(dumped).not.toContain("87004");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

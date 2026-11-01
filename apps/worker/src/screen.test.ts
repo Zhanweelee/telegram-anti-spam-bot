@@ -1813,4 +1813,85 @@ describe("screenTelegramEvent", () => {
     });
     expect(allowed.decision.action).toBe("allow");
   });
+
+  it("deletes a join service message whose visible name carries a short link", async () => {
+    const screenMembers = async (
+      updateId: number,
+      chatId: number,
+      members: readonly Record<string, unknown>[],
+      extra?: Record<string, unknown>,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 87, first_name: "https://tinyurl.com/from85" },
+            ...extra,
+            ...(members.length > 0 ? { new_chat_members: members } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { outcome, logger, moderator, result };
+    };
+
+    const linked = await screenMembers(5510, -100596, [
+      { id: 87, first_name: "https://bit.ly/name85" },
+    ]);
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100596", messageId: "5510" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name85");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from85");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name85",
+    );
+
+    const named = await screenMembers(5511, -100597, [
+      { id: 87, first_name: "广告员免费领取礼品" },
+    ]);
+    expect(named.result.decision.action).toBe("delete");
+    expect(named.result.decision.reasons).toContain("keyword_match");
+    expect(named.result.decision.ruleIds).toContain("spam_keywords");
+    expect(JSON.stringify(named.logger.entries)).not.toContain("免费领取");
+
+    const ordinary = await screenMembers(5512, -100598, [
+      { id: 87, first_name: "https://example.com/ok85" },
+    ]);
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+
+    const invited = await screenMembers(5513, -100599, [
+      { id: 87, first_name: "https://t.me/+CODE85" },
+    ]);
+    expect(invited.result.decision.action).toBe("delete");
+    expect(invited.result.decision.reasons).toContain("invite");
+    expect(JSON.stringify(invited.logger.entries)).not.toContain("CODE85");
+
+    const left = await screenMembers(5514, -100600, [], {
+      left_chat_member: { id: 87004, first_name: "https://bit.ly/left85" },
+    });
+    expect(left.result.decision.action).toBe("allow");
+    expect(left.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(left.logger.entries)).not.toContain("left85");
+    expect(JSON.stringify(left.result)).not.toContain("left85");
+  });
 });
