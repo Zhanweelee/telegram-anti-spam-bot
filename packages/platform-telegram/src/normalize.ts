@@ -851,6 +851,7 @@ function walkBlocks(
         }
         if (typeof item.label === "string" && item.label.length > 0) {
           parts.push(item.label);
+          pushPlainUrls(item.label, urls);
         }
         walkBlocks(item.blocks, parts, labels, urls);
       }

@@ -4963,4 +4963,76 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("附件说明");
     expect(dumped).not.toContain("file_id");
   });
+
+  it("keeps hostnames from a rich list label", async () => {
+    const code = "LIST76";
+    const outcome = await normalize({
+      update_id: 4710,
+      message: {
+        message_id: 270,
+        date: 1761955200,
+        chat: { id: -101000, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "list",
+              items: [
+                {
+                  label: "https://bit.ly/lab76",
+                  blocks: [{ type: "paragraph", text: "内文说明" }],
+                },
+                {
+                  label: `打开 https://t.me/+${code}`,
+                  has_checkbox: true,
+                  is_checked: true,
+                  value: 2,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("lab76");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("内文说明");
+    expect(dumped).not.toContain("has_checkbox");
+
+    const label = "免费领取 https://bit.ly/body76";
+    const asBody = await normalize({
+      update_id: 4711,
+      message: {
+        message_id: 271,
+        date: 1761955200,
+        chat: { id: -101001, type: "supergroup" },
+        from: { id: 9 },
+        rich_message: {
+          blocks: [
+            {
+              type: "list",
+              items: [{ label }],
+            },
+          ],
+        },
+      },
+    });
+    expect(asBody.status).toBe("event");
+    if (asBody.status !== "event") {
+      return;
+    }
+    expect(asBody.event.message?.text).toBe(label);
+    expect(asBody.event.message?.textSha256).toBe(await sha256Hex(label));
+    expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
+  });
 });
