@@ -77,10 +77,11 @@ pnpm test
 pnpm test:coverage  # 只跑 core，门槛 90%
 pnpm eval           # 关键词 precision / recall，低于基线则失败
 pnpm --filter @tasb/worker dev
+pnpm smoke          # 需要 WEBHOOK_SECRET，检查 /health 和一次 webhook 200
 pnpm --filter @tasb/example-minimal-pipeline test
 ```
 
-本地需要 Node 22。测试不需要 Cloudflare 账号。`pnpm --filter @tasb/worker dev` 只提供 `/health`。
+本地需要 Node 22。测试不需要 Cloudflare 账号。部署步骤在 `docs/deploy.md`，免费套餐即可，暂时不要创建 D1 或 KV。
 
 ## 代码规范
 

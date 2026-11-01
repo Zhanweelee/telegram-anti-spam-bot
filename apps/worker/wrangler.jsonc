@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  // WEBHOOK_SECRET is a Worker secret: `wrangler secret put WEBHOOK_SECRET`.
-  // Local dev reads apps/worker/.dev.vars. Never put the secret in vars.
+  // WEBHOOK_SECRET and TELEGRAM_BOT_TOKEN are Worker secrets.
+  // Local dev reads apps/worker/.dev.vars. Never put secrets in vars.
+  // D1 and KV bindings wait for P0-08. A free deploy must succeed without them.
   "name": "tasb",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-30",

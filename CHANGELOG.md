@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P0-07
+
+- README 的 10 分钟路径包含设置 secret、`wrangler deploy` 和设置 webhook。
+- P0-08 尚未合并，部署不创建 D1 或 KV，也不要求付费计划。
+- `pnpm smoke` 检查 `/health`，以及不带密钥的 401 和带密钥的 webhook 200。
+
 ### P0-06
 
 - 配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。

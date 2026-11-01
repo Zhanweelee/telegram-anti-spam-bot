@@ -19,65 +19,63 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 跑一条最小检测 | [examples/minimal-pipeline](examples/minimal-pipeline) |
 | 看 webhook 怎么收事件 | [examples/telegram-webhook](examples/telegram-webhook) |
 | 看私聊命令怎么改配置 | [examples/operator-commands](examples/operator-commands) |
+| 部署到自己的 Cloudflare | [docs/deploy.md](docs/deploy.md) |
 
-Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的这些文本不会改配置。删除接口、D1 和一键部署还在后面的 P0 任务里。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`。群聊里的这些文本不会改配置。免费套餐可以部署，暂时不要创建 D1 或 KV。默认流水线不会调用 Telegram 的删除、禁言或封禁接口。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete。
 
 ## 10 分钟跑通
 
-需要 Node.js 22 和 pnpm 10。
+需要 Node.js 22、pnpm 10、一个 Cloudflare 免费账号，以及 BotFather 的 token。不需要信用卡。P0-08 还没合并，所以不要创建 D1 或 KV。
 
 ```sh
 pnpm install
+cd apps/worker
+pnpm exec wrangler login
+printf '%s' "$WEBHOOK_SECRET" | pnpm exec wrangler secret put WEBHOOK_SECRET
+printf '%s' "$TELEGRAM_BOT_TOKEN" | pnpm exec wrangler secret put TELEGRAM_BOT_TOKEN
+pnpm exec wrangler deploy
+```
+
+`WEBHOOK_SECRET` 用 `openssl rand -hex 32` 生成。Telegram 只接受字母、数字、下划线和短横线。部署打印出的 `https://tasb.<子域>.workers.dev` 就是访问地址。
+
+设置 Webhook，并确认 `/health` 与一次更新：
+
+```sh
+curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -H 'content-type: application/json' \
+  -d "{\"url\":\"https://tasb.<子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"chat_member\"],\"drop_pending_updates\":true}"
+
+curl -sS "https://tasb.<子域>.workers.dev/health"
+TASB_URL="https://tasb.<子域>.workers.dev" pnpm smoke
+```
+
+`/health` 返回 `{"ok":true,"service":"tasb","deploymentMode":"self-host"}`。`pnpm smoke` 不带密钥时期望 401，带密钥的消息更新期望 200，响应里没有原文。完整说明、管理员 id 和本地预览在 [docs/deploy.md](docs/deploy.md)。
+
+## 本地开发
+
+```sh
 pnpm check
 ```
 
 `pnpm check` 会做依赖边界检查、类型检查、lint、全部测试、core 覆盖率（门槛 90%）和关键词评测。
 
-只看最小例子：
-
 ```sh
 pnpm --filter @tasb/example-minimal-pipeline test
 pnpm eval
-```
-
-本地看 Worker：
-
-```sh
 pnpm --filter @tasb/worker dev
+WEBHOOK_SECRET='你的hex' pnpm smoke
 ```
 
-`/health` 的 `deploymentMode` 来自 Wrangler 变量，默认 `self-host`。
-
-Webhook 密钥不要写进 `wrangler.jsonc`。在 `apps/worker/.dev.vars`（已 gitignore）里放：
-
-```sh
-WEBHOOK_SECRET=dev-secret
-```
-
-然后：
-
-```sh
-curl -s -X POST http://127.0.0.1:8787/telegram/webhook \
-  -H "content-type: application/json" \
-  -d '{"update_id":1}'
-```
-
-没带密钥时应为 401。带上 `X-Telegram-Bot-Api-Secret-Token: dev-secret` 且正文是一条 `message` 时为 200。生产环境用 `wrangler secret put WEBHOOK_SECRET`。
-
-只看归一化示例：
-
-```sh
-pnpm --filter @tasb/example-telegram-webhook test
-```
+密钥放在 `apps/worker/.dev.vars`，不要写进 `wrangler.jsonc`。生产环境用上面的 `wrangler secret put`。
 
 ## 仓库地图
 
 ```text
 packages/core                 领域逻辑。零 I/O，零平台 SDK
 packages/detectors-keyword    内置关键词检测器
-packages/actions              内置动作（目前是 delete）
-packages/adapters-memory      测试用存储和处罚端口
-packages/adapters-cloudflare  Cloudflare 绑定适配层（骨架）
+packages/actions              内置动作（delete / mute / ban）
+packages/adapters-memory      测试用存储、策略、处罚和回复
+packages/adapters-cloudflare  Cloudflare 绑定适配层（KV 策略存储已有形状）
 packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  插件作者的测试帮手
 apps/worker                   Workers 入口。self-host / cloud 共用

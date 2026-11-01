@@ -87,7 +87,7 @@
 - 群聊里的命令不改变配置。
 - `/logs` 展示审计摘要，不回显原文。
 
-### P0-07 一键部署 — todo
+### P0-07 一键部署 — done
 
 验收：
 
@@ -222,3 +222,9 @@
 - 做了什么：私聊里的五个管理命令可以看规则、改白名单、看审计摘要、开关某个群的 dry-run。群聊里的同样文本不写配置，继续检测。回复走 `ReplyPort`，Telegram 侧是一次 `sendMessage`。
 - 学到什么：命令权限要看配置里的管理员列表，不能看群里的 `isAdmin`。群消息如果因为长得像命令就跳过流水线，垃圾文本会借这个口子进来。`savePolicy` 必须顺手刷新缓存，否则白名单要等 TTL。
 - 下一步：做 P0-07，把 README 的 10 分钟路径写成创建 D1/KV（若当时已经需要）、设置 secret、`wrangler deploy` 和设置 webhook。不要求付费计划。
+
+### 2026-11-01 P0-07
+
+- 做了什么：README 和 `docs/deploy.md` 写成免费套餐的部署路径：设置 secret、`wrangler deploy`、`setWebhook`，再用 `pnpm smoke` 确认 `/health` 和一次 webhook 200。P0-08 还没合并，所以文档明确不要创建 D1 或 KV。
+- 学到什么：Telegram 的 `secret_token` 字符集比我们的比较函数更窄，部署文档必须先把它写清楚，否则 `setWebhook` 会拒绝密钥。
+- 下一步：做 P0-08，把 D1 迁移和 Cloudflare 存储适配器接上，并让 allow 与 dry-run 不写审计。
