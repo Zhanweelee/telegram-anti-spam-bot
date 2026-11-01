@@ -704,6 +704,108 @@ describe("link fixtures", () => {
     expect(nearby).toBeNull();
   });
 
+  it("reads the url inside a telegram share link and leaves the path out", async () => {
+    const detector = createLinkDetector();
+    const shared = await detector.detect({
+      event: eventFor(
+        "https://t.me/share/url?url=https%3A%2F%2Fbit.ly%2Fname99&text=hello",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shared?.reasons).toEqual(["short_link"]);
+    expect(shared?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shared)).not.toContain("name99");
+
+    const preview = await detector.detect({
+      event: eventFor(
+        "https://t.me/iv?url=http%3A%2F%2F203.0.113.9%2Fpath99&rhash=RHASH99",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview?.reasons).toEqual(["ip_host"]);
+    expect(preview?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(preview)).not.toContain("RHASH99");
+    expect(JSON.stringify(preview)).not.toContain("path99");
+
+    const code = "code99";
+    const invite = await detector.detect({
+      event: eventFor(`tg://msg_url?url=https://t.me/+${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const encodedInvite = await detector.detect({
+      event: eventFor(
+        `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encodedInvite?.reasons).toEqual(["invite"]);
+    expect(encodedInvite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(encodedInvite)).not.toContain(code);
+
+    const bare = await detector.detect({
+      event: eventFor("tg:msg_url?url=https%3A%2F%2Fbit.ly%2Fname99"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(bare)).not.toContain("name99");
+
+    const comment = await detector.detect({
+      event: eventFor(
+        "https://t.me/share/url?url=https%3A%2F%2Fexample.com%2Fok99&text=see%20https%3A%2F%2Fbit.ly%2Fname99",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(comment?.reasons).toEqual(["short_link"]);
+    expect(comment?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(comment)).not.toContain("name99");
+    expect(JSON.stringify(comment)).not.toContain("ok99");
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://t.me/share/url?url=https%3A%2F%2Fexample.com%2Fok99&text=hello",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const profile = await detector.detect({
+      event: eventFor("https://t.me/durov?url=https%3A%2F%2Fbit.ly%2Fname99"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(profile).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://example.com/share/url?url=https%3A%2F%2Fbit.ly%2Fname99",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const wrapped = encodeURIComponent(
+      `https://t.me/share/url?url=${encodeURIComponent("https://bit.ly/name99")}`,
+    );
+    const nested = await detector.detect({
+      event: eventFor(`https://t.me/share/url?url=${wrapped}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(nested).toBeNull();
+  });
+
   it("folds dot lookalikes into ascii dots before reading hosts", async () => {
     const detector = createLinkDetector();
     const short = await detector.detect({

@@ -456,13 +456,19 @@ function linkHosts(message: Record<string, unknown>): {
       seenHosts.add(link.host);
       hosts.push(link.host);
     }
-    if (
-      link.extra !== undefined &&
-      !seenHosts.has(link.extra) &&
-      hosts.length < MAX_HOSTS
-    ) {
-      seenHosts.add(link.extra);
-      hosts.push(link.extra);
+    for (const extra of link.extras ?? []) {
+      if (!seenHosts.has(extra.host) && hosts.length < MAX_HOSTS) {
+        seenHosts.add(extra.host);
+        hosts.push(extra.host);
+      }
+      if (
+        extra.invite &&
+        !seenInvites.has(extra.host) &&
+        invites.length < MAX_HOSTS
+      ) {
+        seenInvites.add(extra.host);
+        invites.push(extra.host);
+      }
     }
     if (
       link.invite &&
@@ -765,7 +771,12 @@ function pushSwitchInlineQueries(
 
 function hostFromUrl(
   value: unknown,
-): { host: string; invite: boolean; extra?: string } | null {
+  unwrap = true,
+): {
+  host: string;
+  invite: boolean;
+  extras?: { host: string; invite: boolean }[];
+} | null {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
@@ -773,27 +784,26 @@ function hostFromUrl(
   ) {
     return null;
   }
-  let url: URL;
-  try {
-    url = new URL(
-      foldBracketDots(
-        foldEncodedAlphabet(
-          foldEncodedSeparators(
-            foldMatchText(
-              foldDotLookalikes(
-                foldEncodedMiddleDot(
-                  foldHostInterrupters(
-                    foldFullwidthLatin(
-                      foldCyrillicLookalikes(foldEncodedGaps(value)),
-                    ),
-                  ),
+  const folded = foldBracketDots(
+    foldEncodedAlphabet(
+      foldEncodedSeparators(
+        foldMatchText(
+          foldDotLookalikes(
+            foldEncodedMiddleDot(
+              foldHostInterrupters(
+                foldFullwidthLatin(
+                  foldCyrillicLookalikes(foldEncodedGaps(value)),
                 ),
               ),
             ),
           ),
         ),
       ),
-    );
+    ),
+  );
+  let url: URL;
+  try {
+    url = new URL(folded);
   } catch {
     return null;
   }
@@ -802,8 +812,16 @@ function hostFromUrl(
     return deep;
   }
   const proxy = proxyServerHost(url);
+  const wrapped = unwrap ? wrappedExtras(folded, url) : [];
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return proxy === null ? null : { host: proxy, invite: false };
+    if (proxy !== null) {
+      return packHost(proxy, false, wrapped);
+    }
+    const first = wrapped[0];
+    if (!first) {
+      return null;
+    }
+    return packHost(first.host, first.invite, wrapped.slice(1));
   }
   const host = url.hostname.toLowerCase();
   if (
@@ -815,14 +833,104 @@ function hostFromUrl(
     host.endsWith(".") ||
     !/^[a-z0-9.-]+$/.test(host)
   ) {
-    return proxy === null ? null : { host: proxy, invite: false };
+    if (proxy !== null) {
+      return packHost(proxy, false, wrapped);
+    }
+    const first = wrapped[0];
+    if (!first) {
+      return null;
+    }
+    return packHost(first.host, first.invite, wrapped.slice(1));
   }
   const path = url.pathname.replace(/\/+$/, "") || "/";
-  return {
-    host,
-    invite: isTelegramInvite(host, path),
-    ...(proxy !== null && proxy !== host ? { extra: proxy } : {}),
-  };
+  return packHost(host, isTelegramInvite(host, path), [
+    ...(proxy !== null && proxy !== host
+      ? [{ host: proxy, invite: false }]
+      : []),
+    ...wrapped,
+  ]);
+}
+
+function packHost(
+  host: string,
+  invite: boolean,
+  extras: { host: string; invite: boolean }[],
+): {
+  host: string;
+  invite: boolean;
+  extras?: { host: string; invite: boolean }[];
+} {
+  const useful = extras.filter(
+    (item) => item.host !== host || (item.invite && !invite),
+  );
+  return useful.length > 0
+    ? { host, invite, extras: useful }
+    : { host, invite };
+}
+
+function wrappedExtras(
+  folded: string,
+  url: URL,
+): { host: string; invite: boolean }[] {
+  if (!isTelegramShare(url)) {
+    return [];
+  }
+  const found: { host: string; invite: boolean }[] = [];
+  const embedded = queryValue(folded, "url");
+  if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
+    const inner = hostFromUrl(embedded, false);
+    if (inner) {
+      found.push({ host: inner.host, invite: inner.invite });
+      for (const extra of inner.extras ?? []) {
+        found.push(extra);
+      }
+    }
+  }
+  const text = queryValue(folded, "text");
+  if (text !== null && text.length > 0 && text.length <= MAX_TEXT) {
+    for (const raw of urlsInText(text)) {
+      const inner = hostFromUrl(raw, false);
+      if (inner) {
+        found.push({ host: inner.host, invite: inner.invite });
+      }
+    }
+  }
+  return found;
+}
+
+function queryValue(raw: string, name: string): string | null {
+  const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
+  const value = match?.[1];
+  if (value === undefined || value.length === 0) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(value.replace(/\+/g, "%2B"));
+  } catch {
+    return null;
+  }
+}
+
+function isTelegramShare(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    return command === "msg_url";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => name === host || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  return path === "/share/url" || path === "/iv";
 }
 
 const telegramProxyHosts = ["t.me", "telegram.me", "telegram.dog"];

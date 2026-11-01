@@ -245,20 +245,24 @@ function extractInviteHosts(
 ): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
+  const pushInvite = (host: string | null): void => {
+    if (!host || seen.has(host) || found.length >= 8) {
+      return;
+    }
+    seen.add(host);
+    found.push(host);
+  };
   token.lastIndex = 0;
   for (const match of text.matchAll(token)) {
     const raw = match[0];
     if (!raw) {
       continue;
     }
-    const host = inviteHost(raw.replace(/[),.;!?]+$/g, ""), names);
-    if (!host || seen.has(host)) {
-      continue;
-    }
-    seen.add(host);
-    found.push(host);
+    const stripped = raw.replace(/[),.;!?]+$/g, "");
+    pushInvite(inviteHost(stripped, names));
+    pushWrappedInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
-      break;
+      return found;
     }
   }
   deepLink.lastIndex = 0;
@@ -267,14 +271,11 @@ function extractInviteHosts(
     if (!raw) {
       continue;
     }
-    const host = deepInviteHost(raw.replace(/[),.;!?]+$/g, ""), names);
-    if (!host || seen.has(host)) {
-      continue;
-    }
-    seen.add(host);
-    found.push(host);
+    const stripped = raw.replace(/[),.;!?]+$/g, "");
+    pushInvite(deepInviteHost(stripped, names));
+    pushWrappedInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
-      break;
+      return found;
     }
   }
   return found;
@@ -357,6 +358,7 @@ export function extractHosts(text: string): string[] {
     }
     push(hostname(raw));
     push(proxyServerHost(raw));
+    pushWrappedHosts(raw, push);
     if (found.length >= 8) {
       return found;
     }
@@ -368,8 +370,134 @@ export function extractHosts(text: string): string[] {
       continue;
     }
     push(proxyServerHost(raw));
+    pushWrappedHosts(raw, push);
     if (found.length >= 8) {
       return found;
+    }
+  }
+  return found;
+}
+
+function pushWrappedHosts(
+  raw: string,
+  push: (host: string | null) => void,
+): void {
+  const wrapped = telegramWrapped(raw);
+  if (!wrapped) {
+    return;
+  }
+  if (wrapped.url) {
+    push(hostname(wrapped.url));
+    push(proxyServerHost(wrapped.url));
+  }
+  if (!wrapped.text) {
+    return;
+  }
+  for (const inner of linkTokens(wrapped.text)) {
+    push(hostname(inner));
+    push(proxyServerHost(inner));
+  }
+}
+
+function pushWrappedInvites(
+  raw: string,
+  names: ReadonlySet<string>,
+  push: (host: string | null) => void,
+): void {
+  const wrapped = telegramWrapped(raw);
+  if (!wrapped) {
+    return;
+  }
+  if (wrapped.url) {
+    push(inviteHost(wrapped.url, names));
+    push(deepInviteHost(wrapped.url, names));
+  }
+  if (!wrapped.text) {
+    return;
+  }
+  for (const inner of linkTokens(wrapped.text)) {
+    push(inviteHost(inner, names));
+  }
+  for (const inner of deepTokens(wrapped.text)) {
+    push(deepInviteHost(inner, names));
+  }
+}
+
+function telegramWrapped(
+  raw: string,
+): { url: string | null; text: string | null } | null {
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
+  } catch {
+    return null;
+  }
+  if (!isTelegramShare(url)) {
+    return null;
+  }
+  const embedded = queryValue(raw, "url");
+  const text = queryValue(raw, "text");
+  return {
+    url:
+      embedded !== null && embedded.length > 0 && embedded.length <= 2048
+        ? embedded
+        : null,
+    text: text !== null && text.length > 0 && text.length <= 4096 ? text : null,
+  };
+}
+
+function queryValue(raw: string, name: string): string | null {
+  const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
+  const value = match?.[1];
+  if (value === undefined || value.length === 0) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(value.replace(/\+/g, "%2B"));
+  } catch {
+    return null;
+  }
+}
+
+function isTelegramShare(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    return command === "msg_url";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => host === name || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  return path === "/share/url" || path === "/iv";
+}
+
+function linkTokens(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(new RegExp(token.source, "gi"))) {
+    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
+    if (raw) {
+      found.push(raw);
+    }
+  }
+  return found;
+}
+
+function deepTokens(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(new RegExp(deepLink.source, "gi"))) {
+    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
+    if (raw) {
+      found.push(raw);
     }
   }
   return found;

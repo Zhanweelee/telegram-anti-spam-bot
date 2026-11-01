@@ -4906,6 +4906,104 @@ describe("normalizeUpdate", () => {
     expect(ordinaryDump).not.toContain("SECRET98");
   });
 
+  it("keeps a hostname from a telegram share link and leaves the path out", async () => {
+    const shared = await normalize({
+      update_id: 6810,
+      message: {
+        message_id: 470,
+        date: 1761955200,
+        chat: {
+          id: -101220,
+          type: "supergroup",
+          title: "https://cutt.ly/grp99",
+        },
+        from: { id: 99, first_name: "https://tinyurl.com/from99" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: "https://t.me/share/url?url=https%3A%2F%2Fbit.ly%2Fname99&text=hello",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shared.status).toBe("event");
+    if (shared.status !== "event") {
+      return;
+    }
+    expect(shared.event.message?.text).toBe("今天站会");
+    expect(shared.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(shared.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const sharedDump = JSON.stringify(shared.event);
+    expect(sharedDump).not.toContain("name99");
+    expect(sharedDump).not.toContain("from99");
+    expect(sharedDump).not.toContain("grp99");
+
+    const invite = await normalize({
+      update_id: 6811,
+      message: {
+        message_id: 471,
+        date: 1761955200,
+        chat: { id: -101221, type: "supergroup", title: "keep-title" },
+        from: { id: 99, first_name: "from99" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "预览",
+                url: "tg://msg_url?url=https%3A%2F%2Ft.me%2F%2Bcode99&text=note",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.text).toBe("今天站会");
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    const inviteDump = JSON.stringify(invite.event);
+    expect(inviteDump).not.toContain("code99");
+    expect(inviteDump).not.toContain("from99");
+    expect(inviteDump).not.toContain("keep-title");
+
+    const foreign = await normalize({
+      update_id: 6812,
+      message: {
+        message_id: 472,
+        date: 1761955200,
+        chat: { id: -101222, type: "supergroup" },
+        from: { id: 99 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: "https://example.com/share/url?url=https%3A%2F%2Fbit.ly%2Fname99",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(foreign.status).toBe("event");
+    if (foreign.status !== "event") {
+      return;
+    }
+    expect(foreign.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(foreign.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(foreign.event)).not.toContain("name99");
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

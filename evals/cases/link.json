@@ -335,5 +335,25 @@
     "id": "foreign-proxy",
     "text": "https://example.com/proxy?server=203.0.113.9",
     "label": "ham"
+  },
+  {
+    "id": "tg-share-short",
+    "text": "https://t.me/share/url?url=https%3A%2F%2Fbit.ly%2Foffer&text=hello",
+    "label": "spam"
+  },
+  {
+    "id": "tg-iv-ordinary",
+    "text": "https://t.me/iv?url=https%3A%2F%2Fexample.com%2Fdocs&rhash=hash",
+    "label": "ham"
+  },
+  {
+    "id": "tg-share-invite",
+    "text": "https://t.me/share/url?url=https%3A%2F%2Ft.me%2F%2Bjoin99",
+    "label": "spam"
+  },
+  {
+    "id": "foreign-share",
+    "text": "https://example.com/share/url?url=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "ham"
   }
 ]

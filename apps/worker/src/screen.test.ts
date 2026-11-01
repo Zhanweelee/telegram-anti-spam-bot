@@ -2818,4 +2818,101 @@ describe("screenTelegramEvent", () => {
     expect(foreign.result.decision.action).toBe("allow");
     expect(foreign.moderator.deleted).toEqual([]);
   });
+
+  it("deletes a telegram share link whose target is a short link", async () => {
+    const screenShare = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 99, first_name: "https://tinyurl.com/from99" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "分享", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenShare(
+      6810,
+      -100730,
+      "https://t.me/share/url?url=https%3A%2F%2Fbit.ly%2Fname99&text=hello",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100730", messageId: "6810" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name99");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from99");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name99",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const preview = await screenShare(
+      6811,
+      -100731,
+      "今天站会",
+      "https://t.me/iv?url=http%3A%2F%2F203.0.113.9%2Fpath99&rhash=RHASH99",
+    );
+    expect(preview.result.decision.action).toBe("delete");
+    expect(preview.result.decision.reasons).toContain("ip_host");
+    expect(preview.event.message?.text).toBe("今天站会");
+    expect(preview.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    expect(JSON.stringify(preview.event)).not.toContain("path99");
+    expect(JSON.stringify(preview.event)).not.toContain("RHASH99");
+    expect(JSON.stringify(preview.logger.entries)).not.toContain("from99");
+
+    const keyword = await screenShare(
+      6812,
+      -100732,
+      "今天站会",
+      "https://t.me/share/url?url=https%3A%2F%2Fexample.com%2Fok99&text=请免费领取礼品",
+    );
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.event)).not.toContain("ok99");
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("from99");
+
+    const foreign = await screenShare(
+      6813,
+      -100733,
+      "https://example.com/share/url?url=https%3A%2F%2Fbit.ly%2Fname99",
+    );
+    expect(foreign.result.decision.action).toBe("allow");
+    expect(foreign.moderator.deleted).toEqual([]);
+  });
 });
