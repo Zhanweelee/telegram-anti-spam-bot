@@ -1,4 +1,5 @@
 import {
+  createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
   createKvBlocklistStore,
@@ -13,6 +14,7 @@ import {
 } from "@tasb/adapter-cloudflare";
 import type {
   BlocklistStore,
+  CaptchaStore,
   ChatDirectory,
   PolicyStore,
   ReviewQueue,
@@ -22,6 +24,7 @@ import type {
   Storage,
 } from "@tasb/core";
 import { workerBlocklist } from "./blocklist-runtime.js";
+import { workerCaptcha } from "./captcha-runtime.js";
 import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
@@ -36,6 +39,7 @@ export interface StoreSlot {
   subscriptions?: RuleSubscriptionStore;
   archive?: RulePackArchive;
   blocklist?: BlocklistStore;
+  captcha?: CaptchaStore;
   kv?: KVNamespace;
 }
 
@@ -53,11 +57,13 @@ export function resolveStores(
   readonly subscriptions: RuleSubscriptionStore;
   readonly archive: RulePackArchive;
   readonly blocklist: BlocklistStore;
+  readonly captcha: CaptchaStore;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
     slot.storage = createD1Storage(sql);
     slot.review = createD1ReviewQueue(sql);
+    slot.captcha = createD1CaptchaStore(sql);
   }
   if (env.POLICY_KV !== undefined && slot.kv !== env.POLICY_KV) {
     const kv = adaptKv(env.POLICY_KV);
@@ -102,6 +108,10 @@ export function resolveStores(
       env.POLICY_KV !== undefined && slot.blocklist !== undefined
         ? slot.blocklist
         : workerBlocklist,
+    captcha:
+      env.DB !== undefined && slot.captcha !== undefined
+        ? slot.captcha
+        : workerCaptcha,
   };
 }
 

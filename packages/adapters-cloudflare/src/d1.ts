@@ -2,10 +2,15 @@ import {
   type AuditRecord,
   type AuditScope,
   auditRecordSchema,
+  type CaptchaChallenge,
+  type CaptchaStore,
+  captchaChallengeSchema,
+  isExpired,
   MAX_REVIEW_SAMPLES,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
+  parseCaptchaChallenge,
   parseReviewSample,
   parseRuleSet,
   ReviewCapacityError,
@@ -64,6 +69,14 @@ export const storageMigrationStatements = [
   rule_ids TEXT NOT NULL,
   created_at TEXT NOT NULL,
   PRIMARY KEY (tenant_id, chat_id, event_id)
+)`,
+  `CREATE TABLE IF NOT EXISTS captcha_challenges (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id, actor_id)
 )`,
 ] as const;
 
@@ -151,7 +164,93 @@ FROM review_samples
 WHERE tenant_id = ? AND chat_id = ?
 ORDER BY created_at ASC, event_id ASC`;
 
+const upsertCaptchaSql = `INSERT INTO captcha_challenges (
+  tenant_id, chat_id, actor_id, nonce, expires_at
+) VALUES (?, ?, ?, ?, ?)
+ON CONFLICT(tenant_id, chat_id, actor_id) DO UPDATE SET
+  nonce = excluded.nonce,
+  expires_at = excluded.expires_at`;
+
+const readCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at
+FROM captcha_challenges
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
+
+const deleteCaptchaSql = `DELETE FROM captcha_challenges
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
+
+const listDueCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at
+FROM captcha_challenges
+WHERE expires_at <= ?
+ORDER BY expires_at ASC
+LIMIT 64`;
+
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
+
+export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
+  return {
+    async get(tenantId, chatId, actorId) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(readCaptchaSql)
+        .bind(tenantId, chatId, actorId)
+        .all();
+      return readCaptcha(rows.results?.[0]);
+    },
+    async put(challenge) {
+      await migrationsFor(db);
+      const parsed = parseCaptchaChallenge(challenge);
+      const expiresAt = new Date(Date.parse(parsed.expiresAt)).toISOString();
+      await db
+        .prepare(upsertCaptchaSql)
+        .bind(
+          parsed.tenantId,
+          parsed.chatId,
+          parsed.actorId,
+          parsed.nonce,
+          expiresAt,
+        )
+        .run();
+    },
+    async delete(tenantId, chatId, actorId) {
+      await migrationsFor(db);
+      await db.prepare(deleteCaptchaSql).bind(tenantId, chatId, actorId).run();
+    },
+    async listExpired(nowIso) {
+      await migrationsFor(db);
+      const stamp = Date.parse(nowIso);
+      if (Number.isNaN(stamp)) {
+        return [];
+      }
+      const rows = await db
+        .prepare(listDueCaptchaSql)
+        .bind(new Date(stamp).toISOString())
+        .all();
+      const due: CaptchaChallenge[] = [];
+      for (const row of rows.results ?? []) {
+        const challenge = readCaptcha(row);
+        if (challenge && isExpired(challenge.expiresAt, nowIso)) {
+          due.push(challenge);
+        }
+      }
+      return due;
+    },
+  };
+}
+
+function readCaptcha(row: unknown): CaptchaChallenge | null {
+  if (typeof row !== "object" || row === null) {
+    return null;
+  }
+  const record = row as Record<string, unknown>;
+  const parsed = captchaChallengeSchema.safeParse({
+    tenantId: record.tenant_id,
+    chatId: record.chat_id,
+    actorId: record.actor_id,
+    nonce: record.nonce,
+    expiresAt: record.expires_at,
+  });
+  return parsed.success ? parsed.data : null;
+}
 
 export async function applyStorageMigrations(db: SqlDatabase): Promise<void> {
   for (const statement of storageMigrationStatements) {

@@ -385,6 +385,31 @@ describe("POST /telegram/webhook", () => {
     expect(logged).not.toContain(phrase);
   });
 
+  it("expires a D1 captcha from the scheduled handler", async () => {
+    const queries: string[] = [];
+    const db = {
+      prepare(sql: string) {
+        queries.push(sql);
+        const statement = {
+          bind() {
+            return statement;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            return {};
+          },
+        };
+        return statement;
+      },
+    };
+    await runScheduled({ DB: db as unknown as D1Database });
+    expect(queries.some((sql) => sql.includes("captcha_challenges"))).toBe(
+      true,
+    );
+  });
+
   it("audits an expired captcha without storing the nonce", async () => {
     const nonce = "abcdef0123456789";
     await workerCaptcha.put({

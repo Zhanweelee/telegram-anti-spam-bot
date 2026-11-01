@@ -39,7 +39,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `log` 只写标识、分数和 reason。`report` 把同一份通知交给 `Notifier`。没有通知端口时返回 `report_unavailable`。见 ADR 0021。
 
-`captcha` 只处理 `kind: "chat_member"` 且 `membership: "join"` 的事件。它调用 `beginChallenge`：先写入挑战，再 `restrictActor`。限制失败就删掉挑战并返回 `failed` / `captcha_unavailable`。结果里不要放 nonce。按钮文案和 `restrictChatMember` 留在 `platform-telegram`。见 ADR 0009。入群检测器在 `packages/detectors-join`，`membership !== "join"` 时返回 null，并带 fixtures。
+`captcha` 只处理 `kind: "chat_member"` 且 `membership: "join"` 的事件。它调用 `beginChallenge`：先写入挑战，再 `restrictActor`。限制失败就删掉挑战并返回 `failed` / `captcha_unavailable`。结果里不要放 nonce。按钮文案和 `restrictChatMember` 留在 `platform-telegram`。没配 `DB` 时挑战留在 isolate 内存。配了之后写入 D1，另一个 isolate 的按钮仍能对上。见 ADR 0009 和 ADR 0051。入群检测器在 `packages/detectors-join`，`membership !== "join"` 时返回 null，并带 fixtures。
 
 洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文放进 key，重复检测只用 `textSha256`。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。见 ADR 0010、ADR 0050 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 

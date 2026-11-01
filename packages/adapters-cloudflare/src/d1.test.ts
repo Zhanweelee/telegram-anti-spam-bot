@@ -2,12 +2,14 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import {
+  bindCaptchaStoreContract,
   bindReviewQueueContract,
   bindStorageContract,
 } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
   applyStorageMigrations,
+  createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
   type SqlDatabase,
@@ -17,6 +19,7 @@ import {
 
 bindStorageContract(() => createD1Storage(openSqlite()));
 bindReviewQueueContract(() => createD1ReviewQueue(openSqlite()));
+bindCaptchaStoreContract(() => createD1CaptchaStore(openSqlite()));
 
 describe("d1 storage", () => {
   it("keeps the sql file equal to the exported statements", () => {
@@ -117,6 +120,50 @@ describe("d1 storage", () => {
     const listed = await queue.list({ tenantId: "tenant_a" });
     expect(listed).toEqual([]);
     expect(JSON.stringify(listed)).not.toContain(secret);
+  });
+
+  it("shares one challenge across two stores and skips a bad row", async () => {
+    const db = openSqlite();
+    const first = createD1CaptchaStore(db);
+    const second = createD1CaptchaStore(db);
+    const challenge = {
+      tenantId: "tenant_a",
+      chatId: "chat_1",
+      actorId: "user_1",
+      nonce: "ab".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+    };
+    await first.put(challenge);
+    expect(await second.get("tenant_a", "chat_1", "user_1")).toEqual(challenge);
+    await second.delete("tenant_a", "chat_1", "user_1");
+    expect(await first.get("tenant_a", "chat_1", "user_1")).toBeNull();
+
+    const phrase = "请免费领取礼品";
+    await applyStorageMigrations(db);
+    await db
+      .prepare(
+        `INSERT INTO captcha_challenges (
+          tenant_id, chat_id, actor_id, nonce, expires_at
+        ) VALUES (?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        "tenant_a",
+        "chat_1",
+        "user_bad",
+        phrase,
+        "2020-01-01T00:00:00.000Z",
+      )
+      .run();
+    expect(await first.get("tenant_a", "chat_1", "user_bad")).toBeNull();
+    expect(await first.listExpired("2026-11-01T00:00:00.000Z")).toEqual([]);
+    const left = await db
+      .prepare(
+        `SELECT nonce FROM captcha_challenges
+         WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`,
+      )
+      .bind("tenant_a", "chat_1", "user_bad")
+      .all();
+    expect(left.results?.[0]?.nonce).toBe(phrase);
   });
 
   it("runs the migration again after it fails", async () => {

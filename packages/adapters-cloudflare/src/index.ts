@@ -34,6 +34,7 @@ export {
 } from "./ai.js";
 export {
   applyStorageMigrations,
+  createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
   type SqlDatabase,
@@ -48,7 +49,7 @@ export {
 
 /**
  * Cloudflare bindings adapter.
- * D1 stores audits and rule documents. KV stores prefilter policy,
+ * D1 stores audits, rule documents, and captcha challenges. KV stores prefilter policy,
  * per-chat runtime switches, pack subscription, and the shared
  * blocklist. Workers AI is optional and stays out
  * of the committed wrangler config. Queues and Durable Objects stay

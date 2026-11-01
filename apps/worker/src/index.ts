@@ -13,7 +13,6 @@ import {
 } from "@tasb/platform-telegram";
 import { Hono } from "hono";
 import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
-import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { allowUnsignedPlugins } from "./plugins.js";
@@ -167,6 +166,7 @@ export function createApp(
             source: workerRulePacks.source,
           },
           blocklist: stores.blocklist,
+          captchaStore: stores.captcha,
           ...(rateWindow ? { rateWindow } : {}),
         });
       },
@@ -187,7 +187,7 @@ export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
   const stores = resolveStores(env);
   try {
     await expireChallenges({
-      store: workerCaptcha,
+      store: stores.captcha,
       storage: stores.storage,
       async restrict() {},
       async release() {},

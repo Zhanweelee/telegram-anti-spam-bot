@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { workerBlocklist } from "./blocklist-runtime.js";
+import { workerCaptcha } from "./captcha-runtime.js";
 import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
@@ -17,6 +18,7 @@ describe("resolveStores", () => {
     expect(stores.subscriptions).toBe(workerRulePacks.store);
     expect(stores.archive).toBe(workerRulePacks.archive);
     expect(stores.blocklist).toBe(workerBlocklist);
+    expect(stores.captcha).toBe(workerCaptcha);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -70,6 +72,9 @@ describe("resolveStores", () => {
     expect(first.archive).not.toBe(workerRulePacks.archive);
     expect(first.blocklist).toBe(second.blocklist);
     expect(first.blocklist).not.toBe(workerBlocklist);
+    expect(first.captcha).toBeDefined();
+    expect(first.captcha).toBe(second.captcha);
+    expect(first.captcha).not.toBe(workerCaptcha);
     expect(
       await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
     ).toBe(true);
@@ -153,6 +158,7 @@ describe("resolveStores", () => {
       expect.stringContaining("audits"),
       expect.stringContaining("rule_sets"),
       expect.stringContaining("review_samples"),
+      expect.stringContaining("captcha_challenges"),
     ]);
   });
 });

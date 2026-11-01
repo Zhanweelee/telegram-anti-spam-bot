@@ -33,3 +33,12 @@ CREATE TABLE IF NOT EXISTS review_samples (
   created_at TEXT NOT NULL,
   PRIMARY KEY (tenant_id, chat_id, event_id)
 );
+
+CREATE TABLE IF NOT EXISTS captcha_challenges (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  nonce TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id, actor_id)
+);
