@@ -731,4 +731,46 @@ describe("link fixtures", () => {
     });
     expect(doubled).toBeNull();
   });
+
+  it("folds encoded dot lookalikes before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("bit%E3%83%BBly/lat68"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("lat68");
+
+    const invite = await detector.detect({
+      event: eventFor("t%EF%BC%8Eme/+LAT68"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("LAT68");
+
+    const ordinary = await detector.detect({
+      event: eventFor("example%E3%83%BBcom/page68"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const period = await detector.detect({
+      event: eventFor("example%E3%80%82com/stop68"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(period).toBeNull();
+
+    const doubled = await detector.detect({
+      event: eventFor("bit%25E3%2583%25BBly/dbl68"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(doubled).toBeNull();
+  });
 });

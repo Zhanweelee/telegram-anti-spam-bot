@@ -134,9 +134,56 @@ export function foldEncodedGaps(text: string): string {
   return out;
 }
 
-/** Turn one `%C2%B7` into U+00B7. A second layer stays. */
+const DOT_LOOKALIKE_CHAR =
+  /[\u00B7\u2022\u2027\u2219\u22C5\u30FB\uFF0E\uFE52\uFF61]/;
+
+/**
+ * Turn one percent-encoded dot lookalike into that character.
+ * A second layer, and the ideographic full stop, stay.
+ */
 export function foldEncodedMiddleDot(text: string): string {
-  return text.replace(/%C2%B7/gi, "\u00B7");
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const found = encodedDot(text, index);
+    if (found !== null) {
+      out += found.char;
+      index += found.length;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedDot(
+  text: string,
+  index: number,
+): { readonly char: string; readonly length: number } | null {
+  const first = readPercentByte(text, index);
+  if (!first) {
+    return null;
+  }
+  const width = utf8Width(first.byte);
+  if (!width) {
+    return null;
+  }
+  const bytes = [first.byte];
+  let next = first.next;
+  for (let part = 1; part < width; part += 1) {
+    const byte = readPercentByte(text, next);
+    if (!byte || (byte.byte & 0xc0) !== 0x80) {
+      return null;
+    }
+    bytes.push(byte.byte);
+    next = byte.next;
+  }
+  const char = decodeUtf8(bytes);
+  if (char === null || !DOT_LOOKALIKE_CHAR.test(char)) {
+    return null;
+  }
+  return { char, length: next - index };
 }
 
 /** Turn one `%2E`, `%2F`, or `%2B` into `.`, `/`, or `+`. A second layer stays. */

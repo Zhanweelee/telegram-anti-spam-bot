@@ -250,5 +250,15 @@
     "id": "encoded-middle-dot-doubled",
     "text": "bit%25C2%25B7ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "encoded-katakana-dot",
+    "text": "bit%E3%83%BBly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ideographic-stop",
+    "text": "example%E3%80%82com/docs",
+    "label": "ham"
   }
 ]

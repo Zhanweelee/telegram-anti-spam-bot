@@ -153,6 +153,21 @@ describe("foldEncodedMiddleDot", () => {
     expect(foldEncodedMiddleDot("bit%c2%b7ly")).toBe("bit\u00B7ly");
     expect(foldEncodedMiddleDot("bit%C2%b7ly")).toBe("bit\u00B7ly");
     expect(foldEncodedMiddleDot("bit%25C2%25B7ly")).toBe("bit%25C2%25B7ly");
+    expect(foldEncodedMiddleDot("bit%E3%83%BBly")).toBe("bit\u30FBly");
+    expect(foldEncodedMiddleDot("bit%e3%83%bbly")).toBe("bit\u30FBly");
+    expect(foldEncodedMiddleDot("bit%E2%80%A2ly")).toBe("bit\u2022ly");
+    expect(foldEncodedMiddleDot("bit%E2%80%A7ly")).toBe("bit\u2027ly");
+    expect(foldEncodedMiddleDot("bit%E2%88%99ly")).toBe("bit\u2219ly");
+    expect(foldEncodedMiddleDot("bit%E2%8B%85ly")).toBe("bit\u22C5ly");
+    expect(foldEncodedMiddleDot("bit%EF%BC%8Ely")).toBe("bit\uFF0Ely");
+    expect(foldEncodedMiddleDot("bit%EF%B9%92ly")).toBe("bit\uFE52ly");
+    expect(foldEncodedMiddleDot("bit%EF%BD%A1ly")).toBe("bit\uFF61ly");
+    expect(foldEncodedMiddleDot("bit%25E3%2583%25BBly")).toBe(
+      "bit%25E3%2583%25BBly",
+    );
+    expect(foldEncodedMiddleDot("example%E3%80%82com")).toBe(
+      "example%E3%80%82com",
+    );
     expect(foldEncodedMiddleDot("免费领取")).toBe("免费领取");
     expect(foldEncodedMiddleDot("不是免费。领取")).toBe("不是免费。领取");
   });

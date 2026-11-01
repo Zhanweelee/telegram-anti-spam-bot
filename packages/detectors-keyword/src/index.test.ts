@@ -243,6 +243,12 @@ describe("keyword detector", () => {
     });
     expect(hit?.evidence[0]?.summary).toBe("keyword:加微信");
     expect(JSON.stringify(hit)).not.toContain("%C2%B7");
+    const katakana = await detector.detect({
+      event: messageEvent("加%E3%83%BB微信"),
+      logger,
+      signal,
+    });
+    expect(katakana?.evidence[0]?.summary).toBe("keyword:加微信");
     expect(
       await detector.detect({
         event: messageEvent("不是免费。领取"),
