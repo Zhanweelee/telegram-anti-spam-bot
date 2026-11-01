@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+### P2-01
+
+- `llm` 检测器默认关闭，提交的配置不绑定 Workers AI。见 ADR 0015。
+- 默认模型是免费计划上的 `@cf/huggingface/distilbert-sst-2-int8`。它做情感分类。`NEGATIVE` 且分数不低于 0.9 才命中。
+- 额度错误、超时、坏响应，以及已知的付费模型，都跳过这条检测。日志不写原文。
+- 评测集 `evals/cases/llm.json` 的 precision 和 recall 都是 1。
+
 ### P1-06
 
 - 管理员可以用 `/appeal` 把一条审计标成误判或确认。样本不含原文，也不改规则。见 ADR 0014。

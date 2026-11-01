@@ -1,6 +1,13 @@
 import { type PolicyStore, prefilterPolicySchema } from "@tasb/core";
 
 export {
+  createWorkersAiClassifier,
+  FREE_PLAN_TEXT_MODEL,
+  LlmUnavailableError,
+  PAID_PLAN_MODELS,
+  type WorkersAiBinding,
+} from "./ai.js";
+export {
   applyStorageMigrations,
   createD1ReviewQueue,
   createD1Storage,
@@ -12,13 +19,14 @@ export {
 /**
  * Cloudflare bindings adapter.
  * D1 stores audits and rule documents. KV stores prefilter policy.
+ * Workers AI is optional and stays out of the committed wrangler config.
  * Queues and Durable Objects stay unused. This module must not be
  * imported by @tasb/core, and it does not import Workers types.
  */
 export const cloudflareAdapter = {
   id: "cloudflare",
   version: "0.0.0",
-  plannedBindings: ["d1", "kv", "queues", "durable_objects"],
+  plannedBindings: ["d1", "kv", "ai", "queues", "durable_objects"],
 } as const;
 
 /** Minimal KV surface. The worker binding satisfies this when P0-08 wires it. */

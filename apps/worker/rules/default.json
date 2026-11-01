@@ -42,6 +42,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "llm_hint",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["llm"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "new_member",
       "enabled": true,
       "when": { "eventKind": "chat_member" },

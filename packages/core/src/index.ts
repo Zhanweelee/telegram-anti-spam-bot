@@ -53,6 +53,7 @@ export {
   parseEvent,
 } from "./event.js";
 export { type Evidence, evidenceKinds, evidenceSchema } from "./evidence.js";
+export type { LlmClassifier, LlmVerdict } from "./llm.js";
 export {
   createMemoryLogger,
   type LogEntry,

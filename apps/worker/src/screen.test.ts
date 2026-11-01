@@ -9,6 +9,7 @@ import {
 import {
   type BlocklistStore,
   createMemoryLogger,
+  type LlmClassifier,
   parseEvent,
   type RuleSource,
   type Storage,
@@ -473,5 +474,54 @@ describe("screenTelegramEvent", () => {
     );
     expect(replaced.decision.action).toBe("allow");
     expect(reads).toBe(seen + 1);
+  });
+
+  it("leaves the llm detector idle until a chat enables it", async () => {
+    const phrase = "这个安排太差了";
+    let calls = 0;
+    const llm: LlmClassifier = {
+      async classify() {
+        calls += 1;
+        return { label: "NEGATIVE", score: 0.99 };
+      },
+    };
+    const idle = await screenTelegramEvent(
+      await event(phrase, false, "-100555"),
+      {
+        llm,
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(idle.decision.action).toBe("allow");
+    expect(calls).toBe(0);
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "llm_hint",
+              enabled: true,
+              detectorIds: ["llm"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const hit = await screenTelegramEvent(await event(phrase), {
+      llm,
+      source,
+      cache: createMemoryCache(),
+    });
+    expect(hit.decision.action).toBe("delete");
+    expect(hit.decision.reasons).toContain("llm");
+    expect(calls).toBe(1);
+    expect(JSON.stringify(hit)).not.toContain(phrase);
   });
 });

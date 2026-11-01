@@ -99,6 +99,7 @@ export async function handleIncomingEvent(
     ...(deps.botToken ? { botToken: deps.botToken } : {}),
     ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
     ...(deps.rateWindow ? { rateWindow: deps.rateWindow } : {}),
+    ...(deps.llm ? { llm: deps.llm } : {}),
     blocklist,
   });
   const prompted = result.actionResults.some(

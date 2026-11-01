@@ -4,6 +4,8 @@
   // Local dev reads apps/worker/.dev.vars. Never put secrets in vars.
   // DB and POLICY_KV are optional. Paste them after `wrangler d1 create`
   // and `wrangler kv namespace create`. A free deploy must succeed without them.
+  // AI is optional too. Add `"ai": { "binding": "AI" }` only after enabling
+  // the llm_hint rule. The default config does not bind Workers AI.
   "name": "tasb",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-30",

@@ -1,3 +1,4 @@
+import { createWorkersAiClassifier } from "@tasb/adapter-cloudflare";
 import {
   createSystemClock,
   type Event,
@@ -26,6 +27,7 @@ export type WorkerBindings = {
   TELEGRAM_BOT_TOKEN?: string;
   DB?: D1Database;
   POLICY_KV?: KVNamespace;
+  AI?: Ai;
 };
 
 export interface CreateAppOptions {
@@ -103,6 +105,7 @@ export function createApp(
         }
         const stores = resolveStores(c.env ?? {});
         const locale = normalizeLocale(c.env?.LOCALE);
+        const ai = c.env?.AI;
         await handleIncomingEvent(event, {
           logger,
           adminActorIds: parseAdminUserIds(c.env?.ADMIN_USER_IDS),
@@ -111,6 +114,13 @@ export function createApp(
           policyStore: stores.policyStore,
           review: stores.review,
           ...(locale ? { locale } : {}),
+          ...(ai
+            ? {
+                llm: createWorkersAiClassifier({
+                  run: (model, input) => ai.run(model, input),
+                }),
+              }
+            : {}),
           ...(c.env?.TELEGRAM_BOT_TOKEN
             ? { botToken: c.env.TELEGRAM_BOT_TOKEN }
             : {}),

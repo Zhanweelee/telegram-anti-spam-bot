@@ -18,6 +18,7 @@ import {
   createSystemClock,
   defaultPrefilterPolicy,
   type Event,
+  type LlmClassifier,
   type Logger,
   loadPolicy,
   loadRuleSet,
@@ -34,6 +35,7 @@ import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
+import { createLlmDetector } from "@tasb/detector-llm";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -92,6 +94,7 @@ export interface ScreenDeps {
   readonly fetchImpl?: typeof fetch;
   readonly rateWindow?: RateWindow;
   readonly blocklist?: BlocklistStore;
+  readonly llm?: LlmClassifier;
 }
 
 export async function screenTelegramEvent(
@@ -148,6 +151,7 @@ export async function screenTelegramEvent(
       createBlocklistDetector({
         store: deps.blocklist ?? workerBlocklist,
       }),
+      createLlmDetector(deps.llm ? { classifier: deps.llm } : {}),
     ],
     actions: [
       createDeleteAction(),

@@ -13,6 +13,7 @@
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",
     "@tasb/detector-link": "workspace:*",
-    "@tasb/detector-blocklist": "workspace:*"
+    "@tasb/detector-blocklist": "workspace:*",
+    "@tasb/detector-llm": "workspace:*"
   }
 }

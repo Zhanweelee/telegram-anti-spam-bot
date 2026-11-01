@@ -59,6 +59,8 @@ pnpm exec wrangler d1 execute tasb --remote --file=../../packages/adapters-cloud
 
 额度数字以 [limits.md](limits.md) 为准。这一步不需要付费计划。
 
+Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时，在 `wrangler.jsonc` 里加 `"ai": { "binding": "AI" }`，再把那条规则的 `enabled` 改成 true。模型名和免费计划限制见 ADR 0015。
+
 ## 部署
 
 ```sh
