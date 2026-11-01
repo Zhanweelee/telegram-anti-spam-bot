@@ -315,5 +315,25 @@
     "id": "encoded-bracket-doubled",
     "text": "bit%255B.%255Dly/offer",
     "label": "ham"
+  },
+  {
+    "id": "tg-proxy-ip",
+    "text": "https://t.me/proxy?server=203.0.113.9&port=443&secret=SECRET",
+    "label": "spam"
+  },
+  {
+    "id": "tg-socks-short",
+    "text": "https://t.me/socks?server=bit.ly&user=user&pass=pass",
+    "label": "spam"
+  },
+  {
+    "id": "tg-proxy-ordinary",
+    "text": "https://t.me/proxy?server=proxy.example.com&secret=SECRET",
+    "label": "ham"
+  },
+  {
+    "id": "foreign-proxy",
+    "text": "https://example.com/proxy?server=203.0.113.9",
+    "label": "ham"
   }
 ]

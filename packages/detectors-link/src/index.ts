@@ -342,23 +342,78 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
 export function extractHosts(text: string): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
-  token.lastIndex = 0;
-  for (const match of text.matchAll(token)) {
-    const raw = match[0];
-    if (!raw) {
-      continue;
-    }
-    const host = hostname(raw.replace(/[),.;!?]+$/g, ""));
-    if (!host || seen.has(host)) {
-      continue;
+  const push = (host: string | null): void => {
+    if (!host || seen.has(host) || found.length >= 8) {
+      return;
     }
     seen.add(host);
     found.push(host);
+  };
+  token.lastIndex = 0;
+  for (const match of text.matchAll(token)) {
+    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
+    if (!raw) {
+      continue;
+    }
+    push(hostname(raw));
+    push(proxyServerHost(raw));
     if (found.length >= 8) {
-      break;
+      return found;
+    }
+  }
+  deepLink.lastIndex = 0;
+  for (const match of text.matchAll(deepLink)) {
+    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
+    if (!raw) {
+      continue;
+    }
+    push(proxyServerHost(raw));
+    if (found.length >= 8) {
+      return found;
     }
   }
   return found;
+}
+
+const telegramProxyHosts = ["t.me", "telegram.me", "telegram.dog"];
+
+function proxyServerHost(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
+  } catch {
+    return null;
+  }
+  if (!isTelegramProxy(url)) {
+    return null;
+  }
+  const server = url.searchParams.get("server");
+  if (server === null || server.length === 0) {
+    return null;
+  }
+  return hostname(server);
+}
+
+function isTelegramProxy(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    return command === "proxy" || command === "socks";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => host === name || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  return path === "/proxy" || path === "/socks";
 }
 
 function hostname(raw: string): string | null {

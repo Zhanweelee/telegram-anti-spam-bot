@@ -4804,6 +4804,108 @@ describe("normalizeUpdate", () => {
     expect(plainDump).not.toContain("bit.ly");
   });
 
+  it("keeps a proxy server hostname and leaves the secret out", async () => {
+    const linked = await normalize({
+      update_id: 6710,
+      message: {
+        message_id: 460,
+        date: 1761955200,
+        chat: {
+          id: -101210,
+          type: "supergroup",
+          title: "https://cutt.ly/grp98",
+        },
+        from: { id: 98, first_name: "https://tinyurl.com/from98" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "代理",
+                url: "https://t.me/proxy?server=203.0.113.9&port=4444&secret=SECRET98",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.text).toBe("今天站会");
+    expect(linked.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(linked.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    const linkedDump = JSON.stringify(linked.event);
+    expect(linkedDump).not.toContain("SECRET98");
+    expect(linkedDump).not.toContain("4444");
+    expect(linkedDump).not.toContain("from98");
+    expect(linkedDump).not.toContain("grp98");
+
+    const deep = await normalize({
+      update_id: 6711,
+      message: {
+        message_id: 461,
+        date: 1761955200,
+        chat: { id: -101211, type: "supergroup", title: "keep-title" },
+        from: { id: 98, first_name: "from98" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "袜子",
+                url: "tg://socks?server=https://bit.ly/name98&user=USER98&pass=PASS98",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(deep.status).toBe("event");
+    if (deep.status !== "event") {
+      return;
+    }
+    expect(deep.event.message?.text).toBe("今天站会");
+    expect(deep.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(deep.event.message?.invites).toBeUndefined();
+    const deepDump = JSON.stringify(deep.event);
+    expect(deepDump).not.toContain("name98");
+    expect(deepDump).not.toContain("USER98");
+    expect(deepDump).not.toContain("PASS98");
+    expect(deepDump).not.toContain("from98");
+    expect(deepDump).not.toContain("keep-title");
+
+    const ordinary = await normalize({
+      update_id: 6712,
+      message: {
+        message_id: 462,
+        date: 1761955200,
+        chat: { id: -101212, type: "supergroup" },
+        from: { id: 98 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "代理",
+                url: "https://example.com/proxy?server=203.0.113.9&secret=SECRET98",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("203.0.113.9");
+    expect(ordinaryDump).not.toContain("SECRET98");
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

@@ -33,3 +33,4 @@ ADR 0030 只认 `https://t.me/+`、`/joinchat/` 和 `/addlist/`。垃圾消息�
 - `tg://addlist?slug=…` 同样记成 `invite:t.me`。
 - `tg://resolve?domain=durov` 仍放行。
 - 邀请码不出现在证据里。重复计数仍按原文哈希。
+- 代理和 socks 的 `server` 后来由 ADR 0129 按普通主机名处理。`secret`、端口、用户名和密码仍不进证据。

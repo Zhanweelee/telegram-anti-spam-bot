@@ -2721,4 +2721,101 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(ordinary.event)).not.toContain("ok97");
     expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from97");
   });
+
+  it("deletes a telegram proxy link whose server is an address", async () => {
+    const screenProxy = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 98, first_name: "https://tinyurl.com/from98" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "代理", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenProxy(
+      6710,
+      -100720,
+      "https://t.me/proxy?server=203.0.113.9&port=4444&secret=SECRET98",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("ip_host");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100720", messageId: "6710" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("SECRET98");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("4444");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from98");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "SECRET98",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const socks = await screenProxy(
+      6711,
+      -100721,
+      "今天站会",
+      "https://t.me/socks?server=https://bit.ly/name98&user=USER98&pass=PASS98",
+    );
+    expect(socks.result.decision.action).toBe("delete");
+    expect(socks.result.decision.reasons).toContain("short_link");
+    expect(socks.event.message?.text).toBe("今天站会");
+    expect(socks.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(socks.event)).not.toContain("name98");
+    expect(JSON.stringify(socks.event)).not.toContain("USER98");
+    expect(JSON.stringify(socks.event)).not.toContain("PASS98");
+    expect(JSON.stringify(socks.logger.entries)).not.toContain("from98");
+
+    const ordinary = await screenProxy(
+      6712,
+      -100722,
+      "https://t.me/proxy?server=proxy.example.com&secret=SECRET98",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("SECRET98");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from98");
+
+    const foreign = await screenProxy(
+      6713,
+      -100723,
+      "https://example.com/proxy?server=203.0.113.9&secret=SECRET98",
+    );
+    expect(foreign.result.decision.action).toBe("allow");
+    expect(foreign.moderator.deleted).toEqual([]);
+  });
 });

@@ -457,6 +457,14 @@ function linkHosts(message: Record<string, unknown>): {
       hosts.push(link.host);
     }
     if (
+      link.extra !== undefined &&
+      !seenHosts.has(link.extra) &&
+      hosts.length < MAX_HOSTS
+    ) {
+      seenHosts.add(link.extra);
+      hosts.push(link.extra);
+    }
+    if (
       link.invite &&
       !seenInvites.has(link.host) &&
       invites.length < MAX_HOSTS
@@ -755,7 +763,9 @@ function pushSwitchInlineQueries(
   }
 }
 
-function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
+function hostFromUrl(
+  value: unknown,
+): { host: string; invite: boolean; extra?: string } | null {
   if (
     typeof value !== "string" ||
     value.length === 0 ||
@@ -791,8 +801,9 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   if (deep) {
     return deep;
   }
+  const proxy = proxyServerHost(url);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return null;
+    return proxy === null ? null : { host: proxy, invite: false };
   }
   const host = url.hostname.toLowerCase();
   if (
@@ -804,10 +815,69 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
     host.endsWith(".") ||
     !/^[a-z0-9.-]+$/.test(host)
   ) {
-    return null;
+    return proxy === null ? null : { host: proxy, invite: false };
   }
   const path = url.pathname.replace(/\/+$/, "") || "/";
-  return { host, invite: isTelegramInvite(host, path) };
+  return {
+    host,
+    invite: isTelegramInvite(host, path),
+    ...(proxy !== null && proxy !== host ? { extra: proxy } : {}),
+  };
+}
+
+const telegramProxyHosts = ["t.me", "telegram.me", "telegram.dog"];
+
+function proxyServerHost(url: URL): string | null {
+  if (!isTelegramProxy(url)) {
+    return null;
+  }
+  const server = url.searchParams.get("server");
+  if (server === null || server.length === 0 || server.length > MAX_LINK) {
+    return null;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(
+      /^(?:https?:)?\/\//i.test(server) ? server : `http://${server}`,
+    );
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    host.length === 0 ||
+    host.length > 253 ||
+    host.includes(":") ||
+    host.includes("..") ||
+    host.startsWith(".") ||
+    host.endsWith(".") ||
+    !/^[a-z0-9.-]+$/.test(host)
+  ) {
+    return null;
+  }
+  return host;
+}
+
+function isTelegramProxy(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    return command === "proxy" || command === "socks";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => host === name || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  return path === "/proxy" || path === "/socks";
 }
 
 function telegramDeepInvite(

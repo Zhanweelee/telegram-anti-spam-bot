@@ -602,6 +602,108 @@ describe("link fixtures", () => {
     expect(skipped).toBeNull();
   });
 
+  it("reads the server host from a telegram proxy link and leaves the secret out", async () => {
+    const detector = createLinkDetector();
+    const secret = "SECRET98";
+    const ip = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?server=203.0.113.9&port=4444&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(ip)).not.toContain(secret);
+    expect(JSON.stringify(ip)).not.toContain("4444");
+
+    const socks = await detector.detect({
+      event: eventFor(
+        "https://t.me/socks?server=bit.ly&port=1080&user=USER98&pass=PASS98",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(socks?.reasons).toEqual(["short_link"]);
+    expect(socks?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(socks)).not.toContain("USER98");
+    expect(JSON.stringify(socks)).not.toContain("PASS98");
+
+    const deep = await detector.detect({
+      event: eventFor(
+        `tg://proxy?server=203.0.113.9&port=4444&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.reasons).toEqual(["ip_host"]);
+    expect(deep?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(deep)).not.toContain(secret);
+
+    const bare = await detector.detect({
+      event: eventFor("tg:socks?server=198.51.100.20&user=USER98&pass=PASS98"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["ip_host"]);
+    expect(bare?.evidence[0]?.summary).toBe("ip_host:198.51.100.20");
+    expect(JSON.stringify(bare)).not.toContain("USER98");
+    expect(JSON.stringify(bare)).not.toContain("PASS98");
+
+    const encoded = await detector.detect({
+      event: eventFor(
+        "https://T.ME/PROXY?server=203%2E0%2E113%2E8&secret=SECRET98",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encoded?.reasons).toEqual(["ip_host"]);
+    expect(encoded?.evidence[0]?.summary).toBe("ip_host:203.0.113.8");
+
+    const wrapped = await detector.detect({
+      event: eventFor(
+        "https://t.me/proxy?server=https%3A%2F%2Fbit.ly%2Fname98&secret=SECRET98",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped?.reasons).toEqual(["short_link"]);
+    expect(wrapped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(wrapped)).not.toContain("name98");
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://t.me/proxy?server=proxy.example.com&secret=SECRET98",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://example.com/proxy?server=203.0.113.9&secret=SECRET98",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const resolve = await detector.detect({
+      event: eventFor("tg://resolve?domain=203.0.113.9"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(resolve).toBeNull();
+
+    const nearby = await detector.detect({
+      event: eventFor("https://t.me/proxybot?server=203.0.113.9"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(nearby).toBeNull();
+  });
+
   it("folds dot lookalikes into ascii dots before reading hosts", async () => {
     const detector = createLinkDetector();
     const short = await detector.detect({
