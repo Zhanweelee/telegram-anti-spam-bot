@@ -913,4 +913,60 @@ describe("screenTelegramEvent", () => {
     expect(logged).toContain("moderation_logged");
     expect(logged).not.toContain(phrase);
   });
+
+  it("deletes a keyword that arrives as an edited message", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 3001,
+        edited_message: {
+          message_id: 9,
+          date: 1761955200,
+          text: phrase,
+          chat: { id: -100568, type: "supergroup" },
+          from: { id: 5 },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.edited).toBe(true);
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    const plain = await normalizeUpdate({
+      update: {
+        update_id: 3002,
+        edited_message: {
+          message_id: 10,
+          date: 1761955200,
+          text: "hello",
+          chat: { id: -100569, type: "supergroup" },
+          from: { id: 5 },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(plain.event, {
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+  });
 });

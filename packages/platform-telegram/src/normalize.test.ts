@@ -338,6 +338,24 @@ describe("normalizeUpdate", () => {
       (await normalize({ update_id: 2, edited_message: { message_id: 1 } }))
         .status,
     ).toBe("ignored");
+    const phrase = "请免费领取礼品";
+    const edited = await normalize({
+      update_id: 4,
+      edited_message: {
+        message_id: 9,
+        date: 1761955200,
+        text: phrase,
+        chat: { id: -100568, type: "supergroup" },
+        from: { id: 5 },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status === "event") {
+      expect(edited.event.edited).toBe(true);
+      expect(edited.event.kind).toBe("message");
+      expect(edited.event.message?.id).toBe("9");
+      expect(edited.event.message?.text).toBe(phrase);
+    }
     expect(
       (await normalize({ update_id: 3, message: { text: "no ids" } })).status,
     ).toBe("ignored");

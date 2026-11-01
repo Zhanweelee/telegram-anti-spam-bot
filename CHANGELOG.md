@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P1-09
+
+- `edited_message` 收成内部消息，并带 `edited: true`。同一套规则会处理它。见 ADR 0022。
+- 缺字段的编辑仍然忽略。`my_chat_member` 仍然忽略。
+- 设置 webhook 时要把 `edited_message` 放进 `allowed_updates`。
+
 ### P1-08
 
 - `log` 写一条不含原文的结构化日志。`report` 通过 `Notifier` 通知，正文只有群、事件、分数、规则和 reason。见 ADR 0021。

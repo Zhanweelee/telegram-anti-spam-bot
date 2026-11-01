@@ -31,10 +31,13 @@ export async function normalizeUpdate(
   if (Object.hasOwn(input.update, "chat_member")) {
     return chatMemberEvent(input.update.chat_member, updateId, input);
   }
+  if (Object.hasOwn(input.update, "edited_message")) {
+    return messageEvent(input.update.edited_message, updateId, input, true);
+  }
   if (!Object.hasOwn(input.update, "message")) {
     return { status: "ignored" };
   }
-  return messageEvent(input.update.message, updateId, input);
+  return messageEvent(input.update.message, updateId, input, false);
 }
 
 function callbackEvent(
@@ -72,6 +75,7 @@ async function messageEvent(
   message: unknown,
   updateId: number,
   input: NormalizeInput,
+  edited: boolean,
 ): Promise<NormalizeOutcome> {
   if (!isRecord(message)) {
     return { status: "ignored" };
@@ -95,6 +99,7 @@ async function messageEvent(
       isAdmin: actorIsAdmin(message, new Set(input.adminUserIds)),
     },
     ...(direct ? { direct: true } : {}),
+    ...(edited ? { edited: true as const } : {}),
     message: {
       id: messageId,
       text,

@@ -21,7 +21,7 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 看私聊命令怎么改配置 | [examples/operator-commands](examples/operator-commands) |
 | 部署到自己的 Cloudflare | [docs/deploy.md](docs/deploy.md) |
 
-Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息和 `chat_member` 归一化成内部事件。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配了 KV 之后白名单进 KV，配了 D1 之后审计进 D1。两个绑定都可以不填，那时数据留在 isolate 内存里。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`、`/export`、`/forget`、`/blocklist`。群聊里的这些文本不会改配置。配了 `TELEGRAM_BOT_TOKEN` 之后，删除、禁言和封禁各发一次 Telegram 请求。没有 token 时只记在内存里。见 ADR 0020。规则可以写 `log` 或 `report`。上报只含标识和 reason，默认规则不自动发给管理员。见 ADR 0021。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete > captcha。新成员入群后，在点「我不是机器人」之前不能发言。按钮回调要能送到 bot，`allowed_updates` 需要包含 `callback_query`。没有 bot token 时不会限制这个人。同一人 10 秒内第 5 条消息，或同一内容哈希 60 秒内第 3 次，会被删掉。这个计数在 isolate 内存里，超额时跳过，不拖住请求。见 ADR 0010。短链接和裸 IP 会被删掉。普通网址默认保留。信誉查询不在热路径上，超时就放过。见 ADR 0011。跨群黑名单默认关闭。打开后只共享 actor id 或内容哈希，关掉后下一条消息不再读共享名单。见 ADR 0012。私聊里还可以用 `/blocklist`。`/appeal` 把一条审计标成误判或确认，样本进入审核队列，不改规则。见 ADR 0014。`/evals` 把这些样本导出成评测文档，只有哈希、特征和 spam/ham 标签。见 ADR 0016。LLM 分类默认关闭，也不绑定 Workers AI。打开后额度错误或超时会跳过。见 ADR 0015。拦截率、动作计数、检测器错误和存储失败从日志汇总，标签只有租户 id 和群 id。见 ADR 0017。外部插件要有完整性摘要和签名。自部署可以显式允许未签名插件，公共 bot 不可以。见 ADR 0018。规则包默认不订阅。私聊 `/packs` 打开后，刷新失败会沿用上一份通过校验的规则。见 ADR 0019。命令回复默认中文。`vars` 里写 `LOCALE=en` 后改成英文。见 ADR 0013。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编辑后的消息和 `chat_member` 归一化成内部事件。编辑后的消息走同一套规则。见 ADR 0022。默认规则在 `apps/worker/rules/default.json`，某个群可以在 `chats.json` 里整份替换。热路径先读缓存，不读 D1。规则 schema 失败时该群放行。白名单和管理员豁免按租户和群存放；没有记录时仍豁免管理员，某个群可以关掉豁免。配了 KV 之后白名单进 KV，配了 D1 之后审计进 D1。两个绑定都可以不填，那时数据留在 isolate 内存里。配置中的管理员可以在私聊使用 `/help`、`/rules`、`/whitelist`、`/logs`、`/dryrun`、`/export`、`/forget`、`/blocklist`。群聊里的这些文本不会改配置。配了 `TELEGRAM_BOT_TOKEN` 之后，删除、禁言和封禁各发一次 Telegram 请求。没有 token 时只记在内存里。见 ADR 0020。规则可以写 `log` 或 `report`。上报只含标识和 reason，默认规则不自动发给管理员。见 ADR 0021。规则可以写 `mute` 或 `ban`，严重度是 ban > mute > delete > captcha。新成员入群后，在点「我不是机器人」之前不能发言。按钮回调要能送到 bot，`allowed_updates` 需要包含 `callback_query`。没有 bot token 时不会限制这个人。同一人 10 秒内第 5 条消息，或同一内容哈希 60 秒内第 3 次，会被删掉。这个计数在 isolate 内存里，超额时跳过，不拖住请求。见 ADR 0010。短链接和裸 IP 会被删掉。普通网址默认保留。信誉查询不在热路径上，超时就放过。见 ADR 0011。跨群黑名单默认关闭。打开后只共享 actor id 或内容哈希，关掉后下一条消息不再读共享名单。见 ADR 0012。私聊里还可以用 `/blocklist`。`/appeal` 把一条审计标成误判或确认，样本进入审核队列，不改规则。见 ADR 0014。`/evals` 把这些样本导出成评测文档，只有哈希、特征和 spam/ham 标签。见 ADR 0016。LLM 分类默认关闭，也不绑定 Workers AI。打开后额度错误或超时会跳过。见 ADR 0015。拦截率、动作计数、检测器错误和存储失败从日志汇总，标签只有租户 id 和群 id。见 ADR 0017。外部插件要有完整性摘要和签名。自部署可以显式允许未签名插件，公共 bot 不可以。见 ADR 0018。规则包默认不订阅。私聊 `/packs` 打开后，刷新失败会沿用上一份通过校验的规则。见 ADR 0019。命令回复默认中文。`vars` 里写 `LOCALE=en` 后改成英文。见 ADR 0013。
 
 ## 10 分钟跑通
 
@@ -51,7 +51,7 @@ pnpm exec wrangler deploy
 ```sh
 curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H 'content-type: application/json' \
-  -d "{\"url\":\"https://tasb.<子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"chat_member\",\"callback_query\"],\"drop_pending_updates\":true}"
+  -d "{\"url\":\"https://tasb.<子域>.workers.dev/telegram/webhook\",\"secret_token\":\"${WEBHOOK_SECRET}\",\"allowed_updates\":[\"message\",\"edited_message\",\"chat_member\",\"callback_query\"],\"drop_pending_updates\":true}"
 
 curl -sS "https://tasb.<子域>.workers.dev/health"
 TASB_URL="https://tasb.<子域>.workers.dev" pnpm smoke

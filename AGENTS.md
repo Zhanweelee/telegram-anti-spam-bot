@@ -202,3 +202,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Plugin manifest | 插件的 id、版本、schema 和完整性摘要。外部包还要签名 | Package.json、原文配置 |
 | Rule pack | 一份可订阅的 RuleSet。默认关闭。刷新失败时保留上一份通过 schema 的规则 | 远程配置、原文规则 |
 | Notifier | 上报端口。通知只有标识、分数和 reason | 原文推送、证据摘录 |
+| Edited | 消息发出后又被修改。事件字段 `edited` | Update 类型名、原文副本 |

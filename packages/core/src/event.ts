@@ -34,6 +34,8 @@ export const eventSchema = z.strictObject({
   actor: actorSchema,
   /** True when the event is a private conversation with the bot. */
   direct: z.boolean().optional(),
+  /** True when this message replaces an earlier one. */
+  edited: z.literal(true).optional(),
   /** Present when a member joined from outside the chat. */
   membership: z.literal("join").optional(),
   /** Button answer. The nonce is not message text. */
