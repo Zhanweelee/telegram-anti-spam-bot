@@ -43,6 +43,31 @@ describe("operator command example", () => {
       "quota -100 2/1 calendar_month basic until 2026-12-01T00:00:00.000Z\nkeyword,join",
     );
     expect(quota).not.toContain(phrase);
+    const rules = await runPrivateCommand({
+      text: "/rules -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["join"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+    });
+    expect(
+      rules?.startsWith("rules -100 until 2026-12-01T00:00:00.000Z\n"),
+    ).toBe(true);
+    expect(rules).toContain(
+      "spam_keywords enabled file threshold 1 actions delete paused",
+    );
+    expect(rules).not.toContain(phrase);
     expect(help).toContain("/chats");
     expect(help).toContain("/rule");
     expect(help).not.toContain(phrase);

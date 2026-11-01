@@ -288,11 +288,17 @@ async function showRules(
     switches,
     ...(pack ? { pack } : {}),
   });
-  const paused = await quotaPausedIds(input, chatId, rules);
+  const mark = await quotaRuleMark(input, chatId, rules);
+  const header = pack
+    ? say(input, "command.rules.pack", { chatId, pack: pack.id })
+    : say(input, "command.rules.header", { chatId });
   const lines = [
-    pack
-      ? say(input, "command.rules.pack", { chatId, pack: pack.id })
-      : say(input, "command.rules.header", { chatId }),
+    mark.resetsAt === undefined
+      ? header
+      : say(input, "command.rules.until", {
+          status: header,
+          resetsAt: mark.resetsAt,
+        }),
   ];
   if (rules.rules.length === 0) {
     lines.push(say(input, "command.rules.empty"));
@@ -315,7 +321,7 @@ async function showRules(
       actions: rule.actions.join(","),
     });
     lines.push(
-      paused.has(rule.id)
+      mark.paused.has(rule.id)
         ? `${line} ${say(input, "command.rules.paused")}`
         : line,
     );
@@ -1216,14 +1222,17 @@ async function commandPack(
   }
 }
 
-async function quotaPausedIds(
+async function quotaRuleMark(
   input: OperatorCommandInput,
   chatId: string,
   rules: RuleSet,
-): Promise<ReadonlySet<string>> {
+): Promise<{
+  readonly paused: ReadonlySet<string>;
+  readonly resetsAt?: string;
+}> {
   const reader = input.quota;
   if (!reader) {
-    return new Set();
+    return { paused: new Set() };
   }
   try {
     const parsed = quotaSnapshotSchema.safeParse(
@@ -1231,20 +1240,24 @@ async function quotaPausedIds(
     );
     if (!parsed.success) {
       warnQuota(input, chatId);
-      return new Set();
+      return { paused: new Set() };
     }
     const basic = parsed.data.basicDetectorIds;
     if (!parsed.data.enabled || !parsed.data.degraded || !basic) {
-      return new Set();
+      return { paused: new Set() };
     }
-    return new Set(
+    const paused = new Set(
       rules.rules
         .filter((rule) => !ruleSurvivesQuota(rule.detectorIds, basic))
         .map((rule) => rule.id),
     );
+    if (parsed.data.resetsAt === undefined) {
+      return { paused };
+    }
+    return { paused, resetsAt: parsed.data.resetsAt };
   } catch {
     warnQuota(input, chatId);
-    return new Set();
+    return { paused: new Set() };
   }
 }
 

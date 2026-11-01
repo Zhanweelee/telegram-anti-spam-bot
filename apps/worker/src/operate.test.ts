@@ -553,6 +553,9 @@ describe("handleIncomingEvent", () => {
       },
     );
     const text = kit.reply.sent.at(-1)?.text ?? "";
+    expect(text.startsWith("rules -100 until 2026-12-01T00:00:00.000Z\n")).toBe(
+      true,
+    );
     expect(text).toContain(
       "spam_keywords enabled file threshold 1 actions delete\n",
     );

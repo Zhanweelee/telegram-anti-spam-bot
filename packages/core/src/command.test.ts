@@ -1658,6 +1658,7 @@ describe("runOperatorCommand", () => {
       expect(listed.text).not.toContain(
         "spam_keywords enabled file threshold 1 actions delete paused",
       );
+      expect(listed.text).not.toContain("until");
     }
     const english = await runOperatorCommand({
       ...deps,
@@ -1759,6 +1760,159 @@ describe("runOperatorCommand", () => {
       expect(broken.text).toContain("llm_hint disabled file");
       expect(broken.text).not.toContain("paused");
       expect(broken.text).not.toContain(phrase);
+    }
+    expect(JSON.stringify(deps.logger.entries)).toContain("quota_failed");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
+  it("puts the quota window end on a degraded /rules header", async () => {
+    const deps = kit();
+    const source = quotaRules();
+    let reads = 0;
+    const listed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          reads += 1;
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month" as const,
+            degraded: true,
+            basicDetectorIds: ["keyword"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+    });
+    expect(reads).toBe(1);
+    expect(listed).toMatchObject({ status: "reply" });
+    if (listed.status === "reply") {
+      expect(
+        listed.text.startsWith("rules -100 until 2026-12-01T00:00:00.000Z\n"),
+      ).toBe(true);
+      expect(listed.text).toContain(
+        "llm_hint disabled file threshold 1 actions log paused",
+      );
+      expect(listed.text).not.toContain(phrase);
+    }
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      source,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["keyword"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+    });
+    expect(english).toMatchObject({ status: "reply" });
+    if (english.status === "reply") {
+      expect(
+        english.text.startsWith("rules -100 until 2026-12-01T00:00:00.000Z\n"),
+      ).toBe(true);
+    }
+    const open = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+            basicDetectorIds: ["keyword"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+    });
+    expect(open).toMatchObject({ status: "reply" });
+    if (open.status === "reply") {
+      expect(open.text.startsWith("rules -100\n")).toBe(true);
+      expect(open.text).not.toContain("until");
+    }
+    const rulePacks = createMemoryRuleSubscriptionStore();
+    const rulePackArchive = createMemoryRulePackArchive();
+    const rulePackSource = communityPack();
+    await rulePacks.put("local", "-100", "community");
+    const packed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      cache: cache(),
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["keyword"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+    });
+    expect(packed).toMatchObject({ status: "reply" });
+    if (packed.status === "reply") {
+      expect(
+        packed.text.startsWith(
+          "rules -100 community until 2026-12-01T00:00:00.000Z\n",
+        ),
+      ).toBe(true);
+      expect(packed.text).toContain(
+        "community_keywords enabled file threshold 2 actions delete",
+      );
+      expect(packed.text).not.toContain("paused");
+    }
+    const invalid = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source,
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["keyword"],
+            resetsAt: phrase,
+          };
+        },
+      },
+    });
+    expect(invalid).toMatchObject({ status: "reply" });
+    if (invalid.status === "reply") {
+      expect(invalid.text.startsWith("rules -100\n")).toBe(true);
+      expect(invalid.text).not.toContain("until");
+      expect(invalid.text).not.toContain("paused");
+      expect(invalid.text).not.toContain(phrase);
     }
     expect(JSON.stringify(deps.logger.entries)).toContain("quota_failed");
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
