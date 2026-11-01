@@ -80,6 +80,10 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 
 多个 id 用逗号隔开。不要把 id 写进 `wrangler.jsonc`。
 
+命令回复默认中文。要英文时，在 `wrangler.jsonc` 的 `vars` 里加 `"LOCALE": "en"`。只接受 `zh` 和 `en`。别的值仍用中文。这不是密钥。
+
+
+
 部署结束时 Wrangler 会打印 `https://tasb.<你的子域>.workers.dev`。免费套餐使用这个地址即可。
 
 ## 设置 Webhook

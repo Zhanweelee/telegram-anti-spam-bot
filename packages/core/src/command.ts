@@ -6,6 +6,8 @@ import {
 import type { Cache } from "./cache.js";
 import type { Event } from "./event.js";
 import type { Logger } from "./logger.js";
+import type { Locale } from "./messages.js";
+import { translate } from "./messages.js";
 import {
   defaultPrefilterPolicy,
   loadPolicy,
@@ -34,31 +36,9 @@ const COMMAND_NAMES = [
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
-const HELP = [
-  "命令：",
-  "/help",
-  "/rules [chatId]",
-  "/whitelist <chatId>",
-  "/whitelist <chatId> add <actorId>",
-  "/whitelist <chatId> remove <actorId>",
-  "/logs [chatId]",
-  "/dryrun <chatId>",
-  "/dryrun <chatId> on|off",
-  "/export [chatId]",
-  "/forget [chatId]",
-  "/blocklist <chatId>",
-  "/blocklist <chatId> on|off",
-  "/blocklist <chatId> add actor <actorId>",
-  "/blocklist <chatId> add hash <sha256>",
-].join("\n");
-
-const DENIED = "没有权限";
-const INVALID = "参数无效";
 const LOG_LIMIT = 10;
 const TOKEN_LIMIT = 80;
 const EXPORT_REPLY_LIMIT = 3500;
-const BLOCKLIST_USAGE =
-  "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]";
 
 export interface OperatorCommandInput {
   readonly event: Event;
@@ -71,6 +51,7 @@ export interface OperatorCommandInput {
   readonly logger: Logger;
   readonly fallback?: PrefilterPolicy;
   readonly blocklist?: BlocklistStore;
+  readonly locale?: Locale;
 }
 
 export type OperatorCommandResult =
@@ -99,7 +80,11 @@ export async function runOperatorCommand(
       chatId: input.event.chatId,
       command: parsed.name,
     });
-    return { status: "reply", command: parsed.name, text: DENIED };
+    return {
+      status: "reply",
+      command: parsed.name,
+      text: say(input, "command.denied"),
+    };
   }
   input.logger.info("operator_command", {
     eventId: input.event.id,
@@ -133,7 +118,7 @@ async function dispatch(
 ): Promise<string> {
   switch (name) {
     case "help":
-      return HELP;
+      return say(input, "command.help");
     case "rules":
       return showRules(input, args);
     case "whitelist":
@@ -156,11 +141,11 @@ async function showRules(
   args: readonly string[],
 ): Promise<string> {
   if (args.length > 1) {
-    return "用法：/rules [chatId]";
+    return say(input, "command.rules.usage");
   }
   const chatId = args[0] ?? input.event.chatId;
   if (!isTargetId(chatId)) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const rules = await loadRuleSet({
     tenantId: input.event.tenantId,
@@ -169,15 +154,23 @@ async function showRules(
     source: input.source,
     logger: input.logger,
   });
-  const lines = [`rules ${chatId}`];
+  const lines = [say(input, "command.rules.header", { chatId })];
   if (rules.rules.length === 0) {
-    lines.push("none");
+    lines.push(say(input, "command.rules.empty"));
     return lines.join("\n");
   }
   for (const rule of rules.rules) {
-    const state = rule.enabled ? "enabled" : "disabled";
+    const state = say(
+      input,
+      rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
+    );
     lines.push(
-      `${rule.id} ${state} threshold ${rule.threshold} actions ${rule.actions.join(",")}`,
+      say(input, "command.rules.line", {
+        id: rule.id,
+        state,
+        threshold: rule.threshold,
+        actions: rule.actions.join(","),
+      }),
     );
   }
   return lines.join("\n");
@@ -189,7 +182,7 @@ async function editWhitelist(
 ): Promise<string> {
   const chatId = args[0];
   if (!chatId || !isTargetId(chatId)) {
-    return "用法：/whitelist <chatId> [add|remove <actorId>]";
+    return say(input, "command.whitelist.usage");
   }
   const op = args[1];
   const actorId = args[2];
@@ -197,13 +190,13 @@ async function editWhitelist(
     args.length > 3 ||
     (op !== undefined && op !== "add" && op !== "remove")
   ) {
-    return "用法：/whitelist <chatId> [add|remove <actorId>]";
+    return say(input, "command.whitelist.usage");
   }
   if (
     (op === "add" || op === "remove") &&
     (actorId === undefined || !isTargetId(actorId))
   ) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const current = await loadPolicy({
     tenantId: input.event.tenantId,
@@ -214,14 +207,14 @@ async function editWhitelist(
     fallback: input.fallback ?? defaultPrefilterPolicy,
   });
   if (op === undefined) {
-    return formatPolicy(chatId, current);
+    return formatPolicy(input, chatId, current);
   }
   const nextIds =
     op === "add"
       ? addActor(current.allowActorIds, actorId ?? "")
       : current.allowActorIds.filter((id) => id !== actorId);
   if (sameIds(current.allowActorIds, nextIds)) {
-    return formatPolicy(chatId, current);
+    return formatPolicy(input, chatId, current);
   }
   const next = { exemptAdmins: current.exemptAdmins, allowActorIds: nextIds };
   try {
@@ -239,9 +232,9 @@ async function editWhitelist(
       chatId: input.event.chatId,
       command: "whitelist",
     });
-    return INVALID;
+    return say(input, "command.invalid");
   }
-  return formatPolicy(chatId, next);
+  return formatPolicy(input, chatId, next);
 }
 
 async function showLogs(
@@ -249,11 +242,11 @@ async function showLogs(
   args: readonly string[],
 ): Promise<string> {
   if (args.length > 1) {
-    return "用法：/logs [chatId]";
+    return say(input, "command.logs.usage");
   }
   const chatId = args[0];
   if (chatId !== undefined && !isTargetId(chatId)) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const records = await input.storage.listAudits(
     chatId === undefined
@@ -261,16 +254,16 @@ async function showLogs(
       : { tenantId: input.event.tenantId, chatId, limit: LOG_LIMIT },
   );
   if (records.length === 0) {
-    return "no audits";
+    return say(input, "command.logs.empty");
   }
-  return records.map(formatAudit).join("\n");
+  return records.map((record) => formatAudit(input, record)).join("\n");
 }
 
 async function exportAudits(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  const scope = resolveScope(input, args, "/export [chatId]");
+  const scope = resolveScope(input, args, "command.export.usage");
   if (typeof scope === "string") {
     return scope;
   }
@@ -278,7 +271,7 @@ async function exportAudits(
     const records = await input.storage.exportAudits(scope);
     const json = auditExportDocument(scope, records);
     if (json.length > EXPORT_REPLY_LIMIT) {
-      return `导出 ${records.length} 条，超过私聊长度`;
+      return say(input, "command.export.too_long", { count: records.length });
     }
     return json;
   } catch {
@@ -287,7 +280,7 @@ async function exportAudits(
       chatId: input.event.chatId,
       command: "export",
     });
-    return INVALID;
+    return say(input, "command.invalid");
   }
 }
 
@@ -295,35 +288,35 @@ async function forgetAudits(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  const scope = resolveScope(input, args, "/forget [chatId]");
+  const scope = resolveScope(input, args, "command.forget.usage");
   if (typeof scope === "string") {
     return scope;
   }
   try {
     const records = await input.storage.exportAudits(scope);
     await input.storage.deleteAudits(scope);
-    return `已删除 ${records.length} 条`;
+    return say(input, "command.forget.deleted", { count: records.length });
   } catch {
     input.logger.warn("operator_rejected", {
       eventId: input.event.id,
       chatId: input.event.chatId,
       command: "forget",
     });
-    return INVALID;
+    return say(input, "command.invalid");
   }
 }
 
 function resolveScope(
   input: OperatorCommandInput,
   args: readonly string[],
-  usage: string,
+  usageKey: string,
 ): AuditScope | string {
   if (args.length > 1) {
-    return `用法：${usage}`;
+    return say(input, usageKey);
   }
   const chatId = args[0];
   if (chatId !== undefined && !isTargetId(chatId)) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   return chatId === undefined
     ? { tenantId: input.event.tenantId }
@@ -336,38 +329,62 @@ async function editDryRun(
 ): Promise<string> {
   const chatId = args[0];
   if (!chatId || !isTargetId(chatId) || args.length > 2) {
-    return "用法：/dryrun <chatId> [on|off]";
+    return say(input, "command.dryrun.usage");
   }
   const mode = args[1];
   if (mode !== undefined && mode !== "on" && mode !== "off") {
-    return "用法：/dryrun <chatId> [on|off]";
+    return say(input, "command.dryrun.usage");
   }
   if (mode === "on" || mode === "off") {
     await input.runtime.setDryRun(input.event.tenantId, chatId, mode === "on");
   }
   const enabled = await input.runtime.getDryRun(input.event.tenantId, chatId);
-  return `dry-run ${chatId} ${enabled ? "on" : "off"}`;
+  return say(input, "command.dryrun.status", {
+    chatId,
+    state: say(input, enabled ? "command.switch.on" : "command.switch.off"),
+  });
 }
 
-function formatPolicy(chatId: string, policy: PrefilterPolicy): string {
+function formatPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+  policy: PrefilterPolicy,
+): string {
   const allow =
-    policy.allowActorIds.length === 0 ? "none" : policy.allowActorIds.join(",");
-  return `whitelist ${chatId}\nexemptAdmins ${policy.exemptAdmins}\nallow ${allow}`;
+    policy.allowActorIds.length === 0
+      ? say(input, "command.allow.empty")
+      : policy.allowActorIds.join(",");
+  return say(input, "command.whitelist.body", {
+    chatId,
+    exemptAdmins: String(policy.exemptAdmins),
+    allow,
+  });
 }
 
-function formatAudit(record: AuditRecord): string {
-  const reasons = record.reasons.map(safeToken).join(",");
-  const rules = record.ruleIds.map(safeToken).join(",");
-  return `${record.createdAt} ${safeToken(record.eventId)} ${record.action} score ${record.score} rules ${rules} reasons ${reasons}`;
+function formatAudit(input: OperatorCommandInput, record: AuditRecord): string {
+  const reasons = record.reasons
+    .map((reason) => safeToken(input, reason))
+    .join(",");
+  const rules = record.ruleIds
+    .map((ruleId) => safeToken(input, ruleId))
+    .join(",");
+  return say(input, "command.logs.line", {
+    createdAt: record.createdAt,
+    eventId: safeToken(input, record.eventId),
+    action: record.action,
+    score: record.score,
+    rules,
+    reasons,
+  });
 }
 
-function safeToken(value: string): string {
+function safeToken(input: OperatorCommandInput, value: string): string {
   if (
     value.length === 0 ||
     value.length > TOKEN_LIMIT ||
     /[\r\n]/.test(value)
   ) {
-    return "redacted";
+    return say(input, "command.redacted");
   }
   return value;
 }
@@ -397,37 +414,43 @@ async function editBlocklist(
   const store = input.blocklist;
   if (!store) {
     rejectBlocklist(input);
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const chatId = args[0];
   if (!chatId || !isTargetId(chatId)) {
-    return args.length === 0 ? BLOCKLIST_USAGE : INVALID;
+    return args.length === 0
+      ? say(input, "command.blocklist.usage")
+      : say(input, "command.invalid");
   }
   const op = args[1];
   if (op === undefined) {
     const enabled = await readEnabled(input, store, chatId);
-    return enabled === null ? INVALID : formatBlocklist(chatId, enabled);
+    return enabled === null
+      ? say(input, "command.invalid")
+      : formatBlocklist(input, chatId, enabled);
   }
   if (op === "on" || op === "off") {
     if (args.length !== 2) {
-      return BLOCKLIST_USAGE;
+      return say(input, "command.blocklist.usage");
     }
     const wrote = await writeBlocklist(input, () =>
       store.setEnabled(input.event.tenantId, chatId, op === "on"),
     );
     if (!wrote) {
-      return INVALID;
+      return say(input, "command.invalid");
     }
     const enabled = await readEnabled(input, store, chatId);
-    return enabled === null ? INVALID : formatBlocklist(chatId, enabled);
+    return enabled === null
+      ? say(input, "command.invalid")
+      : formatBlocklist(input, chatId, enabled);
   }
   if (op !== "add" || args.length !== 4) {
-    return BLOCKLIST_USAGE;
+    return say(input, "command.blocklist.usage");
   }
   const kind = args[2];
   const raw = args[3];
   if ((kind !== "actor" && kind !== "hash") || raw === undefined) {
-    return BLOCKLIST_USAGE;
+    return say(input, "command.blocklist.usage");
   }
   const candidate: BlocklistEntry =
     kind === "hash"
@@ -435,19 +458,21 @@ async function editBlocklist(
       : { kind: "actor", value: raw };
   const parsed = blocklistEntrySchema.safeParse(candidate);
   if (!parsed.success) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const wrote = await writeBlocklist(input, () =>
     store.add(input.event.tenantId, parsed.data),
   );
   if (!wrote) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
   const enabled = await readEnabled(input, store, chatId);
   if (enabled === null) {
-    return INVALID;
+    return say(input, "command.invalid");
   }
-  return `${formatBlocklist(chatId, enabled)}\nadded`;
+  return say(input, "command.blocklist.added", {
+    status: formatBlocklist(input, chatId, enabled),
+  });
 }
 
 async function readEnabled(
@@ -484,8 +509,23 @@ function rejectBlocklist(input: OperatorCommandInput): void {
   });
 }
 
-function formatBlocklist(chatId: string, enabled: boolean): string {
-  return `blocklist ${chatId} ${enabled ? "on" : "off"}`;
+function formatBlocklist(
+  input: OperatorCommandInput,
+  chatId: string,
+  enabled: boolean,
+): string {
+  return say(input, "command.blocklist.status", {
+    chatId,
+    state: say(input, enabled ? "command.switch.on" : "command.switch.off"),
+  });
+}
+
+function say(
+  input: OperatorCommandInput,
+  key: string,
+  vars?: Readonly<Record<string, string | number>>,
+): string {
+  return translate(input.locale ?? "zh", key, vars);
 }
 
 function isCommandName(value: string): value is CommandName {

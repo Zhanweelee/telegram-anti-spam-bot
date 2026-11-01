@@ -172,6 +172,53 @@ function kit() {
 }
 
 describe("runOperatorCommand", () => {
+  it("uses the English catalog when locale is en", async () => {
+    const deps = kit();
+    const denied = await runOperatorCommand({
+      event: event({ text: "/help", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "No permission" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text.startsWith("Commands:")).toBe(true);
+    }
+    const usage = await runOperatorCommand({
+      event: event({ text: "/forget extra extra", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(usage).toMatchObject({ text: "Usage: /forget [chatId]" });
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_en",
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "Deleted 1" });
+    expect(JSON.stringify(forgotten)).not.toContain(phrase);
+  });
+
   it("does not change config for a group command", async () => {
     const deps = kit();
     const result = await runOperatorCommand({

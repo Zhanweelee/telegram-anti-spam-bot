@@ -7,6 +7,7 @@ import {
 } from "@tasb/adapter-memory";
 import {
   createMemoryLogger,
+  type Locale,
   parseEvent,
   runOperatorCommand,
   type Storage,
@@ -31,6 +32,7 @@ export async function runPrivateCommand(input: {
   readonly actorId: string;
   readonly adminActorIds: readonly string[];
   readonly storage?: Storage;
+  readonly locale?: Locale;
 }): Promise<string | null> {
   const result = await runOperatorCommand({
     event: parseEvent({
@@ -54,6 +56,7 @@ export async function runPrivateCommand(input: {
     storage: input.storage ?? createMemoryStorage(),
     logger: createMemoryLogger(),
     blocklist: createMemoryBlocklistStore(),
+    ...(input.locale ? { locale: input.locale } : {}),
     source: {
       async loadChat() {
         return null;

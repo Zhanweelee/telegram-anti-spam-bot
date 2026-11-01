@@ -2,6 +2,7 @@ import {
   createSystemClock,
   type Event,
   expireChallenges,
+  type Locale,
   type Logger,
 } from "@tasb/core";
 import {
@@ -21,6 +22,7 @@ export type WorkerBindings = {
   WEBHOOK_SECRET?: string;
   TENANT_ID?: string;
   ADMIN_USER_IDS?: string;
+  LOCALE?: string;
   TELEGRAM_BOT_TOKEN?: string;
   DB?: D1Database;
   POLICY_KV?: KVNamespace;
@@ -44,6 +46,13 @@ export function normalizeTenantId(value: string | undefined): string {
     return "local";
   }
   return trimmed;
+}
+
+export function normalizeLocale(value: string | undefined): Locale | undefined {
+  if (value === "zh" || value === "en") {
+    return value;
+  }
+  return undefined;
 }
 
 export function parseAdminUserIds(
@@ -93,12 +102,14 @@ export function createApp(
           return;
         }
         const stores = resolveStores(c.env ?? {});
+        const locale = normalizeLocale(c.env?.LOCALE);
         await handleIncomingEvent(event, {
           logger,
           adminActorIds: parseAdminUserIds(c.env?.ADMIN_USER_IDS),
           reply: createTelegramReply({ token: c.env?.TELEGRAM_BOT_TOKEN }),
           storage: stores.storage,
           policyStore: stores.policyStore,
+          ...(locale ? { locale } : {}),
           ...(c.env?.TELEGRAM_BOT_TOKEN
             ? { botToken: c.env.TELEGRAM_BOT_TOKEN }
             : {}),

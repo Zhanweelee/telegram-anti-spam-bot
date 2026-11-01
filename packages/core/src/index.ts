@@ -62,6 +62,13 @@ export {
   wrapLogger,
 } from "./logger.js";
 export {
+  type Locale,
+  locales,
+  type MessageKey,
+  messageKeys,
+  translate,
+} from "./messages.js";
+export {
   DEFAULT_DETECTOR_TIMEOUT_MS,
   type DetectorError,
   type FailureMode,

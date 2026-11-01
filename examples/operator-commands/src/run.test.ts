@@ -13,6 +13,14 @@ describe("operator command example", () => {
     expect(help).toContain("/logs");
     expect(help).toContain("/blocklist");
     expect(help).not.toContain(phrase);
+    const english = await runPrivateCommand({
+      text: "/help",
+      actorId: "42",
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english?.startsWith("Commands:")).toBe(true);
+    expect(english).not.toContain(phrase);
 
     const storage = createMemoryStorage();
     await storage.appendAudit({

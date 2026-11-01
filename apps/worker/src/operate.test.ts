@@ -328,4 +328,14 @@ describe("handleIncomingEvent", () => {
     expect(kit.storage.records).toHaveLength(1);
     expect(JSON.stringify(kit.logger.entries)).not.toContain(note);
   });
+
+  it("replies in English when locale is en", async () => {
+    const kit = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/help", direct: true, actorId: "7" }),
+      { ...kit, locale: "en" },
+    );
+    expect(kit.reply.sent[0]?.text).toBe("No permission");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
 });

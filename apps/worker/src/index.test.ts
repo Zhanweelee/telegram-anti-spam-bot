@@ -4,6 +4,7 @@ import { workerCaptcha } from "./captcha-runtime.js";
 import {
   createApp,
   normalizeDeploymentMode,
+  normalizeLocale,
   normalizeTenantId,
   parseAdminUserIds,
   runScheduled,
@@ -73,6 +74,10 @@ describe("worker", () => {
     expect(normalizeTenantId("x".repeat(129))).toBe("local");
     expect(parseAdminUserIds(undefined)).toEqual([]);
     expect(parseAdminUserIds(" 42, ,7 ")).toEqual(["42", "7"]);
+    expect(normalizeLocale(undefined)).toBeUndefined();
+    expect(normalizeLocale("nope")).toBeUndefined();
+    expect(normalizeLocale("en")).toBe("en");
+    expect(normalizeLocale("zh")).toBe("zh");
   });
 });
 

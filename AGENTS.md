@@ -193,3 +193,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Deployment mode | 只存在于 worker 的 `self-host` 或 `cloud` | Environment |
 | Direct | 与 bot 的私聊，事件字段 `direct` | Private（平台词）、DM |
 | Blocklist | 租户内共享的 actor id 或内容哈希。每个群单独 opt-in，默认关闭 | Ban list、原文黑名单 |
+| Locale | 命令回复的语言，`zh` 或 `en`。缺省中文 | Language、i18n code |

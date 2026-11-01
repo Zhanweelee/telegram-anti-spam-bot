@@ -1,6 +1,7 @@
 import {
   createSystemClock,
   type Event,
+  type Locale,
   type Logger,
   type ReplyPort,
   resolveChallenge,
@@ -24,6 +25,7 @@ import {
 export interface OperateDeps extends ScreenDeps {
   readonly adminActorIds?: readonly string[];
   readonly reply?: ReplyPort;
+  readonly locale?: Locale;
 }
 
 export async function handleIncomingEvent(
@@ -72,6 +74,7 @@ export async function handleIncomingEvent(
     storage,
     logger,
     blocklist,
+    ...(deps.locale ? { locale: deps.locale } : {}),
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
