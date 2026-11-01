@@ -1,0 +1,50 @@
+[
+  {
+    "id": "negative-high",
+    "text": "领取免费礼品",
+    "label": "spam",
+    "verdict": { "label": "NEGATIVE", "score": 0.97 }
+  },
+  {
+    "id": "negative-certain",
+    "text": "加微信领红包",
+    "label": "spam",
+    "verdict": { "label": "NEGATIVE", "score": 1 }
+  },
+  {
+    "id": "positive",
+    "text": "今天站会改到三点",
+    "label": "ham",
+    "verdict": { "label": "POSITIVE", "score": 0.99 }
+  },
+  {
+    "id": "below-threshold",
+    "text": "这个安排不太好",
+    "label": "ham",
+    "verdict": { "label": "NEGATIVE", "score": 0.4 }
+  },
+  {
+    "id": "timeout",
+    "text": "请等一下",
+    "label": "ham",
+    "source": "timeout"
+  },
+  {
+    "id": "quota",
+    "text": "额度用完了",
+    "label": "ham",
+    "source": "throw"
+  },
+  {
+    "id": "absent",
+    "text": "没有模型",
+    "label": "ham",
+    "source": "absent"
+  },
+  {
+    "id": "negative-again",
+    "text": "点击链接领取",
+    "label": "spam",
+    "verdict": { "label": "NEGATIVE", "score": 0.93 }
+  }
+]

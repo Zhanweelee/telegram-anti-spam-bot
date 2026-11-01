@@ -1,0 +1,14 @@
+{
+  "name": "@tasb/example-plugin-manifest",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/adapter-cloudflare": "workspace:*",
+    "@tasb/core": "workspace:*"
+  }
+}

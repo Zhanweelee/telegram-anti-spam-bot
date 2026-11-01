@@ -1,0 +1,5 @@
+{
+  "detector": "contact",
+  "precision": 1,
+  "recall": 1
+}

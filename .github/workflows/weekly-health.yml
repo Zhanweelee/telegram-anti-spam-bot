@@ -1,0 +1,49 @@
+name: weekly-health
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monday 02:00 UTC is 10:00 in Asia/Shanghai.
+    - cron: "0 2 * * 1"
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: Open health report
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().slice(0, 10);
+            const status = "${{ job.status }}";
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `项目健康报告 ${date}`,
+              body: [
+                `自动检查：${status}`,
+                "",
+                "请人工打开 Cloudflare 文档，对照 `docs/limits.md`：",
+                "- https://developers.cloudflare.com/workers/platform/limits/",
+                "- https://developers.cloudflare.com/d1/platform/pricing/",
+                "- https://developers.cloudflare.com/kv/platform/pricing/",
+                "- https://developers.cloudflare.com/queues/platform/pricing/",
+                "- https://developers.cloudflare.com/durable-objects/platform/pricing/",
+                "- https://developers.cloudflare.com/workers-ai/platform/pricing/",
+                "",
+                "额度以官方文档为准。这个 workflow 不会修改 `docs/limits.md`。",
+              ].join("\n"),
+            });

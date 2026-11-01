@@ -1,0 +1,17 @@
+{
+  "name": "@tasb/example-minimal-pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/actions": "workspace:*",
+    "@tasb/adapter-memory": "workspace:*",
+    "@tasb/core": "workspace:*",
+    "@tasb/detector-keyword": "workspace:*",
+    "@tasb/sdk": "workspace:*"
+  }
+}

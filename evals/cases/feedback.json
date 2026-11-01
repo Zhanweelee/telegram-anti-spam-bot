@@ -1,0 +1,21 @@
+[
+  {
+    "id": "evt_confirmed",
+    "chatId": "-100",
+    "label": "spam",
+    "textSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "action": "delete",
+    "score": 1,
+    "reasons": ["keyword_match"],
+    "ruleIds": ["spam_keywords"]
+  },
+  {
+    "id": "evt_false",
+    "chatId": "-100",
+    "label": "ham",
+    "action": "allow",
+    "score": 0,
+    "reasons": ["keyword"],
+    "ruleIds": ["spam_keywords"]
+  }
+]

@@ -1,0 +1,268 @@
+import {
+  type ChatDirectory,
+  createSystemClock,
+  type Event,
+  type Locale,
+  type Logger,
+  type ReplyPort,
+  type ReviewQueue,
+  resolveChallenge,
+  runOperatorCommand,
+} from "@tasb/core";
+import { sendCaptchaButton } from "@tasb/platform-telegram";
+import { workerBlocklist } from "./blocklist-runtime.js";
+import { workerCaptcha } from "./captcha-runtime.js";
+import { moderatorFor } from "./moderation.js";
+import { workerRulePacks } from "./pack-runtime.js";
+import { adminNotifier } from "./report.js";
+import { workerReview } from "./review-runtime.js";
+import { fileRuleSource } from "./rules.js";
+import {
+  createWorkerLogger,
+  type ScreenDeps,
+  screenTelegramEvent,
+  workerCache,
+  workerPolicyStore,
+  workerRuntime,
+  workerStorage,
+} from "./screen.js";
+
+export interface OperateDeps extends ScreenDeps {
+  readonly adminActorIds?: readonly string[];
+  readonly reply?: ReplyPort;
+  readonly locale?: Locale;
+  readonly review?: ReviewQueue;
+  readonly chats?: ChatDirectory;
+}
+
+export async function handleIncomingEvent(
+  event: Event,
+  deps: OperateDeps = {},
+): Promise<void> {
+  const logger = deps.logger ?? createWorkerLogger();
+  const cache = deps.cache ?? workerCache;
+  const source = deps.source ?? fileRuleSource;
+  const storage = deps.storage ?? workerStorage;
+  const policyStore = deps.policyStore ?? workerPolicyStore;
+  const runtime = deps.runtime ?? workerRuntime;
+  const moderator =
+    deps.moderator ??
+    moderatorFor({ token: deps.botToken, fetchImpl: deps.fetchImpl });
+  const captchaStore = deps.captchaStore ?? workerCaptcha;
+  const blocklist = deps.blocklist ?? workerBlocklist;
+  const review = deps.review ?? workerReview;
+  const rulePacks = deps.rulePacks ?? workerRulePacks;
+  const quota = deps.quota;
+  const chats = deps.chats;
+  const reportActorId = (deps.adminActorIds ?? []).find((id) => id.length > 0);
+  const notifier =
+    deps.notifier ??
+    (deps.reply && reportActorId
+      ? adminNotifier(deps.reply, reportActorId)
+      : undefined);
+  if (event.kind === "bot_membership" || event.kind === "chat_member") {
+    await syncChatDirectory(event, chats, logger);
+  }
+  if (event.kind === "bot_membership") {
+    return;
+  }
+  if (event.kind === "challenge") {
+    try {
+      await resolveChallenge({
+        event,
+        ports: {
+          store: captchaStore,
+          storage,
+          restrict: (target) => moderator.restrictActor(target),
+          release: (target) => moderator.releaseActor(target),
+          clock: deps.clock ?? createSystemClock(),
+          logger,
+        },
+      });
+    } catch {
+      logger.warn("captcha_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+    return;
+  }
+  const outcome = await runOperatorCommand({
+    event,
+    adminActorIds: deps.adminActorIds ?? [],
+    cache,
+    policyStore,
+    runtime,
+    source,
+    storage,
+    logger,
+    blocklist,
+    review,
+    rulePacks: rulePacks.store,
+    rulePackSource: rulePacks.source,
+    rulePackArchive: rulePacks.archive,
+    ...(deps.locale ? { locale: deps.locale } : {}),
+    ...(quota
+      ? {
+          quota: {
+            async read(tenantId, chatId, atIso) {
+              const snapshot = await quota.store.read({
+                tenantId,
+                chatId,
+                atIso,
+                policy: quota.policy,
+              });
+              if (!snapshot) {
+                return snapshot;
+              }
+              return {
+                ...snapshot,
+                basicDetectorIds: [...quota.policy.basicDetectorIds],
+              };
+            },
+          },
+        }
+      : {}),
+    ...(chats ? { chats } : {}),
+  });
+  if (outcome.status === "reply") {
+    await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
+    return;
+  }
+  const result = await screenTelegramEvent(event, {
+    logger,
+    cache,
+    source,
+    storage,
+    policyStore,
+    runtime,
+    moderator,
+    captchaStore,
+    ...(deps.clock ? { clock: deps.clock } : {}),
+    ...(deps.createNonce ? { createNonce: deps.createNonce } : {}),
+    ...(deps.botToken ? { botToken: deps.botToken } : {}),
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    ...(deps.rateWindow ? { rateWindow: deps.rateWindow } : {}),
+    ...(deps.llm ? { llm: deps.llm } : {}),
+    ...(deps.allowUnsigned ? { allowUnsigned: true } : {}),
+    ...(deps.externalDetectors
+      ? { externalDetectors: deps.externalDetectors }
+      : {}),
+    ...(deps.externalActions ? { externalActions: deps.externalActions } : {}),
+    rulePacks,
+    blocklist,
+    ...(quota ? { quota } : {}),
+    ...(notifier ? { notifier } : {}),
+  });
+  const prompted = result.actionResults.some(
+    (item) => item.actionId === "captcha" && item.status === "executed",
+  );
+  if (!prompted) {
+    return;
+  }
+  const challenge = await captchaStore.get(
+    event.tenantId,
+    event.chatId,
+    event.actor.id,
+  );
+  if (!challenge) {
+    return;
+  }
+  try {
+    await sendCaptchaButton({
+      token: deps.botToken,
+      chatId: event.chatId,
+      nonce: challenge.nonce,
+      ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    });
+  } catch {
+    try {
+      await moderator.releaseActor({
+        tenantId: event.tenantId,
+        chatId: event.chatId,
+        actorId: event.actor.id,
+      });
+      await captchaStore.delete(event.tenantId, event.chatId, event.actor.id);
+    } catch {
+      logger.warn("captcha_prompt_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+      return;
+    }
+    logger.warn("captcha_prompt_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
+}
+
+async function syncChatDirectory(
+  event: Event,
+  directory: ChatDirectory | undefined,
+  logger: Logger,
+): Promise<void> {
+  if (!directory) {
+    return;
+  }
+  try {
+    const result =
+      event.kind === "bot_membership"
+        ? event.bot
+          ? await directory.noteBot({
+              tenantId: event.tenantId,
+              chatId: event.chatId,
+              actorId: event.actor.id,
+              state: event.bot,
+            })
+          : "ok"
+        : await directory.noteMember({
+            tenantId: event.tenantId,
+            chatId: event.chatId,
+            actorId: event.actor.id,
+            admin: event.actor.isAdmin,
+          });
+    if (result === "full") {
+      logger.warn("chat_directory_full", {
+        eventId: event.id,
+        chatId: event.chatId,
+        tenantId: event.tenantId,
+      });
+    }
+  } catch {
+    logger.warn("chat_directory_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+      tenantId: event.tenantId,
+    });
+  }
+}
+
+async function sendReply(
+  event: Event,
+  text: string,
+  command: string,
+  reply: ReplyPort | undefined,
+  logger: Logger,
+): Promise<void> {
+  try {
+    if (!reply) {
+      throw new Error("reply_unavailable");
+    }
+    await reply.send({
+      tenantId: event.tenantId,
+      chatId: event.chatId,
+      text,
+    });
+    logger.info("operator_replied", {
+      eventId: event.id,
+      chatId: event.chatId,
+      command,
+    });
+  } catch {
+    logger.warn("reply_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
+}

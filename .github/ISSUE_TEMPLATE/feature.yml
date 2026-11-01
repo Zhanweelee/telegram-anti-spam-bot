@@ -1,0 +1,16 @@
+name: Feature
+description: 路线图里的一项，或一项新的小任务
+title: "feat: "
+labels: []
+body:
+  - type: input
+    attributes:
+      label: ROADMAP 编号
+      description: 例如 P0-01。新工作要先说明它属于哪一层优先级。
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 验收标准
+    validations:
+      required: true

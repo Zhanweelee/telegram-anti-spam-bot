@@ -1,0 +1,56 @@
+[
+  {
+    "name": "short-link",
+    "text": "看 https://bit.ly/free-gift",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "bare-short",
+    "text": "bit.ly/abc",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "no-link",
+    "text": "今天站会改到三点",
+    "expect": "miss"
+  },
+  {
+    "name": "clean-link",
+    "text": "文档在 https://example.com/docs",
+    "expect": "miss"
+  },
+  {
+    "name": "ip-host",
+    "text": "http://203.0.113.8/login",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "denylist",
+    "text": "https://spam.example/a",
+    "expect": "hit",
+    "reason": "denylist",
+    "denylist": ["spam.example"]
+  },
+  {
+    "name": "source-timeout",
+    "text": "https://example.com/slow",
+    "expect": "miss",
+    "source": "timeout"
+  },
+  {
+    "name": "source-bad",
+    "text": "https://example.com/bad",
+    "expect": "hit",
+    "reason": "reputation",
+    "source": "bad"
+  },
+  {
+    "name": "source-throw",
+    "text": "https://example.com/boom",
+    "expect": "miss",
+    "source": "throw"
+  }
+]

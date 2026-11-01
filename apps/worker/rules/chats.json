@@ -1,0 +1,15 @@
+{
+  "-100777": {
+    "version": 1,
+    "aggregate": "max",
+    "rules": [
+      {
+        "id": "spam_keywords",
+        "enabled": true,
+        "detectorIds": ["keyword"],
+        "threshold": 2,
+        "actions": ["delete"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,5 @@
+[
+  { "name": "inline", "kind": "message", "via": true, "expect": "hit" },
+  { "name": "plain", "kind": "message", "expect": "miss" },
+  { "name": "join", "kind": "chat_member", "via": true, "expect": "miss" }
+]

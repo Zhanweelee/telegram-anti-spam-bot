@@ -1,0 +1,42 @@
+[
+  {
+    "name": "same-text",
+    "messages": 3,
+    "sameText": true,
+    "text": "hello",
+    "expect": "hit"
+  },
+  {
+    "name": "different-text",
+    "messages": 3,
+    "sameText": false,
+    "text": "hello",
+    "expect": "miss"
+  },
+  {
+    "name": "empty-text",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "expect": "miss"
+  },
+  {
+    "name": "same-sticker",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "mediaSha256": "abababababababababababababababababababababababababababababababab",
+    "expect": "hit"
+  },
+  {
+    "name": "different-sticker",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": false,
+    "mediaSha256": "abababababababababababababababababababababababababababababababab",
+    "expect": "miss"
+  }
+]

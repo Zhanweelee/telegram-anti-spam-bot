@@ -1,0 +1,67 @@
+import { describe, expect, it } from "vitest";
+import { parseEvent } from "./event.js";
+import { aggregateScores, matchesWhen, parseRuleSet } from "./rule.js";
+
+const event = parseEvent({
+  id: "evt_1",
+  tenantId: "tenant_1",
+  chatId: "chat_1",
+  kind: "message",
+  occurredAt: "2026-11-01T00:00:00Z",
+  actor: { id: "user_1", isAdmin: false },
+});
+
+describe("rules", () => {
+  it("matches combinators", () => {
+    expect(matchesWhen(undefined, event)).toBe(true);
+    expect(matchesWhen({ eventKind: "message" }, event)).toBe(true);
+    expect(matchesWhen({ eventKind: "command" }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { all: [{ eventKind: "message" }, { eventKind: "command" }] },
+        event,
+      ),
+    ).toBe(false);
+    expect(matchesWhen({ all: [{ eventKind: "message" }] }, event)).toBe(true);
+    expect(
+      matchesWhen(
+        { any: [{ eventKind: "command" }, { eventKind: "message" }] },
+        event,
+      ),
+    ).toBe(true);
+    expect(matchesWhen({ any: [{ eventKind: "command" }] }, event)).toBe(false);
+    expect(matchesWhen({ not: { eventKind: "command" } }, event)).toBe(true);
+  });
+
+  it("aggregates empty, max, and sum", () => {
+    expect(aggregateScores("max", [])).toBe(0);
+    expect(aggregateScores("sum", [])).toBe(0);
+    expect(aggregateScores("max", [0.2, 0.9])).toBe(0.9);
+    expect(aggregateScores("sum", [0.2, 0.9])).toBeCloseTo(1.1);
+  });
+
+  it("rejects duplicate rule ids and an uppercase hash", () => {
+    expect(() =>
+      parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "same",
+            enabled: true,
+            detectorIds: ["keyword"],
+            threshold: 1,
+            actions: ["log"],
+          },
+          {
+            id: "same",
+            enabled: true,
+            detectorIds: ["keyword"],
+            threshold: 1,
+            actions: ["log"],
+          },
+        ],
+      }),
+    ).toThrow(/duplicate_rule_id/);
+  });
+});

@@ -1,0 +1,30 @@
+[
+  {
+    "name": "below-threshold",
+    "messages": 4,
+    "gapMs": 1000,
+    "rotateActor": false,
+    "expect": "miss"
+  },
+  {
+    "name": "reaches-threshold",
+    "messages": 5,
+    "gapMs": 1000,
+    "rotateActor": false,
+    "expect": "hit"
+  },
+  {
+    "name": "outside-window",
+    "messages": 5,
+    "gapMs": 20000,
+    "rotateActor": false,
+    "expect": "miss"
+  },
+  {
+    "name": "other-actor",
+    "messages": 5,
+    "gapMs": 1000,
+    "rotateActor": true,
+    "expect": "miss"
+  }
+]

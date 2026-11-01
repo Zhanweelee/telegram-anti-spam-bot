@@ -1,0 +1,11 @@
+---
+description: 测试与评测要求
+globs: "**/*.test.ts,evals/**/*.ts"
+alwaysApply: false
+---
+
+测试要覆盖成功、失败和边界，不只是主路径。core 用注入的 Clock 和内存双端，不要依赖网络。
+
+检测器测试加载 `fixtures/`。改检测行为时更新 `evals/cases` 与 `evals/baselines`，并跑 `pnpm eval`。precision 或 recall 下降则不要合入。
+
+断言审计 JSON 时确认原文不在里面。不要为了变绿而调低覆盖率门槛。

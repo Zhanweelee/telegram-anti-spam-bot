@@ -1,0 +1,13 @@
+[
+  {
+    "name": "dry_run",
+    "dryRun": true,
+    "status": "skipped",
+    "detail": "dry_run"
+  },
+  {
+    "name": "executed",
+    "dryRun": false,
+    "status": "executed"
+  }
+]

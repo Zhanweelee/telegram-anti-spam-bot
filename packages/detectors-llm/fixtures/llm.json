@@ -1,0 +1,38 @@
+[
+  {
+    "name": "negative-above-threshold",
+    "text": "领取免费礼品加微信",
+    "expect": "hit",
+    "verdict": { "label": "NEGATIVE", "score": 0.97 }
+  },
+  {
+    "name": "positive",
+    "text": "今天站会改到三点",
+    "expect": "miss",
+    "verdict": { "label": "POSITIVE", "score": 0.99 }
+  },
+  {
+    "name": "below-threshold",
+    "text": "这个安排不太好",
+    "expect": "miss",
+    "verdict": { "label": "NEGATIVE", "score": 0.4 }
+  },
+  {
+    "name": "timeout",
+    "text": "请等一下",
+    "expect": "miss",
+    "source": "timeout"
+  },
+  {
+    "name": "throw",
+    "text": "额度用完了",
+    "expect": "miss",
+    "source": "throw"
+  },
+  {
+    "name": "no-classifier",
+    "text": "没有模型",
+    "expect": "miss",
+    "source": "absent"
+  }
+]

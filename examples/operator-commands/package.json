@@ -1,0 +1,14 @@
+{
+  "name": "@tasb/example-operator-commands",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/adapter-memory": "workspace:*",
+    "@tasb/core": "workspace:*"
+  }
+}

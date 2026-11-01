@@ -1,0 +1,9 @@
+[
+  { "text": "点这里 t.me/+AbCd", "expect": "hit" },
+  { "text": "加微信领取", "expect": "hit" },
+  { "text": "加微x 看资料", "expect": "hit" },
+  { "text": "今天站会改到三点", "expect": "miss" },
+  { "text": "https://t.me/username", "expect": "miss" },
+  { "text": "https://example.com/docs", "expect": "miss" },
+  { "text": "", "expect": "miss" }
+]

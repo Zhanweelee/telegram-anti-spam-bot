@@ -1,0 +1,13 @@
+---
+description: 检测器和动作的插件契约
+globs: packages/detectors-*/**/*.ts,packages/actions/**/*.ts
+alwaysApply: false
+---
+
+用 `defineDetector` / `defineAction`。必须有 id、semver、capabilities、zod schema。
+
+检测器返回 `null` 或 score 在 0..1 的 hit。证据摘要不得复制消息原文。
+
+动作通过 core 端口执行。dry-run 返回 `skipped`。失败返回固定 `detail`，不要把异常 message 抛出流水线。
+
+每个新检测器带 `fixtures/` 和 eval 样本。检测器不要依赖 actions、adapters 或 platform-telegram。

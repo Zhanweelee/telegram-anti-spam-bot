@@ -1,0 +1,5 @@
+{
+  "detector": "regex",
+  "precision": 1,
+  "recall": 1
+}

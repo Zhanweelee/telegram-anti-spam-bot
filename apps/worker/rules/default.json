@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "aggregate": "max",
+  "rules": [
+    {
+      "id": "spam_keywords",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["keyword"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "flood",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["flood"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "repeat",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["repeat"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "shared_blocklist",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["blocklist"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "links",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["link"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "channel_forward",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["forward"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "llm_hint",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["llm"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "regex_hint",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "via_inline",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["via"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "new_member",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["join"],
+      "threshold": 1,
+      "actions": ["captcha"]
+    },
+    {
+      "id": "join_name",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["keyword"],
+      "threshold": 1,
+      "actions": ["ban"]
+    },
+    {
+      "id": "bot_join",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["bot"],
+      "threshold": 1,
+      "actions": ["ban"]
+    },
+    {
+      "id": "shared_contact",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["contact"],
+      "threshold": 1,
+      "actions": ["delete"]
+    }
+  ]
+}

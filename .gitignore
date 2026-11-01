@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.wrangler
+.turbo
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.dev.vars
+.DS_Store
+evals/last-report.json

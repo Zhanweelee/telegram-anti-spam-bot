@@ -1,0 +1,74 @@
+[
+  {
+    "id": "short-link",
+    "text": "https://bit.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "no-link",
+    "text": "今天站会改到三点",
+    "label": "ham"
+  },
+  {
+    "id": "clean-link",
+    "text": "https://example.com/docs",
+    "label": "ham"
+  },
+  {
+    "id": "ip-host",
+    "text": "http://203.0.113.9/x",
+    "label": "spam"
+  },
+  {
+    "id": "denylist",
+    "text": "https://spam.example/deal",
+    "label": "spam",
+    "denylist": ["spam.example"]
+  },
+  {
+    "id": "source-timeout",
+    "text": "https://example.com/slow",
+    "label": "ham",
+    "source": "timeout"
+  },
+  {
+    "id": "source-bad",
+    "text": "https://example.com/bad",
+    "label": "spam",
+    "source": "bad"
+  },
+  {
+    "id": "source-throw",
+    "text": "https://example.com/boom",
+    "label": "ham",
+    "source": "throw"
+  },
+  {
+    "id": "hidden-short",
+    "text": "点这里",
+    "hosts": ["bit.ly"],
+    "label": "spam"
+  },
+  {
+    "id": "hidden-plain",
+    "text": "点这里",
+    "hosts": ["example.com"],
+    "label": "ham"
+  },
+  {
+    "id": "invite-plus",
+    "text": "https://t.me/+INVITESECRET99",
+    "label": "spam"
+  },
+  {
+    "id": "invite-public",
+    "text": "https://t.me/durov",
+    "label": "ham"
+  },
+  {
+    "id": "hidden-invite",
+    "text": "点这里",
+    "invites": ["t.me"],
+    "label": "spam"
+  }
+]

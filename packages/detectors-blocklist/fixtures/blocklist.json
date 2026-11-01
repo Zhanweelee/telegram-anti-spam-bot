@@ -1,0 +1,73 @@
+[
+  {
+    "name": "opted-out",
+    "optIn": false,
+    "actorId": "99",
+    "text": "今天站会改到三点",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "expect": "miss",
+    "readsShared": false
+  },
+  {
+    "name": "toggled-off",
+    "optIn": false,
+    "toggled": true,
+    "actorId": "99",
+    "text": "今天站会改到三点",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "expect": "miss",
+    "readsShared": false
+  },
+  {
+    "name": "other-chat-off",
+    "optIn": false,
+    "chatId": "chat_b",
+    "enabledChats": ["chat_a"],
+    "actorId": "99",
+    "text": "今天站会改到三点",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "expect": "miss",
+    "readsShared": false
+  },
+  {
+    "name": "shared-actor",
+    "optIn": true,
+    "actorId": "99",
+    "text": "hello",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "expect": "hit",
+    "reason": "shared_actor"
+  },
+  {
+    "name": "shared-hash",
+    "optIn": true,
+    "actorId": "1",
+    "text": "hello",
+    "hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "entries": [
+      {
+        "kind": "hash",
+        "value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    ],
+    "expect": "hit",
+    "reason": "shared_hash"
+  },
+  {
+    "name": "opted-in-clean",
+    "optIn": true,
+    "actorId": "1",
+    "text": "今天站会改到三点",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "expect": "miss"
+  },
+  {
+    "name": "raw-rejected",
+    "optIn": true,
+    "actorId": "1",
+    "text": "请免费领取礼品",
+    "reject": true,
+    "entries": [],
+    "expect": "miss"
+  }
+]

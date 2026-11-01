@@ -1,0 +1,14 @@
+---
+description: TASB 的使命、边界和依赖方向
+alwaysApply: true
+---
+
+TASB 是 Telegram 反垃圾 bot。同一份 core 服务 self-host 和 cloud。core 不得感知部署模式。
+
+依赖方向：apps → platform / adapters / detectors / actions → core → zod。core 禁止依赖任何 `@tasb/*` 包和平台 SDK。
+
+非目标：通用聊天、群娱乐、第一版 Web 后台、常驻服务器。
+
+做任务前读 `AGENTS.md`、`ROADMAP.md`、最近的 ADR。一轮只做 ROADMAP 里最高优先级的未完成项。
+
+计费、保留期变更、破坏性迁移、付费第三方、许可证和法律文本：停下来问维护者。

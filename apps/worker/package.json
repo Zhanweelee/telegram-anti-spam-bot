@@ -1,0 +1,36 @@
+{
+  "name": "@tasb/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@tasb/actions": "workspace:*",
+    "@tasb/adapter-cloudflare": "workspace:*",
+    "@tasb/adapter-memory": "workspace:*",
+    "@tasb/cloud": "workspace:*",
+    "@tasb/core": "workspace:*",
+    "@tasb/detector-blocklist": "workspace:*",
+    "@tasb/detector-join": "workspace:*",
+    "@tasb/detector-bot": "workspace:*",
+    "@tasb/detector-contact": "workspace:*",
+    "@tasb/detector-via": "workspace:*",
+    "@tasb/detector-keyword": "workspace:*",
+    "@tasb/detector-rate": "workspace:*",
+    "@tasb/detector-link": "workspace:*",
+    "@tasb/detector-llm": "workspace:*",
+    "@tasb/detector-regex": "workspace:*",
+    "@tasb/detector-forward": "workspace:*",
+    "@tasb/platform-telegram": "workspace:*",
+    "hono": "4.13.16"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261101.1",
+    "wrangler": "4.156.0"
+  }
+}

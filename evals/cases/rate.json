@@ -1,0 +1,100 @@
+[
+  {
+    "id": "flood-hit",
+    "detector": "flood",
+    "label": "spam",
+    "messages": 5,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true
+  },
+  {
+    "id": "flood-under",
+    "detector": "flood",
+    "label": "ham",
+    "messages": 4,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true
+  },
+  {
+    "id": "flood-gap",
+    "detector": "flood",
+    "label": "ham",
+    "messages": 5,
+    "gapMs": 20000,
+    "sameActor": true,
+    "sameText": true
+  },
+  {
+    "id": "flood-actors",
+    "detector": "flood",
+    "label": "ham",
+    "messages": 5,
+    "gapMs": 1000,
+    "sameActor": false,
+    "sameText": true
+  },
+  {
+    "id": "repeat-hit",
+    "detector": "repeat",
+    "label": "spam",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true
+  },
+  {
+    "id": "repeat-varied",
+    "detector": "repeat",
+    "label": "ham",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": false
+  },
+  {
+    "id": "repeat-empty",
+    "detector": "repeat",
+    "label": "ham",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true,
+    "text": ""
+  },
+  {
+    "id": "repeat-sticker",
+    "detector": "repeat",
+    "label": "spam",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": true
+  },
+  {
+    "id": "repeat-sticker-varied",
+    "detector": "repeat",
+    "label": "ham",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": false
+  },
+  {
+    "id": "flood-over-budget",
+    "detector": "flood",
+    "label": "ham",
+    "messages": 5,
+    "gapMs": 1000,
+    "sameActor": false,
+    "sameText": true,
+    "maxKeys": 0
+  }
+]

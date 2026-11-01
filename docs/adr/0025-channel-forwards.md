@@ -1,0 +1,32 @@
+# ADR 0025：默认删除频道转发
+
+- 状态：已接受
+- 日期：2026-11-01
+
+## 背景
+
+群里的广告经常是从频道转发来的。正文本身可以是一句普通的话，关键词和正则都看不出来。Telegram 的 `forward_origin` 以及更早的 `forward_from_chat` 带有频道标题和来源 id。标题是原文的一种，不能进日志和审计。
+
+用户之间转发、从群里转发、以及隐藏来源的转发，在正常聊天里很常见。
+
+## 决策
+
+- 平台把转发收成 `message.forward`，取值只有 `user`、`chat`、`channel`、`hidden`。没有转发就不带这个字段。
+- 现代字段 `forward_origin.type` 优先。没有它时，`forward_sender_name` 是 `hidden`，`forward_from_chat.type === "channel"` 是 `channel`，其他来源聊天是 `chat`，`forward_from` 是 `user`。
+- 检测器 `@tasb/detector-forward` 只对配置里的类别记 1 分。Worker 的默认类别只有 `channel`。证据是 `forward:channel`，reason 是 `forward_channel`。
+- 默认规则 `channel_forward` 是启用的，动作是 delete。编辑后的频道转发走同一条规则。
+- 用户、群和隐藏来源默认不删。要一并处理，需要改检测器配置，不在这条规则里猜。
+
+## 备选
+
+| 方案 | 放弃原因 |
+| --- | --- |
+| 默认关闭 | 频道转发是最常见的广告形态。关掉之后，这轮对默认部署没有行为变化。 |
+| 连隐藏来源一起删 | 有人会隐藏自己的账号再转发。误伤比频道转发大。 |
+| 把频道标题或来源 id 放进事件 | 标题是原文。来源 id 对删除这条消息没有用，还多留一份标识。 |
+
+## 后果
+
+- 默认部署会删除频道转发，包括正文看起来无害的那一种。转载频道内容的群要在规则里关掉 `channel_forward`，或者用 `chats.json` 整份替换。整份替换不会自动带上这条规则。
+- 隐藏来源、用户转发和群转发仍然留下。
+- 审计里只有 `forward:channel` 这种类别，没有频道名。

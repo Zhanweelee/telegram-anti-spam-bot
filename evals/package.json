@@ -1,0 +1,24 @@
+{
+  "name": "@tasb/evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/core": "workspace:*",
+    "@tasb/detector-keyword": "workspace:*",
+    "@tasb/detector-rate": "workspace:*",
+    "@tasb/detector-link": "workspace:*",
+    "@tasb/detector-blocklist": "workspace:*",
+    "@tasb/detector-llm": "workspace:*",
+    "@tasb/detector-regex": "workspace:*",
+    "@tasb/detector-forward": "workspace:*",
+    "@tasb/detector-bot": "workspace:*",
+    "@tasb/detector-contact": "workspace:*",
+    "@tasb/detector-via": "workspace:*"
+  }
+}
