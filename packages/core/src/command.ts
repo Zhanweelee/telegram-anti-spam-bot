@@ -1135,14 +1135,21 @@ async function showQuota(
         snapshot.degraded ? "command.quota.basic" : "command.quota.full",
       ),
     });
+    const dated =
+      snapshot.resetsAt === undefined
+        ? status
+        : say(input, "command.quota.until", {
+            status,
+            resetsAt: snapshot.resetsAt,
+          });
     const basics = snapshot.basicDetectorIds;
     if (snapshot.degraded && basics !== undefined && basics.length > 0) {
       return say(input, "command.quota.basics", {
-        status,
+        status: dated,
         basic: basics.join(","),
       });
     }
-    return status;
+    return dated;
   } catch {
     input.logger.warn("operator_rejected", {
       eventId: input.event.id,

@@ -1958,6 +1958,93 @@ describe("runOperatorCommand", () => {
     });
   });
 
+  it("names when the quota window resets", async () => {
+    const deps = kit();
+    const month = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(month).toMatchObject({
+      text: "quota -100 0/3000 calendar_month full until 2026-12-01T00:00:00.000Z",
+    });
+    const english = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 1,
+            limit: 3000,
+            period: "rolling_30d",
+            degraded: false,
+            resetsAt: "2026-01-31T00:00:00.000Z",
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: "Quota -100 1/3000 rolling_30d full until 2026-01-31T00:00:00.000Z",
+    });
+    const degraded = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 2,
+            limit: 1,
+            period: "calendar_month",
+            degraded: true,
+            basicDetectorIds: ["keyword", "join"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(degraded).toMatchObject({
+      text: "quota -100 2/1 calendar_month basic until 2026-12-01T00:00:00.000Z\nkeyword,join",
+    });
+    expect(JSON.stringify(degraded)).not.toContain(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: "/quota -100", direct: true }),
+      adminActorIds: ["42"],
+      quota: {
+        async read() {
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month",
+            degraded: false,
+            resetsAt: phrase,
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(invalid).toMatchObject({ text: "quota off" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
   it("lets a granting user manage only that chat", async () => {
     const deps = kit();
     const directory = {

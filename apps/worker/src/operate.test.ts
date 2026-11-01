@@ -593,7 +593,7 @@ describe("handleIncomingEvent", () => {
       },
     );
     expect(kit.reply.sent[1]?.text).toBe(
-      "quota -100 0/3000 calendar_month full",
+      "quota -100 0/3000 calendar_month full until 2026-12-01T00:00:00.000Z",
     );
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });
@@ -622,7 +622,7 @@ describe("handleIncomingEvent", () => {
       "keyword,join,flood,repeat,link,blocklist,forward,regex",
     );
     expect(text).toBe(
-      `quota -100 2/1 calendar_month basic\n${defaultBasicDetectorIds.join(",")}`,
+      `quota -100 2/1 calendar_month basic until 2026-12-01T00:00:00.000Z\n${defaultBasicDetectorIds.join(",")}`,
     );
     expect(text).not.toContain("llm");
     expect(text).not.toContain(phrase);
@@ -681,7 +681,7 @@ describe("handleIncomingEvent", () => {
       },
     );
     expect(kit.reply.sent[2]?.text).toBe(
-      "quota -100586 0/3000 calendar_month full",
+      "quota -100586 0/3000 calendar_month full until 2026-12-01T00:00:00.000Z",
     );
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });

@@ -13,6 +13,7 @@ export const quotaSnapshotSchema = z.strictObject({
   period: quotaPeriodSchema,
   degraded: z.boolean(),
   basicDetectorIds: z.array(detectorIdSchema).max(32).optional(),
+  resetsAt: z.iso.datetime().optional(),
 });
 
 /** A rule stays when every detector is in the basic set. */

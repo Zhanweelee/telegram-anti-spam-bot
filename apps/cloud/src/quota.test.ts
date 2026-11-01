@@ -1,4 +1,4 @@
-import type { RuleSet } from "@tasb/core";
+import { quotaSnapshotSchema, type RuleSet } from "@tasb/core";
 import { describe, expect, it } from "vitest";
 import {
   createMemoryQuotaStore,
@@ -91,6 +91,8 @@ describe("createMemoryQuotaStore", () => {
     };
     const first = await store.consume(january);
     expect(first).toMatchObject({ used: 1, degraded: false });
+    expect(first?.resetsAt).toBe("2026-02-01T00:00:00.000Z");
+    expect(quotaSnapshotSchema.safeParse(first).success).toBe(true);
     const second = await store.consume(january);
     expect(second).toMatchObject({ used: 2, degraded: true });
     const other = await store.consume({ ...january, chatId: "-200" });
@@ -100,6 +102,7 @@ describe("createMemoryQuotaStore", () => {
       atIso: "2026-02-01T00:00:00.000Z",
     });
     expect(february).toMatchObject({ used: 1, degraded: false });
+    expect(february?.resetsAt).toBe("2026-03-01T00:00:00.000Z");
     expect(await store.read(january)).toMatchObject({
       used: 0,
       degraded: false,
@@ -110,6 +113,16 @@ describe("createMemoryQuotaStore", () => {
         atIso: "2026-02-01T00:00:00.000Z",
       }),
     ).toMatchObject({ used: 1, degraded: false });
+    const unread = await store.read({
+      tenantId: "local",
+      chatId: "-300",
+      atIso: "2026-12-15T12:00:00.000Z",
+      policy,
+    });
+    expect(unread).toMatchObject({
+      used: 0,
+      resetsAt: "2027-01-01T00:00:00.000Z",
+    });
   });
 
   it("resets a rolling window after 30 days", async () => {
@@ -125,7 +138,12 @@ describe("createMemoryQuotaStore", () => {
       atIso: "2026-01-01T00:00:00.000Z",
       policy: rolling,
     };
-    expect(await store.consume(start)).toMatchObject({ degraded: false });
+    const opened = await store.consume(start);
+    expect(opened).toMatchObject({ degraded: false });
+    expect(opened?.resetsAt).toBe("2026-01-31T00:00:00.000Z");
+    const fresh = await store.read({ ...start, chatId: "-300" });
+    expect(fresh).toMatchObject({ used: 0 });
+    expect(fresh && "resetsAt" in fresh).toBe(false);
     expect(
       await store.consume({
         ...start,
@@ -151,6 +169,14 @@ describe("createMemoryQuotaStore", () => {
         policy: off,
       }),
     ).toMatchObject({ enabled: false, used: 0 });
+    expect(
+      await store.read({
+        tenantId: "local",
+        chatId: "-100",
+        atIso: "2026-01-01T00:00:00.000Z",
+        policy: off,
+      }),
+    ).not.toHaveProperty("resetsAt");
     expect(
       await store.consume({
         tenantId: "local",

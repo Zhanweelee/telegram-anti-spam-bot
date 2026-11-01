@@ -34,11 +34,14 @@ describe("operator command example", () => {
             period: "calendar_month",
             degraded: true,
             basicDetectorIds: ["keyword", "join"],
+            resetsAt: "2026-12-01T00:00:00.000Z",
           };
         },
       },
     });
-    expect(quota).toBe("quota -100 2/1 calendar_month basic\nkeyword,join");
+    expect(quota).toBe(
+      "quota -100 2/1 calendar_month basic until 2026-12-01T00:00:00.000Z\nkeyword,join",
+    );
     expect(quota).not.toContain(phrase);
     expect(help).toContain("/chats");
     expect(help).toContain("/rule");

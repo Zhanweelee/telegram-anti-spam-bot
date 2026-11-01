@@ -182,14 +182,19 @@ function touch(
   let bucket = buckets.get(key);
   if (bucket && !samePeriod(bucket.startedAtMs, nowMs, policy.period)) {
     if (nowMs < bucket.startedAtMs) {
-      return snapshot(policy, increment ? bucket.used : 0);
+      return snapshot(
+        policy,
+        increment ? bucket.used : 0,
+        nowMs,
+        bucket.startedAtMs,
+      );
     }
     bucket.used = 0;
     bucket.startedAtMs = nowMs;
   }
   if (!bucket) {
     if (!increment) {
-      return snapshot(policy, 0);
+      return snapshot(policy, 0, nowMs, null);
     }
     if (buckets.size >= maxChats) {
       sweep(buckets, nowMs, policy.period);
@@ -203,17 +208,44 @@ function touch(
   if (increment && bucket.used < maxCount) {
     bucket.used += 1;
   }
-  return snapshot(policy, bucket.used);
+  return snapshot(policy, bucket.used, nowMs, bucket.startedAtMs);
 }
 
-function snapshot(policy: QuotaPolicy, used: number): QuotaSnapshot {
-  return {
-    enabled: true,
+function snapshot(
+  policy: QuotaPolicy,
+  used: number,
+  atMs: number,
+  startedAtMs: number | null,
+): QuotaSnapshot {
+  const base = {
+    enabled: true as const,
     used,
     limit: policy.limit,
     period: policy.period,
     degraded: used > policy.limit,
   };
+  const resetsAt = resetInstant(policy.period, atMs, startedAtMs);
+  if (resetsAt === undefined) {
+    return base;
+  }
+  return { ...base, resetsAt };
+}
+
+function resetInstant(
+  period: QuotaPeriod,
+  atMs: number,
+  startedAtMs: number | null,
+): string | undefined {
+  if (period === "calendar_month") {
+    const anchor = new Date(atMs);
+    return new Date(
+      Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + 1, 1),
+    ).toISOString();
+  }
+  if (startedAtMs === null) {
+    return undefined;
+  }
+  return new Date(startedAtMs + rollingWindowMs).toISOString();
 }
 
 function samePeriod(
