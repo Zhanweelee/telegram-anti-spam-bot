@@ -41,13 +41,16 @@ function createRateDetector(
       if (!message) {
         return null;
       }
-      if (id === "repeat" && message.text.length === 0) {
-        return null;
+      let key: string;
+      if (id === "flood") {
+        key = floodKey(ctx.event);
+      } else {
+        const digest = repeatDigest(message);
+        if (digest === null) {
+          return null;
+        }
+        key = repeatKey(ctx.event, digest);
       }
-      const key =
-        id === "flood"
-          ? floodKey(ctx.event)
-          : repeatKey(ctx.event, message.textSha256);
       let count: number | null;
       try {
         count = await config.window.observe({
@@ -89,6 +92,13 @@ function floodKey(event: Event): string {
   return `f\n${event.tenantId}\n${event.chatId}\n${event.actor.id}`;
 }
 
-function repeatKey(event: Event, textSha256: string): string {
-  return `r\n${event.tenantId}\n${event.chatId}\n${textSha256}`;
+function repeatDigest(message: NonNullable<Event["message"]>): string | null {
+  if (message.text.length > 0) {
+    return message.textSha256;
+  }
+  return message.mediaSha256 ?? null;
+}
+
+function repeatKey(event: Event, digest: string): string {
+  return `r\n${event.tenantId}\n${event.chatId}\n${digest}`;
 }

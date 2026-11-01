@@ -55,6 +55,59 @@ describe("normalizeUpdate", () => {
     });
   });
 
+  it("hashes a sticker file id and leaves the id out of the event", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 1101,
+      message: {
+        message_id: 21,
+        date: 1761955200,
+        chat: { id: -100123, type: "supergroup" },
+        from: { id: 7, is_bot: false, first_name: "Bob" },
+        sticker: {
+          file_id: phrase,
+          file_unique_id: phrase,
+          width: 64,
+          height: 64,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message).toEqual({
+      id: "21",
+      text: "",
+      textSha256: EMPTY_HASH,
+      media: "sticker",
+      mediaSha256: await sha256Hex(`sticker\n${phrase}`),
+    });
+    expect(JSON.stringify(outcome.event)).not.toContain(phrase);
+  });
+
+  it("keeps the first media class and skips an oversized file id", async () => {
+    const longId = "x".repeat(257);
+    const outcome = await normalize({
+      update_id: 1102,
+      message: {
+        message_id: 22,
+        date: 1761955200,
+        chat: { id: -100123, type: "supergroup" },
+        from: { id: 7, is_bot: false, first_name: "Bob" },
+        animation: { file_unique_id: longId },
+        photo: [{ file_unique_id: "photo-1" }],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.media).toBe("animation");
+    expect(outcome.event.message?.mediaSha256).toBeUndefined();
+    expect(JSON.stringify(outcome.event)).not.toContain(longId);
+  });
+
   it("keeps a message id when the update has no text", async () => {
     const outcome = await normalize(load("message-no-text.json"));
     expect(outcome.status).toBe("event");
@@ -66,7 +119,9 @@ describe("normalizeUpdate", () => {
       id: "11",
       text: "",
       textSha256: EMPTY_HASH,
+      media: "photo",
     });
+    expect(JSON.stringify(outcome.event)).not.toContain("abc");
   });
 
   it("marks sender_chat of the same chat as an admin", async () => {

@@ -19,5 +19,24 @@
     "sameText": true,
     "text": "",
     "expect": "miss"
+  },
+  {
+    "name": "same-sticker",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "mediaSha256": "abababababababababababababababababababababababababababababababab",
+    "expect": "hit"
+  },
+  {
+    "name": "different-sticker",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": false,
+    "mediaSha256": "abababababababababababababababababababababababababababababababab",
+    "expect": "miss"
   }
 ]

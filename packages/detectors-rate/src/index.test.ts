@@ -37,6 +37,9 @@ const repeatFixtures = JSON.parse(
   messages: number;
   sameText: boolean;
   text: string;
+  media?: "sticker";
+  sameMedia?: boolean;
+  mediaSha256?: string;
   expect: "hit" | "miss";
 }[];
 
@@ -47,6 +50,8 @@ function messageEvent(input: {
   readonly textSha256: string;
   readonly occurredAt: string;
   readonly chatId?: string;
+  readonly media?: "sticker";
+  readonly mediaSha256?: string;
 }): Event {
   return parseEvent({
     id: input.id,
@@ -59,6 +64,8 @@ function messageEvent(input: {
       id: input.id,
       text: input.text,
       textSha256: input.textSha256,
+      ...(input.media ? { media: input.media } : {}),
+      ...(input.mediaSha256 ? { mediaSha256: input.mediaSha256 } : {}),
     },
   });
 }
@@ -129,12 +136,20 @@ describe("flood and repeat fixtures", () => {
         const text = fixture.sameText
           ? fixture.text
           : `${fixture.text}-${index}`;
+        const mediaSha256 =
+          fixture.mediaSha256 === undefined
+            ? undefined
+            : fixture.sameMedia === false
+              ? `${index}`.padStart(64, "d")
+              : fixture.mediaSha256;
         return messageEvent({
           id: `r_${index}`,
           actorId: "user_1",
           text,
           textSha256: fixture.sameText ? HASH : `${index}`.padStart(64, "c"),
           occurredAt: isoAt(index * 1000),
+          ...(fixture.media ? { media: fixture.media } : {}),
+          ...(mediaSha256 ? { mediaSha256 } : {}),
         });
       });
       const hit = await lastHit(detector, events, logger);

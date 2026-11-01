@@ -233,6 +233,58 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a media class with its digest and rejects a digest alone", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        media: "sticker",
+        mediaSha256: "cd".repeat(32),
+      },
+    });
+    expect(event.message?.media).toBe("sticker");
+    expect(event.message?.mediaSha256).toBe("cd".repeat(32));
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          mediaSha256: "cd".repeat(32),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          media: "gif",
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts an inline-bot flag and rejects false", () => {
     const event = parseEvent({
       id: "evt_1",

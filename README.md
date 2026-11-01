@@ -84,7 +84,7 @@ packages/detectors-keyword    内置关键词检测器
 packages/detectors-regex      正则检测器。默认关闭，证据只记 regex:hit
 packages/detectors-forward     转发来源。默认删除频道转发
 packages/detectors-join       入群检测器
-packages/detectors-rate       洪泛与重复。窗口在 isolate 内存
+packages/detectors-rate       洪泛与重复。窗口在 isolate 内存。无正文的文件按摘要计重复
 packages/detectors-link       短链接、裸 IP、可选信誉源
 packages/detectors-blocklist  跨群黑名单。默认关闭，只存标识或哈希。配了 KV 后留在 POLICY_KV
 packages/actions              内置动作（delete / mute / ban / captcha）

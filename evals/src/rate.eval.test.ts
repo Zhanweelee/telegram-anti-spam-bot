@@ -19,6 +19,8 @@ interface RateCase {
   readonly sameText: boolean;
   readonly text?: string;
   readonly maxKeys?: number;
+  readonly media?: "sticker";
+  readonly sameMedia?: boolean;
 }
 
 interface Baseline {
@@ -54,6 +56,15 @@ function eventFor(item: RateCase, index: number) {
       id: `${index}`,
       text,
       textSha256: item.sameText ? "e".repeat(64) : `${index}`.padStart(64, "a"),
+      ...(item.media
+        ? {
+            media: item.media,
+            mediaSha256:
+              item.sameMedia === false
+                ? `${index}`.padStart(64, "b")
+                : "f".repeat(64),
+          }
+        : {}),
     },
   });
 }

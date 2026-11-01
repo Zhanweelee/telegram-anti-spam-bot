@@ -18,6 +18,19 @@ export const eventKindSchema = z.enum(eventKinds);
 export const forwardKinds = ["user", "chat", "channel", "hidden"] as const;
 export const forwardKindSchema = z.enum(forwardKinds);
 
+export const mediaKinds = [
+  "sticker",
+  "animation",
+  "photo",
+  "video",
+  "document",
+  "voice",
+  "video_note",
+  "audio",
+] as const;
+export const mediaKindSchema = z.enum(mediaKinds);
+export type MediaKind = z.output<typeof mediaKindSchema>;
+
 export const botStates = ["admin", "gone"] as const;
 export const botStateSchema = z.enum(botStates);
 
@@ -36,21 +49,30 @@ function isHostname(value: string): boolean {
 
 const hostnameSchema = z.string().refine(isHostname);
 
-export const messageSchema = z.strictObject({
-  id: idSchema,
-  text: z.string().max(4096),
-  textSha256: sha256Schema,
-  /** Source class only. Titles and author names stay out. */
-  forward: forwardKindSchema.optional(),
-  /** Hostnames from hidden links. Paths and queries stay out. */
-  hosts: z.array(hostnameSchema).min(1).max(8).optional(),
-  /** Invite hostnames. The invite code stays out. */
-  invites: z.array(hostnameSchema).min(1).max(8).optional(),
-  /** Shared contact card. Phone numbers and names stay out. */
-  contact: z.literal(true).optional(),
-  /** Sent through an inline bot. The bot username stays out. */
-  via: z.literal(true).optional(),
-});
+export const messageSchema = z
+  .strictObject({
+    id: idSchema,
+    text: z.string().max(4096),
+    textSha256: sha256Schema,
+    /** Source class only. Titles and author names stay out. */
+    forward: forwardKindSchema.optional(),
+    /** Hostnames from hidden links. Paths and queries stay out. */
+    hosts: z.array(hostnameSchema).min(1).max(8).optional(),
+    /** Invite hostnames. The invite code stays out. */
+    invites: z.array(hostnameSchema).min(1).max(8).optional(),
+    /** Shared contact card. Phone numbers and names stay out. */
+    contact: z.literal(true).optional(),
+    /** Sent through an inline bot. The bot username stays out. */
+    via: z.literal(true).optional(),
+    /** File class. File ids, names, and set titles stay out. */
+    media: mediaKindSchema.optional(),
+    /** Digest of the file class and file_unique_id. The id stays out. */
+    mediaSha256: sha256Schema.optional(),
+  })
+  .refine(
+    (message) =>
+      message.media !== undefined || message.mediaSha256 === undefined,
+  );
 
 export const profileSchema = z.strictObject({
   text: z.string().min(1).max(256),

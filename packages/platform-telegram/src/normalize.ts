@@ -1,4 +1,9 @@
-import { type Event, type ForwardKind, parseEvent } from "@tasb/core";
+import {
+  type Event,
+  type ForwardKind,
+  type MediaKind,
+  parseEvent,
+} from "@tasb/core";
 import { sha256Hex } from "./hash.js";
 
 const MAX_TEXT = 4096;
@@ -92,6 +97,7 @@ async function messageEvent(
   const text = messageText(message);
   const forward = forwardKind(message);
   const links = linkHosts(message);
+  const media = await mediaMark(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -114,6 +120,8 @@ async function messageEvent(
       ...(links.invites.length > 0 ? { invites: links.invites } : {}),
       ...(isRecord(message.contact) ? { contact: true as const } : {}),
       ...(isRecord(message.via_bot) ? { via: true as const } : {}),
+      ...(media ? { media: media.kind } : {}),
+      ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
     },
   });
 }
@@ -411,6 +419,51 @@ function isTelegramInvite(host: string, path: string): boolean {
     /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
     /^\/addlist\/[A-Za-z0-9_-]{1,128}$/.test(path)
   );
+}
+
+const mediaFields = [
+  ["sticker", "sticker"],
+  ["animation", "animation"],
+  ["video", "video"],
+  ["video_note", "video_note"],
+  ["voice", "voice"],
+  ["audio", "audio"],
+  ["document", "document"],
+  ["photo", "photo"],
+] as const;
+
+async function mediaMark(
+  message: Record<string, unknown>,
+): Promise<{ readonly kind: MediaKind; readonly sha256?: string } | undefined> {
+  for (const [field, kind] of mediaFields) {
+    const value = message[field];
+    if (field === "photo") {
+      if (!Array.isArray(value) || value.length === 0) {
+        continue;
+      }
+      const id = uniqueId(value[value.length - 1]);
+      return id
+        ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) }
+        : { kind };
+    }
+    if (!isRecord(value)) {
+      continue;
+    }
+    const id = uniqueId(value);
+    return id ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) } : { kind };
+  }
+  return undefined;
+}
+
+function uniqueId(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  const id = value.file_unique_id;
+  if (typeof id !== "string" || id.length === 0 || id.length > 256) {
+    return undefined;
+  }
+  return id;
 }
 
 function messageText(message: Record<string, unknown>): string {

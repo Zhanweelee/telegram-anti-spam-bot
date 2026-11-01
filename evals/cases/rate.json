@@ -64,6 +64,30 @@
     "text": ""
   },
   {
+    "id": "repeat-sticker",
+    "detector": "repeat",
+    "label": "spam",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": true
+  },
+  {
+    "id": "repeat-sticker-varied",
+    "detector": "repeat",
+    "label": "ham",
+    "messages": 3,
+    "gapMs": 1000,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "media": "sticker",
+    "sameMedia": false
+  },
+  {
     "id": "flood-over-budget",
     "detector": "flood",
     "label": "ham",
