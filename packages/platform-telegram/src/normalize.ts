@@ -343,9 +343,13 @@ function linkHosts(message: Record<string, unknown>): {
   const seenInvites = new Set<string>();
   const urls: unknown[] = [];
   const poll = message.poll;
+  const checklist = message.checklist;
   const lists = [message.entities, message.caption_entities];
   if (isRecord(poll)) {
     lists.push(poll.question_entities);
+  }
+  if (isRecord(checklist)) {
+    lists.push(checklist.title_entities);
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {
@@ -527,6 +531,14 @@ function messageText(message: Record<string, unknown>): string {
     ) {
       return value.prize_description.slice(0, MAX_TEXT);
     }
+  }
+  const checklist = message.checklist;
+  if (
+    isRecord(checklist) &&
+    typeof checklist.title === "string" &&
+    checklist.title.length > 0
+  ) {
+    return checklist.title.slice(0, MAX_TEXT);
   }
   return "";
 }
