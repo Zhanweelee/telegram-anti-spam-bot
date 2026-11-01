@@ -3,6 +3,7 @@
   { "text": "加微信领取", "expect": "hit" },
   { "text": "加\u200b微信", "expect": "hit" },
   { "text": "加\u00a0微信", "expect": "hit" },
+  { "text": "加\uFE0F微信", "expect": "hit" },
   { "text": "加微x 看资料", "expect": "hit" },
   { "text": "今天站会改到三点", "expect": "miss" },
   { "text": "https://t.me/username", "expect": "miss" },

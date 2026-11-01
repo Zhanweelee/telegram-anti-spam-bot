@@ -88,6 +88,24 @@ describe("keyword detector", () => {
     expect(JSON.stringify(hit)).not.toContain(name);
   });
 
+  it("does not treat a variation-selector keyword as a match for every message", async () => {
+    const detector = createKeywordDetector({ keywords: ["\uFE0F"] });
+    const hit = await detector.detect({
+      event: messageEvent("今天站会"),
+      logger,
+      signal,
+    });
+    expect(hit).toBeNull();
+    const hidden = "免\uFE0F费领取";
+    const matched = await detector.detect({
+      event: messageEvent(hidden),
+      logger,
+      signal,
+    });
+    expect(matched).toBeNull();
+    expect(JSON.stringify(matched)).not.toContain("\uFE0F");
+  });
+
   it("does not treat a format-only keyword as a match for every message", async () => {
     const detector = createKeywordDetector({ keywords: ["\u200b"] });
     const hit = await detector.detect({

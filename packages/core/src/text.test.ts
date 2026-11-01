@@ -16,4 +16,11 @@ describe("foldMatchText", () => {
     expect(foldMatchText("加\u2000微\u202f信")).toBe("加微信");
     expect(foldMatchText("免 费领取")).toBe("免 费领取");
   });
+
+  it("drops variation selectors and keeps a normal space", () => {
+    expect(foldMatchText("免\uFE0F费\uFE00领取")).toBe("免费领取");
+    expect(foldMatchText("加\u180B微信")).toBe("加微信");
+    expect(foldMatchText("加\u{E0100}微信")).toBe("加微信");
+    expect(foldMatchText("免 费领取")).toBe("免 费领取");
+  });
 });
