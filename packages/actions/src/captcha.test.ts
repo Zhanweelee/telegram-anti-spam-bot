@@ -69,6 +69,9 @@ function storage(): Storage {
     async listAudits() {
       return [];
     },
+    async getAudit() {
+      return null;
+    },
     async exportAudits() {
       return [];
     },

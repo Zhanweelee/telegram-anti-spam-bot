@@ -167,7 +167,7 @@ pnpm --filter @tasb/example-minimal-pipeline test
 ## 新增一个 Adapter
 
 1. 建 `packages/adapters-<runtime>`，实现 core 的端口，不要把平台类型导出给 core。
-2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。实现 `PolicyStore` 时从 `@tasb/core/testing` 调用 `bindPolicyStoreContract`。实现 `Storage` 时调用 `bindStorageContract`。实现 `BlocklistStore` 时调用 `bindBlocklistStoreContract`。
+2. 提供与 `adapters-memory` 同行为的测试：租户隔离、审计 schema 拒绝原文。实现 `PolicyStore` 时从 `@tasb/core/testing` 调用 `bindPolicyStoreContract`。实现 `Storage` 时调用 `bindStorageContract`。实现 `BlocklistStore` 时调用 `bindBlocklistStoreContract`。实现 `ReviewQueue` 时调用 `bindReviewQueueContract`。
 3. 对照 `docs/limits.md` 写明读放大、写放大和失败时的行为。
 4. Workers 绑定只出现在该包和 `apps/worker`。
 5. 新的 npm 依赖需要 ADR。
@@ -194,3 +194,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Direct | 与 bot 的私聊，事件字段 `direct` | Private（平台词）、DM |
 | Blocklist | 租户内共享的 actor id 或内容哈希。每个群单独 opt-in，默认关闭 | Ban list、原文黑名单 |
 | Locale | 命令回复的语言，`zh` 或 `en`。缺省中文 | Language、i18n code |
+| Review sample | 一条待审核的误判或确认。只有哈希和特征，不含原文 | Feedback、原文样本 |

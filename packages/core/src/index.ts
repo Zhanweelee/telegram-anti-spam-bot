@@ -125,6 +125,19 @@ export {
 export { assertNoRawContent, redactExactText } from "./privacy.js";
 export type { ReplyMessage, ReplyPort } from "./reply.js";
 export {
+  buildReviewSample,
+  createMemoryReviewQueue,
+  MAX_REVIEW_SAMPLES,
+  parseReviewSample,
+  ReviewCapacityError,
+  type ReviewLabel,
+  type ReviewQueue,
+  type ReviewSample,
+  reviewLabelSchema,
+  reviewLabels,
+  reviewSampleSchema,
+} from "./review.js";
+export {
   type AggregateStrategy,
   aggregateScores,
   aggregateStrategies,

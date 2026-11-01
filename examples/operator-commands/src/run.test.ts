@@ -1,4 +1,7 @@
-import { createMemoryStorage } from "@tasb/adapter-memory";
+import {
+  createMemoryReviewQueue,
+  createMemoryStorage,
+} from "@tasb/adapter-memory";
 import { describe, expect, it } from "vitest";
 import { runPrivateCommand } from "./run.js";
 
@@ -12,6 +15,7 @@ describe("operator command example", () => {
     });
     expect(help).toContain("/logs");
     expect(help).toContain("/blocklist");
+    expect(help).toContain("/appeal");
     expect(help).not.toContain(phrase);
     const english = await runPrivateCommand({
       text: "/help",
@@ -51,6 +55,18 @@ describe("operator command example", () => {
     });
     expect(exported).toContain('"audits"');
     expect(exported).not.toContain('"text"');
+    const review = createMemoryReviewQueue();
+    const appeal = await runPrivateCommand({
+      text: "/appeal -100 evt_1 false",
+      actorId: "42",
+      adminActorIds: ["42"],
+      storage,
+      review,
+    });
+    expect(appeal).toBe("appeal -100 evt_1 误判");
+    expect(
+      JSON.stringify(await review.list({ tenantId: "local" })),
+    ).not.toContain(phrase);
     const forgotten = await runPrivateCommand({
       text: "/forget -100",
       actorId: "42",
@@ -58,6 +74,7 @@ describe("operator command example", () => {
       storage,
     });
     expect(forgotten).toBe("已删除 1 条");
+    expect(await review.list({ tenantId: "local" })).toHaveLength(1);
     expect(
       await storage.listAudits({
         tenantId: "local",

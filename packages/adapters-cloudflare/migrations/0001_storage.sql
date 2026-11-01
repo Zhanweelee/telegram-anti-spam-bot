@@ -19,3 +19,17 @@ CREATE TABLE IF NOT EXISTS rule_sets (
   document TEXT NOT NULL,
   PRIMARY KEY (tenant_id, chat_id)
 );
+
+CREATE TABLE IF NOT EXISTS review_samples (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  text_sha256 TEXT,
+  action TEXT NOT NULL,
+  score REAL NOT NULL,
+  reasons TEXT NOT NULL,
+  rule_ids TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id, event_id)
+);

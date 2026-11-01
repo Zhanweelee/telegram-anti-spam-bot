@@ -109,6 +109,7 @@ export function createApp(
           reply: createTelegramReply({ token: c.env?.TELEGRAM_BOT_TOKEN }),
           storage: stores.storage,
           policyStore: stores.policyStore,
+          review: stores.review,
           ...(locale ? { locale } : {}),
           ...(c.env?.TELEGRAM_BOT_TOKEN
             ? { botToken: c.env.TELEGRAM_BOT_TOKEN }

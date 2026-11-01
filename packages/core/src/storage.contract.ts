@@ -70,6 +70,20 @@ export function bindStorageContract(create: () => Storage): void {
       expect(listed).toEqual([{ ...record, tenantId, eventId: "evt_q" }]);
     });
 
+    it("reads one audit by tenant, chat, and event", async () => {
+      const storage = create();
+      expect(await storage.getAudit("tenant_a", "chat_1", "evt_1")).toBeNull();
+      await storage.appendAudit(record);
+      expect(await storage.getAudit("tenant_a", "chat_1", "evt_1")).toEqual(
+        record,
+      );
+      expect(await storage.getAudit("tenant_b", "chat_1", "evt_1")).toBeNull();
+      expect(await storage.getAudit("tenant_a", "chat_2", "evt_1")).toBeNull();
+      expect(
+        await storage.getAudit("tenant_a", "chat_1", "missing"),
+      ).toBeNull();
+    });
+
     it("lists audits oldest first for that tenant and chat", async () => {
       const storage = create();
       await storage.appendAudit(record);

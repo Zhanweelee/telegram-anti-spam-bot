@@ -92,6 +92,9 @@ const closedStorage: Storage = {
   async listAudits() {
     return [];
   },
+  async getAudit() {
+    return null;
+  },
   async exportAudits() {
     return [];
   },

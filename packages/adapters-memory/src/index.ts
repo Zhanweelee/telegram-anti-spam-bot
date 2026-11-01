@@ -45,6 +45,16 @@ export function createMemoryStorage(options?: {
         .filter((record) => matchesScope(record, parsed))
         .slice(0, parsed.limit);
     },
+    async getAudit(tenantId, chatId, eventId) {
+      return (
+        records.find(
+          (record) =>
+            record.tenantId === tenantId &&
+            record.chatId === chatId &&
+            record.eventId === eventId,
+        ) ?? null
+      );
+    },
     async exportAudits(scope) {
       const parsed = parseAuditScope(scope);
       return records.filter((record) => matchesScope(record, parsed));
@@ -200,7 +210,10 @@ export function createMemoryReply(): ReplyPort & {
   };
 }
 
-export { createMemoryBlocklistStore } from "@tasb/core";
+export {
+  createMemoryBlocklistStore,
+  createMemoryReviewQueue,
+} from "@tasb/core";
 
 export function createMemoryCache(nowMs: () => number = Date.now): Cache {
   const values = new Map<string, { value: string; expiresAt: number }>();

@@ -29,6 +29,11 @@ export const messageKeys = [
   "command.blocklist.usage",
   "command.blocklist.status",
   "command.blocklist.added",
+  "command.appeal.usage",
+  "command.appeal.missing",
+  "command.appeal.queued",
+  "command.appeal.false_positive",
+  "command.appeal.confirmed",
 ] as const;
 
 export type MessageKey = (typeof messageKeys)[number];
@@ -48,6 +53,7 @@ const syntax = [
   "/blocklist <chatId> on|off",
   "/blocklist <chatId> add actor <actorId>",
   "/blocklist <chatId> add hash <sha256>",
+  "/appeal <chatId> <eventId> false|confirm",
 ].join("\n");
 
 const zh = {
@@ -81,6 +87,11 @@ const zh = {
     "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
   "command.blocklist.status": "blocklist {chatId} {state}",
   "command.blocklist.added": "{status}\nadded",
+  "command.appeal.usage": "用法：/appeal <chatId> <eventId> false|confirm",
+  "command.appeal.missing": "没有这条审计",
+  "command.appeal.queued": "appeal {chatId} {eventId} {label}",
+  "command.appeal.false_positive": "误判",
+  "command.appeal.confirmed": "确认",
 } satisfies Record<MessageKey, string>;
 
 const en = {
@@ -115,6 +126,11 @@ const en = {
     "Usage: /blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
   "command.blocklist.status": "Blocklist {chatId} is {state}",
   "command.blocklist.added": "{status}\nAdded",
+  "command.appeal.usage": "Usage: /appeal <chatId> <eventId> false|confirm",
+  "command.appeal.missing": "No audit",
+  "command.appeal.queued": "Appeal {chatId} {eventId} {label}",
+  "command.appeal.false_positive": "False positive",
+  "command.appeal.confirmed": "Confirmed",
 } satisfies Record<MessageKey, string>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { zh, en };

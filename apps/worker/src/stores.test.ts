@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerStorage } from "./screen.js";
 import { resolveStores, type StoreSlot } from "./stores.js";
 
@@ -7,6 +8,7 @@ describe("resolveStores", () => {
     const stores = resolveStores({}, {});
     expect(stores.storage).toBe(workerStorage);
     expect(stores.policyStore).toBe(workerPolicyStore);
+    expect(stores.review).toBe(workerReview);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -48,6 +50,8 @@ describe("resolveStores", () => {
     expect(first.storage).not.toBe(workerStorage);
     expect(first.policyStore).toBe(second.policyStore);
     expect(first.policyStore).not.toBe(workerPolicyStore);
+    expect(first.review).toBe(second.review);
+    expect(first.review).not.toBe(workerReview);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
@@ -58,6 +62,7 @@ describe("resolveStores", () => {
     expect(queries.filter((sql) => sql.startsWith("CREATE TABLE"))).toEqual([
       expect.stringContaining("audits"),
       expect.stringContaining("rule_sets"),
+      expect.stringContaining("review_samples"),
     ]);
   });
 });

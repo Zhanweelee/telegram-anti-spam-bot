@@ -12,6 +12,7 @@ import type { PolicyStore } from "./policy-store.js";
 import type { AuditRecord, Storage } from "./ports.js";
 import { parseAuditRecord } from "./ports.js";
 import { prefilterPolicySchema } from "./prefilter.js";
+import { createMemoryReviewQueue, type ReviewQueue } from "./review.js";
 import type { RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
@@ -83,10 +84,17 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
   };
 }
 
-function storage(): Storage & { readonly records: AuditRecord[] } {
+function storage(): Storage & {
+  readonly records: AuditRecord[];
+  ruleWrites: number;
+} {
   const records: AuditRecord[] = [];
+  let ruleWrites = 0;
   return {
     records,
+    get ruleWrites() {
+      return ruleWrites;
+    },
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
     },
@@ -98,6 +106,16 @@ function storage(): Storage & { readonly records: AuditRecord[] } {
             (query.chatId === undefined || record.chatId === query.chatId),
         )
         .slice(0, query.limit);
+    },
+    async getAudit(tenantId, chatId, eventId) {
+      return (
+        records.find(
+          (record) =>
+            record.tenantId === tenantId &&
+            record.chatId === chatId &&
+            record.eventId === eventId,
+        ) ?? null
+      );
     },
     async exportAudits(scope) {
       return records.filter(
@@ -122,7 +140,7 @@ function storage(): Storage & { readonly records: AuditRecord[] } {
       return null;
     },
     async putRuleSet() {
-      return undefined;
+      ruleWrites += 1;
     },
   };
 }
@@ -961,7 +979,181 @@ describe("runOperatorCommand", () => {
     expect(await addedThenUnreadable.isEnabled("local", "-100")).toBe(true);
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
+
+  it("queues a false positive without the message or a rule change", async () => {
+    const deps = kit();
+    const review = createMemoryReviewQueue();
+    const summary = phrase;
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "tg_9",
+      textSha256: "cd".repeat(32),
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+    const marked = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(marked).toMatchObject({
+      command: "appeal",
+      text: "appeal -100 tg_9 误判",
+    });
+    const queued = await review.list({ tenantId: "local" });
+    expect(queued).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-100",
+        eventId: "tg_9",
+        label: "false_positive",
+        textSha256: "cd".repeat(32),
+        action: "delete",
+        score: 1,
+        reasons: ["keyword_match"],
+        ruleIds: ["spam_keywords"],
+        createdAt: "2026-11-01T00:00:00.000Z",
+      },
+    ]);
+    expect(JSON.stringify(queued)).not.toContain(summary);
+    expect(deps.storage.ruleWrites).toBe(0);
+    expect(await deps.storage.getRuleSet("local", "-100")).toBeNull();
+    const again = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 confirm", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(again).toMatchObject({ text: "appeal -100 tg_9 确认" });
+    expect(await review.list({ tenantId: "local" })).toHaveLength(1);
+    expect((await review.list({ tenantId: "local" }))[0]?.label).toBe(
+      "confirmed",
+    );
+    await deps.storage.deleteAudits({ tenantId: "local", chatId: "-100" });
+    expect(await review.list({ tenantId: "local" })).toHaveLength(1);
+    const english = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      review,
+      ...deps,
+    });
+    expect(english).toMatchObject({ text: "No audit" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(summary);
+  });
+
+  it("does not enqueue when the audit is missing or the caller is not an admin", async () => {
+    const deps = kit();
+    const review = createMemoryReviewQueue();
+    const missing = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(missing).toMatchObject({ text: "没有这条审计" });
+    const denied = await runOperatorCommand({
+      event: event({
+        text: `/appeal -100 tg_9 false ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    const group = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", chatId: "-100" }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(group).toEqual({ status: "skip" });
+    const sentence = await runOperatorCommand({
+      event: event({ text: `/appeal -100 ${phrase} false`, direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(sentence).toMatchObject({ text: "参数无效" });
+    const bare = await runOperatorCommand({
+      event: event({ text: "/appeal", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(bare).toMatchObject({
+      text: "用法：/appeal <chatId> <eventId> false|confirm",
+    });
+    const usage = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 maybe", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/appeal <chatId> <eventId> false|confirm",
+    });
+    expect(await review.list({ tenantId: "local" })).toEqual([]);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
+  it("rejects a missing or failing review queue without the error text", async () => {
+    const deps = kit();
+    await deps.storage.appendAudit(appealAudit());
+    const absent = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(absent).toMatchObject({ text: "参数无效" });
+    const failing: ReviewQueue = {
+      async enqueue() {
+        throw new Error(phrase);
+      },
+      async list() {
+        return [];
+      },
+    };
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 confirm", direct: true }),
+      adminActorIds: ["42"],
+      review: failing,
+      ...deps,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    deps.storage.getAudit = () => Promise.reject(new Error(phrase));
+    const unreadable = await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      review: createMemoryReviewQueue(),
+      ...deps,
+    });
+    expect(unreadable).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
 });
+
+function appealAudit(): AuditRecord {
+  return {
+    tenantId: "local",
+    chatId: "-100",
+    eventId: "tg_9",
+    action: "delete",
+    score: 1,
+    reasons: ["keyword_match"],
+    evidence: [],
+    ruleIds: ["spam_keywords"],
+    createdAt: "2026-11-01T00:00:00.000Z",
+  };
+}
 
 function countingStore(
   inner: ReturnType<typeof createMemoryBlocklistStore>,

@@ -21,6 +21,11 @@ import {
   type Storage,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
+import {
+  buildReviewSample,
+  type ReviewLabel,
+  type ReviewQueue,
+} from "./review.js";
 import { loadRuleSet, type RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
@@ -33,6 +38,7 @@ const COMMAND_NAMES = [
   "export",
   "forget",
   "blocklist",
+  "appeal",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -51,6 +57,7 @@ export interface OperatorCommandInput {
   readonly logger: Logger;
   readonly fallback?: PrefilterPolicy;
   readonly blocklist?: BlocklistStore;
+  readonly review?: ReviewQueue;
   readonly locale?: Locale;
 }
 
@@ -133,6 +140,8 @@ async function dispatch(
       return forgetAudits(input, args);
     case "blocklist":
       return editBlocklist(input, args);
+    case "appeal":
+      return appealAudit(input, args);
   }
 }
 
@@ -526,6 +535,98 @@ function say(
   vars?: Readonly<Record<string, string | number>>,
 ): string {
   return translate(input.locale ?? "zh", key, vars);
+}
+
+function isEventId(value: string): boolean {
+  return /^[A-Za-z0-9_.:-]{1,128}$/.test(value);
+}
+
+async function appealAudit(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const queue = input.review;
+  if (!queue) {
+    rejectAppeal(input);
+    return say(input, "command.invalid");
+  }
+  if (args.length !== 3) {
+    return say(input, "command.appeal.usage");
+  }
+  const chatId = args[0];
+  const eventId = args[1];
+  const verb = args[2];
+  if (!chatId || !isTargetId(chatId) || !eventId || !isEventId(eventId)) {
+    return say(input, "command.invalid");
+  }
+  const label = appealLabel(verb);
+  if (!label) {
+    return say(input, "command.appeal.usage");
+  }
+  const audit = await readAudit(input, chatId, eventId);
+  if (audit === "failed") {
+    return say(input, "command.invalid");
+  }
+  if (audit === null) {
+    return say(input, "command.appeal.missing");
+  }
+  try {
+    await queue.enqueue(
+      buildReviewSample(audit, label, input.event.occurredAt),
+    );
+  } catch {
+    rejectAppeal(input);
+    return say(input, "command.invalid");
+  }
+  input.logger.info("review_queued", {
+    eventId: input.event.id,
+    chatId,
+    label,
+  });
+  return say(input, "command.appeal.queued", {
+    chatId,
+    eventId,
+    label: say(input, appealLabelKey(label)),
+  });
+}
+
+function appealLabel(value: string | undefined): ReviewLabel | null {
+  if (value === "false") {
+    return "false_positive";
+  }
+  if (value === "confirm") {
+    return "confirmed";
+  }
+  return null;
+}
+
+function appealLabelKey(
+  label: ReviewLabel,
+): "command.appeal.false_positive" | "command.appeal.confirmed" {
+  return label === "false_positive"
+    ? "command.appeal.false_positive"
+    : "command.appeal.confirmed";
+}
+
+async function readAudit(
+  input: OperatorCommandInput,
+  chatId: string,
+  eventId: string,
+): Promise<AuditRecord | null | "failed"> {
+  try {
+    return await input.storage.getAudit(input.event.tenantId, chatId, eventId);
+  } catch {
+    rejectAppeal(input);
+    return "failed";
+  }
+}
+
+function rejectAppeal(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "appeal",
+  });
 }
 
 function isCommandName(value: string): value is CommandName {

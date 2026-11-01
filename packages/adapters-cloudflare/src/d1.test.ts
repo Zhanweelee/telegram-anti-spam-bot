@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { bindStorageContract } from "@tasb/core/testing";
+import {
+  bindReviewQueueContract,
+  bindStorageContract,
+} from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
   applyStorageMigrations,
+  createD1ReviewQueue,
   createD1Storage,
   type SqlDatabase,
   type SqlPrepared,
@@ -12,6 +16,7 @@ import {
 } from "./d1.js";
 
 bindStorageContract(() => createD1Storage(openSqlite()));
+bindReviewQueueContract(() => createD1ReviewQueue(openSqlite()));
 
 describe("d1 storage", () => {
   it("keeps the sql file equal to the exported statements", () => {
@@ -82,6 +87,35 @@ describe("d1 storage", () => {
     });
     expect(listed).toEqual([]);
     expect(await storage.getRuleSet("tenant_a", "chat_1")).toBeNull();
+    expect(JSON.stringify(listed)).not.toContain(secret);
+  });
+
+  it("skips a review row whose reasons are not a feature list", async () => {
+    const db = openSqlite();
+    const queue = createD1ReviewQueue(db);
+    const secret = "请免费领取礼品";
+    await queue.list({ tenantId: "tenant_a" });
+    await db
+      .prepare(
+        `INSERT INTO review_samples (
+          tenant_id, chat_id, event_id, label, action, score,
+          reasons, rule_ids, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        "tenant_a",
+        "chat_1",
+        "evt_bad",
+        "confirmed",
+        "delete",
+        1,
+        secret,
+        "[]",
+        "2026-11-01T00:00:00.000Z",
+      )
+      .run();
+    const listed = await queue.list({ tenantId: "tenant_a" });
+    expect(listed).toEqual([]);
     expect(JSON.stringify(listed)).not.toContain(secret);
   });
 

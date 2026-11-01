@@ -4,6 +4,7 @@ import {
   type Locale,
   type Logger,
   type ReplyPort,
+  type ReviewQueue,
   resolveChallenge,
   runOperatorCommand,
 } from "@tasb/core";
@@ -11,6 +12,7 @@ import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
+import { workerReview } from "./review-runtime.js";
 import { fileRuleSource } from "./rules.js";
 import {
   createWorkerLogger,
@@ -26,6 +28,7 @@ export interface OperateDeps extends ScreenDeps {
   readonly adminActorIds?: readonly string[];
   readonly reply?: ReplyPort;
   readonly locale?: Locale;
+  readonly review?: ReviewQueue;
 }
 
 export async function handleIncomingEvent(
@@ -43,6 +46,7 @@ export async function handleIncomingEvent(
     moderatorFor({ token: deps.botToken, fetchImpl: deps.fetchImpl });
   const captchaStore = deps.captchaStore ?? workerCaptcha;
   const blocklist = deps.blocklist ?? workerBlocklist;
+  const review = deps.review ?? workerReview;
   if (event.kind === "challenge") {
     try {
       await resolveChallenge({
@@ -74,6 +78,7 @@ export async function handleIncomingEvent(
     storage,
     logger,
     blocklist,
+    review,
     ...(deps.locale ? { locale: deps.locale } : {}),
   });
   if (outcome.status === "reply") {

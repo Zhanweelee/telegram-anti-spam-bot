@@ -2,11 +2,17 @@ import {
   type AuditRecord,
   type AuditScope,
   auditRecordSchema,
+  MAX_REVIEW_SAMPLES,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
+  parseReviewSample,
   parseRuleSet,
+  ReviewCapacityError,
+  type ReviewQueue,
+  type ReviewSample,
   type RuleSet,
+  reviewSampleSchema,
   ruleSetSchema,
   type Storage,
 } from "@tasb/core";
@@ -46,6 +52,19 @@ export const storageMigrationStatements = [
   document TEXT NOT NULL,
   PRIMARY KEY (tenant_id, chat_id)
 )`,
+  `CREATE TABLE IF NOT EXISTS review_samples (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  event_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  text_sha256 TEXT,
+  action TEXT NOT NULL,
+  score REAL NOT NULL,
+  reasons TEXT NOT NULL,
+  rule_ids TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id, event_id)
+)`,
 ] as const;
 
 const insertAuditSql = `INSERT INTO audits (
@@ -66,6 +85,11 @@ FROM audits
 WHERE tenant_id = ? AND chat_id = ?
 ORDER BY rowid ASC
 LIMIT ?`;
+
+const getAuditSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha256,
+  action, score, reasons, evidence, rule_ids, created_at
+FROM audits
+WHERE tenant_id = ? AND chat_id = ? AND event_id = ?`;
 
 const deleteAuditsSql = "DELETE FROM audits WHERE tenant_id = ?";
 
@@ -94,6 +118,38 @@ WHERE tenant_id = ? AND chat_id = ?`;
 const upsertRuleSql = `INSERT INTO rule_sets (tenant_id, chat_id, document)
 VALUES (?, ?, ?)
 ON CONFLICT(tenant_id, chat_id) DO UPDATE SET document = excluded.document`;
+
+const reviewColumns = `tenant_id, chat_id, event_id, label, text_sha256,
+  action, score, reasons, rule_ids, created_at`;
+
+const findReviewSql = `SELECT event_id FROM review_samples
+WHERE tenant_id = ? AND chat_id = ? AND event_id = ?`;
+
+const countReviewSql =
+  "SELECT COUNT(*) AS total FROM review_samples WHERE tenant_id = ?";
+
+const upsertReviewSql = `INSERT INTO review_samples (
+  tenant_id, chat_id, event_id, label, text_sha256,
+  action, score, reasons, rule_ids, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(tenant_id, chat_id, event_id) DO UPDATE SET
+  label = excluded.label,
+  text_sha256 = excluded.text_sha256,
+  action = excluded.action,
+  score = excluded.score,
+  reasons = excluded.reasons,
+  rule_ids = excluded.rule_ids,
+  created_at = excluded.created_at`;
+
+const listReviewSql = `SELECT ${reviewColumns}
+FROM review_samples
+WHERE tenant_id = ?
+ORDER BY created_at ASC, event_id ASC`;
+
+const listReviewInChatSql = `SELECT ${reviewColumns}
+FROM review_samples
+WHERE tenant_id = ? AND chat_id = ?
+ORDER BY created_at ASC, event_id ASC`;
 
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
 
@@ -135,6 +191,15 @@ export function createD1Storage(db: SqlDatabase): Storage {
       }
       return audits;
     },
+    async getAudit(tenantId, chatId, eventId) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(getAuditSql)
+        .bind(tenantId, chatId, eventId)
+        .all();
+      const row = rows.results?.[0];
+      return row ? readAudit(row) : null;
+    },
     async exportAudits(scope) {
       await migrationsFor(db);
       return exportMatching(db, scope);
@@ -164,6 +229,51 @@ export function createD1Storage(db: SqlDatabase): Storage {
         .prepare(upsertRuleSql)
         .bind(tenantId, chatId, JSON.stringify(parsed))
         .run();
+    },
+  };
+}
+
+export function createD1ReviewQueue(db: SqlDatabase): ReviewQueue {
+  return {
+    async enqueue(sample) {
+      await migrationsFor(db);
+      const parsed = parseReviewSample(sample);
+      const existing = await db
+        .prepare(findReviewSql)
+        .bind(parsed.tenantId, parsed.chatId, parsed.eventId)
+        .all();
+      if ((existing.results ?? []).length === 0) {
+        const counted = await db
+          .prepare(countReviewSql)
+          .bind(parsed.tenantId)
+          .all();
+        if (readCount(counted.results?.[0]) >= MAX_REVIEW_SAMPLES) {
+          throw new ReviewCapacityError();
+        }
+      }
+      await db
+        .prepare(upsertReviewSql)
+        .bind(...reviewValues(parsed))
+        .run();
+    },
+    async list(scope) {
+      await migrationsFor(db);
+      const parsed = parseAuditScope(scope);
+      const rows =
+        parsed.chatId === undefined
+          ? await db.prepare(listReviewSql).bind(parsed.tenantId).all()
+          : await db
+              .prepare(listReviewInChatSql)
+              .bind(parsed.tenantId, parsed.chatId)
+              .all();
+      const samples: ReviewSample[] = [];
+      for (const row of rows.results ?? []) {
+        const sample = readReview(row);
+        if (sample) {
+          samples.push(sample);
+        }
+      }
+      return samples;
     },
   };
 }
@@ -270,6 +380,57 @@ function readAudit(row: Record<string, unknown>): AuditRecord | null {
     createdAt: row.created_at,
   });
   return parsed.success ? parsed.data : null;
+}
+
+function reviewValues(
+  sample: ReviewSample,
+): readonly (string | number | null)[] {
+  return [
+    sample.tenantId,
+    sample.chatId,
+    sample.eventId,
+    sample.label,
+    sample.textSha256 ?? null,
+    sample.action,
+    sample.score,
+    JSON.stringify(sample.reasons),
+    JSON.stringify(sample.ruleIds),
+    sample.createdAt,
+  ];
+}
+
+function readReview(row: Record<string, unknown>): ReviewSample | null {
+  const reasons = readJson(row.reasons);
+  const ruleIds = readJson(row.rule_ids);
+  if (reasons === undefined || ruleIds === undefined) {
+    return null;
+  }
+  const parsed = reviewSampleSchema.safeParse({
+    tenantId: row.tenant_id,
+    chatId: row.chat_id,
+    eventId: row.event_id,
+    label: row.label,
+    ...(typeof row.text_sha256 === "string"
+      ? { textSha256: row.text_sha256 }
+      : {}),
+    action: row.action,
+    score: row.score,
+    reasons,
+    ruleIds,
+    createdAt: row.created_at,
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function readCount(row: Record<string, unknown> | undefined): number {
+  const value = row?.total;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "bigint") {
+    return Number(value);
+  }
+  return 0;
 }
 
 function readRuleSet(document: unknown): RuleSet | null {

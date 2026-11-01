@@ -100,6 +100,9 @@ function harness(options?: { failStorage?: boolean }) {
       return null;
     },
     async putRuleSet() {},
+    async getAudit() {
+      return null;
+    },
     async exportAudits() {
       return records.slice();
     },

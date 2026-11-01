@@ -208,6 +208,9 @@ function harness() {
     async listAudits() {
       return records;
     },
+    async getAudit() {
+      return null;
+    },
     async exportAudits() {
       return records;
     },

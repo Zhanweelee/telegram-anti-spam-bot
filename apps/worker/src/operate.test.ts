@@ -5,6 +5,7 @@ import {
   createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryReply,
+  createMemoryReviewQueue,
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
@@ -337,5 +338,50 @@ describe("handleIncomingEvent", () => {
     );
     expect(kit.reply.sent[0]?.text).toBe("No permission");
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("queues an appeal and leaves the rules untouched", async () => {
+    const kit = deps();
+    const review = createMemoryReviewQueue();
+    const rules = {
+      version: 1 as const,
+      aggregate: "max" as const,
+      rules: [
+        {
+          id: "spam_keywords",
+          enabled: true,
+          detectorIds: ["keyword"],
+          threshold: 1,
+          actions: ["delete" as const],
+        },
+      ],
+    };
+    await kit.storage.putRuleSet("local", "-100", rules);
+    await kit.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "tg_9",
+      textSha256: await sha256Hex(phrase),
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: phrase }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+    await handleIncomingEvent(
+      await incoming({ text: "/appeal -100 tg_9 false", direct: true }),
+      { ...kit, review },
+    );
+    expect(kit.reply.sent.at(-1)?.text).toBe("appeal -100 tg_9 误判");
+    const queued = await review.list({ tenantId: "local" });
+    expect(queued).toHaveLength(1);
+    expect(queued[0]?.label).toBe("false_positive");
+    expect(JSON.stringify(queued)).not.toContain(phrase);
+    expect(await kit.storage.getRuleSet("local", "-100")).toEqual(rules);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(
+      kit.logger.entries.some((entry) => entry.message === "review_queued"),
+    ).toBe(true);
   });
 });

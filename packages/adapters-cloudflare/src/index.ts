@@ -2,6 +2,7 @@ import { type PolicyStore, prefilterPolicySchema } from "@tasb/core";
 
 export {
   applyStorageMigrations,
+  createD1ReviewQueue,
   createD1Storage,
   type SqlDatabase,
   type SqlPrepared,

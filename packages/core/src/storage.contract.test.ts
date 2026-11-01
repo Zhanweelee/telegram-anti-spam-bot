@@ -20,6 +20,16 @@ function createReferenceStorage(): Storage {
         .filter((record) => inScope(record, parsed))
         .slice(0, parsed.limit);
     },
+    async getAudit(tenantId, chatId, eventId) {
+      return (
+        records.find(
+          (record) =>
+            record.tenantId === tenantId &&
+            record.chatId === chatId &&
+            record.eventId === eventId,
+        ) ?? null
+      );
+    },
     async exportAudits(scope) {
       const parsed = parseAuditScope(scope);
       return records.filter((record) => inScope(record, parsed));

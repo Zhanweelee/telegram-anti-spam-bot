@@ -51,7 +51,7 @@ pnpm exec wrangler kv namespace create POLICY_KV
 ]
 ```
 
-迁移可以重复执行：
+迁移可以重复执行。`review_samples` 和审计、规则文档在同一份 SQL 里，再执行一次只会补上缺的表：
 
 ```sh
 pnpm exec wrangler d1 execute tasb --remote --file=../../packages/adapters-cloudflare/migrations/0001_storage.sql
