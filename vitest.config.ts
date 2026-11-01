@@ -6,6 +6,7 @@ export default defineConfig({
       "packages/core",
       "packages/detectors-keyword",
       "packages/detectors-join",
+      "packages/detectors-rate",
       "packages/actions",
       "packages/adapters-memory",
       "packages/adapters-cloudflare",

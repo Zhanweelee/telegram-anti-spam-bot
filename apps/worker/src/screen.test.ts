@@ -12,6 +12,7 @@ import {
   type Storage,
 } from "@tasb/core";
 import { createKeywordDetector } from "@tasb/detector-keyword";
+import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { normalizeUpdate, sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { screenTelegramEvent } from "./screen.js";
@@ -337,5 +338,62 @@ describe("screenTelegramEvent", () => {
       { cache: createMemoryCache(), policyStore },
     );
     expect(adminElsewhere.exemptReason).toBe("admin");
+  });
+
+  it("deletes a short flood and a repeated hash, then skips when full", async () => {
+    const window = createMemoryRateWindow();
+    const logger = createMemoryLogger();
+    const base = Date.parse("2026-11-01T00:00:00.000Z");
+    async function at(index: number, text: string) {
+      return parseEvent({
+        id: `rate_${index}_${text.length}`,
+        tenantId: "local",
+        chatId: "-100rate",
+        kind: "message",
+        occurredAt: new Date(base + index * 1000).toISOString(),
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: String(index),
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      });
+    }
+    const first = await screenTelegramEvent(await at(0, "hello"), {
+      logger,
+      rateWindow: window,
+    });
+    expect(first.decision.action).toBe("allow");
+    await screenTelegramEvent(await at(1, "hello"), { rateWindow: window });
+    const repeated = await screenTelegramEvent(await at(2, "hello"), {
+      rateWindow: window,
+    });
+    expect(repeated.decision.action).toBe("delete");
+    expect(repeated.decision.reasons).toContain("repeat");
+    expect(JSON.stringify(repeated)).not.toContain("hello");
+
+    const floodWindow = createMemoryRateWindow();
+    for (let index = 0; index < 4; index += 1) {
+      const step = await screenTelegramEvent(await at(index, `note-${index}`), {
+        rateWindow: floodWindow,
+      });
+      expect(step.decision.action).toBe("allow");
+    }
+    const flooded = await screenTelegramEvent(await at(4, "note-4"), {
+      rateWindow: floodWindow,
+    });
+    expect(flooded.decision.action).toBe("delete");
+    expect(flooded.decision.reasons).toContain("flood");
+
+    const capped = createMemoryRateWindow({ maxKeys: 0 });
+    const skipped = await screenTelegramEvent(await at(6, "note-6"), {
+      logger,
+      rateWindow: capped,
+    });
+    expect(skipped.decision.action).toBe("allow");
+    expect(skipped.detectorErrors).toEqual([]);
+    expect(
+      logger.entries.some((entry) => entry.message === "rate_window_skipped"),
+    ).toBe(true);
   });
 });

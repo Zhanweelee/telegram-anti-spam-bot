@@ -55,6 +55,7 @@ apps/cloud 不被 core 依赖
 packages/core                 领域类型与流水线
 packages/detectors-keyword    关键词检测器
 packages/detectors-join       入群检测器
+packages/detectors-rate       洪泛与重复
 packages/actions              内置动作
 packages/adapters-memory      内存 Storage / Moderation
 packages/adapters-cloudflare  D1 审计与 KV 白名单

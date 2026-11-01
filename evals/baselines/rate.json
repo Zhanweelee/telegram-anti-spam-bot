@@ -1,0 +1,5 @@
+{
+  "detector": "rate",
+  "precision": 1,
+  "recall": 1
+}

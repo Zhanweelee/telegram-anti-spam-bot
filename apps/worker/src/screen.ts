@@ -31,8 +31,14 @@ import {
 } from "@tasb/core";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
+import {
+  createFloodDetector,
+  createRepeatDetector,
+  type RateWindow,
+} from "@tasb/detector-rate";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
+import { workerRateWindow } from "./rate-runtime.js";
 import { fileRuleSource } from "./rules.js";
 
 /**
@@ -78,6 +84,7 @@ export interface ScreenDeps {
   readonly createNonce?: () => string;
   readonly botToken?: string;
   readonly fetchImpl?: typeof fetch;
+  readonly rateWindow?: RateWindow;
 }
 
 export async function screenTelegramEvent(
@@ -117,7 +124,20 @@ export async function screenTelegramEvent(
     rules,
     policy,
     dryRun,
-    detectors: [detector, createJoinDetector()],
+    detectors: [
+      detector,
+      createJoinDetector(),
+      createFloodDetector({
+        window: deps.rateWindow ?? workerRateWindow,
+        windowSeconds: 10,
+        threshold: 5,
+      }),
+      createRepeatDetector({
+        window: deps.rateWindow ?? workerRateWindow,
+        windowSeconds: 60,
+        threshold: 3,
+      }),
+    ],
     actions: [
       createDeleteAction(),
       createMuteAction({ durationSeconds: 60 * 60 }),

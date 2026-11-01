@@ -1,0 +1,23 @@
+[
+  {
+    "name": "same-text",
+    "messages": 3,
+    "sameText": true,
+    "text": "hello",
+    "expect": "hit"
+  },
+  {
+    "name": "different-text",
+    "messages": 3,
+    "sameText": false,
+    "text": "hello",
+    "expect": "miss"
+  },
+  {
+    "name": "empty-text",
+    "messages": 3,
+    "sameText": true,
+    "text": "",
+    "expect": "miss"
+  }
+]

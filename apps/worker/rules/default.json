@@ -10,6 +10,22 @@
       "actions": ["delete"]
     },
     {
+      "id": "flood",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["flood"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "repeat",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["repeat"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "new_member",
       "enabled": true,
       "when": { "eventKind": "chat_member" },

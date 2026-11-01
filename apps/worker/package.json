@@ -16,6 +16,7 @@
     "@tasb/core": "workspace:*",
     "@tasb/detector-join": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
+    "@tasb/detector-rate": "workspace:*",
     "@tasb/platform-telegram": "workspace:*",
     "hono": "4.13.16"
   },
