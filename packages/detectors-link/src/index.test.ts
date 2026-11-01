@@ -228,8 +228,27 @@ describe("link fixtures", () => {
       logger,
       signal,
     });
-    expect(doubled).toBeNull();
-    const dumped = JSON.stringify({ invite, bare, logs: logger.entries });
+    expect(doubled?.reasons).toEqual(["invite"]);
+    expect(doubled?.evidence[0]?.summary).toBe("invite:t.me");
+    const doubledBare = await detector.detect({
+      event: eventFor("bit%25E2%2580%258B.ly/encoded"),
+      logger,
+      signal,
+    });
+    expect(doubledBare?.reasons).toEqual(["short_link"]);
+    const doubledDot = await detector.detect({
+      event: eventFor("bit%252Ely/encoded"),
+      logger,
+      signal,
+    });
+    expect(doubledDot).toBeNull();
+    const dumped = JSON.stringify({
+      invite,
+      bare,
+      doubled,
+      doubledBare,
+      logs: logger.entries,
+    });
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("encoded");
     expect(dumped).not.toContain("DOUBLE99");

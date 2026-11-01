@@ -37,7 +37,17 @@ describe("foldEncodedGaps", () => {
     expect(foldEncodedGaps("IN%20VITE")).toBe("IN%20VITE");
     expect(foldEncodedGaps("bit%2Ely")).toBe("bit%2Ely");
     expect(foldEncodedGaps("%00%7F")).toBe("%00%7F");
-    expect(foldEncodedGaps("%25E2%2580%258B")).toBe("%25E2%2580%258B");
+    expect(foldEncodedGaps("%25E2%2580%258B")).toBe("");
+    expect(foldEncodedGaps("IN%25E2%2580%258BVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%25e2%2580%258bVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%25EF%25B8%258FVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("IN%250AVITE")).toBe("INVITE");
+    expect(foldEncodedGaps("%252E")).toBe("%252E");
+    expect(foldEncodedGaps("%2520")).toBe("%2520");
+    expect(foldEncodedGaps("%252F")).toBe("%252F");
+    expect(foldEncodedGaps("%2525E2%252580%25258B")).toBe(
+      "%2525E2%252580%25258B",
+    );
     expect(foldEncodedGaps("IN%E2%80")).toBe("IN%E2%80");
     expect(foldEncodedGaps("%C0%80")).toBe("%C0%80");
     expect(foldEncodedGaps("%ED%A0%80")).toBe("%ED%A0%80");

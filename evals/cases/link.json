@@ -95,5 +95,15 @@
     "id": "encoded-space",
     "text": "bit.%20ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "double-encoded-invite",
+    "text": "https://t.me/+IN%25E2%2580%258BOFFER",
+    "label": "spam"
+  },
+  {
+    "id": "double-encoded-dot",
+    "text": "bit%252Ely/offer",
+    "label": "ham"
   }
 ]

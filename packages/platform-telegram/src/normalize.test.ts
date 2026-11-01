@@ -477,6 +477,7 @@ describe("normalizeUpdate", () => {
       "telegram.me",
       "t.me",
       "telegram.dog",
+      "double.t.me",
     ]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);

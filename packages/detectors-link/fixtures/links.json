@@ -46,6 +46,17 @@
     "expect": "miss"
   },
   {
+    "name": "double-encoded-invite",
+    "text": "https://t.me/+IN%25E2%2580%258BINVITECODE",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "double-encoded-dot",
+    "text": "bit%252Ely/abc",
+    "expect": "miss"
+  },
+  {
     "name": "no-link",
     "text": "今天站会改到三点",
     "expect": "miss"

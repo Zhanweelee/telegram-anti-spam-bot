@@ -18,15 +18,18 @@ export function foldMatchText(text: string): string {
 
 /**
  * Drop percent-encoded characters that `foldMatchText` would remove.
- * `%20` and `%2E` stay. One layer only, so `%25E2%2580%258B` stays.
+ * A second layer written as `%25HH` is removed the same way.
+ * `%20`, `%2E`, `%2520`, and `%252E` stay. A third layer stays.
  */
 export function foldEncodedGaps(text: string): string {
   let out = "";
   let index = 0;
   while (index < text.length) {
     const skipped = encodedGapLength(text, index);
-    if (skipped > 0) {
-      index += skipped;
+    const doubled = skipped > 0 ? 0 : doubleEncodedGapLength(text, index);
+    const taken = skipped > 0 ? skipped : doubled;
+    if (taken > 0) {
+      index += taken;
       continue;
     }
     out += text.charAt(index);
@@ -59,6 +62,40 @@ function encodedGapLength(text: string, index: number): number {
     return 0;
   }
   return next - index;
+}
+
+function doubleEncodedGapLength(text: string, index: number): number {
+  let inner = "";
+  let cursor = index;
+  let groups = 0;
+  while (groups < 4 && cursor + 5 <= text.length) {
+    if (text.slice(cursor, cursor + 3).toLowerCase() !== "%25") {
+      break;
+    }
+    const hex = text.slice(cursor + 3, cursor + 5);
+    if (!/^[0-9a-fA-F]{2}$/.test(hex)) {
+      break;
+    }
+    inner += `%${hex}`;
+    cursor += 5;
+    groups += 1;
+    if (encodedGapsCover(inner)) {
+      return cursor - index;
+    }
+  }
+  return 0;
+}
+
+function encodedGapsCover(text: string): boolean {
+  let index = 0;
+  while (index < text.length) {
+    const skipped = encodedGapLength(text, index);
+    if (skipped === 0) {
+      return false;
+    }
+    index += skipped;
+  }
+  return text.length > 0;
 }
 
 function readPercentByte(
