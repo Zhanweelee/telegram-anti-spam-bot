@@ -773,6 +773,91 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("免费领取");
   });
 
+  it("uses a venue title when earlier text is missing", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "免费领取";
+    const placeId = "PLACEIDSECRET99";
+    const outcome = await normalize({
+      update_id: 2501,
+      message: {
+        message_id: 71,
+        date: 1761955200,
+        chat: { id: -100740, type: "supergroup" },
+        from: { id: 9 },
+        venue: {
+          location: { latitude: 31.2304, longitude: 121.4737 },
+          title,
+          address: phrase,
+          google_place_id: placeId,
+          foursquare_id: placeId,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe(title);
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(placeId);
+    expect(dumped).not.toContain("31.2304");
+    expect(dumped).not.toContain("121.4737");
+  });
+
+  it("leaves a bare location without coordinates in the event", async () => {
+    const outcome = await normalize({
+      update_id: 2502,
+      message: {
+        message_id: 72,
+        date: 1761955200,
+        chat: { id: -100741, type: "supergroup" },
+        from: { id: 9 },
+        location: { latitude: 31.2304, longitude: 121.4737 },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("31.2304");
+    expect(dumped).not.toContain("121.4737");
+  });
+
+  it("keeps an invoice title when a venue is also present", async () => {
+    const outcome = await normalize({
+      update_id: 2503,
+      message: {
+        message_id: 73,
+        date: 1761955200,
+        chat: { id: -100742, type: "supergroup" },
+        from: { id: 9 },
+        invoice: {
+          title: "今天站会",
+          description: "说明",
+          start_parameter: "meet",
+          currency: "XTR",
+          total_amount: 1,
+        },
+        venue: {
+          location: { latitude: 1, longitude: 2 },
+          title: "免费领取",
+          address: "路",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("免费领取");
+  });
+
   it("keeps only the forward class and drops the channel title", async () => {
     const title = "机密频道名";
     const origin = await normalize({

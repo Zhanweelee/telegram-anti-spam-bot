@@ -540,7 +540,7 @@ function messageText(message: Record<string, unknown>): string {
   ) {
     return checklist.title.slice(0, MAX_TEXT);
   }
-  for (const field of ["game", "invoice"]) {
+  for (const field of ["game", "invoice", "venue"]) {
     const value = message[field];
     if (
       isRecord(value) &&
