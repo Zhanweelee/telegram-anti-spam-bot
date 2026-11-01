@@ -1139,6 +1139,176 @@ describe("runOperatorCommand", () => {
     expect(unreadable).toMatchObject({ text: "参数无效" });
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
+
+  it("exports appeals as eval cases without message text", async () => {
+    const deps = kit();
+    const review = createMemoryReviewQueue();
+    await deps.storage.appendAudit({
+      ...appealAudit(),
+      textSha256: "ab".repeat(32),
+      evidence: [{ kind: "keyword", summary: phrase }],
+    });
+    await deps.storage.appendAudit({
+      ...appealAudit(),
+      chatId: "-200",
+      eventId: "tg_10",
+      evidence: [{ kind: "keyword", summary: phrase }],
+    });
+    await runOperatorCommand({
+      event: event({ text: "/appeal -100 tg_9 false", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    await runOperatorCommand({
+      event: event({ text: "/appeal -200 tg_10 confirm", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    const usage = await runOperatorCommand({
+      event: event({ text: "/evals -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(usage).toMatchObject({ text: "用法：/evals [chatId]" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/evals ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/evals -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(skipped.status).toBe("skip");
+    const denied = await runOperatorCommand({
+      event: event({ text: "/evals", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    const exported = await runOperatorCommand({
+      event: event({ text: "/evals -100", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(exported.status).toBe("reply");
+    if (exported.status === "reply") {
+      expect(JSON.parse(exported.text)).toEqual({
+        tenantId: "local",
+        chatId: "-100",
+        cases: [
+          {
+            id: "tg_9",
+            chatId: "-100",
+            label: "ham",
+            textSha256: "ab".repeat(32),
+            action: "delete",
+            score: 1,
+            reasons: ["keyword_match"],
+            ruleIds: ["spam_keywords"],
+          },
+        ],
+      });
+      expect(exported.text).not.toContain(phrase);
+      expect(exported.text).not.toContain('"text"');
+    }
+    const all = await runOperatorCommand({
+      event: event({ text: "/evals", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(all.status).toBe("reply");
+    if (all.status === "reply") {
+      const doc = JSON.parse(all.text) as {
+        cases: { id: string; label: string }[];
+      };
+      expect(doc.cases.map((item) => [item.id, item.label])).toEqual([
+        ["tg_10", "spam"],
+        ["tg_9", "ham"],
+      ]);
+      expect(all.text).not.toContain(phrase);
+    }
+    expect(deps.storage.ruleWrites).toBe(0);
+    const english = await runOperatorCommand({
+      event: event({ text: "/evals extra extra", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      review,
+      ...deps,
+    });
+    expect(english).toMatchObject({ text: "Usage: /evals [chatId]" });
+  });
+
+  it("hides a missing queue and a long eval export", async () => {
+    const deps = kit();
+    const missing = await runOperatorCommand({
+      event: event({ text: "/evals", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(missing).toMatchObject({ command: "evals", text: "参数无效" });
+    expect(
+      deps.logger.entries.some(
+        (entry) =>
+          entry.message === "operator_rejected" &&
+          entry.fields.command === "evals",
+      ),
+    ).toBe(true);
+    const broken = createMemoryReviewQueue();
+    broken.list = () => Promise.reject(new Error(phrase));
+    const failed = await runOperatorCommand({
+      event: event({ text: "/evals -100", direct: true }),
+      adminActorIds: ["42"],
+      review: broken,
+      ...deps,
+    });
+    expect(failed).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const review = createMemoryReviewQueue();
+    for (let index = 0; index < 40; index += 1) {
+      await review.enqueue({
+        tenantId: "local",
+        chatId: "-100",
+        eventId: `evt_${index}`,
+        label: "confirmed",
+        textSha256: "cd".repeat(32),
+        action: "delete",
+        score: 1,
+        reasons: ["keyword_match"],
+        ruleIds: ["spam_keywords"],
+        createdAt: "2026-11-01T00:00:00.000Z",
+      });
+    }
+    const longExport = await runOperatorCommand({
+      event: event({ text: "/evals -100", direct: true }),
+      adminActorIds: ["42"],
+      review,
+      ...deps,
+    });
+    expect(longExport).toMatchObject({ text: "评测样本 40 条，超过私聊长度" });
+    expect(JSON.stringify(longExport)).not.toContain(phrase);
+    const english = await runOperatorCommand({
+      event: event({ text: "/evals", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      review,
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: "40 cases, longer than a private message",
+    });
+  });
 });
 
 function appealAudit(): AuditRecord {

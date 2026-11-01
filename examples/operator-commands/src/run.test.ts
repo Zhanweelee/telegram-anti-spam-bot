@@ -16,6 +16,7 @@ describe("operator command example", () => {
     expect(help).toContain("/logs");
     expect(help).toContain("/blocklist");
     expect(help).toContain("/appeal");
+    expect(help).toContain("/evals");
     expect(help).not.toContain(phrase);
     const english = await runPrivateCommand({
       text: "/help",
@@ -67,6 +68,16 @@ describe("operator command example", () => {
     expect(
       JSON.stringify(await review.list({ tenantId: "local" })),
     ).not.toContain(phrase);
+    const evals = await runPrivateCommand({
+      text: "/evals -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      storage,
+      review,
+    });
+    expect(evals).toContain('"label":"ham"');
+    expect(evals).not.toContain(phrase);
+    expect(evals).not.toContain('"text"');
     const forgotten = await runPrivateCommand({
       text: "/forget -100",
       actorId: "42",

@@ -5,6 +5,7 @@ import {
 } from "./blocklist.js";
 import type { Cache } from "./cache.js";
 import type { Event } from "./event.js";
+import { feedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
 import type { Locale } from "./messages.js";
 import { translate } from "./messages.js";
@@ -39,6 +40,7 @@ const COMMAND_NAMES = [
   "forget",
   "blocklist",
   "appeal",
+  "evals",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -142,6 +144,8 @@ async function dispatch(
       return editBlocklist(input, args);
     case "appeal":
       return appealAudit(input, args);
+    case "evals":
+      return exportEvals(input, args);
   }
 }
 
@@ -291,6 +295,40 @@ async function exportAudits(
     });
     return say(input, "command.invalid");
   }
+}
+
+async function exportEvals(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const queue = input.review;
+  if (!queue) {
+    rejectEvals(input);
+    return say(input, "command.invalid");
+  }
+  const scope = resolveScope(input, args, "command.evals.usage");
+  if (typeof scope === "string") {
+    return scope;
+  }
+  try {
+    const samples = await queue.list(scope);
+    const json = feedbackEvalDocument(scope, samples);
+    if (json.length > EXPORT_REPLY_LIMIT) {
+      return say(input, "command.evals.too_long", { count: samples.length });
+    }
+    return json;
+  } catch {
+    rejectEvals(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function rejectEvals(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "evals",
+  });
 }
 
 async function forgetAudits(

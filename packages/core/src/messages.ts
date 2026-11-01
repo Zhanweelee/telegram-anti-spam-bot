@@ -34,6 +34,8 @@ export const messageKeys = [
   "command.appeal.queued",
   "command.appeal.false_positive",
   "command.appeal.confirmed",
+  "command.evals.usage",
+  "command.evals.too_long",
 ] as const;
 
 export type MessageKey = (typeof messageKeys)[number];
@@ -54,6 +56,7 @@ const syntax = [
   "/blocklist <chatId> add actor <actorId>",
   "/blocklist <chatId> add hash <sha256>",
   "/appeal <chatId> <eventId> false|confirm",
+  "/evals [chatId]",
 ].join("\n");
 
 const zh = {
@@ -92,6 +95,8 @@ const zh = {
   "command.appeal.queued": "appeal {chatId} {eventId} {label}",
   "command.appeal.false_positive": "误判",
   "command.appeal.confirmed": "确认",
+  "command.evals.usage": "用法：/evals [chatId]",
+  "command.evals.too_long": "评测样本 {count} 条，超过私聊长度",
 } satisfies Record<MessageKey, string>;
 
 const en = {
@@ -131,6 +136,8 @@ const en = {
   "command.appeal.queued": "Appeal {chatId} {eventId} {label}",
   "command.appeal.false_positive": "False positive",
   "command.appeal.confirmed": "Confirmed",
+  "command.evals.usage": "Usage: /evals [chatId]",
+  "command.evals.too_long": "{count} cases, longer than a private message",
 } satisfies Record<MessageKey, string>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { zh, en };

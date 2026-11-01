@@ -53,6 +53,19 @@ export {
   parseEvent,
 } from "./event.js";
 export { type Evidence, evidenceKinds, evidenceSchema } from "./evidence.js";
+export {
+  buildFeedbackCase,
+  type FeedbackCase,
+  type FeedbackEvalDocument,
+  type FeedbackLabel,
+  feedbackCaseSchema,
+  feedbackEvalDocument,
+  feedbackEvalDocumentSchema,
+  feedbackLabelFromReview,
+  feedbackLabelSchema,
+  feedbackLabels,
+  parseFeedbackCase,
+} from "./feedback-eval.js";
 export type { LlmClassifier, LlmVerdict } from "./llm.js";
 export {
   createMemoryLogger,

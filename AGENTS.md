@@ -195,4 +195,5 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Blocklist | 租户内共享的 actor id 或内容哈希。每个群单独 opt-in，默认关闭 | Ban list、原文黑名单 |
 | Locale | 命令回复的语言，`zh` 或 `en`。缺省中文 | Language、i18n code |
 | Review sample | 一条待审核的误判或确认。只有哈希和特征，不含原文 | Feedback、原文样本 |
+| Feedback case | 从审核样本导出的评测条目。确认是 spam，误判是 ham。只有哈希和特征 | 原文样本 |
 | LlmClassifier | 最后一级分类端口。返回标签和分数。core 不发请求 | Model、Prompt |

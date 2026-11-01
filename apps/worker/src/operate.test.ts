@@ -383,5 +383,17 @@ describe("handleIncomingEvent", () => {
     expect(
       kit.logger.entries.some((entry) => entry.message === "review_queued"),
     ).toBe(true);
+    await handleIncomingEvent(
+      await incoming({ text: "/evals -100", direct: true }),
+      { ...kit, review },
+    );
+    const exported = kit.reply.sent.at(-1)?.text ?? "";
+    const doc = JSON.parse(exported) as {
+      cases: { label: string; text?: string }[];
+    };
+    expect(doc.cases[0]?.label).toBe("ham");
+    expect(doc.cases[0]?.text).toBeUndefined();
+    expect(exported).not.toContain(phrase);
+    expect(await kit.storage.getRuleSet("local", "-100")).toEqual(rules);
   });
 });
