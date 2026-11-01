@@ -56,6 +56,8 @@ export const profileSchema = z.strictObject({
 export const actorSchema = z.strictObject({
   id: idSchema,
   isAdmin: z.boolean(),
+  /** True when a bot joined from outside the chat. Usernames stay out. */
+  bot: z.literal(true).optional(),
 });
 
 export const eventSchema = z.strictObject({

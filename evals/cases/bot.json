@@ -1,0 +1,6 @@
+[
+  { "id": "joining-bot", "kind": "chat_member", "bot": true, "label": "spam" },
+  { "id": "human-join", "kind": "chat_member", "label": "ham" },
+  { "id": "bot-message", "kind": "message", "bot": true, "label": "ham" },
+  { "id": "plain-message", "kind": "message", "label": "ham" }
+]

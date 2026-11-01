@@ -437,6 +437,31 @@ describe("normalizeUpdate", () => {
     expect(bot.status).toBe("event");
     if (bot.status === "event") {
       expect(bot.event.membership).toBeUndefined();
+      expect(bot.event.actor.bot).toBe(true);
+      expect(bot.event.actor.isAdmin).toBe(false);
+    }
+    const promoted = await normalize({
+      update_id: 2007,
+      chat_member: {
+        chat: { id: -100592, type: "supergroup", title: "机密群名" },
+        date: 1761955200,
+        old_chat_member: {
+          user: { id: 91, is_bot: true, username: "已在群里" },
+          status: "member",
+        },
+        new_chat_member: {
+          user: { id: 91, is_bot: true, username: "已在群里" },
+          status: "administrator",
+        },
+      },
+    });
+    expect(promoted.status).toBe("event");
+    if (promoted.status === "event") {
+      expect(promoted.event.actor.bot).toBeUndefined();
+      expect(promoted.event.membership).toBeUndefined();
+      expect(promoted.event.actor.isAdmin).toBe(true);
+      expect(JSON.stringify(promoted.event)).not.toContain("已在群里");
+      expect(JSON.stringify(promoted.event)).not.toContain("机密群名");
     }
   });
 

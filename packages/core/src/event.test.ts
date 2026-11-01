@@ -156,6 +156,7 @@ describe("event schema", () => {
       },
     });
     expect(event.message?.invites).toEqual(["t.me"]);
+    expect(event.actor.bot).toBeUndefined();
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -170,6 +171,28 @@ describe("event schema", () => {
           textSha256: "ab".repeat(32),
           invites: ["t.me/+INVITESECRET99"],
         },
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a joining bot flag and rejects false", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "chat_member",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false, bot: true },
+    });
+    expect(event.actor.bot).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false, bot: false },
       }),
     ).toThrow();
   });

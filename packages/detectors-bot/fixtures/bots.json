@@ -1,0 +1,10 @@
+[
+  {
+    "name": "joining bot",
+    "kind": "chat_member",
+    "bot": true,
+    "expect": "hit"
+  },
+  { "name": "human join", "kind": "chat_member", "expect": "miss" },
+  { "name": "bot message", "kind": "message", "bot": true, "expect": "miss" }
+]

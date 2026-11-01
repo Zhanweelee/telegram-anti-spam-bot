@@ -81,6 +81,14 @@
       "detectorIds": ["keyword"],
       "threshold": 1,
       "actions": ["ban"]
+    },
+    {
+      "id": "bot_join",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["bot"],
+      "threshold": 1,
+      "actions": ["ban"]
     }
   ]
 }

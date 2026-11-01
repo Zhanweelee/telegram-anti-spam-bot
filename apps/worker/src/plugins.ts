@@ -79,6 +79,12 @@ export const builtinManifests = {
     integrity:
       "46bb1558bbe3410f6a6d226d42abfb0058517afbfc80df37c27b2e2f02ee5442",
   }),
+  bot: manifest({
+    id: "bot",
+    kind: "detector",
+    integrity:
+      "9baddcf248aabed1cd0fabd714d080b8e16fda611ac23ca593c04766d59cb021",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

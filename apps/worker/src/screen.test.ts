@@ -251,6 +251,59 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(audit)).not.toContain(name);
   });
 
+  it("bans a bot added from outside and drops its username", async () => {
+    const name = "广告机器人";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2006,
+        chat_member: {
+          chat: { id: -100591, type: "supergroup", title: "机密群名" },
+          from: { id: 1 },
+          date: 1761955200,
+          old_chat_member: {
+            user: { id: 90, is_bot: true, username: name },
+            status: "left",
+          },
+          new_chat_member: {
+            user: { id: 90, is_bot: true, username: name, first_name: name },
+            status: "administrator",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor.bot).toBe(true);
+    expect(outcome.event.actor.isAdmin).toBe(false);
+    expect(outcome.event.membership).toBeUndefined();
+    expect(JSON.stringify(outcome.event)).not.toContain(name);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      captchaStore,
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(result.decision.action).toBe("ban");
+    expect(result.decision.reasons).toContain("bot_joined");
+    expect(result.decision.ruleIds).toContain("bot_join");
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100591", actorId: "90" },
+    ]);
+    expect(moderator.restricted).toEqual([]);
+    expect(await captchaStore.get("local", "-100591", "90")).toBeNull();
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("uses a chat override from the rule file and does not read storage", async () => {
     const text = "请免费领取礼品";
     const storage = countingStorage();

@@ -169,11 +169,13 @@ async function chatMemberEvent(
   const status = value.new_chat_member.status;
   const admins = new Set(input.adminUserIds);
   const direct = isPrivateChat(value.chat);
+  const botJoin = joiningBot(value);
   const membership = joiningMember(value) ? ("join" as const) : undefined;
   const profile =
     membership && isRecord(value.new_chat_member.user)
       ? await joinProfile(value.new_chat_member.user)
       : undefined;
+  const configured = admins.has(actor);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -182,8 +184,10 @@ async function chatMemberEvent(
     occurredAt: occurredAt(value.date, input.nowIso),
     actor: {
       id: actor,
-      isAdmin:
-        status === "administrator" || status === "creator" || admins.has(actor),
+      isAdmin: botJoin
+        ? configured
+        : status === "administrator" || status === "creator" || configured,
+      ...(botJoin ? { bot: true as const } : {}),
     },
     ...(direct ? { direct: true } : {}),
     ...(membership ? { membership } : {}),
@@ -260,6 +264,29 @@ function isGroupChat(chat: unknown): boolean {
   return (
     isRecord(chat) && (chat.type === "group" || chat.type === "supergroup")
   );
+}
+
+function joiningBot(value: Record<string, unknown>): boolean {
+  if (!isRecord(value.new_chat_member)) {
+    return false;
+  }
+  const user = value.new_chat_member.user;
+  if (!isRecord(user) || user.is_bot !== true) {
+    return false;
+  }
+  const status = value.new_chat_member.status;
+  if (
+    status !== "member" &&
+    status !== "restricted" &&
+    status !== "administrator"
+  ) {
+    return false;
+  }
+  if (!isRecord(value.old_chat_member)) {
+    return true;
+  }
+  const previous = value.old_chat_member.status;
+  return previous === "left" || previous === "kicked" || previous === undefined;
 }
 
 function joiningMember(value: Record<string, unknown>): boolean {
