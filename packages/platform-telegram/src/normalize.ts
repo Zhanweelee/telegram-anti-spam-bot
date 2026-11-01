@@ -572,6 +572,16 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(declined.comment, urls);
   }
   pushPlainUrls(message.new_chat_title, urls);
+  for (const field of ["community_chat_added", "community_chat_joined"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    const community = value.community;
+    if (isRecord(community)) {
+      pushPlainUrls(community.name, urls);
+    }
+  }
   return urls;
 }
 

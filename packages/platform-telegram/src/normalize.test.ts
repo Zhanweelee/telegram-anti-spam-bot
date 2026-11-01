@@ -5641,4 +5641,103 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("body81");
     expect(aloneDump).not.toContain(phrase);
   });
+
+  it("keeps hostnames from a community name", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "COMM82";
+    const labeled = await normalize({
+      update_id: 5310,
+      message: {
+        message_id: 330,
+        date: 1761955200,
+        chat: {
+          id: -101060,
+          type: "supergroup",
+          title: "https://cutt.ly/grp82",
+        },
+        from: { id: 9, first_name: "https://tinyurl.com/name82" },
+        text: "今天站会",
+        community_chat_added: {
+          community: {
+            id: 82001,
+            name: `${phrase} https://bit.ly/comm82 https://t.me/+${code}.`,
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("comm82");
+    expect(labeledDump).not.toContain("grp82");
+    expect(labeledDump).not.toContain("name82");
+    expect(labeledDump).not.toContain("82001");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const joined = await normalize({
+      update_id: 5311,
+      message: {
+        message_id: 331,
+        date: 1761955200,
+        chat: {
+          id: -101061,
+          type: "supergroup",
+          title: "https://bit.ly/kept82",
+        },
+        from: { id: 9 },
+        text: "今天站会",
+        community_chat_joined: {
+          community: { id: 82002, name: "https://example.com/ok82" },
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.text).toBe("今天站会");
+    expect(joined.event.message?.hosts).toEqual(["example.com"]);
+    const joinedDump = JSON.stringify(joined.event);
+    expect(joinedDump).not.toContain("ok82");
+    expect(joinedDump).not.toContain("kept82");
+    expect(joinedDump).not.toContain("bit.ly");
+    expect(joinedDump).not.toContain("82002");
+
+    const named = "免费领取 https://bit.ly/body82";
+    const alone = await normalize({
+      update_id: 5312,
+      message: {
+        message_id: 332,
+        date: 1761955200,
+        chat: { id: -101062, type: "supergroup" },
+        from: { id: 9 },
+        community_chat_added: {
+          community: { id: 82003, name: named },
+        },
+        community_chat_removed: { name: "https://ow.ly/gone82" },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe("");
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain("免费领取");
+    expect(aloneDump).not.toContain("body82");
+    expect(aloneDump).not.toContain("gone82");
+    expect(aloneDump).not.toContain("ow.ly");
+    expect(aloneDump).not.toContain("82003");
+  });
 });
