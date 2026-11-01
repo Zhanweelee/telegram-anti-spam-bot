@@ -1,3 +1,4 @@
+import { sha256HexUtf8 } from "@tasb/adapter-cloudflare";
 import {
   createMemoryBlocklistStore,
   createMemoryCache,
@@ -8,7 +9,9 @@ import {
 } from "@tasb/adapter-memory";
 import {
   type BlocklistStore,
+  canonicalPluginPayload,
   createMemoryLogger,
+  type Detector,
   type LlmClassifier,
   parseEvent,
   type RuleSource,
@@ -523,5 +526,87 @@ describe("screenTelegramEvent", () => {
     expect(hit.decision.reasons).toContain("llm");
     expect(calls).toBe(1);
     expect(JSON.stringify(hit)).not.toContain(phrase);
+  });
+
+  it("leaves an unsigned external detector out of the pipeline", async () => {
+    const logger = createMemoryLogger();
+    const extra = {
+      kind: "detector" as const,
+      id: "extra",
+      version: "0.1.0",
+      capabilities: ["text"],
+      configSchema: { parse: (value: unknown) => value },
+      async detect() {
+        return {
+          detectorId: "extra",
+          score: 1,
+          reasons: ["extra"],
+          evidence: [],
+        };
+      },
+    } as unknown as Detector;
+    const payload = canonicalPluginPayload({
+      id: "extra",
+      version: "0.1.0",
+      kind: "detector",
+      schema: "extra",
+    });
+    const manifest = {
+      id: "extra",
+      version: "0.1.0",
+      kind: "detector" as const,
+      schema: "extra",
+      integrity: await sha256HexUtf8(payload),
+    };
+    const source: RuleSource = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "extra_rule",
+              enabled: true,
+              detectorIds: ["extra"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+    };
+    const blocked = await screenTelegramEvent(
+      await event("hello", false, "-100556"),
+      {
+        logger,
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        externalDetectors: [{ source: "external", manifest, value: extra }],
+      },
+    );
+    expect(blocked.decision.action).toBe("allow");
+    expect(
+      logger.entries.some(
+        (entry) =>
+          entry.message === "plugin_rejected" &&
+          entry.fields.reason === "unsigned",
+      ),
+    ).toBe(true);
+    const opened = await screenTelegramEvent(
+      await event("hello", false, "-100557"),
+      {
+        logger: createMemoryLogger(),
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        allowUnsigned: true,
+        externalDetectors: [{ source: "external", manifest, value: extra }],
+      },
+    );
+    expect(opened.decision.action).toBe("delete");
   });
 });

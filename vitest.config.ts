@@ -18,6 +18,7 @@ export default defineConfig({
       "examples/minimal-pipeline",
       "examples/operator-commands",
       "examples/telegram-webhook",
+      "examples/plugin-manifest",
       "evals",
       "apps/worker",
     ],

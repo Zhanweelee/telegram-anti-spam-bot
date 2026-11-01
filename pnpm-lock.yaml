@@ -123,6 +123,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  examples/plugin-manifest:
+    dependencies:
+      '@tasb/adapter-cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/adapters-cloudflare
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   examples/telegram-webhook:
     dependencies:
       '@tasb/core':

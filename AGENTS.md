@@ -146,6 +146,7 @@ pnpm --filter @tasb/example-minimal-pipeline test
 5. 在 `evals/cases` 加标注样本，更新 `evals/baselines`。recall 或 precision 下降就停。
 6. 在 `scripts/check-boundaries.mjs` 登记允许的 import。
 7. 更新 `docs`、例子（如果用户会直接用到）、Changeset、ROADMAP。
+8. 放进 Worker 时，在 `builtinManifests` 写上同 id、同版本的清单。完整性是 canonical payload 的 sha256。外部清单还要签名。见 ADR 0018。
 
 ## 新增一个 Action
 
@@ -198,3 +199,4 @@ pnpm --filter @tasb/example-minimal-pipeline test
 | Feedback case | 从审核样本导出的评测条目。确认是 spam，误判是 ham。只有哈希和特征 | 原文样本 |
 | LlmClassifier | 最后一级分类端口。返回标签和分数。core 不发请求 | Model、Prompt |
 | Metric report | 从日志汇总的拦截率、动作、检测器错误和存储失败。标签只有 id | Dashboard、昵称维度 |
+| Plugin manifest | 插件的 id、版本、schema 和完整性摘要。外部包还要签名 | Package.json、原文配置 |

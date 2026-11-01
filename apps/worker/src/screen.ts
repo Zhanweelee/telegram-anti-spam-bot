@@ -11,11 +11,13 @@ import {
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
+  type Action,
   type BlocklistStore,
   type Cache,
   type CaptchaStore,
   type Clock,
   createSystemClock,
+  type Detector,
   defaultPrefilterPolicy,
   type Event,
   type LlmClassifier,
@@ -44,6 +46,11 @@ import {
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
+import {
+  builtinManifests,
+  type PluginSlot,
+  selectAdmitted,
+} from "./plugins.js";
 import { workerRateWindow } from "./rate-runtime.js";
 import { fileRuleSource } from "./rules.js";
 
@@ -95,6 +102,9 @@ export interface ScreenDeps {
   readonly rateWindow?: RateWindow;
   readonly blocklist?: BlocklistStore;
   readonly llm?: LlmClassifier;
+  readonly allowUnsigned?: boolean;
+  readonly externalDetectors?: readonly PluginSlot<Detector>[];
+  readonly externalActions?: readonly PluginSlot<Action>[];
 }
 
 export async function screenTelegramEvent(
@@ -129,41 +139,104 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  const allowUnsigned = deps.allowUnsigned === true;
+  const detectors = await selectAdmitted({
+    logger,
+    allowUnsigned,
+    slots: [
+      {
+        source: "builtin",
+        manifest: builtinManifests.keyword,
+        value: detector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.join,
+        value: createJoinDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.flood,
+        value: createFloodDetector({
+          window: deps.rateWindow ?? workerRateWindow,
+          windowSeconds: 10,
+          threshold: 5,
+        }),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.repeat,
+        value: createRepeatDetector({
+          window: deps.rateWindow ?? workerRateWindow,
+          windowSeconds: 60,
+          threshold: 3,
+        }),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.link,
+        value: linkDetector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.blocklist,
+        value: createBlocklistDetector({
+          store: deps.blocklist ?? workerBlocklist,
+        }),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.llm,
+        value: createLlmDetector(deps.llm ? { classifier: deps.llm } : {}),
+      },
+      ...(deps.externalDetectors ?? []).map((slot) => ({
+        ...slot,
+        source: "external" as const,
+      })),
+    ],
+  });
+  const actions = await selectAdmitted({
+    logger,
+    allowUnsigned,
+    slots: [
+      {
+        source: "builtin",
+        manifest: builtinManifests.delete,
+        value: createDeleteAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mute,
+        value: createMuteAction({ durationSeconds: 60 * 60 }),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.ban,
+        value: createBanAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.captcha,
+        value: createCaptchaAction({
+          ttlSeconds: 300,
+          createNonce: deps.createNonce ?? createCaptchaNonce,
+          store: deps.captchaStore ?? workerCaptcha,
+          clock: deps.clock ?? createSystemClock(),
+        }),
+      },
+      ...(deps.externalActions ?? []).map((slot) => ({
+        ...slot,
+        source: "external" as const,
+      })),
+    ],
+  });
   const result = await runPipeline({
     event,
     rules,
     policy,
     dryRun,
-    detectors: [
-      detector,
-      createJoinDetector(),
-      createFloodDetector({
-        window: deps.rateWindow ?? workerRateWindow,
-        windowSeconds: 10,
-        threshold: 5,
-      }),
-      createRepeatDetector({
-        window: deps.rateWindow ?? workerRateWindow,
-        windowSeconds: 60,
-        threshold: 3,
-      }),
-      linkDetector,
-      createBlocklistDetector({
-        store: deps.blocklist ?? workerBlocklist,
-      }),
-      createLlmDetector(deps.llm ? { classifier: deps.llm } : {}),
-    ],
-    actions: [
-      createDeleteAction(),
-      createMuteAction({ durationSeconds: 60 * 60 }),
-      createBanAction(),
-      createCaptchaAction({
-        ttlSeconds: 300,
-        createNonce: deps.createNonce ?? createCaptchaNonce,
-        store: deps.captchaStore ?? workerCaptcha,
-        clock: deps.clock ?? createSystemClock(),
-      }),
-    ],
+    detectors,
+    actions,
     storage: deps.storage ?? workerStorage,
     moderator:
       deps.moderator ??

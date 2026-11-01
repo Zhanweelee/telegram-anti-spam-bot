@@ -70,7 +70,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 请求处理期间，`Event.message.text` 可以留在内存里，检测器需要它。存储端口的 `AuditRecord` 没有原文栏位，只有 `textSha256`、原因和截断后的证据摘要。写入前会拒绝与原文完全相同的字符串，以及名为 `text` / `body` / `caption` / `raw` / `messageText` / `content` 的字段。
 
-日志字段同样会丢掉这些键。检测器异常的 `message` 不会进入日志，避免把用户原文从错误对象里漏出去。`aggregateMetrics` 只从这些日志汇总拦截率、动作、检测器错误和存储失败。分组标签只接受租户 id 和群 id。见 ADR 0017。
+日志字段同样会丢掉这些键。检测器异常的 `message` 不会进入日志，避免把用户原文从错误对象里漏出去。`aggregateMetrics` 只从这些日志汇总拦截率、动作、检测器错误和存储失败。分组标签只接受租户 id 和群 id。见 ADR 0017。插件能否加载由 `admitPlugin` 决定。core 只比较调用方算好的摘要和签名是否有效，不读部署模式。见 ADR 0018。
 
 ## Telegram 接入
 

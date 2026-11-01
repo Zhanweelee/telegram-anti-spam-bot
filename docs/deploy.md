@@ -84,6 +84,8 @@ printf '%s' '123456789' | pnpm exec wrangler secret put ADMIN_USER_IDS
 
 命令回复默认中文。要英文时，在 `wrangler.jsonc` 的 `vars` 里加 `"LOCALE": "en"`。只接受 `zh` 和 `en`。别的值仍用中文。这不是密钥。
 
+外部插件默认必须带 HMAC 签名。自部署要临时加载未签名插件时，把 secret `ALLOW_UNSIGNED_PLUGINS` 设为 `true`。公共 bot 的 `DEPLOYMENT_MODE=cloud` 会忽略这个值。签名密钥不要写进仓库。
+
 
 
 部署结束时 Wrangler 会打印 `https://tasb.<你的子域>.workers.dev`。免费套餐使用这个地址即可。

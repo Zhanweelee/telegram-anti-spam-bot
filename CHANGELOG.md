@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-02
+
+- 插件清单包含 id、版本、schema 和完整性摘要。外部包还要 HMAC 签名。见 ADR 0018。
+- 未签名的外部插件不会进入流水线。自部署把 `ALLOW_UNSIGNED_PLUGINS` 设为 `true` 后可以打开。`DEPLOYMENT_MODE=cloud` 时这个值无效。
+- 坏签名在两种模式下都拒绝。清单上的原文键会被 schema 丢掉，日志只留 id 和原因。
+
 ### P2-04
 
 - `aggregateMetrics` 从日志汇总拦截率、动作计数、检测器错误和存储失败。见 ADR 0017。

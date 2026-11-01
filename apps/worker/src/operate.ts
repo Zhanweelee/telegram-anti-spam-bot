@@ -100,6 +100,11 @@ export async function handleIncomingEvent(
     ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
     ...(deps.rateWindow ? { rateWindow: deps.rateWindow } : {}),
     ...(deps.llm ? { llm: deps.llm } : {}),
+    ...(deps.allowUnsigned ? { allowUnsigned: true } : {}),
+    ...(deps.externalDetectors
+      ? { externalDetectors: deps.externalDetectors }
+      : {}),
+    ...(deps.externalActions ? { externalActions: deps.externalActions } : {}),
     blocklist,
   });
   const prompted = result.actionResults.some(

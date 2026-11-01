@@ -13,6 +13,7 @@ import {
 import { Hono } from "hono";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
+import { allowUnsignedPlugins } from "./plugins.js";
 import { createWorkerLogger } from "./screen.js";
 import { resolveStores } from "./stores.js";
 
@@ -28,6 +29,7 @@ export type WorkerBindings = {
   DB?: D1Database;
   POLICY_KV?: KVNamespace;
   AI?: Ai;
+  ALLOW_UNSIGNED_PLUGINS?: string;
 };
 
 export interface CreateAppOptions {
@@ -105,6 +107,7 @@ export function createApp(
         }
         const stores = resolveStores(c.env ?? {});
         const locale = normalizeLocale(c.env?.LOCALE);
+        const allowUnsigned = allowUnsignedPlugins(c.env ?? {});
         const ai = c.env?.AI;
         await handleIncomingEvent(event, {
           logger,
@@ -114,6 +117,7 @@ export function createApp(
           policyStore: stores.policyStore,
           review: stores.review,
           ...(locale ? { locale } : {}),
+          ...(allowUnsigned ? { allowUnsigned: true } : {}),
           ...(ai
             ? {
                 llm: createWorkersAiClassifier({

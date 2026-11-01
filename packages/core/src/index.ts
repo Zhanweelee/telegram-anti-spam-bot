@@ -109,6 +109,21 @@ export {
   defineDetector,
 } from "./plugin.js";
 export {
+  admitPlugin,
+  canonicalPluginPayload,
+  type PluginAdmission,
+  type PluginKind,
+  type PluginManifest,
+  type PluginRejectReason,
+  type PluginSource,
+  pluginKindSchema,
+  pluginKinds,
+  pluginManifestSchema,
+  pluginRejectReasons,
+  pluginSourceSchema,
+  pluginSources,
+} from "./plugin-manifest.js";
+export {
   DEFAULT_POLICY_CACHE_TTL_SECONDS,
   defaultPrefilterPolicy,
   type LoadPolicyInput,

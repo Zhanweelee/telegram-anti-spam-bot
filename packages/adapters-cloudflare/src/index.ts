@@ -15,6 +15,11 @@ export {
   type SqlPrepared,
   storageMigrationStatements,
 } from "./d1.js";
+export {
+  hmacSha256Hex,
+  sha256HexUtf8,
+  signaturesMatch,
+} from "./plugin-digest.js";
 
 /**
  * Cloudflare bindings adapter.
