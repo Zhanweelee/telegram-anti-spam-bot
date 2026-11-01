@@ -4669,4 +4669,97 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("%2F");
     expect(dumped).not.toContain("\u200b");
   });
+
+  it("keeps only the hostname of a poll media link", async () => {
+    const code = "POLL73";
+    const outcome = await normalize({
+      update_id: 4410,
+      message: {
+        message_id: 240,
+        date: 1761955200,
+        chat: { id: -100970, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll: {
+          question: "今天站会",
+          media: { link: { url: "https://bit.ly/media73?q=PATH73" } },
+          explanation: "说明",
+          explanation_media: { link: { url: `https://t.me/+${code}` } },
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              media: { link: { url: "https://tinyurl.com/opt73" } },
+            },
+            {
+              text: "乙",
+              voter_count: 0,
+              media: {
+                photo: [
+                  {
+                    file_id: "https://bit.ly/hidden73",
+                    file_unique_id: "x",
+                    width: 1,
+                    height: 1,
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "tinyurl.com",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("PATH73");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("opt73");
+    expect(dumped).not.toContain("hidden73");
+    expect(dumped).not.toContain("file_id");
+
+    const photoOnly = await normalize({
+      update_id: 4411,
+      message: {
+        message_id: 241,
+        date: 1761955200,
+        chat: { id: -100971, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              media: {
+                photo: [{ file_id: "https://bit.ly/hidden73" }],
+              },
+            },
+          ],
+          media: { location: { latitude: 1, longitude: 2 } },
+        },
+      },
+    });
+    expect(photoOnly.status).toBe("event");
+    if (photoOnly.status !== "event") {
+      return;
+    }
+    expect(photoOnly.event.message?.hosts).toBeUndefined();
+    expect(photoOnly.event.message?.text).toBe("今天站会");
+    const photoDump = JSON.stringify(photoOnly.event);
+    expect(photoDump).not.toContain("bit.ly");
+    expect(photoDump).not.toContain("hidden73");
+    expect(photoDump).not.toContain("latitude");
+  });
 });

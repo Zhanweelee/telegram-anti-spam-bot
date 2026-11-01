@@ -446,6 +446,16 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushTextLinks(poll.explanation_entities, urls);
     pushPlainUrls(poll.description, urls);
     pushTextLinks(poll.description_entities, urls);
+    pushPollMediaLink(poll.media, urls);
+    pushPollMediaLink(poll.explanation_media, urls);
+    if (Array.isArray(poll.options)) {
+      for (const option of poll.options) {
+        if (!isRecord(option)) {
+          continue;
+        }
+        pushPollMediaLink(option.media, urls);
+      }
+    }
   }
   for (const field of ["giveaway", "giveaway_winners"]) {
     const value = message[field];
@@ -554,6 +564,15 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(message.author_signature, urls);
   return urls;
+}
+
+function pushPollMediaLink(media: unknown, urls: string[]): void {
+  if (!isRecord(media) || !isRecord(media.link)) {
+    return;
+  }
+  if (typeof media.link.url === "string") {
+    urls.push(media.link.url);
+  }
 }
 
 function pushPlainUrls(value: unknown, urls: string[]): void {
