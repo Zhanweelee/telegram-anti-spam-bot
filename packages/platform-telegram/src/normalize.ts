@@ -498,6 +498,13 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(value.text, urls);
     pushTextLinks(value.entities, urls);
   }
+  for (const field of ["forum_topic_created", "forum_topic_edited"]) {
+    const value = message[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    pushPlainUrls(value.name, urls);
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
@@ -914,6 +921,24 @@ function messageText(
   const gift = giftText(message);
   if (gift.length > 0) {
     return gift;
+  }
+  const topic = topicName(message);
+  if (topic.length > 0) {
+    return topic;
+  }
+  return "";
+}
+
+function topicName(message: Record<string, unknown>): string {
+  for (const field of ["forum_topic_created", "forum_topic_edited"]) {
+    const value = message[field];
+    if (
+      isRecord(value) &&
+      typeof value.name === "string" &&
+      value.name.length > 0
+    ) {
+      return value.name.slice(0, MAX_TEXT);
+    }
   }
   return "";
 }

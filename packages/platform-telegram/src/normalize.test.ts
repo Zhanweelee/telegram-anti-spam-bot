@@ -2638,6 +2638,110 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("keeps hostnames from forum topic names", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "TOPIC57";
+    const created = await normalize({
+      update_id: 3010,
+      message: {
+        message_id: 120,
+        date: 1761955200,
+        chat: { id: -100800, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forum_topic_created: {
+          name: `${phrase} https://bit.ly/topic57 https://t.me/+${code}.`,
+          icon_color: 9367192,
+          icon_custom_emoji_id: "https://tinyurl.com/icon57",
+        },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.text).toBe("今天站会");
+    expect(created.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(created.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(created.event.message?.invites).toEqual(["t.me"]);
+    const createdDump = JSON.stringify(created.event);
+    expect(createdDump).not.toContain(phrase);
+    expect(createdDump).not.toContain(code);
+    expect(createdDump).not.toContain("topic57");
+    expect(createdDump).not.toContain("tinyurl.com");
+    expect(createdDump).not.toContain("icon57");
+
+    const edited = await normalize({
+      update_id: 3011,
+      message: {
+        message_id: 121,
+        date: 1761955200,
+        chat: { id: -100801, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forum_topic_edited: {
+          name: `${phrase} https://example.com/page57`,
+          icon_custom_emoji_id: "emoji57",
+        },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.message?.text).toBe("今天站会");
+    expect(edited.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(edited.event.message?.hosts).toEqual(["example.com"]);
+    const editedDump = JSON.stringify(edited.event);
+    expect(editedDump).not.toContain(phrase);
+    expect(editedDump).not.toContain("page57");
+    expect(editedDump).not.toContain("emoji57");
+
+    const iconOnly = await normalize({
+      update_id: 3012,
+      message: {
+        message_id: 122,
+        date: 1761955200,
+        chat: { id: -100802, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        forum_topic_edited: {
+          icon_custom_emoji_id: "https://bit.ly/icon57",
+        },
+      },
+    });
+    expect(iconOnly.status).toBe("event");
+    if (iconOnly.status !== "event") {
+      return;
+    }
+    expect(iconOnly.event.message?.text).toBe("今天站会");
+    expect(iconOnly.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(iconOnly.event)).not.toContain("bit.ly");
+
+    const asBody = "免费领取 https://bit.ly/body57";
+    const body = await normalize({
+      update_id: 3013,
+      message: {
+        message_id: 123,
+        date: 1761955200,
+        chat: { id: -100803, type: "supergroup" },
+        from: { id: 9 },
+        forum_topic_created: {
+          name: asBody,
+          icon_color: 1,
+          is_name_implicit: true,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({
