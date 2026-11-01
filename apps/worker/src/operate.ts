@@ -99,6 +99,8 @@ export async function handleIncomingEvent(
     blocklist,
     review,
     rulePacks: rulePacks.store,
+    rulePackSource: rulePacks.source,
+    rulePackArchive: rulePacks.archive,
     ...(deps.locale ? { locale: deps.locale } : {}),
     ...(quota
       ? {

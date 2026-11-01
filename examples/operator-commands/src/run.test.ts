@@ -3,6 +3,7 @@ import {
   createMemoryRuleSubscriptionStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
+import { createMemoryRulePackArchive } from "@tasb/core";
 import { describe, expect, it } from "vitest";
 import { runPrivateCommand } from "./run.js";
 
@@ -98,6 +99,34 @@ describe("operator command example", () => {
     });
     expect(subscribed).toBe("packs -100 community");
     expect(await packs.get("local", "-100")).toBe("community");
+    const archive = createMemoryRulePackArchive();
+    const packSource = {
+      async load() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "community_keywords",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 2,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+    };
+    const packed = await runPrivateCommand({
+      text: "/rules -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+      rulePacks: packs,
+      rulePackSource: packSource,
+      rulePackArchive: archive,
+    });
+    expect(packed).toContain("community_keywords enabled");
+    expect(packed).not.toContain("spam_keywords");
     const cleared = await runPrivateCommand({
       text: "/packs -100 off",
       actorId: "42",

@@ -429,6 +429,11 @@ describe("handleIncomingEvent", () => {
     );
     expect(kit.reply.sent.at(-1)?.text).toBe("packs -100558 community");
     await handleIncomingEvent(
+      await incoming({ text: "/rules -100558", direct: true }),
+      { ...kit, rulePacks, rateWindow },
+    );
+    expect(kit.reply.sent.at(-1)?.text).toBe("rules -100558\nnone");
+    await handleIncomingEvent(
       await incoming({ text: phrase, chatId: "-100558", actorId: "5" }),
       { ...kit, rulePacks, rateWindow },
     );

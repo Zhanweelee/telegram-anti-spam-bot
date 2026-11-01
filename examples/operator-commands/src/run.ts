@@ -12,6 +12,8 @@ import {
   type Locale,
   parseEvent,
   type ReviewQueue,
+  type RulePackArchive,
+  type RulePackSource,
   type RuleSubscriptionStore,
   runOperatorCommand,
   type Storage,
@@ -38,6 +40,8 @@ export async function runPrivateCommand(input: {
   readonly storage?: Storage;
   readonly review?: ReviewQueue;
   readonly rulePacks?: RuleSubscriptionStore;
+  readonly rulePackSource?: RulePackSource;
+  readonly rulePackArchive?: RulePackArchive;
   readonly locale?: Locale;
 }): Promise<string | null> {
   const result = await runOperatorCommand({
@@ -64,6 +68,12 @@ export async function runPrivateCommand(input: {
     blocklist: createMemoryBlocklistStore(),
     review: input.review ?? createMemoryReviewQueue(),
     rulePacks: input.rulePacks ?? createMemoryRuleSubscriptionStore(),
+    ...(input.rulePackSource && input.rulePackArchive
+      ? {
+          rulePackSource: input.rulePackSource,
+          rulePackArchive: input.rulePackArchive,
+        }
+      : {}),
     ...(input.locale ? { locale: input.locale } : {}),
     source: {
       async loadChat() {

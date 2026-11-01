@@ -13,7 +13,11 @@ import type { AuditRecord, Storage } from "./ports.js";
 import { parseAuditRecord } from "./ports.js";
 import { prefilterPolicySchema } from "./prefilter.js";
 import { createMemoryReviewQueue, type ReviewQueue } from "./review.js";
-import { createMemoryRuleSubscriptionStore } from "./rule-pack.js";
+import {
+  createMemoryRulePackArchive,
+  createMemoryRuleSubscriptionStore,
+  type RulePackSource,
+} from "./rule-pack.js";
 import type { RuleSource } from "./rules-load.js";
 import type { RuntimeStore } from "./runtime.js";
 
@@ -1441,6 +1445,146 @@ describe("runOperatorCommand", () => {
     ).toBe(true);
   });
 
+  it("lists the subscribed pack from the same resolver as screening", async () => {
+    const deps = kit();
+    const rulePacks = createMemoryRuleSubscriptionStore();
+    const rulePackArchive = createMemoryRulePackArchive();
+    const rulePackSource = communityPack();
+    await runOperatorCommand({
+      event: event({ text: "/packs -100 community", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    const listed = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(listed).toMatchObject({ status: "reply" });
+    if (listed.status === "reply") {
+      expect(listed.text).toContain(
+        "community_keywords enabled threshold 2 actions delete",
+      );
+      expect(listed.text).not.toContain("spam_keywords");
+    }
+    await deps.runtime.setRuleSwitch(
+      "local",
+      "-100",
+      "community_keywords",
+      false,
+    );
+    const switched = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(switched).toMatchObject({ status: "reply" });
+    if (switched.status === "reply") {
+      expect(switched.text).toContain("community_keywords disabled");
+    }
+    const fileToggle = await runOperatorCommand({
+      event: event({ text: "/rule -100 spam_keywords off", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(fileToggle).toMatchObject({
+      text: "rule -100 spam_keywords disabled switch",
+    });
+    const packToggle = await runOperatorCommand({
+      event: event({
+        text: "/rule -100 community_keywords off",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(packToggle).toMatchObject({
+      text: "rule community_keywords missing",
+    });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/packs -100 off", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(cleared).toMatchObject({ text: "packs -100 none" });
+    const local = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(local).toMatchObject({ status: "reply" });
+    if (local.status === "reply") {
+      expect(local.text).toContain("spam_keywords disabled");
+      expect(local.text).not.toContain("community_keywords");
+    }
+    const failing = {
+      async get() {
+        throw new Error(phrase);
+      },
+      async put() {
+        return undefined;
+      },
+    };
+    const denied = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks: failing,
+      rulePackSource,
+      rulePackArchive,
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(
+      deps.logger.entries.some(
+        (entry) => entry.message === "pack_store_failed",
+      ),
+    ).toBe(true);
+    const broken: RulePackSource = {
+      async load() {
+        throw new Error(phrase);
+      },
+    };
+    await rulePacks.put("local", "-100", "community");
+    const fallback = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      rulePacks,
+      rulePackSource: broken,
+      rulePackArchive: createMemoryRulePackArchive(),
+      ...deps,
+      cache: cache(),
+    });
+    expect(fallback).toMatchObject({ status: "reply" });
+    if (fallback.status === "reply") {
+      expect(fallback.text).toContain("spam_keywords");
+      expect(fallback.text).not.toContain(phrase);
+    }
+    expect(JSON.stringify(deps.logger.entries)).toContain("pack_update_failed");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
   it("reports a configurable quota without echoing extra text", async () => {
     const deps = kit();
     const missing = await runOperatorCommand({
@@ -1960,6 +2104,26 @@ function countingStore(
     async has(tenantId, entry) {
       onRead();
       return inner.has(tenantId, entry);
+    },
+  };
+}
+
+function communityPack(): RulePackSource {
+  return {
+    async load() {
+      return {
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "community_keywords",
+            enabled: true,
+            detectorIds: ["keyword"],
+            threshold: 2,
+            actions: ["delete"],
+          },
+        ],
+      };
     },
   };
 }

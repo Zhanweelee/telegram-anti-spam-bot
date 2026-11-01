@@ -29,8 +29,18 @@ import {
   type ReviewLabel,
   type ReviewQueue,
 } from "./review.js";
-import { parseRulePackId, type RuleSubscriptionStore } from "./rule-pack.js";
-import { loadRuleSet, type RuleSource } from "./rules-load.js";
+import {
+  parseRulePackId,
+  type RulePackArchive,
+  type RulePackSource,
+  type RuleSubscriptionStore,
+} from "./rule-pack.js";
+import {
+  loadRuleSet,
+  type RulePackRequest,
+  type RuleSource,
+  resolveRuleSet,
+} from "./rules-load.js";
 import type { RuleSwitch, RuntimeStore } from "./runtime.js";
 
 const COMMAND_NAMES = [
@@ -69,6 +79,8 @@ export interface OperatorCommandInput {
   readonly review?: ReviewQueue;
   readonly locale?: Locale;
   readonly rulePacks?: RuleSubscriptionStore;
+  readonly rulePackSource?: RulePackSource;
+  readonly rulePackArchive?: RulePackArchive;
   readonly quota?: QuotaReader;
   readonly chats?: ChatDirectory;
   readonly scope?: CommandScope;
@@ -258,13 +270,18 @@ async function showRules(
   if (!switches) {
     return say(input, "command.invalid");
   }
-  const rules = await loadRuleSet({
+  const pack = await commandPack(input, chatId);
+  if (pack === "failed") {
+    return say(input, "command.invalid");
+  }
+  const rules = await resolveRuleSet({
     tenantId: input.event.tenantId,
     chatId,
     cache: input.cache,
     source: input.source,
     logger: input.logger,
     switches,
+    ...(pack ? { pack } : {}),
   });
   const lines = [say(input, "command.rules.header", { chatId })];
   if (rules.rules.length === 0) {
@@ -1137,6 +1154,32 @@ async function showChats(
       command: "chats",
     });
     return say(input, "command.invalid");
+  }
+}
+
+async function commandPack(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<RulePackRequest | null | "failed"> {
+  const store = input.rulePacks;
+  const source = input.rulePackSource;
+  const archive = input.rulePackArchive;
+  if (!store || !source || !archive) {
+    return null;
+  }
+  try {
+    const id = await store.get(input.event.tenantId, chatId);
+    if (!id) {
+      return null;
+    }
+    return { id, source, archive };
+  } catch {
+    input.logger.warn("pack_store_failed", {
+      eventId: input.event.id,
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+    return "failed";
   }
 }
 
