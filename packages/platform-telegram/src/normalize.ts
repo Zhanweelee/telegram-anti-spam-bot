@@ -411,7 +411,7 @@ function linkHosts(message: Record<string, unknown>): {
 }
 
 const COPY_URL =
-  /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
+  /(?:https?:\/\/|tg:(?:\/\/)?|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
 
 function urlsInText(text: string): string[] {
   const found: string[] = [];
@@ -425,7 +425,7 @@ function urlsInText(text: string): string[] {
     if (!raw) {
       continue;
     }
-    found.push(/^https?:\/\//i.test(raw) ? raw : `http://${raw}`);
+    found.push(/^(?:https?|tg):/i.test(raw) ? raw : `http://${raw}`);
   }
   return found;
 }
@@ -653,6 +653,10 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   } catch {
     return null;
   }
+  const deep = telegramDeepInvite(url);
+  if (deep) {
+    return deep;
+  }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return null;
   }
@@ -670,6 +674,27 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
   }
   const path = url.pathname.replace(/\/+$/, "") || "/";
   return { host, invite: isTelegramInvite(host, path) };
+}
+
+function telegramDeepInvite(
+  url: URL,
+): { host: string; invite: boolean } | null {
+  if (url.protocol !== "tg:") {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const command = host.length > 0 ? host : path;
+  const code =
+    command === "join"
+      ? url.searchParams.get("invite")
+      : command === "addlist"
+        ? url.searchParams.get("slug")
+        : null;
+  if (code === null || !/^[A-Za-z0-9_-]{1,128}$/.test(code)) {
+    return null;
+  }
+  return { host: "t.me", invite: true };
 }
 
 function isTelegramInvite(host: string, path: string): boolean {

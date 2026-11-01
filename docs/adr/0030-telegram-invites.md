@@ -29,3 +29,4 @@
 - 隐藏的非 Telegram 邀请主机名不会进 `invites`。它们仍以主机名进入 `hosts`，短链、裸 IP 和黑名单照旧。
 - 自定义 `inviteHosts` 只影响检测器能看见的正文。平台对隐藏链接只认上面三个 Telegram 主机名。
 - `chats.json` 整份替换、因而没有 `links` 的群不会删除邀请。
+- `tg://join?invite=` 和 `tg://addlist?slug=` 后来由 ADR 0102 记成 `t.me`。`tg://resolve` 仍当公开用户名。

@@ -535,6 +535,73 @@ describe("link fixtures", () => {
     expect(pub).toBeNull();
   });
 
+  it("treats a tg deep link as an invite and keeps the code out", async () => {
+    const code = "DEEPJOIN69";
+    const detector = createLinkDetector();
+    const join = await detector.detect({
+      event: eventFor(`加入 tg://join?invite=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(join?.reasons).toEqual(["invite"]);
+    expect(join?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(join)).not.toContain(code);
+    const folder = await detector.detect({
+      event: eventFor(`tg://addlist?slug=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(folder?.reasons).toEqual(["invite"]);
+    expect(folder?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(folder)).not.toContain(code);
+    const upper = await detector.detect({
+      event: eventFor(`TG://JOIN?invite=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(upper?.reasons).toEqual(["invite"]);
+    const bare = await detector.detect({
+      event: eventFor(`tg:join?invite=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["invite"]);
+    const encoded = "ZZ%5F69";
+    const percent = await detector.detect({
+      event: eventFor(`tg://join?invite=${encoded}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(percent?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(percent)).not.toContain("ZZ_69");
+    expect(JSON.stringify(percent)).not.toContain(encoded);
+    const resolve = await detector.detect({
+      event: eventFor("tg://resolve?domain=durov"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(resolve).toBeNull();
+    const broken = await detector.detect({
+      event: eventFor("tg://join?invite=a/b"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(broken).toBeNull();
+    const empty = await detector.detect({
+      event: eventFor("tg://join?invite="),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(empty).toBeNull();
+    const other = createLinkDetector({ inviteHosts: ["telegram.dog"] });
+    const skipped = await other.detect({
+      event: eventFor(`tg://join?invite=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(skipped).toBeNull();
+  });
+
   it("folds dot lookalikes into ascii dots before reading hosts", async () => {
     const detector = createLinkDetector();
     const short = await detector.detect({

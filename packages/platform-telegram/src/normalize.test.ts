@@ -4522,4 +4522,54 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(body.event)).not.toContain("ph-192");
   });
+
+  it("keeps a tg deep link as an invite host", async () => {
+    const joinCode = "DEEPJOIN69";
+    const folderCode = "DEEPFOLDER69";
+    const signCode = "DEEPSIGN69";
+    const outcome = await normalize({
+      update_id: 4010,
+      message: {
+        message_id: 200,
+        date: 1761955200,
+        chat: { id: -100930, type: "supergroup" },
+        from: { id: 9 },
+        text: "点这里",
+        author_signature: `tg://join?invite=${signCode}`,
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://join?invite=${joinCode}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "tg://resolve?domain=notahost69",
+          },
+        ],
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "文件夹", url: `tg://addlist?slug=${folderCode}` }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("点这里");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("点这里"));
+    expect(outcome.event.message?.hosts).toEqual(["t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(joinCode);
+    expect(dumped).not.toContain(folderCode);
+    expect(dumped).not.toContain(signCode);
+    expect(dumped).not.toContain("notahost69");
+    expect(dumped).not.toContain("resolve");
+  });
 });

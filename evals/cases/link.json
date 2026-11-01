@@ -270,5 +270,20 @@
     "id": "armenian-glued",
     "text": "x\u0561bit.ly/offer",
     "label": "ham"
+  },
+  {
+    "id": "tg-join",
+    "text": "加入 tg://join?invite=DEEPEVAL69",
+    "label": "spam"
+  },
+  {
+    "id": "tg-addlist",
+    "text": "tg://addlist?slug=DEEPEVAL69",
+    "label": "spam"
+  },
+  {
+    "id": "tg-resolve",
+    "text": "tg://resolve?domain=durov",
+    "label": "ham"
   }
 ]

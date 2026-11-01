@@ -185,5 +185,22 @@
     "text": "https://example.com/boom",
     "expect": "miss",
     "source": "throw"
+  },
+  {
+    "name": "tg-join",
+    "text": "加入 tg://join?invite=DEEPJOIN69",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "tg-addlist",
+    "text": "tg://addlist?slug=DEEPFOLDER69",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "tg-resolve",
+    "text": "tg://resolve?domain=durov",
+    "expect": "miss"
   }
 ]

@@ -63,6 +63,8 @@ export const defaultShorteners = [
 const token =
   /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
 
+const deepLink = /(?<![A-Za-z0-9./])tg:(?:\/\/)?[^\s<>"']+/gi;
+
 export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
   return defineDetector({
     id: "link",
@@ -280,7 +282,59 @@ function extractInviteHosts(
       break;
     }
   }
+  deepLink.lastIndex = 0;
+  for (const match of text.matchAll(deepLink)) {
+    const raw = match[0];
+    if (!raw) {
+      continue;
+    }
+    const host = deepInviteHost(raw.replace(/[),.;!?]+$/g, ""), names);
+    if (!host || seen.has(host)) {
+      continue;
+    }
+    seen.add(host);
+    found.push(host);
+    if (found.length >= 8) {
+      break;
+    }
+  }
   return found;
+}
+
+function deepInviteHost(
+  raw: string,
+  names: ReadonlySet<string>,
+): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  const canonical = canonicalDeepInvite(url);
+  if (canonical === null || !matchesHost(canonical, names)) {
+    return null;
+  }
+  return canonical;
+}
+
+function canonicalDeepInvite(url: URL): string | null {
+  if (url.protocol !== "tg:") {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+  const command = host.length > 0 ? host : path;
+  const code =
+    command === "join"
+      ? url.searchParams.get("invite")
+      : command === "addlist"
+        ? url.searchParams.get("slug")
+        : null;
+  if (code === null || !/^[A-Za-z0-9_-]{1,128}$/.test(code)) {
+    return null;
+  }
+  return "t.me";
 }
 
 function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
