@@ -566,6 +566,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     urls.push(preview.url);
   }
   pushPlainUrls(message.author_signature, urls);
+  pushPlainUrls(message.sender_tag, urls);
   return urls;
 }
 
@@ -1103,6 +1104,17 @@ function messageText(
   const signature = authorSignature(message);
   if (signature.length > 0) {
     return signature;
+  }
+  const tag = senderTag(message);
+  if (tag.length > 0) {
+    return tag;
+  }
+  return "";
+}
+
+function senderTag(message: Record<string, unknown>): string {
+  if (typeof message.sender_tag === "string" && message.sender_tag.length > 0) {
+    return message.sender_tag.slice(0, MAX_TEXT);
   }
   return "";
 }

@@ -5327,4 +5327,110 @@ describe("normalizeUpdate", () => {
     expect(richDump).not.toContain("richcb78");
     expect(richDump).not.toContain("bit.ly");
   });
+
+  it("keeps hostnames from a sender tag", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "TAG79";
+    const labeled = await normalize({
+      update_id: 5010,
+      message: {
+        message_id: 300,
+        date: 1761955200,
+        chat: {
+          id: -101030,
+          type: "supergroup",
+          title: "https://ow.ly/title79",
+        },
+        from: { id: 9, first_name: "https://tinyurl.com/name79" },
+        text: "今天站会",
+        sender_tag: `${phrase} https://bit.ly/tag79 https://t.me/+${code}.`,
+        forward_origin: {
+          type: "user",
+          sender_user: { id: 1, first_name: "https://cutt.ly/fwd79" },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("tag79");
+    expect(labeledDump).not.toContain("title79");
+    expect(labeledDump).not.toContain("name79");
+    expect(labeledDump).not.toContain("fwd79");
+    expect(labeledDump).not.toContain("ow.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("cutt.ly");
+
+    const ordinary = await normalize({
+      update_id: 5011,
+      message: {
+        message_id: 301,
+        date: 1761955200,
+        chat: { id: -101031, type: "supergroup" },
+        from: { id: 9, first_name: "https://bit.ly/name79b" },
+        text: "今天站会",
+        sender_tag: "https://example.com/ok79",
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok79");
+    expect(ordinaryDump).not.toContain("name79b");
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const tag = "免费领取 https://bit.ly/body79";
+    const asBody = await normalize({
+      update_id: 5012,
+      message: {
+        message_id: 302,
+        date: 1761955200,
+        chat: { id: -101032, type: "supergroup" },
+        from: { id: 9, first_name: phrase },
+        sender_tag: tag,
+      },
+    });
+    expect(asBody.status).toBe("event");
+    if (asBody.status !== "event") {
+      return;
+    }
+    expect(asBody.event.message?.text).toBe(tag);
+    expect(asBody.event.message?.textSha256).toBe(await sha256Hex(tag));
+    expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
+    const bodyDump = JSON.stringify(asBody.event);
+    expect(bodyDump).not.toContain(phrase);
+
+    const signature = "签名";
+    const both = await normalize({
+      update_id: 5013,
+      message: {
+        message_id: 303,
+        date: 1761955200,
+        chat: { id: -101033, type: "supergroup" },
+        from: { id: 9 },
+        author_signature: signature,
+        sender_tag: "https://bit.ly/both79",
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.text).toBe(signature);
+    expect(both.event.message?.textSha256).toBe(await sha256Hex(signature));
+    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(both.event)).not.toContain("both79");
+  });
 });
