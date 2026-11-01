@@ -31,6 +31,21 @@ importers:
 
   apps/worker:
     dependencies:
+      '@tasb/actions':
+        specifier: workspace:*
+        version: link:../../packages/actions
+      '@tasb/adapter-memory':
+        specifier: workspace:*
+        version: link:../../packages/adapters-memory
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tasb/detector-keyword':
+        specifier: workspace:*
+        version: link:../../packages/detectors-keyword
+      '@tasb/platform-telegram':
+        specifier: workspace:*
+        version: link:../../packages/platform-telegram
       hono:
         specifier: 4.13.16
         version: 4.13.16
@@ -68,6 +83,15 @@ importers:
       '@tasb/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+
+  examples/telegram-webhook:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tasb/platform-telegram':
+        specifier: workspace:*
+        version: link:../../packages/platform-telegram
 
   packages/actions:
     dependencies:

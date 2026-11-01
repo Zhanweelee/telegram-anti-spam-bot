@@ -64,6 +64,22 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 日志字段同样会丢掉这些键。检测器异常的 `message` 不会进入日志，避免把用户原文从错误对象里漏出去。
 
+## Telegram 接入
+
+`POST /telegram/webhook` 由 `packages/platform-telegram` 处理。
+
+1. 读取 `X-Telegram-Bot-Api-Secret-Token`。`WEBHOOK_SECRET` 未配置、请求头缺失或不相等时返回 401，不调用 `onEvent`。比较时对两侧做 SHA-256，再按固定长度逐字节异或。密钥最长 256 字符，和 Telegram 的 `secret_token` 限制一致。
+2. 正文超过 64 KiB 返回 413。JSON 无法解析，或缺少 `update_id`，返回 400。
+3. 目前只把 `message` 收成 `kind: "message"` 的 `Event`。`edited_message`、`callback_query` 以及其他更新返回 200，正文是 `{ "ok": true, "ignored": true }`，避免 Telegram 重试。入群事件留给 P0-02。
+4. 没有 `text` 时仍保留 `message.id`，正文记成空字符串并哈希。有 `caption` 且没有文本时用 caption。
+5. 管理员不调用 `getChatMember`。`sender_chat.id` 与 `chat.id` 相同（匿名管理员），或 `from.id` 出现在 Worker 的 `ADMIN_USER_IDS`（逗号分隔）时，`actor.isAdmin` 为 true。
+
+`apps/worker` 在归一化之后跑 core 流水线：关键词检测器和删除动作，预过滤豁免管理员。处罚端口是该次请求新建的内存适配器，不会请求 Telegram 的 `deleteMessage`。审计也不出这个请求。持久化和真正的 API 调用在 P0-04 之后的适配任务里。
+
+流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
+
+`textSha256` 在这个包里用 Web Crypto 计算。`packages/sdk` 的 `sha256Hex` 依赖 `node:crypto`，Worker 不要 import 它。
+
 ## 部署形态放在哪
 
 `apps/worker` 读取 `DEPLOYMENT_MODE`，只影响 `/health` 这样的进程元数据。把 bot 行为按模式拆开，需要新的 ADR。

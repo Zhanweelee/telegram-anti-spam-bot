@@ -1,0 +1,165 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+import { sha256Hex } from "./hash.js";
+import { normalizeUpdate } from "./normalize.js";
+
+const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "../fixtures");
+const EMPTY_HASH =
+  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const NOW = "2026-11-01T00:00:00.000Z";
+
+function load(name: string): unknown {
+  return JSON.parse(readFileSync(join(fixtureDir, name), "utf8"));
+}
+
+async function normalize(
+  update: unknown,
+  adminUserIds: readonly string[] = [],
+) {
+  return normalizeUpdate({
+    update,
+    tenantId: "local",
+    adminUserIds,
+    nowIso: NOW,
+  });
+}
+
+describe("normalizeUpdate", () => {
+  it("hashes with the known sha256 test vector", async () => {
+    expect(await sha256Hex("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+    expect(await sha256Hex("")).toBe(EMPTY_HASH);
+  });
+
+  it("normalizes a text message fixture", async () => {
+    const outcome = await normalize(load("message.json"));
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event).toMatchObject({
+      id: "tg_1001",
+      tenantId: "local",
+      chatId: "-100123",
+      kind: "message",
+      occurredAt: new Date(1761955200 * 1000).toISOString(),
+      actor: { id: "42", isAdmin: false },
+      message: {
+        id: "10",
+        text: "hello",
+        textSha256: await sha256Hex("hello"),
+      },
+    });
+  });
+
+  it("keeps a message id when the update has no text", async () => {
+    const outcome = await normalize(load("message-no-text.json"));
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor.isAdmin).toBe(false);
+    expect(outcome.event.message).toEqual({
+      id: "11",
+      text: "",
+      textSha256: EMPTY_HASH,
+    });
+  });
+
+  it("marks sender_chat of the same chat as an admin", async () => {
+    const outcome = await normalize(load("message-admin.json"));
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor).toEqual({ id: "42", isAdmin: true });
+    expect(outcome.event.message?.text).toBe("公告");
+  });
+
+  it("marks configured admin user ids without calling Telegram", async () => {
+    const outcome = await normalize(load("message.json"), ["42"]);
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor.isAdmin).toBe(true);
+  });
+
+  it("prefers a caption when text is missing", async () => {
+    const outcome = await normalize({
+      update_id: 8,
+      message: {
+        message_id: 3,
+        date: 1761955200,
+        chat: { id: 5 },
+        from: { id: 9 },
+        caption: "caption-only",
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("caption-only");
+    expect(outcome.event.message?.textSha256).toBe(
+      await sha256Hex("caption-only"),
+    );
+  });
+
+  it("uses the supplied clock when the message has no date", async () => {
+    const outcome = await normalize({
+      update_id: 9,
+      message: {
+        message_id: 4,
+        chat: { id: -1 },
+        from: { id: 2 },
+        text: "x",
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.occurredAt).toBe(NOW);
+  });
+
+  it("treats anonymous admins as the chat itself", async () => {
+    const outcome = await normalize({
+      update_id: 4,
+      message: {
+        message_id: 1,
+        date: 1761955200,
+        chat: { id: -5 },
+        sender_chat: { id: -5 },
+        text: "hi",
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.actor).toEqual({ id: "-5", isAdmin: true });
+  });
+
+  it("rejects updates that are not objects or lack update_id", async () => {
+    expect((await normalize([])).status).toBe("invalid");
+    expect((await normalize({})).status).toBe("invalid");
+    expect((await normalize(null)).status).toBe("invalid");
+  });
+
+  it("ignores unsupported update types and incomplete messages", async () => {
+    expect(
+      (await normalize({ update_id: 1, callback_query: { id: "1" } })).status,
+    ).toBe("ignored");
+    expect(
+      (await normalize({ update_id: 2, edited_message: { message_id: 1 } }))
+        .status,
+    ).toBe("ignored");
+    expect(
+      (await normalize({ update_id: 3, message: { text: "no ids" } })).status,
+    ).toBe("ignored");
+  });
+});

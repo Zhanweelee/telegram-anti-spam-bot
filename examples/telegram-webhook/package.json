@@ -1,0 +1,14 @@
+{
+  "name": "@tasb/example-telegram-webhook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tasb/core": "workspace:*",
+    "@tasb/platform-telegram": "workspace:*"
+  }
+}

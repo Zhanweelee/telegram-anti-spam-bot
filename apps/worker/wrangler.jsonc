@@ -1,5 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
+  // WEBHOOK_SECRET is a Worker secret: `wrangler secret put WEBHOOK_SECRET`.
+  // Local dev reads apps/worker/.dev.vars. Never put the secret in vars.
   "name": "tasb",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-30",
@@ -7,6 +9,7 @@
     "enabled": true
   },
   "vars": {
-    "DEPLOYMENT_MODE": "self-host"
+    "DEPLOYMENT_MODE": "self-host",
+    "TENANT_ID": "local"
   }
 }

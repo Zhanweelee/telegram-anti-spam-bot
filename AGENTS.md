@@ -57,7 +57,7 @@ packages/detectors-keyword    关键词检测器
 packages/actions              内置动作
 packages/adapters-memory      内存 Storage / Moderation
 packages/adapters-cloudflare  Cloudflare 适配层骨架
-packages/platform-telegram    Telegram 适配层骨架
+packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  Node 侧测试帮手（sha256、构造事件）
 apps/worker                   Hono 入口
 apps/cloud                    云租户模块。禁止在这里擅自写计费
@@ -149,6 +149,15 @@ pnpm --filter @tasb/example-minimal-pipeline test
 3. 支持 dry-run：返回 `skipped`，不要调用端口。缺字段时返回 `failed` 和固定 detail，不要抛给流水线。
 4. 用 fixture 覆盖执行、跳过、失败。
 5. 若新动作改变 `DecisionAction` 或端口方法，先写 ADR。
+
+## 新增一个 Platform
+
+1. 建 `packages/platform-<name>`，只依赖 `@tasb/core`。哈希用 Web Crypto，不要 import `node:crypto`。
+2. 把平台更新归一化成 `Event`。core 的测试和源码都不出现平台类型。
+3. 校验 webhook secret。失败、密钥未配置、或正文不是合法更新时，不要调用流水线。
+4. HTTP 响应和日志里不要出现消息原文、token、secret。解析异常的 `message` 会回显正文，不要把它写进日志。
+5. 用 fixture 覆盖一条正常更新、一条缺文本的更新、一条特权用户更新。
+6. 在 `scripts/check-boundaries.mjs` 登记允许的 import。
 
 ## 新增一个 Adapter
 

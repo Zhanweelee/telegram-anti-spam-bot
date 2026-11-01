@@ -40,7 +40,7 @@
 
 ## P0
 
-### P0-01 Telegram webhook 接入 — todo
+### P0-01 Telegram webhook 接入 — done
 
 验收：
 
@@ -186,3 +186,9 @@
 - 做了什么：搭好 monorepo、core 流水线、关键词检测器、删除动作、内存端到端、额度文档和三份 ADR。Telegram 与 D1 故意没接。
 - 学到什么：免费计划 HTTP CPU 只有 10 ms，KV 每天 1,000 次写，队列大约 3,000 条完整投递。热路径必须是本地规则；队列和 LLM 不能进默认路径。D1 从 2026-09-01 起超额会直接失败，所以存储错误必须 fail-open。
 - 下一步：做 P0-01，把 webhook 校验和 Update → Event 放进 `platform-telegram`，core 保持不认识 Telegram。
+
+### 2026-11-01 P0-01
+
+- 做了什么：`POST /telegram/webhook` 校验 secret，把 `message` 更新归一化成 Event。fixture 覆盖普通消息、没有文本的消息、管理员消息。Worker 把事件送进内存流水线，不调用 Telegram 删除接口。
+- 学到什么：免费计划的外部子请求很少，热路径不该为了判断管理员去打 `getChatMember`。`JSON.parse` 的异常文本会带回正文，不能写进日志。鉴权要放在读大 body 之前。
+- 下一步：做 P0-02，把 `chat_member` 收成 `kind: "chat_member"`，并确认没有文本时关键词检测器返回 null、流水线不抛错。

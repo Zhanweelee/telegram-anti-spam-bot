@@ -23,13 +23,25 @@ const rules = [
   },
   {
     prefix: "packages/platform-telegram/",
-    allow: [/^\.{1,2}\//, /^@tasb\/core$/],
+    allow: [/^\.{1,2}\//, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
     prefix: "packages/sdk/",
     allow: [/^\.{1,2}\//, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
-  { prefix: "apps/worker/", allow: [/^\.{1,2}\//, /^hono$/, /^vitest$/] },
+  {
+    prefix: "apps/worker/",
+    allow: [
+      /^\.{1,2}\//,
+      /^hono$/,
+      /^vitest$/,
+      /^@tasb\/core$/,
+      /^@tasb\/platform-telegram$/,
+      /^@tasb\/detector-keyword$/,
+      /^@tasb\/actions$/,
+      /^@tasb\/adapter-memory$/,
+    ],
+  },
   { prefix: "apps/cloud/", allow: [/^\.{1,2}\//] },
   {
     prefix: "examples/",
@@ -63,7 +75,8 @@ async function walk(directory, files) {
     if (
       entry.name === "node_modules" ||
       entry.name === "dist" ||
-      entry.name === "coverage"
+      entry.name === "coverage" ||
+      entry.name === ".wrangler"
     ) {
       continue;
     }

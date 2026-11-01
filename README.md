@@ -17,8 +17,9 @@ Telegram 反垃圾 bot。同一套核心，两种部署：自己放到 Cloudflar
 | 给 Agent / 贡献者的规矩 | [AGENTS.md](AGENTS.md) |
 | 免费额度对设计的约束 | [docs/limits.md](docs/limits.md) |
 | 跑一条最小检测 | [examples/minimal-pipeline](examples/minimal-pipeline) |
+| 看 webhook 怎么收事件 | [examples/telegram-webhook](examples/telegram-webhook) |
 
-当前是 Round 0：流水线、关键词检测器和删除动作已经能在内存里跑通。Telegram webhook 和生产部署在 P0，还没有接上。
+Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息归一化成内部事件。删除接口、D1 和一键部署还在后面的 P0 任务里。默认流水线只在单次请求的内存里做关键词判定，不会调用 Telegram 的 `deleteMessage`。
 
 ## 10 分钟跑通
 
@@ -38,13 +39,35 @@ pnpm --filter @tasb/example-minimal-pipeline test
 pnpm eval
 ```
 
-本地看 Worker 健康检查（还不会连 Telegram）：
+本地看 Worker：
 
 ```sh
 pnpm --filter @tasb/worker dev
 ```
 
-然后请求 `/health`。`deploymentMode` 来自 Wrangler 变量，默认 `self-host`。
+`/health` 的 `deploymentMode` 来自 Wrangler 变量，默认 `self-host`。
+
+Webhook 密钥不要写进 `wrangler.jsonc`。在 `apps/worker/.dev.vars`（已 gitignore）里放：
+
+```sh
+WEBHOOK_SECRET=dev-secret
+```
+
+然后：
+
+```sh
+curl -s -X POST http://127.0.0.1:8787/telegram/webhook \
+  -H "content-type: application/json" \
+  -d '{"update_id":1}'
+```
+
+没带密钥时应为 401。带上 `X-Telegram-Bot-Api-Secret-Token: dev-secret` 且正文是一条 `message` 时为 200。生产环境用 `wrangler secret put WEBHOOK_SECRET`。
+
+只看归一化示例：
+
+```sh
+pnpm --filter @tasb/example-telegram-webhook test
+```
 
 ## 仓库地图
 
@@ -54,7 +77,7 @@ packages/detectors-keyword    内置关键词检测器
 packages/actions              内置动作（目前是 delete）
 packages/adapters-memory      测试用存储和处罚端口
 packages/adapters-cloudflare  Cloudflare 绑定适配层（骨架）
-packages/platform-telegram    Telegram 适配层（骨架）
+packages/platform-telegram    Telegram webhook 校验与 Update → Event
 packages/sdk                  插件作者的测试帮手
 apps/worker                   Workers 入口。self-host / cloud 共用
 apps/cloud                    云服务租户模块。计费尚未实现

@@ -1,0 +1,11 @@
+{
+  "update_id": 1003,
+  "message": {
+    "message_id": 12,
+    "date": 1761955200,
+    "chat": { "id": -100123, "type": "supergroup" },
+    "from": { "id": 42, "is_bot": false, "first_name": "Ada" },
+    "sender_chat": { "id": -100123, "title": "demo", "type": "supergroup" },
+    "text": "公告"
+  }
+}

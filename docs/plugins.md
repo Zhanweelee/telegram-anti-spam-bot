@@ -39,6 +39,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 适配器实现 `Storage` 或 `ModerationPort`。不要把 D1、KV 或 Telegram 的类型 re-export 到 core 能 import 的位置。
 
+平台包把 Telegram `Update` 收成 `Event`。参考 `packages/platform-telegram` 和 `examples/telegram-webhook`。Webhook 失败时不要调用 `onEvent`。
+
 提交前：
 
 ```sh

@@ -10,6 +10,11 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
+    "@tasb/actions": "workspace:*",
+    "@tasb/adapter-memory": "workspace:*",
+    "@tasb/core": "workspace:*",
+    "@tasb/detector-keyword": "workspace:*",
+    "@tasb/platform-telegram": "workspace:*",
     "hono": "4.13.16"
   },
   "devDependencies": {

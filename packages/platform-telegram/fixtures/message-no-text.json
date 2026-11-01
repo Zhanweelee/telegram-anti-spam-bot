@@ -1,0 +1,10 @@
+{
+  "update_id": 1002,
+  "message": {
+    "message_id": 11,
+    "date": 1761955200,
+    "chat": { "id": -100123, "type": "supergroup" },
+    "from": { "id": 7, "is_bot": false, "first_name": "Bob" },
+    "photo": [{ "file_id": "abc", "width": 1, "height": 1 }]
+  }
+}
