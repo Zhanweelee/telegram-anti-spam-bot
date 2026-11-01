@@ -902,8 +902,33 @@ function walkBlocks(
       pushRich(richText(block.credit, urls), parts);
       continue;
     }
+    if (
+      block.type === "animation" ||
+      block.type === "video" ||
+      block.type === "audio" ||
+      block.type === "document"
+    ) {
+      pushRichMediaName(block, urls);
+    }
     pushCaption(block.caption, parts, urls);
   }
+}
+
+function pushRichMediaName(
+  block: Record<string, unknown>,
+  urls: string[],
+): void {
+  const value = block[String(block.type)];
+  if (!isRecord(value)) {
+    return;
+  }
+  if (block.type === "audio") {
+    pushPlainUrls(value.title, urls);
+    pushPlainUrls(value.file_name, urls);
+    pushPlainUrls(value.performer, urls);
+    return;
+  }
+  pushPlainUrls(value.file_name, urls);
 }
 
 function pushRich(text: string, parts: string[]): void {

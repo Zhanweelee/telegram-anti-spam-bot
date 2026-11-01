@@ -4884,4 +4884,83 @@ describe("normalizeUpdate", () => {
     expect(audioDump).not.toContain("aid74");
     expect(audioDump).not.toContain("歌手");
   });
+
+  it("keeps hostnames from a rich media file name", async () => {
+    const code = "RICH75";
+    const outcome = await normalize({
+      update_id: 4610,
+      message: {
+        message_id: 260,
+        date: 1761955200,
+        chat: { id: -100990, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "document",
+                  document: {
+                    file_name: "https://bit.ly/doc75",
+                    file_id: "https://bit.ly/id75",
+                    file_unique_id: "a",
+                  },
+                  caption: { text: "附件说明" },
+                },
+              ],
+            },
+            {
+              type: "audio",
+              audio: {
+                title: "https://ow.ly/song75",
+                performer: `https://t.me/+${code}`,
+                file_id: "https://cutt.ly/aid75",
+                file_unique_id: "b",
+                duration: 1,
+              },
+            },
+            {
+              type: "photo",
+              photo: [
+                {
+                  file_id: "https://bit.ly/pic75",
+                  file_unique_id: "c",
+                  width: 1,
+                  height: 1,
+                },
+              ],
+            },
+            {
+              type: "voice_note",
+              voice_note: {
+                file_id: "https://tinyurl.com/voice75",
+                file_unique_id: "d",
+                duration: 1,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly", "ow.ly", "t.me"]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("doc75");
+    expect(dumped).not.toContain("song75");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("id75");
+    expect(dumped).not.toContain("aid75");
+    expect(dumped).not.toContain("pic75");
+    expect(dumped).not.toContain("voice75");
+    expect(dumped).not.toContain("附件说明");
+    expect(dumped).not.toContain("file_id");
+  });
 });
