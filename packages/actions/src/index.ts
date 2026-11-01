@@ -5,6 +5,7 @@ import {
   type CaptchaStore,
   type Clock,
   defineAction,
+  moreSevere,
   type Notifier,
   type Storage,
 } from "@tasb/core";
@@ -120,6 +121,9 @@ export function createCaptchaAction(deps: CaptchaActionDeps): Action {
       }
       if (ctx.event.kind !== "chat_member" || ctx.event.membership !== "join") {
         return { actionId: "captcha", status: "skipped", detail: "not_join" };
+      }
+      if (moreSevere(ctx.decision.action, "captcha") !== "captcha") {
+        return { actionId: "captcha", status: "skipped", detail: "superseded" };
       }
       if (ctx.event.actor.id.length === 0) {
         return {

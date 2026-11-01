@@ -48,7 +48,8 @@ describe("receiveUpdate", () => {
       actor: { id: "77", isAdmin: false },
     });
     expect(result.events[0]?.message).toBeUndefined();
-    expect(JSON.stringify(result)).not.toContain("Newbie");
+    expect(result.events[0]?.profile?.text).toBe("Newbie");
+    expect(JSON.stringify(result.events[0]?.actor)).not.toContain("Newbie");
   });
 
   it("returns an internal event for a valid secret", async () => {

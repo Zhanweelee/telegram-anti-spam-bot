@@ -32,7 +32,7 @@ export async function normalizeUpdate(
     return botMembershipEvent(input.update.my_chat_member, updateId, input);
   }
   if (Object.hasOwn(input.update, "chat_member")) {
-    return chatMemberEvent(input.update.chat_member, updateId, input);
+    return await chatMemberEvent(input.update.chat_member, updateId, input);
   }
   if (Object.hasOwn(input.update, "edited_message")) {
     return messageEvent(input.update.edited_message, updateId, input, true);
@@ -150,11 +150,11 @@ function forwardKind(
  * The actor is the member whose status changed (`new_chat_member.user`),
  * not `from`. `from` is whoever performed the action, often an admin.
  */
-function chatMemberEvent(
+async function chatMemberEvent(
   value: unknown,
   updateId: number,
   input: NormalizeInput,
-): NormalizeOutcome {
+): Promise<NormalizeOutcome> {
   if (!isRecord(value) || !isRecord(value.new_chat_member)) {
     return { status: "ignored" };
   }
@@ -167,6 +167,10 @@ function chatMemberEvent(
   const admins = new Set(input.adminUserIds);
   const direct = isPrivateChat(value.chat);
   const membership = joiningMember(value) ? ("join" as const) : undefined;
+  const profile =
+    membership && isRecord(value.new_chat_member.user)
+      ? await joinProfile(value.new_chat_member.user)
+      : undefined;
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -180,7 +184,29 @@ function chatMemberEvent(
     },
     ...(direct ? { direct: true } : {}),
     ...(membership ? { membership } : {}),
+    ...(profile ? { profile } : {}),
   });
+}
+
+async function joinProfile(
+  user: Record<string, unknown>,
+): Promise<{ readonly text: string; readonly textSha256: string } | undefined> {
+  const parts: string[] = [];
+  for (const key of ["first_name", "last_name", "username"]) {
+    const value = user[key];
+    if (typeof value !== "string") {
+      continue;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      parts.push(trimmed);
+    }
+  }
+  if (parts.length === 0) {
+    return undefined;
+  }
+  const text = parts.join(" ").slice(0, 256);
+  return { text, textSha256: await sha256Hex(text) };
 }
 
 function botMembershipEvent(

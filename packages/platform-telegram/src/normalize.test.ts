@@ -250,7 +250,9 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.occurredAt).toBe(
       new Date(1761955200 * 1000).toISOString(),
     );
-    expect(JSON.stringify(outcome.event)).not.toContain("Newbie");
+    expect(outcome.event.profile?.text).toBe("Newbie");
+    const withoutProfile = { ...outcome.event, profile: undefined };
+    expect(JSON.stringify(withoutProfile)).not.toContain("Newbie");
     expect(outcome.event.actor.id).not.toBe("1");
   });
 
@@ -419,6 +421,59 @@ describe("normalizeUpdate", () => {
     expect(
       (await normalize({ update_id: 3, message: { text: "no ids" } })).status,
     ).toBe("ignored");
+  });
+
+  it("keeps a joining name for screening and drops other profile fields", async () => {
+    const name = "广告员";
+    const extra = "机密简介";
+    const outcome = await normalize({
+      update_id: 38,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup", title: extra },
+        from: { id: 1, first_name: extra },
+        date: 1761955200,
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: {
+          user: {
+            id: 77,
+            first_name: name,
+            last_name: "免费领取",
+            username: "gift",
+            language_code: extra,
+          },
+          status: "member",
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status === "event") {
+      expect(outcome.event.membership).toBe("join");
+      expect(outcome.event.profile?.text).toBe(`${name} 免费领取 gift`);
+      expect(outcome.event.profile?.textSha256).toHaveLength(64);
+      const encoded = JSON.stringify({
+        ...outcome.event,
+        profile: { textSha256: outcome.event.profile?.textSha256 },
+      });
+      expect(encoded).not.toContain(name);
+      expect(encoded).not.toContain(extra);
+    }
+    const stayed = await normalize({
+      update_id: 39,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "administrator",
+        },
+      },
+    });
+    expect(stayed.status).toBe("event");
+    if (stayed.status === "event") {
+      expect(stayed.event.profile).toBeUndefined();
+      expect(JSON.stringify(stayed.event)).not.toContain(name);
+    }
   });
 
   it("records a group admin grant without the chat title", async () => {

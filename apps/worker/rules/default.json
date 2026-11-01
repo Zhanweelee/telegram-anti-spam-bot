@@ -5,6 +5,7 @@
     {
       "id": "spam_keywords",
       "enabled": true,
+      "when": { "eventKind": "message" },
       "detectorIds": ["keyword"],
       "threshold": 1,
       "actions": ["delete"]
@@ -72,6 +73,14 @@
       "detectorIds": ["join"],
       "threshold": 1,
       "actions": ["captcha"]
+    },
+    {
+      "id": "join_name",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["keyword"],
+      "threshold": 1,
+      "actions": ["ban"]
     }
   ]
 }

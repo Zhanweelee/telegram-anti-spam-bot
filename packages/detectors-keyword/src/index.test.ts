@@ -65,6 +65,29 @@ describe("keyword detector", () => {
     expect(await detector.detect({ event: member, logger, signal })).toBeNull();
   });
 
+  it("matches a join profile without copying the whole name", async () => {
+    const name = "广告员免费领取礼品";
+    const hit = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        membership: "join",
+        profile: { text: name, textSha256: HASH },
+      }),
+      logger,
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["keyword_match"]);
+    expect(hit?.evidence).toEqual([
+      { kind: "keyword", summary: "keyword:免费领取" },
+    ]);
+    expect(JSON.stringify(hit)).not.toContain(name);
+  });
+
   it("rejects an empty keyword list", () => {
     expect(() => createKeywordDetector({ keywords: [] })).toThrow();
   });

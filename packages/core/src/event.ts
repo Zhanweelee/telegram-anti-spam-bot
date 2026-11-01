@@ -29,6 +29,11 @@ export const messageSchema = z.strictObject({
   forward: forwardKindSchema.optional(),
 });
 
+export const profileSchema = z.strictObject({
+  text: z.string().min(1).max(256),
+  textSha256: sha256Schema,
+});
+
 export const actorSchema = z.strictObject({
   id: idSchema,
   isAdmin: z.boolean(),
@@ -54,12 +59,15 @@ export const eventSchema = z.strictObject({
     .strictObject({ nonce: z.string().regex(/^[a-f0-9]{16}$/) })
     .optional(),
   message: messageSchema.optional(),
+  /** Visible join name. Request memory only; audits keep the hash. */
+  profile: profileSchema.optional(),
 });
 
 export type EventKind = z.output<typeof eventKindSchema>;
 export type ForwardKind = z.output<typeof forwardKindSchema>;
 export type BotState = z.output<typeof botStateSchema>;
 export type MessageContent = z.output<typeof messageSchema>;
+export type Profile = z.output<typeof profileSchema>;
 export type Actor = z.output<typeof actorSchema>;
 export type Event = z.output<typeof eventSchema>;
 

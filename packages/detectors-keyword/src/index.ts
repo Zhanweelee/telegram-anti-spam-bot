@@ -16,15 +16,19 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
     configSchema: keywordConfigSchema,
     config,
     async detect(ctx, parsed) {
-      const text = ctx.event.message?.text;
-      if (text === undefined) {
+      const texts = [ctx.event.message?.text, ctx.event.profile?.text].filter(
+        (text): text is string => typeof text === "string" && text.length > 0,
+      );
+      if (texts.length === 0) {
         return null;
       }
       const caseSensitive = parsed.caseSensitive === true;
-      const haystack = caseSensitive ? text : text.toLocaleLowerCase();
       const matched = parsed.keywords.filter((keyword) => {
         const needle = caseSensitive ? keyword : keyword.toLocaleLowerCase();
-        return haystack.includes(needle);
+        return texts.some((text) => {
+          const haystack = caseSensitive ? text : text.toLocaleLowerCase();
+          return haystack.includes(needle);
+        });
       });
       if (matched.length === 0) {
         return null;

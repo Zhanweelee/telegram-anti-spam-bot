@@ -101,7 +101,7 @@ export async function runPipeline(
 
   const logger = wrapLogger(input.logger);
   const clock = input.clock ?? { nowIso: () => new Date().toISOString() };
-  const rawText = event.message?.text;
+  const rawTexts = eventTexts(event);
 
   const exemption = prefilter(event, policy);
   if (exemption) {
@@ -155,7 +155,7 @@ export async function runPipeline(
       detectorErrors.push(item.error);
     }
     if (item.hit) {
-      hits.push(redactHit(item.hit, rawText));
+      hits.push(redactHit(item.hit, rawTexts));
     }
   }
   const hitsById = new Map(hits.map((hit) => [hit.detectorId, hit]));
@@ -189,7 +189,7 @@ export async function runPipeline(
       storage: input.storage,
       logger,
       createdAt: clock.nowIso(),
-      rawText,
+      rawTexts,
     });
   }
 
@@ -326,15 +326,35 @@ function failedDetector(
   return { hit: null, error };
 }
 
-function redactHit(hit: DetectorHit, rawText: string | undefined): DetectorHit {
+function eventTexts(event: Event): readonly string[] {
+  const texts: string[] = [];
+  const message = event.message?.text;
+  const profile = event.profile?.text;
+  if (message && message.length > 0) {
+    texts.push(message);
+  }
+  if (profile && profile.length > 0 && profile !== message) {
+    texts.push(profile);
+  }
+  return texts;
+}
+
+function redactHit(hit: DetectorHit, rawTexts: readonly string[]): DetectorHit {
   return {
     ...hit,
-    reasons: hit.reasons.map((reason) => redactExactText(reason, rawText)),
+    reasons: hit.reasons.map((reason) => redactTexts(reason, rawTexts)),
     evidence: hit.evidence.map((item) => ({
       kind: item.kind,
-      summary: redactExactText(item.summary, rawText),
+      summary: redactTexts(item.summary, rawTexts),
     })),
   };
+}
+
+function redactTexts(value: string, rawTexts: readonly string[]): string {
+  return rawTexts.reduce(
+    (current, text) => redactExactText(current, text),
+    value,
+  );
 }
 
 function buildDecision(
@@ -441,7 +461,7 @@ async function persistAudit(input: {
   storage: Storage;
   logger: Logger;
   createdAt: string;
-  rawText: string | undefined;
+  rawTexts: readonly string[];
 }): Promise<void> {
   try {
     const record = parseAuditRecord({
@@ -453,7 +473,9 @@ async function persistAudit(input: {
             messageId: input.event.message.id,
             textSha256: input.event.message.textSha256,
           }
-        : {}),
+        : input.event.profile
+          ? { textSha256: input.event.profile.textSha256 }
+          : {}),
       action: input.decision.action,
       score: input.decision.score,
       reasons: input.decision.reasons,
@@ -461,7 +483,9 @@ async function persistAudit(input: {
       ruleIds: input.decision.ruleIds,
       createdAt: input.createdAt,
     });
-    assertNoRawContent(record, input.rawText);
+    for (const text of input.rawTexts) {
+      assertNoRawContent(record, text);
+    }
     await input.storage.appendAudit(record);
   } catch (error) {
     const fields: LogFields = {

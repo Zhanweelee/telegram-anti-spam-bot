@@ -228,6 +228,30 @@ describe("captcha action", () => {
     ).toBe(true);
   });
 
+  it("does not captcha a join that is already being banned", async () => {
+    const ports = moderator();
+    const result = await action(clock).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "ban",
+        ruleIds: ["join_name"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [{ kind: "keyword", summary: "keyword:免费领取" }],
+      },
+      dryRun: false,
+      moderator: ports,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({
+      actionId: "captcha",
+      status: "skipped",
+      detail: "superseded",
+    });
+    expect(ports.restricted).toEqual([]);
+  });
+
   it("does not restrict when a detector throws", async () => {
     const ports = moderator();
     const logger = createMemoryLogger();

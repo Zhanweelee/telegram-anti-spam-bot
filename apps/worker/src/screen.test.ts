@@ -27,7 +27,7 @@ import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { normalizeUpdate, sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { filePackSource } from "./rules.js";
-import { screenTelegramEvent } from "./screen.js";
+import { screenTelegramEvent, workerStorage } from "./screen.js";
 
 async function event(text: string, isAdmin = false, chatId = "-100") {
   return parseEvent({
@@ -185,6 +185,7 @@ describe("screenTelegramEvent", () => {
       createNonce: () => "0123456789abcdef",
     });
     expect(result.decision.action).toBe("captcha");
+    expect(JSON.stringify(logger.entries)).not.toContain("Newbie");
     expect(result.detectorErrors).toEqual([]);
     expect(moderator.restricted).toHaveLength(1);
     expect(moderator.released).toEqual([]);
@@ -194,6 +195,60 @@ describe("screenTelegramEvent", () => {
     );
     expect(JSON.stringify(logger.entries)).not.toContain("Newbie");
     expect(JSON.stringify(logger.entries)).not.toContain("0123456789abcdef");
+  });
+
+  it("bans a join whose visible name matches a keyword", async () => {
+    const name = "广告员免费领取礼品";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2002,
+        chat_member: {
+          chat: { id: -100588, type: "supergroup", title: "机密群名" },
+          from: { id: 1 },
+          date: 1761955200,
+          old_chat_member: { user: { id: 78 }, status: "left" },
+          new_chat_member: {
+            user: { id: 78, first_name: name, language_code: "机密群名" },
+            status: "member",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      captchaStore,
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(result.decision.action).toBe("ban");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("join_name");
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100588", actorId: "78" },
+    ]);
+    expect(moderator.restricted).toEqual([]);
+    expect(await captchaStore.get("local", "-100588", "78")).toBeNull();
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(name);
+    expect(logged).not.toContain("机密群名");
+    expect(JSON.stringify(result.decision.evidence)).not.toContain(name);
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-100588",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(outcome.event.profile?.textSha256);
+    expect(JSON.stringify(audit)).not.toContain(name);
   });
 
   it("uses a chat override from the rule file and does not read storage", async () => {

@@ -61,7 +61,9 @@ export {
   forwardKinds,
   type MessageContent,
   messageSchema,
+  type Profile,
   parseEvent,
+  profileSchema,
 } from "./event.js";
 export { type Evidence, evidenceKinds, evidenceSchema } from "./evidence.js";
 export {
