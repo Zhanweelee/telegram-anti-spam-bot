@@ -6204,4 +6204,124 @@ describe("normalizeUpdate", () => {
     expect(departedDump).not.toContain("gone87");
     expect(departedDump).not.toContain("bit.ly");
   });
+
+  it("keeps a proximity alert name and drops the distance", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "NEAR88";
+    const visible = `${phrase} https://bit.ly/name88 https://t.me/+${code}.`;
+    const labeled = await normalize({
+      update_id: 5810,
+      message: {
+        message_id: 370,
+        date: 1761955200,
+        chat: {
+          id: -101120,
+          type: "supergroup",
+          title: "https://cutt.ly/grp88",
+        },
+        from: { id: 90, first_name: "https://tinyurl.com/from88" },
+        text: "今天站会",
+        proximity_alert_triggered: {
+          traveler: {
+            id: 90001,
+            is_bot: false,
+            first_name: visible,
+            last_name: "https://ow.ly/last88",
+            username: "user88",
+            language_code: "zh",
+          },
+          watcher: { id: 90002, first_name: "Ada" },
+          distance: 90909,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("name88");
+    expect(labeledDump).not.toContain("last88");
+    expect(labeledDump).not.toContain("user88");
+    expect(labeledDump).not.toContain("from88");
+    expect(labeledDump).not.toContain("grp88");
+    expect(labeledDump).not.toContain("90001");
+    expect(labeledDump).not.toContain("90002");
+    expect(labeledDump).not.toContain("90909");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("Ada");
+
+    const ordinary = await normalize({
+      update_id: 5811,
+      message: {
+        message_id: 371,
+        date: 1761955200,
+        chat: {
+          id: -101121,
+          type: "supergroup",
+          title: "https://bit.ly/kept88",
+        },
+        from: { id: 90, first_name: phrase },
+        text: "今天站会",
+        proximity_alert_triggered: {
+          traveler: { id: 90, first_name: "https://example.com/ok88" },
+          watcher: { id: 91, first_name: "Bea" },
+          distance: 12,
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok88");
+    expect(ordinaryDump).not.toContain("kept88");
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("bit.ly");
+    expect(ordinaryDump).not.toContain("Bea");
+
+    const names = "Ada https://bit.ly/body88 skip88";
+    const alone = await normalize({
+      update_id: 5812,
+      message: {
+        message_id: 372,
+        date: 1761955200,
+        chat: { id: -101122, type: "supergroup", title: phrase },
+        from: { id: 90, first_name: "https://tinyurl.com/from88b" },
+        proximity_alert_triggered: {
+          traveler: { id: 90003, first_name: "Ada", language_code: "en" },
+          watcher: {
+            id: 90004,
+            last_name: "https://bit.ly/body88",
+            username: "skip88",
+          },
+          distance: 90910,
+        },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe(names);
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain(phrase);
+    expect(aloneDump).not.toContain("from88b");
+    expect(aloneDump).not.toContain("90003");
+    expect(aloneDump).not.toContain("90004");
+    expect(aloneDump).not.toContain("90910");
+    expect(aloneDump).not.toContain("tinyurl.com");
+  });
 });

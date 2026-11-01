@@ -2051,4 +2051,75 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(departed.result)).not.toContain("from87");
     expect(JSON.stringify(departed.logger.entries)).not.toContain("机密群名");
   });
+
+  it("deletes a proximity alert whose visible name carries a short link", async () => {
+    const screenNear = async (
+      updateId: number,
+      chatId: number,
+      alert: Record<string, unknown>,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 90, first_name: "https://tinyurl.com/from88" },
+            proximity_alert_triggered: alert,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result };
+    };
+
+    const linked = await screenNear(5810, -100630, {
+      traveler: { id: 90, first_name: "https://bit.ly/name88" },
+      watcher: { id: 91, first_name: "Ada" },
+      distance: 90909,
+    });
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100630", messageId: "5810" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name88");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from88");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("90909");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name88",
+    );
+
+    const named = await screenNear(5811, -100631, {
+      traveler: { id: 90, first_name: "Ada" },
+      watcher: { id: 91, first_name: "广告员免费领取礼品" },
+      distance: 8,
+    });
+    expect(named.result.decision.action).toBe("delete");
+    expect(named.result.decision.reasons).toContain("keyword_match");
+    expect(JSON.stringify(named.logger.entries)).not.toContain("免费领取");
+
+    const ordinary = await screenNear(5812, -100632, {
+      traveler: { id: 90, first_name: "https://example.com/ok88" },
+      watcher: { id: 91, first_name: "Bea" },
+      distance: 12,
+    });
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.result)).not.toContain("90909");
+  });
 });

@@ -177,6 +177,40 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("89001");
   });
 
+  it("keeps a proximity alert name and drops the distance", async () => {
+    const visible = "https://bit.ly/name88";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 7,
+        message: {
+          message_id: 70,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp88" },
+          from: { id: 90, first_name: "https://tinyurl.com/from88" },
+          proximity_alert_triggered: {
+            traveler: { id: 90001, first_name: visible, language_code: "zh" },
+            watcher: { id: 90002, first_name: "Ada" },
+            distance: 90909,
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_7",
+      kind: "message",
+      message: { id: "70", text: `${visible} Ada` },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("from88");
+    expect(dumped).not.toContain("grp88");
+    expect(dumped).not.toContain("90001");
+    expect(dumped).not.toContain("90002");
+    expect(dumped).not.toContain("90909");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

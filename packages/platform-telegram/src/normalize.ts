@@ -1193,6 +1193,10 @@ function memberNames(message: Record<string, unknown>): string {
       pushUserLabels([value.new_owner], parts);
     }
   }
+  const proximity = message.proximity_alert_triggered;
+  if (isRecord(proximity)) {
+    pushUserLabels([proximity.traveler, proximity.watcher], parts);
+  }
   if (parts.length === 0) {
     return "";
   }
