@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto";
-import { type DeleteTarget, type Event, parseEvent } from "@tasb/core";
+import {
+  type BanTarget,
+  type DeleteTarget,
+  type Event,
+  type MuteTarget,
+  parseEvent,
+} from "@tasb/core";
 
-export type { DeleteTarget };
+export type { BanTarget, DeleteTarget, MuteTarget };
 
 export function sha256Hex(text: string): string {
   return createHash("sha256").update(text).digest("hex");

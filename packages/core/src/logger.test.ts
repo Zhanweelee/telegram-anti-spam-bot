@@ -52,6 +52,8 @@ describe("logger and clock", () => {
     wrapped.error("e");
     expect(seen).toEqual(["i", "w", "e"]);
     expect(createSystemClock().nowIso()).toMatch(/Z$/);
+    expect(moreSevere("ban", "mute")).toBe("ban");
+    expect(moreSevere("mute", "delete")).toBe("mute");
     expect(moreSevere("ban", "delete")).toBe("ban");
     expect(moreSevere("log", "mute")).toBe("mute");
   });

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "dry_run",
+    "dryRun": true,
+    "hasActor": true,
+    "status": "skipped",
+    "detail": "dry_run"
+  },
+  {
+    "name": "missing_actor",
+    "dryRun": false,
+    "hasActor": false,
+    "status": "failed",
+    "detail": "missing_actor"
+  },
+  {
+    "name": "executed",
+    "dryRun": false,
+    "hasActor": true,
+    "status": "executed"
+  }
+]

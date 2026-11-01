@@ -1,9 +1,11 @@
 import {
   type AuditQuery,
   type AuditRecord,
+  type BanTarget,
   type Cache,
   type DeleteTarget,
   type ModerationPort,
+  type MuteTarget,
   parseAuditQuery,
   parseAuditRecord,
   parseRuleSet,
@@ -42,12 +44,24 @@ export function createMemoryStorage(): Storage & {
 
 export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
+  readonly muted: readonly MuteTarget[];
+  readonly banned: readonly BanTarget[];
 } {
   const deleted: DeleteTarget[] = [];
+  const muted: MuteTarget[] = [];
+  const banned: BanTarget[] = [];
   return {
     deleted,
+    muted,
+    banned,
     async deleteMessage(target) {
       deleted.push({ ...target });
+    },
+    async muteActor(target) {
+      muted.push({ ...target });
+    },
+    async banActor(target) {
+      banned.push({ ...target });
     },
   };
 }

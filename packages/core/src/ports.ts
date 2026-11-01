@@ -45,8 +45,23 @@ export interface DeleteTarget {
   readonly messageId: string;
 }
 
+export interface MuteTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+  readonly durationSeconds: number;
+}
+
+export interface BanTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+}
+
 export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
+  muteActor(target: MuteTarget): Promise<void>;
+  banActor(target: BanTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

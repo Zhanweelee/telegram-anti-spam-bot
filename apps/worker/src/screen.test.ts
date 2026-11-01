@@ -52,6 +52,67 @@ describe("screenTelegramEvent", () => {
     expect(logged).not.toContain('"text"');
   });
 
+  it("runs mute and ban from chat rules without deleting", async () => {
+    const text = "请免费领取礼品";
+    const cache = createMemoryCache();
+    const mute = await screenTelegramEvent(await event(text), {
+      cache,
+      source: {
+        async loadChat() {
+          return null;
+        },
+        async loadDefault() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "quiet",
+                enabled: true,
+                detectorIds: ["keyword"],
+                threshold: 1,
+                actions: ["mute"],
+              },
+            ],
+          };
+        },
+      },
+    });
+    expect(mute.decision.action).toBe("mute");
+    expect(mute.actionResults).toEqual([
+      { actionId: "mute", status: "executed" },
+    ]);
+
+    const ban = await screenTelegramEvent(await event(text, false, "-1009"), {
+      cache: createMemoryCache(),
+      source: {
+        async loadChat() {
+          return null;
+        },
+        async loadDefault() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "drop",
+                enabled: true,
+                detectorIds: ["keyword"],
+                threshold: 1,
+                actions: ["ban", "delete"],
+              },
+            ],
+          };
+        },
+      },
+    });
+    expect(ban.decision.action).toBe("ban");
+    expect(ban.actionResults.map((item) => item.status)).toEqual([
+      "executed",
+      "executed",
+    ]);
+  });
+
   it("allows ordinary text and empty text", async () => {
     const hello = await screenTelegramEvent(await event("hello"));
     expect(hello.decision.action).toBe("allow");

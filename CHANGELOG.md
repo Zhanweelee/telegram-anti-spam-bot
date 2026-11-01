@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P0-04
+
+- `ModerationPort` 增加 `muteActor` 与 `banActor`。说明见 ADR 0004。
+- mute 和 ban 在 dry-run 时跳过，缺少 actor 时返回 `failed`。严重度仍是 ban > mute > delete。
+- Worker 注册这两个动作。默认规则仍是 delete。尚未调用 Telegram 的处罚接口。
+
 ### P0-03
 
 - Worker 从 `apps/worker/rules/default.json` 读取默认 RuleSet，`chats.json` 按 `chatId` 整份覆盖。

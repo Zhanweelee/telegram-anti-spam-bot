@@ -35,7 +35,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 }
 ```
 
-动作只调用 `ctx.moderator`。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。
+动作只调用 `ctx.moderator`。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。
 
 适配器实现 `Storage`、`Cache` 或 `ModerationPort`。不要把 D1、KV 或 Telegram 的类型 re-export 到 core 能 import 的位置。`RuleSource` 只返回未校验文档，schema 和缓存由 `loadRuleSet` 负责。
 

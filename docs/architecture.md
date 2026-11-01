@@ -40,7 +40,7 @@ Event
   → detectors        并行。每个返回 score + reasons + evidence，或 null
   → aggregate        max 或 sum，按规则阈值比较
   → decision         取最重动作：ban > mute > delete > captcha > report > log > allow
-  → actions          delete / …；dry-run 只记录，不调用端口
+  → actions          delete / mute / ban；dry-run 只记录，不调用端口
   → audit            非 allow 且非 dry-run 时写存储。失败不影响决策
 ```
 

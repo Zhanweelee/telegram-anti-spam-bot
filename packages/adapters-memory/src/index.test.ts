@@ -70,6 +70,24 @@ describe("memory adapter", () => {
     expect(await cache.get("missing")).toBeNull();
   });
 
+  it("records mute and ban without treating ban as a delete", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.muteActor({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "u",
+      durationSeconds: 60,
+    });
+    await moderator.banActor({ tenantId: "t", chatId: "c", actorId: "u" });
+    expect(moderator.muted).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u", durationSeconds: 60 },
+    ]);
+    expect(moderator.banned).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u" },
+    ]);
+    expect(moderator.deleted).toEqual([]);
+  });
+
   it("records deletions", async () => {
     const moderator = createMemoryModerator();
     await moderator.deleteMessage({

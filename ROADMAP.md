@@ -63,7 +63,7 @@
 - 热路径先读缓存端口，不在每条消息上打 D1。
 - 规则 schema 失败时该群 fail-open，并打一条不含原文的日志。
 
-### P0-04 mute 与 ban — todo
+### P0-04 mute 与 ban — done
 
 验收：
 
@@ -204,3 +204,9 @@
 - 做了什么：默认规则和按群覆盖放进 JSON 配置。`loadRuleSet` 先读缓存端口，未命中读 `RuleSource`，不读 Storage。schema 失败时该群得到空规则集并放行。
 - 学到什么：缓存故障应该留下已经解析的规则，schema 故障才 fail-open。zod 的错误文本会回显文档，所以只能记 `rules_invalid`。
 - 下一步：做 P0-04，在 ADR 之后给 `ModerationPort` 增加 mute 和 ban。
+
+### 2026-11-01 P0-04
+
+- 做了什么：ADR 0004 规定 mute 和 ban 的端口形状。两个动作支持 dry-run 和缺少 actor 时的 `failed`。内存适配器只记录调用。严重度保持 ban > mute > delete。
+- 学到什么：时长放在动作配置里，绝对时间留给以后发 HTTP 的适配器。ban 不隐含 delete，否则一条规则会做两件没有写出来的事。
+- 下一步：做 P0-05，把白名单和管理员豁免按 tenant + chat 放进适配器，并允许关掉管理员豁免。

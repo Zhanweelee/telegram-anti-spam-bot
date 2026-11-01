@@ -105,6 +105,8 @@ function harness(options?: { failStorage?: boolean }) {
     async deleteMessage(target) {
       deleted.push(target);
     },
+    async muteActor() {},
+    async banActor() {},
   };
   return {
     records,

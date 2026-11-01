@@ -1,4 +1,8 @@
-import { createDeleteAction } from "@tasb/actions";
+import {
+  createBanAction,
+  createDeleteAction,
+  createMuteAction,
+} from "@tasb/actions";
 import {
   createMemoryCache,
   createMemoryModerator,
@@ -66,7 +70,11 @@ export async function screenTelegramEvent(
     rules,
     policy: { exemptAdmins: true, allowActorIds: [] },
     detectors: [detector],
-    actions: [createDeleteAction()],
+    actions: [
+      createDeleteAction(),
+      createMuteAction({ durationSeconds: 60 * 60 }),
+      createBanAction(),
+    ],
     storage: deps.storage ?? createMemoryStorage(),
     moderator: createMemoryModerator(),
     logger,
