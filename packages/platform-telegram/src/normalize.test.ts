@@ -4459,6 +4459,117 @@ describe("normalizeUpdate", () => {
     expect(inlineDump).not.toContain("bit.ly");
   });
 
+  it("keeps a custom emoji alternative and leaves the emoji id out", async () => {
+    const emojiId = "SECRETEMOJI95";
+    const alone = await normalize({
+      update_id: 6410,
+      message: {
+        message_id: 430,
+        date: 1761955200,
+        chat: {
+          id: -101180,
+          type: "supergroup",
+          title: "https://cutt.ly/grp95",
+        },
+        from: { id: 95, first_name: "https://tinyurl.com/from95" },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "custom_emoji",
+                custom_emoji_id: emojiId,
+                alternative_text: "https://bit.ly/name95",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe("https://bit.ly/name95");
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain(emojiId);
+    expect(aloneDump).not.toContain("from95");
+    expect(aloneDump).not.toContain("grp95");
+    expect(aloneDump).not.toContain("cutt.ly");
+    expect(aloneDump).not.toContain("tinyurl.com");
+
+    const beside = await normalize({
+      update_id: 6411,
+      message: {
+        message_id: 431,
+        date: 1761955200,
+        chat: { id: -101181, type: "supergroup", title: "keep-title" },
+        from: { id: 95, first_name: "from95" },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "custom_emoji",
+                  custom_emoji_id: emojiId,
+                  alternative_text: "https://t.me/+code95",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(beside.status).toBe("event");
+    if (beside.status !== "event") {
+      return;
+    }
+    expect(beside.event.message?.text).toBe("今天站会");
+    expect(beside.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(beside.event.message?.hosts).toEqual(["t.me"]);
+    expect(beside.event.message?.invites).toEqual(["t.me"]);
+    const besideDump = JSON.stringify(beside.event);
+    expect(besideDump).not.toContain(emojiId);
+    expect(besideDump).not.toContain("code95");
+    expect(besideDump).not.toContain("from95");
+    expect(besideDump).not.toContain("keep-title");
+
+    const decoy = await normalize({
+      update_id: 6412,
+      message: {
+        message_id: 432,
+        date: 1761955200,
+        chat: { id: -101182, type: "supergroup" },
+        from: { id: 95 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "custom_emoji",
+                custom_emoji_id: "https://bit.ly/icon95",
+                alternative_text: "今天站会",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(decoy.status).toBe("event");
+    if (decoy.status !== "event") {
+      return;
+    }
+    expect(decoy.event.message?.text).toBe("今天站会");
+    expect(decoy.event.message?.hosts).toBeUndefined();
+    const decoyDump = JSON.stringify(decoy.event);
+    expect(decoyDump).not.toContain("bit.ly");
+    expect(decoyDump).not.toContain("icon95");
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

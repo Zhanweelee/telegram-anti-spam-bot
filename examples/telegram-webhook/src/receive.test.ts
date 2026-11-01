@@ -373,6 +373,48 @@ describe("receiveUpdate", () => {
     expect(result.events[0]?.message?.id).not.toBe("0");
   });
 
+  it("keeps a custom emoji alternative and leaves the emoji id out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 12,
+        message: {
+          message_id: 120,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp95" },
+          from: { id: 95, first_name: "https://tinyurl.com/from95" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: {
+                  type: "custom_emoji",
+                  custom_emoji_id: "SECRETEMOJI95",
+                  alternative_text: "https://bit.ly/name95",
+                },
+              },
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_12",
+      kind: "message",
+      message: {
+        id: "120",
+        text: "https://bit.ly/name95",
+        hosts: ["bit.ly"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("SECRETEMOJI95");
+    expect(dumped).not.toContain("from95");
+    expect(dumped).not.toContain("grp95");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

@@ -1171,6 +1171,9 @@ function richText(value: unknown, urls: string[]): string {
     pushPlainUrls(value.expression, urls);
     return "";
   }
+  if (value.type === "custom_emoji") {
+    return richText(value.alternative_text, urls);
+  }
   if ("text" in value) {
     return richText(value.text, urls);
   }

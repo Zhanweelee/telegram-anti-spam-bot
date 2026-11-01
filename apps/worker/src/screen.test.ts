@@ -2438,4 +2438,114 @@ describe("screenTelegramEvent", () => {
     expect(allowed.deleted).toEqual([]);
     expect(JSON.stringify(plain.event)).not.toContain("recv94");
   });
+
+  it("deletes a custom emoji alternative that carries a short link", async () => {
+    const emojiId = "SECRETEMOJI95";
+    const screenEmoji = async (
+      updateId: number,
+      chatId: number,
+      message: Record<string, unknown>,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 95, first_name: "https://tinyurl.com/from95" },
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+    const emoji = (alternative: string) => ({
+      rich_message: {
+        blocks: [
+          {
+            type: "paragraph",
+            text: {
+              type: "custom_emoji",
+              custom_emoji_id: emojiId,
+              alternative_text: alternative,
+            },
+          },
+        ],
+      },
+    });
+
+    const linked = await screenEmoji(
+      6410,
+      -100690,
+      emoji("https://bit.ly/name95"),
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.event.message?.text).toBe("https://bit.ly/name95");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100690", messageId: "6410" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name95");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain(emojiId);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from95");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name95",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      emojiId,
+    );
+
+    const named = await screenEmoji(6411, -100691, emoji("请免费领取礼品"));
+    expect(named.result.decision.action).toBe("delete");
+    expect(named.result.decision.reasons).toContain("keyword_match");
+    expect(JSON.stringify(named.logger.entries)).not.toContain("免费领取");
+    expect(JSON.stringify(named.logger.entries)).not.toContain(emojiId);
+
+    const beside = await screenEmoji(6412, -100692, {
+      text: "今天站会",
+      ...emoji("https://bit.ly/name95"),
+    });
+    expect(beside.result.decision.action).toBe("delete");
+    expect(beside.result.decision.reasons).toContain("short_link");
+    expect(beside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(beside.event)).not.toContain("name95");
+    expect(JSON.stringify(beside.event)).not.toContain(emojiId);
+    expect(JSON.stringify(beside.logger.entries)).not.toContain("name95");
+    expect(JSON.stringify(beside.logger.entries)).not.toContain("from95");
+
+    const decoy = await screenEmoji(6413, -100693, {
+      rich_message: {
+        blocks: [
+          {
+            type: "paragraph",
+            text: {
+              type: "custom_emoji",
+              custom_emoji_id: "https://bit.ly/icon95",
+              alternative_text: "今天站会",
+            },
+          },
+        ],
+      },
+    });
+    expect(decoy.result.decision.action).toBe("allow");
+    expect(decoy.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(decoy.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(decoy.event)).not.toContain("icon95");
+    expect(JSON.stringify(decoy.logger.entries)).not.toContain("from95");
+  });
 });
