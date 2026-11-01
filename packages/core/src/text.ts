@@ -43,17 +43,49 @@ export function foldEncodedSeparators(text: string): string {
   return text.replace(/%2E/gi, ".").replace(/%2F/gi, "/").replace(/%2B/gi, "+");
 }
 
-const ENCODED_ALPHABET = /%[0-9A-Fa-f]{2}/g;
+const ENCODED_ALPHABET_CHAR = /[A-Za-z0-9_-]/;
 
 /**
- * Turn one `%HH` into a letter, digit, hyphen, or underscore.
- * `%20`, `%2E`, and a second layer written as `%25HH` stay.
+ * Turn one `%HH`, or one `%25HH`, into a letter, digit, hyphen, or
+ * underscore. `%20`, `%2E`, `%252E`, and a third layer stay.
  */
 export function foldEncodedAlphabet(text: string): string {
-  return text.replace(ENCODED_ALPHABET, (token) => {
-    const char = String.fromCharCode(Number.parseInt(token.slice(1), 16));
-    return /[A-Za-z0-9_-]/.test(char) ? char : token;
-  });
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const doubled = encodedAlphabetLength(text, index, "%25");
+    const single = doubled > 0 ? 0 : encodedAlphabetLength(text, index, "%");
+    const taken = doubled > 0 ? doubled : single;
+    if (taken > 0) {
+      const hex = text.slice(index + taken - 2, index + taken);
+      out += alphabetChar(hex);
+      index += taken;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedAlphabetLength(
+  text: string,
+  index: number,
+  marker: "%25" | "%",
+): number {
+  if (text.slice(index, index + marker.length).toLowerCase() !== marker) {
+    return 0;
+  }
+  const hex = text.slice(index + marker.length, index + marker.length + 2);
+  if (!/^[0-9a-fA-F]{2}$/.test(hex) || alphabetChar(hex) === null) {
+    return 0;
+  }
+  return marker.length + 2;
+}
+
+function alphabetChar(hex: string): string | null {
+  const char = String.fromCharCode(Number.parseInt(hex, 16));
+  return ENCODED_ALPHABET_CHAR.test(char) ? char : null;
 }
 
 function encodedGapLength(text: string, index: number): number {

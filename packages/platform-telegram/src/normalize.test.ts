@@ -651,6 +651,10 @@ describe("normalizeUpdate", () => {
                 text: "twice",
                 url: "https://double.t.me/+OFF%2545DOUBLE40",
               },
+              {
+                text: "thrice",
+                url: "https://triple.t.me/+OFF%252545TRIPLE40",
+              },
             ],
           ],
         },
@@ -666,13 +670,19 @@ describe("normalizeUpdate", () => {
       "telegram.me",
       "examplea.com",
       "double.t.me",
+      "triple.t.me",
     ]);
-    expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
+    expect(outcome.event.message?.invites).toEqual([
+      "t.me",
+      "telegram.me",
+      "double.t.me",
+    ]);
     const dumped = JSON.stringify(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(join);
     expect(dumped).not.toContain("DOUBLE40");
+    expect(dumped).not.toContain("TRIPLE40");
     expect(dumped).not.toContain("durov");
     expect(dumped).not.toContain("/docs");
   });

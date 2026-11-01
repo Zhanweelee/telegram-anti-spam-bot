@@ -438,13 +438,33 @@ describe("link fixtures", () => {
       logger,
       signal,
     });
-    expect(doubled).toBeNull();
+    expect(doubled?.reasons).toEqual(["invite"]);
+    expect(doubled?.evidence[0]?.summary).toBe("invite:t.me");
     const doubleHost = await detector.detect({
       event: eventFor("b%2569t.ly/offer"),
       logger,
       signal,
     });
-    expect(doubleHost).toBeNull();
+    expect(doubleHost?.reasons).toEqual(["short_link"]);
+    expect(doubleHost?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const triple = await detector.detect({
+      event: eventFor(`t.me/+OFF%252545${code}`),
+      logger,
+      signal,
+    });
+    expect(triple).toBeNull();
+    const tripleHost = await detector.detect({
+      event: eventFor("b%252569t.ly/offer"),
+      logger,
+      signal,
+    });
+    expect(tripleHost).toBeNull();
+    const doubleDot = await detector.detect({
+      event: eventFor("bit%252Ely/offer"),
+      logger,
+      signal,
+    });
+    expect(doubleDot).toBeNull();
     const plain = await detector.detect({
       event: eventFor("example%41.com/docs"),
       logger,
@@ -468,6 +488,8 @@ describe("link fixtures", () => {
       invite,
       lower,
       marked,
+      doubled,
+      doubleHost,
       logs: logger.entries,
     });
     expect(dumped).not.toContain(code);

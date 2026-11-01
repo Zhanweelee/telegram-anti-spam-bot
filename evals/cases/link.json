@@ -159,6 +159,16 @@
   {
     "id": "double-encoded-letter",
     "text": "t.me/+OFF%2545R",
+    "label": "spam"
+  },
+  {
+    "id": "double-encoded-host-letter",
+    "text": "b%2569t.ly/offer",
+    "label": "spam"
+  },
+  {
+    "id": "triple-encoded-letter",
+    "text": "t.me/+OFF%252545R",
     "label": "ham"
   }
 ]

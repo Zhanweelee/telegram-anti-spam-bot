@@ -120,6 +120,23 @@
   {
     "name": "double-encoded-letter",
     "text": "t.me/+OFF%2545LETTER",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "double-encoded-host-letter",
+    "text": "b%2569t.ly/offer",
+    "expect": "hit",
+    "reason": "short_link"
+  },
+  {
+    "name": "triple-encoded-letter",
+    "text": "t.me/+OFF%252545LETTER",
+    "expect": "miss"
+  },
+  {
+    "name": "double-encoded-dot-stays",
+    "text": "bit%252Ely/offer",
     "expect": "miss"
   },
   {
