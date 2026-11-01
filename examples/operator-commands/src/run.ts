@@ -1,4 +1,5 @@
 import {
+  createMemoryBlocklistStore,
   createMemoryCache,
   createMemoryPolicyStore,
   createMemoryRuntimeStore,
@@ -52,6 +53,7 @@ export async function runPrivateCommand(input: {
     runtime: createMemoryRuntimeStore(),
     storage: input.storage ?? createMemoryStorage(),
     logger: createMemoryLogger(),
+    blocklist: createMemoryBlocklistStore(),
     source: {
       async loadChat() {
         return null;

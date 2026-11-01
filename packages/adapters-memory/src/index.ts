@@ -200,6 +200,8 @@ export function createMemoryReply(): ReplyPort & {
   };
 }
 
+export { createMemoryBlocklistStore } from "@tasb/core";
+
 export function createMemoryCache(nowMs: () => number = Date.now): Cache {
   const values = new Map<string, { value: string; expiresAt: number }>();
   return {

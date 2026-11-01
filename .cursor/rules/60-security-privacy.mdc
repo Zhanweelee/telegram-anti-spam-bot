@@ -5,7 +5,7 @@ alwaysApply: true
 
 禁止提交 token、webhook secret、`.env`。示例只放空变量名。
 
-禁止记录或存储消息原文。审计只有哈希、规则 id 和短证据。日志字段禁止 `text`、`body`、`caption`、`raw`、`messageText`、`content`。
+禁止记录或存储消息原文。审计只有哈希、规则 id 和短证据。日志字段禁止 `text`、`body`、`caption`、`raw`、`messageText`、`content`。黑名单只存 actor id 或 sha256，不存原文。
 
 不要把 `Error.message` 写进日志。`JSON.parse` 和 schema 校验的异常文本会回显正文，同样不能写进日志。Webhook 必须校验 secret token，失败或未配置密钥时不得进入流水线。导出与删除必须按 tenant 限定范围。
 

@@ -26,6 +26,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "shared_blocklist",
+      "enabled": true,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["blocklist"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "links",
       "enabled": true,
       "when": { "eventKind": "message" },

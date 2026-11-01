@@ -14,6 +14,7 @@
     "@tasb/adapter-cloudflare": "workspace:*",
     "@tasb/adapter-memory": "workspace:*",
     "@tasb/core": "workspace:*",
+    "@tasb/detector-blocklist": "workspace:*",
     "@tasb/detector-join": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",

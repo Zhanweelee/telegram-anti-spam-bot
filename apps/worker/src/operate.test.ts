@@ -1,4 +1,5 @@
 import {
+  createMemoryBlocklistStore,
   createMemoryCache,
   createMemoryCaptchaStore,
   createMemoryModerator,
@@ -7,7 +8,13 @@ import {
   createMemoryRuntimeStore,
   createMemoryStorage,
 } from "@tasb/adapter-memory";
-import { createFixedClock, createMemoryLogger, parseEvent } from "@tasb/core";
+import {
+  type BlocklistStore,
+  createFixedClock,
+  createMemoryLogger,
+  parseEvent,
+} from "@tasb/core";
+import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
 import { handleIncomingEvent } from "./operate.js";
@@ -255,5 +262,70 @@ describe("handleIncomingEvent", () => {
     expect(body).toContain(`c:${nonce}`);
     expect(body).not.toContain(phrase);
     expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("stops reading the shared blocklist as soon as the chat turns it off", async () => {
+    const kit = deps();
+    const blocklist = createMemoryBlocklistStore();
+    let reads = 0;
+    const wrapped: BlocklistStore = {
+      isEnabled: (tenantId, chatId) => blocklist.isEnabled(tenantId, chatId),
+      setEnabled: (tenantId, chatId, enabled) =>
+        blocklist.setEnabled(tenantId, chatId, enabled),
+      add: (tenantId, entry) => blocklist.add(tenantId, entry),
+      async has(tenantId, entry) {
+        reads += 1;
+        return blocklist.has(tenantId, entry);
+      },
+    };
+    const note = "今天站会改到三点";
+    const base = {
+      ...kit,
+      blocklist: wrapped,
+      rateWindow: createMemoryRateWindow(),
+    };
+    await handleIncomingEvent(
+      await incoming({ text: note, chatId: "-100", actorId: "5" }),
+      base,
+    );
+    expect(reads).toBe(0);
+    expect(kit.storage.records).toHaveLength(0);
+
+    await handleIncomingEvent(
+      await incoming({ text: "/blocklist -100 add actor 5", direct: true }),
+      base,
+    );
+    expect(kit.reply.sent.at(-1)?.text).toBe("blocklist -100 off\nadded");
+    await handleIncomingEvent(
+      await incoming({ text: "明天下午见", chatId: "-100", actorId: "5" }),
+      base,
+    );
+    expect(reads).toBe(0);
+
+    await handleIncomingEvent(
+      await incoming({ text: "/blocklist -100 on", direct: true }),
+      base,
+    );
+    await handleIncomingEvent(
+      await incoming({ text: "下周一同步", chatId: "-100", actorId: "5" }),
+      base,
+    );
+    expect(kit.storage.records.at(-1)?.action).toBe("delete");
+    expect(kit.storage.records.at(-1)?.reasons).toContain("shared_actor");
+    expect(JSON.stringify(kit.storage.records)).not.toContain("下周一同步");
+    const seen = reads;
+    expect(seen).toBeGreaterThan(0);
+
+    await handleIncomingEvent(
+      await incoming({ text: "/blocklist -100 off", direct: true }),
+      base,
+    );
+    await handleIncomingEvent(
+      await incoming({ text: "周五再看", chatId: "-100", actorId: "5" }),
+      base,
+    );
+    expect(reads).toBe(seen);
+    expect(kit.storage.records).toHaveLength(1);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(note);
   });
 });

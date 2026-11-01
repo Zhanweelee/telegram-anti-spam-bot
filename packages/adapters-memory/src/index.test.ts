@@ -1,10 +1,12 @@
 import {
+  bindBlocklistStoreContract,
   bindCaptchaStoreContract,
   bindPolicyStoreContract,
   bindStorageContract,
 } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
+  createMemoryBlocklistStore,
   createMemoryCache,
   createMemoryCaptchaStore,
   createMemoryModerator,
@@ -14,6 +16,7 @@ import {
   createMemoryStorage,
 } from "./index.js";
 
+bindBlocklistStoreContract(createMemoryBlocklistStore);
 bindPolicyStoreContract(createMemoryPolicyStore);
 bindStorageContract(() => createMemoryStorage());
 bindCaptchaStoreContract(createMemoryCaptchaStore);

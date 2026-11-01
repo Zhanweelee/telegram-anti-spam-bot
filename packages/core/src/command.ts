@@ -1,3 +1,8 @@
+import {
+  type BlocklistEntry,
+  type BlocklistStore,
+  blocklistEntrySchema,
+} from "./blocklist.js";
 import type { Cache } from "./cache.js";
 import type { Event } from "./event.js";
 import type { Logger } from "./logger.js";
@@ -25,6 +30,7 @@ const COMMAND_NAMES = [
   "dryrun",
   "export",
   "forget",
+  "blocklist",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -40,6 +46,10 @@ const HELP = [
   "/dryrun <chatId> on|off",
   "/export [chatId]",
   "/forget [chatId]",
+  "/blocklist <chatId>",
+  "/blocklist <chatId> on|off",
+  "/blocklist <chatId> add actor <actorId>",
+  "/blocklist <chatId> add hash <sha256>",
 ].join("\n");
 
 const DENIED = "没有权限";
@@ -47,6 +57,8 @@ const INVALID = "参数无效";
 const LOG_LIMIT = 10;
 const TOKEN_LIMIT = 80;
 const EXPORT_REPLY_LIMIT = 3500;
+const BLOCKLIST_USAGE =
+  "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]";
 
 export interface OperatorCommandInput {
   readonly event: Event;
@@ -58,6 +70,7 @@ export interface OperatorCommandInput {
   readonly storage: Storage;
   readonly logger: Logger;
   readonly fallback?: PrefilterPolicy;
+  readonly blocklist?: BlocklistStore;
 }
 
 export type OperatorCommandResult =
@@ -133,6 +146,8 @@ async function dispatch(
       return exportAudits(input, args);
     case "forget":
       return forgetAudits(input, args);
+    case "blocklist":
+      return editBlocklist(input, args);
   }
 }
 
@@ -373,6 +388,104 @@ function sameIds(left: readonly string[], right: readonly string[]): boolean {
 
 function isTargetId(value: string): boolean {
   return /^-?\d{1,20}$/.test(value);
+}
+
+async function editBlocklist(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const store = input.blocklist;
+  if (!store) {
+    rejectBlocklist(input);
+    return INVALID;
+  }
+  const chatId = args[0];
+  if (!chatId || !isTargetId(chatId)) {
+    return args.length === 0 ? BLOCKLIST_USAGE : INVALID;
+  }
+  const op = args[1];
+  if (op === undefined) {
+    const enabled = await readEnabled(input, store, chatId);
+    return enabled === null ? INVALID : formatBlocklist(chatId, enabled);
+  }
+  if (op === "on" || op === "off") {
+    if (args.length !== 2) {
+      return BLOCKLIST_USAGE;
+    }
+    const wrote = await writeBlocklist(input, () =>
+      store.setEnabled(input.event.tenantId, chatId, op === "on"),
+    );
+    if (!wrote) {
+      return INVALID;
+    }
+    const enabled = await readEnabled(input, store, chatId);
+    return enabled === null ? INVALID : formatBlocklist(chatId, enabled);
+  }
+  if (op !== "add" || args.length !== 4) {
+    return BLOCKLIST_USAGE;
+  }
+  const kind = args[2];
+  const raw = args[3];
+  if ((kind !== "actor" && kind !== "hash") || raw === undefined) {
+    return BLOCKLIST_USAGE;
+  }
+  const candidate: BlocklistEntry =
+    kind === "hash"
+      ? { kind: "hash", value: raw.toLowerCase() }
+      : { kind: "actor", value: raw };
+  const parsed = blocklistEntrySchema.safeParse(candidate);
+  if (!parsed.success) {
+    return INVALID;
+  }
+  const wrote = await writeBlocklist(input, () =>
+    store.add(input.event.tenantId, parsed.data),
+  );
+  if (!wrote) {
+    return INVALID;
+  }
+  const enabled = await readEnabled(input, store, chatId);
+  if (enabled === null) {
+    return INVALID;
+  }
+  return `${formatBlocklist(chatId, enabled)}\nadded`;
+}
+
+async function readEnabled(
+  input: OperatorCommandInput,
+  store: BlocklistStore,
+  chatId: string,
+): Promise<boolean | null> {
+  try {
+    return await store.isEnabled(input.event.tenantId, chatId);
+  } catch {
+    rejectBlocklist(input);
+    return null;
+  }
+}
+
+async function writeBlocklist(
+  input: OperatorCommandInput,
+  run: () => Promise<void>,
+): Promise<boolean> {
+  try {
+    await run();
+    return true;
+  } catch {
+    rejectBlocklist(input);
+    return false;
+  }
+}
+
+function rejectBlocklist(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "blocklist",
+  });
+}
+
+function formatBlocklist(chatId: string, enabled: boolean): string {
+  return `blocklist ${chatId} ${enabled ? "on" : "off"}`;
 }
 
 function isCommandName(value: string): value is CommandName {

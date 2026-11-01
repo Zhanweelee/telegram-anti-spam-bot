@@ -1,4 +1,8 @@
 import { describe, expect, it } from "vitest";
+import {
+  type BlocklistStore,
+  createMemoryBlocklistStore,
+} from "./blocklist.js";
 import type { Cache } from "./cache.js";
 import { runOperatorCommand } from "./command.js";
 import { parseEvent } from "./event.js";
@@ -656,4 +660,296 @@ describe("runOperatorCommand", () => {
     expect(deps.storage.records).toHaveLength(1);
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
+
+  it("leaves the shared blocklist unread until a chat opts in", async () => {
+    const deps = kit();
+    const blocklist = createMemoryBlocklistStore();
+    let reads = 0;
+    const wrapped = countingStore(blocklist, () => {
+      reads += 1;
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 on", chatId: "-100" }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(skipped.status).toBe("skip");
+    expect(reads).toBe(0);
+    expect(await blocklist.isEnabled("local", "-100")).toBe(false);
+
+    const denied = await runOperatorCommand({
+      event: event({
+        text: `/blocklist -100 on ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(await blocklist.isEnabled("local", "-100")).toBe(false);
+    expect(JSON.stringify(denied)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/blocklist -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    expect(reads).toBe(0);
+
+    const off = await runOperatorCommand({
+      event: event({ text: "/blocklist -100", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(off).toMatchObject({ text: "blocklist -100 off" });
+    expect(reads).toBe(0);
+
+    const added = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 add actor 9", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(added).toMatchObject({ text: "blocklist -100 off\nadded" });
+    expect(await blocklist.has("local", { kind: "actor", value: "9" })).toBe(
+      true,
+    );
+    expect(reads).toBe(0);
+
+    const hash = "ab".repeat(32);
+    const hashed = await runOperatorCommand({
+      event: event({
+        text: `/blocklist -100 add hash ${hash.toUpperCase()}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(hashed).toMatchObject({ text: "blocklist -100 off\nadded" });
+    expect(JSON.stringify(hashed)).not.toContain(hash);
+    expect(await blocklist.has("local", { kind: "hash", value: hash })).toBe(
+      true,
+    );
+
+    const turnedOn = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 on", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(turnedOn).toMatchObject({ text: "blocklist -100 on" });
+    const turnedOff = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 off", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: wrapped,
+      ...deps,
+    });
+    expect(turnedOff).toMatchObject({ text: "blocklist -100 off" });
+    expect(await blocklist.isEnabled("local", "-100")).toBe(false);
+    expect(await blocklist.has("local", { kind: "actor", value: "9" })).toBe(
+      true,
+    );
+  });
+
+  it("rejects raw text and a missing or full blocklist without echoing it", async () => {
+    const deps = kit();
+    const blocklist = createMemoryBlocklistStore();
+    const raw = await runOperatorCommand({
+      event: event({
+        text: `/blocklist -100 add actor ${phrase}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(raw).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(raw)).not.toContain(phrase);
+    expect(JSON.stringify(blocklist.snapshot())).not.toContain(phrase);
+
+    const spaced = await runOperatorCommand({
+      event: event({
+        text: "/blocklist -100 add actor hello world",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(spaced).toMatchObject({
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/blocklist", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+    });
+    const badChat = await runOperatorCommand({
+      event: event({ text: "/blocklist abc", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(badChat).toMatchObject({ text: "参数无效" });
+    const badOp = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 maybe", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(badOp).toMatchObject({
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+    });
+
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text).toContain("/blocklist");
+    }
+
+    const failing = failingStore(phrase);
+    const failed = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 on", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: failing,
+      ...deps,
+    });
+    expect(failed).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const unread = await runOperatorCommand({
+      event: event({ text: "/blocklist -100", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: failing,
+      ...deps,
+    });
+    expect(unread).toMatchObject({ text: "参数无效" });
+    expect(failing.reads).toBe(0);
+
+    const extra = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 on extra", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+    });
+    const wrongKind = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 add note 9", direct: true }),
+      adminActorIds: ["42"],
+      blocklist,
+      ...deps,
+    });
+    expect(wrongKind).toMatchObject({
+      text: "用法：/blocklist <chatId> [on|off|add actor <id>|add hash <sha256>]",
+    });
+
+    const addedThenUnreadable = createMemoryBlocklistStore();
+    const hide: BlocklistStore = {
+      isEnabled() {
+        return Promise.reject(new Error(phrase));
+      },
+      setEnabled: (tenantId, chatId, enabled) =>
+        addedThenUnreadable.setEnabled(tenantId, chatId, enabled),
+      add: (tenantId, entry) => addedThenUnreadable.add(tenantId, entry),
+      has: (tenantId, entry) => addedThenUnreadable.has(tenantId, entry),
+    };
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 add actor 9", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: hide,
+      ...deps,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(
+      await addedThenUnreadable.has("local", { kind: "actor", value: "9" }),
+    ).toBe(true);
+    const addFails: BlocklistStore = {
+      async isEnabled() {
+        return false;
+      },
+      async setEnabled() {
+        return undefined;
+      },
+      async has() {
+        return false;
+      },
+      async add() {
+        throw new Error(phrase);
+      },
+    };
+    const rejectedAdd = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 add actor 9", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: addFails,
+      ...deps,
+    });
+    expect(rejectedAdd).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+
+    const hiddenOn = await runOperatorCommand({
+      event: event({ text: "/blocklist -100 on", direct: true }),
+      adminActorIds: ["42"],
+      blocklist: hide,
+      ...deps,
+    });
+    expect(hiddenOn).toMatchObject({ text: "参数无效" });
+    expect(await addedThenUnreadable.isEnabled("local", "-100")).toBe(true);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
 });
+
+function countingStore(
+  inner: ReturnType<typeof createMemoryBlocklistStore>,
+  onRead: () => void,
+): BlocklistStore {
+  return {
+    isEnabled: (tenantId, chatId) => inner.isEnabled(tenantId, chatId),
+    setEnabled: (tenantId, chatId, enabled) =>
+      inner.setEnabled(tenantId, chatId, enabled),
+    add: (tenantId, entry) => inner.add(tenantId, entry),
+    async has(tenantId, entry) {
+      onRead();
+      return inner.has(tenantId, entry);
+    },
+  };
+}
+
+function failingStore(phrase: string): BlocklistStore & { reads: number } {
+  let reads = 0;
+  return {
+    get reads() {
+      return reads;
+    },
+    async isEnabled() {
+      throw new Error(phrase);
+    },
+    async setEnabled() {
+      throw new Error(phrase);
+    },
+    async has() {
+      reads += 1;
+      throw new Error(phrase);
+    },
+    async add() {
+      throw new Error(phrase);
+    },
+  };
+}

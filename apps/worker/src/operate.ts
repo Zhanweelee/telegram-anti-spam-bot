@@ -7,6 +7,7 @@ import {
   runOperatorCommand,
 } from "@tasb/core";
 import { sendCaptchaButton } from "@tasb/platform-telegram";
+import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { fileRuleSource } from "./rules.js";
@@ -39,6 +40,7 @@ export async function handleIncomingEvent(
     deps.moderator ??
     moderatorFor({ token: deps.botToken, fetchImpl: deps.fetchImpl });
   const captchaStore = deps.captchaStore ?? workerCaptcha;
+  const blocklist = deps.blocklist ?? workerBlocklist;
   if (event.kind === "challenge") {
     try {
       await resolveChallenge({
@@ -69,6 +71,7 @@ export async function handleIncomingEvent(
     source,
     storage,
     logger,
+    blocklist,
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
@@ -87,6 +90,8 @@ export async function handleIncomingEvent(
     ...(deps.createNonce ? { createNonce: deps.createNonce } : {}),
     ...(deps.botToken ? { botToken: deps.botToken } : {}),
     ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    ...(deps.rateWindow ? { rateWindow: deps.rateWindow } : {}),
+    blocklist,
   });
   const prompted = result.actionResults.some(
     (item) => item.actionId === "captcha" && item.status === "executed",

@@ -4,6 +4,13 @@
 
 ## Unreleased
 
+### P1-04
+
+- 跨群黑名单默认关闭。打开后只保存 actor id 或 sha256，不保存原文。见 ADR 0012。
+- 某个群关掉之后，下一条消息不再读取共享名单。名单在 isolate 内存里，不走 KV 或 D1。
+- 私聊命令 `/blocklist` 给配置中的管理员。回复不回显哈希或原文。
+- 评测集 `evals/cases/blocklist.json` 的 precision 和 recall 都是 1。
+
 ### P1-03
 
 - 短链接和裸 IP 默认删除。普通网址保留。见 ADR 0011。

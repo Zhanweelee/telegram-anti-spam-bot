@@ -1,0 +1,79 @@
+[
+  {
+    "id": "opted-out",
+    "text": "今天站会改到三点",
+    "label": "ham",
+    "optIn": false,
+    "actorId": "99",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "readsShared": false
+  },
+  {
+    "id": "toggled-off",
+    "text": "明天下午见",
+    "label": "ham",
+    "optIn": false,
+    "toggled": true,
+    "actorId": "99",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "readsShared": false
+  },
+  {
+    "id": "shared-actor",
+    "text": "hello",
+    "label": "spam",
+    "optIn": true,
+    "actorId": "99",
+    "entries": [{ "kind": "actor", "value": "99" }]
+  },
+  {
+    "id": "shared-hash",
+    "text": "hello",
+    "label": "spam",
+    "optIn": true,
+    "actorId": "1",
+    "hash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "entries": [
+      {
+        "kind": "hash",
+        "value": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    ]
+  },
+  {
+    "id": "opted-in-clean",
+    "text": "今天站会改到三点",
+    "label": "ham",
+    "optIn": true,
+    "actorId": "1",
+    "entries": [{ "kind": "actor", "value": "99" }]
+  },
+  {
+    "id": "raw-rejected",
+    "text": "请免费领取礼品",
+    "label": "ham",
+    "optIn": true,
+    "actorId": "1",
+    "reject": true,
+    "entries": []
+  },
+  {
+    "id": "other-tenant",
+    "text": "hello",
+    "label": "ham",
+    "optIn": true,
+    "actorId": "99",
+    "entries": [{ "kind": "actor", "value": "99", "tenantId": "tenant_other" }]
+  },
+  {
+    "id": "other-chat-off",
+    "text": "hello",
+    "label": "ham",
+    "optIn": false,
+    "chatId": "chat_b",
+    "enabledChats": ["chat_a"],
+    "actorId": "99",
+    "entries": [{ "kind": "actor", "value": "99" }],
+    "readsShared": false
+  }
+]

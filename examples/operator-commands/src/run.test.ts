@@ -11,6 +11,7 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(help).toContain("/logs");
+    expect(help).toContain("/blocklist");
     expect(help).not.toContain(phrase);
 
     const storage = createMemoryStorage();

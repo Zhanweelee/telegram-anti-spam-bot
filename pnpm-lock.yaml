@@ -43,6 +43,9 @@ importers:
       '@tasb/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@tasb/detector-blocklist':
+        specifier: workspace:*
+        version: link:../../packages/detectors-blocklist
       '@tasb/detector-join':
         specifier: workspace:*
         version: link:../../packages/detectors-join
@@ -74,6 +77,9 @@ importers:
       '@tasb/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@tasb/detector-blocklist':
+        specifier: workspace:*
+        version: link:../packages/detectors-blocklist
       '@tasb/detector-keyword':
         specifier: workspace:*
         version: link:../packages/detectors-keyword
@@ -143,6 +149,15 @@ importers:
 
   packages/core:
     dependencies:
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-blocklist:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
       zod:
         specifier: 4.6.7
         version: 4.6.7

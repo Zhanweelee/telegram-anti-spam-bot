@@ -1,3 +1,14 @@
+export {
+  BlocklistCapacityError,
+  type BlocklistEntry,
+  type BlocklistSnapshot,
+  type BlocklistStore,
+  blocklistEntrySchema,
+  createMemoryBlocklistStore,
+  MAX_BLOCKLIST_CHATS,
+  MAX_BLOCKLIST_ENTRIES,
+  parseBlocklistEntry,
+} from "./blocklist.js";
 export type { Cache } from "./cache.js";
 export {
   addSeconds,

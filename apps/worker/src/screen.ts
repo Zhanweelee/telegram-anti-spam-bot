@@ -11,6 +11,7 @@ import {
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
+  type BlocklistStore,
   type Cache,
   type CaptchaStore,
   type Clock,
@@ -29,6 +30,7 @@ import {
   type Storage,
   wrapLogger,
 } from "@tasb/core";
+import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
@@ -37,6 +39,7 @@ import {
   createRepeatDetector,
   type RateWindow,
 } from "@tasb/detector-rate";
+import { workerBlocklist } from "./blocklist-runtime.js";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { workerRateWindow } from "./rate-runtime.js";
@@ -45,7 +48,8 @@ import { fileRuleSource } from "./rules.js";
 /**
  * Isolate-local fallback when D1 and KV are not bound. A rule miss
  * still reads the bundled files. Memory audits are capped at 200 rows.
- * Captcha challenges live in this isolate. A restart drops them.
+ * Captcha challenges and the shared blocklist live in this isolate.
+ * A restart drops both. Blocklist opt-in starts off.
  * delete / mute / ban still do not call Telegram. restrict / release
  * call Telegram only when TELEGRAM_BOT_TOKEN is set.
  */
@@ -87,6 +91,7 @@ export interface ScreenDeps {
   readonly botToken?: string;
   readonly fetchImpl?: typeof fetch;
   readonly rateWindow?: RateWindow;
+  readonly blocklist?: BlocklistStore;
 }
 
 export async function screenTelegramEvent(
@@ -140,6 +145,9 @@ export async function screenTelegramEvent(
         threshold: 3,
       }),
       linkDetector,
+      createBlocklistDetector({
+        store: deps.blocklist ?? workerBlocklist,
+      }),
     ],
     actions: [
       createDeleteAction(),

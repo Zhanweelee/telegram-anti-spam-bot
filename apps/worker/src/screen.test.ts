@@ -1,4 +1,5 @@
 import {
+  createMemoryBlocklistStore,
   createMemoryCache,
   createMemoryCaptchaStore,
   createMemoryModerator,
@@ -6,6 +7,7 @@ import {
   createMemoryStorage,
 } from "@tasb/adapter-memory";
 import {
+  type BlocklistStore,
   createMemoryLogger,
   parseEvent,
   type RuleSource,
@@ -409,5 +411,65 @@ describe("screenTelegramEvent", () => {
     expect(result.decision.action).toBe("delete");
     expect(result.decision.reasons).toContain("short_link");
     expect(JSON.stringify(result)).not.toContain(path);
+  });
+
+  it("deletes a shared actor only while that chat is opted in", async () => {
+    const text = "今天站会改到三点";
+    const blocklist = createMemoryBlocklistStore();
+    let reads = 0;
+    const wrapped: BlocklistStore = {
+      isEnabled: (tenantId, chatId) => blocklist.isEnabled(tenantId, chatId),
+      setEnabled: (tenantId, chatId, enabled) =>
+        blocklist.setEnabled(tenantId, chatId, enabled),
+      add: (tenantId, entry) => blocklist.add(tenantId, entry),
+      async has(tenantId, entry) {
+        reads += 1;
+        return blocklist.has(tenantId, entry);
+      },
+    };
+    const rateWindow = createMemoryRateWindow();
+    const off = await screenTelegramEvent(await event(text), {
+      blocklist: wrapped,
+      rateWindow,
+    });
+    expect(off.decision.action).toBe("allow");
+    expect(reads).toBe(0);
+    expect(JSON.stringify(off)).not.toContain(text);
+
+    await wrapped.setEnabled("local", "-100", true);
+    await wrapped.add("local", { kind: "actor", value: "5" });
+    const on = await screenTelegramEvent(await event("明天下午见"), {
+      blocklist: wrapped,
+      rateWindow,
+    });
+    expect(on.decision.action).toBe("delete");
+    expect(on.decision.reasons).toContain("shared_actor");
+    expect(JSON.stringify(on)).not.toContain("明天下午见");
+    const seen = reads;
+    expect(seen).toBeGreaterThan(0);
+
+    await wrapped.setEnabled("local", "-100", false);
+    const stopped = await screenTelegramEvent(await event("下周一同步"), {
+      blocklist: wrapped,
+      rateWindow,
+    });
+    expect(stopped.decision.action).toBe("allow");
+    expect(reads).toBe(seen);
+
+    await wrapped.setEnabled("local", "-200", true);
+    const shared = await screenTelegramEvent(
+      await event("周五再看", false, "-200"),
+      { blocklist: wrapped, rateWindow: createMemoryRateWindow() },
+    );
+    expect(shared.decision.action).toBe("delete");
+    expect(shared.decision.reasons).toContain("shared_actor");
+
+    await wrapped.setEnabled("local", "-100777", true);
+    const replaced = await screenTelegramEvent(
+      await event("规则被整份替换", false, "-100777"),
+      { blocklist: wrapped, rateWindow: createMemoryRateWindow() },
+    );
+    expect(replaced.decision.action).toBe("allow");
+    expect(reads).toBe(seen + 1);
   });
 });
