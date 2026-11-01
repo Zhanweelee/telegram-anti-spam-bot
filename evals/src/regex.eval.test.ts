@@ -72,7 +72,7 @@ export async function evaluateRegex(): Promise<{
 
 describe("regex eval", () => {
   it("does not regress precision or recall", async () => {
-    expect(cases).toHaveLength(8);
+    expect(cases).toHaveLength(9);
     for (const item of cases) {
       expect(Object.keys(item).sort()).toEqual(["id", "label", "text"]);
     }

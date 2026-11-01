@@ -1,4 +1,4 @@
-import { type Detector, defineDetector } from "@tasb/core";
+import { type Detector, defineDetector, foldMatchText } from "@tasb/core";
 import { z } from "zod";
 
 export const defaultRegexPatterns = ["t\\.me/\\+", "加微[信xX]"] as const;
@@ -61,7 +61,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
       for (const expression of compiled) {
         let matched = false;
         try {
-          matched = expression.test(text);
+          matched = expression.test(foldMatchText(text));
         } catch {
           ctx.logger.warn("regex_failed", {
             detectorId: "regex",

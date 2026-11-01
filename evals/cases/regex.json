@@ -2,6 +2,7 @@
   { "id": "s1", "text": "进群 t.me/+abc", "label": "spam" },
   { "id": "s2", "text": "加微x 领取", "label": "spam" },
   { "id": "s3", "text": "加微信", "label": "spam" },
+  { "id": "s5", "text": "加\u200b微信", "label": "spam" },
   { "id": "s4", "text": "群 t.me/+zzzz", "label": "spam" },
   { "id": "h1", "text": "今天站会", "label": "ham" },
   { "id": "h2", "text": "欢迎新人看置顶", "label": "ham" },
