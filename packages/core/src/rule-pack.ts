@@ -3,6 +3,9 @@ import { parseRuleSet, type RuleSet } from "./rule.js";
 
 const idSchema = z.string().min(1).max(128);
 export const rulePackIdSchema = z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/);
+export const ruleSubscriptionDocumentSchema = z.strictObject({
+  packId: rulePackIdSchema.nullable(),
+});
 export const MAX_RULE_SUBSCRIPTIONS = 128;
 
 export class RulePackCapacityError extends Error {

@@ -15,6 +15,7 @@ import { Hono } from "hono";
 import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
 import { workerCaptcha } from "./captcha-runtime.js";
 import { handleIncomingEvent } from "./operate.js";
+import { workerRulePacks } from "./pack-runtime.js";
 import { allowUnsignedPlugins } from "./plugins.js";
 import { workerQuota } from "./quota-runtime.js";
 import { createWorkerLogger } from "./screen.js";
@@ -155,6 +156,11 @@ export function createApp(
             store: workerQuota,
           },
           chats: stores.chats,
+          rulePacks: {
+            store: stores.subscriptions,
+            archive: workerRulePacks.archive,
+            source: workerRulePacks.source,
+          },
         });
       },
       ...(c.env?.TELEGRAM_BOT_TOKEN

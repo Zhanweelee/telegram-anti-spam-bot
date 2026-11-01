@@ -57,7 +57,7 @@ Detector、Action、以及以后的 RuleSource、Notifier、Storage 都走同一
 
 `loadRuleSet` 先读 `Cache`。未命中才向 `RuleSource` 要该群的文档，没有覆盖时再要默认文档。校验失败或来源抛错时返回空规则集，流水线放行，日志代码是 `rules_invalid`，不写异常文本。缓存读写失败只记 `rules_cache_failed`，已经解析好的规则仍然使用。这条路径不调用 `Storage.getRuleSet`，所以热路径不会为了规则去打 D1。
 
-`resolveRuleSet` 在没有规则包时调用 `loadRuleSet`。群通过 `/packs` 订阅之后，缓存键换成 `pack:<tenant>:<chat>:<packId>`。刷新失败时使用归档里上一份通过 schema 的规则，不把空规则写进去。没有上一份才回到本地规则。未订阅的群不读取规则包。见 ADR 0019。规则开关是运行时覆盖，套在读出缓存之后，不是第二份规则集。见 ADR 0034。配了 `POLICY_KV` 时，这份覆盖和 dry-run 按群写进同一个 KV，每个 isolate 缓存 60 秒。见 ADR 0035。
+`resolveRuleSet` 在没有规则包时调用 `loadRuleSet`。群通过 `/packs` 订阅之后，缓存键换成 `pack:<tenant>:<chat>:<packId>`。刷新失败时使用归档里上一份通过 schema 的规则，不把空规则写进去。没有上一份才回到本地规则。未订阅的群不读取规则包。见 ADR 0019。配了 `POLICY_KV` 时，订阅指针按群一个键写进同一份 KV，上一份规则仍留在内存。见 ADR 0037。规则开关是运行时覆盖，套在读出缓存之后，不是第二份规则集。见 ADR 0034。配了 `POLICY_KV` 时，这份覆盖和 dry-run 按群写进同一个 KV，每个 isolate 缓存 60 秒。见 ADR 0035。
 
 Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`。群覆盖是整份替换。缓存目前是进程内内存，接口留给以后的 KV。
 

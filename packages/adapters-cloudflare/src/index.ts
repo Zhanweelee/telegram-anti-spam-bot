@@ -7,8 +7,11 @@ import {
   MAX_RULE_SWITCHES,
   type PolicyStore,
   prefilterPolicySchema,
+  type RuleSubscriptionStore,
   type RuntimeDocument,
   type RuntimeStore,
+  rulePackIdSchema,
+  ruleSubscriptionDocumentSchema,
   ruleSwitchSchema,
   runtimeDocumentSchema,
 } from "@tasb/core";
@@ -37,7 +40,7 @@ export {
 /**
  * Cloudflare bindings adapter.
  * D1 stores audits and rule documents. KV stores prefilter policy and
- * the per-chat runtime switches. Workers AI is optional and stays out
+ * the per-chat runtime switches and pack subscription. Workers AI is optional and stays out
  * of the committed wrangler config. Queues and Durable Objects stay
  * unused. This module must not be imported by @tasb/core, and it does
  * not import Workers types.
@@ -184,6 +187,78 @@ function recordKey(tenantId: string, chatId: string): string {
 
 function runtimeKey(tenantId: string, chatId: string): string {
   return `runtime\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+export function createKvRuleSubscriptionStore(
+  kv: StringStore,
+  options?: { readonly now?: () => number; readonly ttlMs?: number },
+): RuleSubscriptionStore {
+  const now = options?.now ?? (() => Date.now());
+  const ttlMs = options?.ttlMs ?? DEFAULT_KV_TTL_MS;
+  const cache = new Map<
+    string,
+    { readonly packId: string | null; readonly expiresAt: number }
+  >();
+
+  async function load(
+    tenantId: string,
+    chatId: string,
+  ): Promise<string | null> {
+    const id = packKey(tenantId, chatId);
+    const at = now();
+    const hit = cache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.packId;
+    }
+    const packId = parseSubscription(await kv.get(id));
+    cache.set(id, { packId, expiresAt: at + ttlMs });
+    return packId;
+  }
+
+  return {
+    get(tenantId, chatId) {
+      return load(tenantId, chatId);
+    },
+    async put(tenantId, chatId, packId) {
+      requireSubscriptionIds(tenantId, chatId);
+      const next = packId === null ? null : rulePackIdSchema.parse(packId);
+      const current = await load(tenantId, chatId);
+      if (current === next) {
+        return;
+      }
+      const document = ruleSubscriptionDocumentSchema.parse({ packId: next });
+      const id = packKey(tenantId, chatId);
+      await kv.put(id, JSON.stringify(document));
+      cache.set(id, { packId: document.packId, expiresAt: now() + ttlMs });
+    },
+  };
+}
+
+function parseSubscription(raw: string | null): string | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = ruleSubscriptionDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.packId : null;
+  } catch {
+    return null;
+  }
+}
+
+function packKey(tenantId: string, chatId: string): string {
+  return `pack\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function requireSubscriptionIds(tenantId: string, chatId: string): void {
+  if (
+    tenantId.length < 1 ||
+    tenantId.length > 128 ||
+    chatId.length < 1 ||
+    chatId.length > 128
+  ) {
+    throw new Error("invalid_id");
+  }
 }
 
 const emptyDirectory: ChatDirectoryDocument = { rooms: [] };

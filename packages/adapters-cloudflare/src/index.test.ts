@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createKvChatDirectory,
   createKvPolicyStore,
+  createKvRuleSubscriptionStore,
   createKvRuntimeStore,
   type StringStore,
 } from "./index.js";
@@ -297,6 +298,92 @@ describe("kv chat directory", () => {
     expect(await store.chatsFor("local", "7")).toEqual(["-100"]);
     expect(gets).toBe(1);
     expect(await store.list("local")).toEqual(["-100"]);
+    expect(gets).toBe(1);
+  });
+});
+
+describe("kv rule subscriptions", () => {
+  it("keeps a pack id after a new store reads the same KV", async () => {
+    const backing = createMapStore();
+    let puts = 0;
+    const counted: StringStore = {
+      get: (key) => backing.store.get(key),
+      async put(key, value) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuleSubscriptionStore(counted);
+    expect(await first.get("local", "-100")).toBeNull();
+    expect(puts).toBe(0);
+    await first.put("local", "-100", "community");
+    expect(puts).toBe(1);
+    await first.put("local", "-100", "community");
+    expect(puts).toBe(1);
+    const key = [...backing.values.keys()][0];
+    expect(key?.startsWith("pack")).toBe(true);
+    const second = createKvRuleSubscriptionStore(backing.store);
+    expect(await second.get("local", "-100")).toBe("community");
+    await second.put("local", "-100", null);
+    const cleared = createKvRuleSubscriptionStore(backing.store);
+    expect(await cleared.get("local", "-100")).toBeNull();
+  });
+
+  it("treats a corrupt document as unsubscribed and hides the text", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    const store = createKvRuleSubscriptionStore(backing.store);
+    await store.put("local", "-100", "community");
+    const key = [...backing.values.keys()][0];
+    if (key !== undefined) {
+      backing.values.set(
+        key,
+        JSON.stringify({ packId: "community", text: secret }),
+      );
+    }
+    const fresh = createKvRuleSubscriptionStore(backing.store);
+    expect(await fresh.get("local", "-100")).toBeNull();
+    expect(JSON.stringify(await fresh.get("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(key === undefined ? "" : backing.values.get(key)).toContain(secret);
+  });
+
+  it("stores a 129th chat without pack_full", async () => {
+    const backing = createMapStore();
+    const store = createKvRuleSubscriptionStore(backing.store);
+    for (let index = 0; index < 129; index += 1) {
+      await store.put("local", String(-1000 - index), "community");
+    }
+    const fresh = createKvRuleSubscriptionStore(backing.store);
+    expect(await fresh.get("local", "-1000")).toBe("community");
+    expect(await fresh.get("local", "-1128")).toBe("community");
+    expect(backing.values.size).toBe(129);
+  });
+
+  it("reads KV once per ttl after a write", async () => {
+    const backing = createMapStore();
+    let now = 0;
+    let gets = 0;
+    const store = createKvRuleSubscriptionStore(
+      {
+        async get(key) {
+          gets += 1;
+          return backing.store.get(key);
+        },
+        put: (key, value) => backing.store.put(key, value),
+      },
+      { now: () => now, ttlMs: 60_000 },
+    );
+    await store.put("local", "-100", "community");
+    gets = 0;
+    expect(await store.get("local", "-100")).toBe("community");
+    expect(await store.get("local", "-100")).toBe("community");
+    expect(gets).toBe(0);
+    now = 60_000;
+    expect(await store.get("local", "-100")).toBe("community");
+    expect(gets).toBe(1);
+    expect(await store.get("local", "-100")).toBe("community");
     expect(gets).toBe(1);
   });
 });

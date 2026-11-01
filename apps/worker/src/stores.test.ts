@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { workerChats } from "./chat-runtime.js";
+import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
 import { resolveStores, type StoreSlot } from "./stores.js";
@@ -12,6 +13,7 @@ describe("resolveStores", () => {
     expect(stores.review).toBe(workerReview);
     expect(stores.runtime).toBe(workerRuntime);
     expect(stores.chats).toBe(workerChats);
+    expect(stores.subscriptions).toBe(workerRulePacks.store);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -59,6 +61,8 @@ describe("resolveStores", () => {
     expect(first.runtime).not.toBe(workerRuntime);
     expect(first.chats).toBe(second.chats);
     expect(first.chats).not.toBe(workerChats);
+    expect(first.subscriptions).toBe(second.subscriptions);
+    expect(first.subscriptions).not.toBe(workerRulePacks.store);
     expect(
       await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
     ).toBe(true);
@@ -90,6 +94,10 @@ describe("resolveStores", () => {
     expect([...values.keys()].some((key) => key.startsWith("chats"))).toBe(
       true,
     );
+    await first.subscriptions.put("local", "-100", "community");
+    const packs = resolveStores(env, {});
+    expect(await packs.subscriptions.get("local", "-100")).toBe("community");
+    expect([...values.keys()].some((key) => key.startsWith("pack"))).toBe(true);
     expect(await first.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(await second.storage.getRuleSet("local", "chat_1")).toBeNull();
     expect(queries.filter((sql) => sql.startsWith("CREATE TABLE"))).toEqual([

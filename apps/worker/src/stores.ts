@@ -3,6 +3,7 @@ import {
   createD1Storage,
   createKvChatDirectory,
   createKvPolicyStore,
+  createKvRuleSubscriptionStore,
   createKvRuntimeStore,
   type SqlDatabase,
   type SqlPrepared,
@@ -12,10 +13,12 @@ import type {
   ChatDirectory,
   PolicyStore,
   ReviewQueue,
+  RuleSubscriptionStore,
   RuntimeStore,
   Storage,
 } from "@tasb/core";
 import { workerChats } from "./chat-runtime.js";
+import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
 
@@ -25,6 +28,7 @@ export interface StoreSlot {
   review?: ReviewQueue;
   runtime?: RuntimeStore;
   chats?: ChatDirectory;
+  subscriptions?: RuleSubscriptionStore;
   kv?: KVNamespace;
 }
 
@@ -39,6 +43,7 @@ export function resolveStores(
   readonly review: ReviewQueue;
   readonly runtime: RuntimeStore;
   readonly chats: ChatDirectory;
+  readonly subscriptions: RuleSubscriptionStore;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
@@ -51,6 +56,7 @@ export function resolveStores(
     slot.policyStore = createKvPolicyStore(kv);
     slot.runtime = createKvRuntimeStore(kv);
     slot.chats = createKvChatDirectory(kv);
+    slot.subscriptions = createKvRuleSubscriptionStore(kv);
   }
   return {
     storage:
@@ -73,6 +79,10 @@ export function resolveStores(
       env.POLICY_KV !== undefined && slot.chats !== undefined
         ? slot.chats
         : workerChats,
+    subscriptions:
+      env.POLICY_KV !== undefined && slot.subscriptions !== undefined
+        ? slot.subscriptions
+        : workerRulePacks.store,
   };
 }
 

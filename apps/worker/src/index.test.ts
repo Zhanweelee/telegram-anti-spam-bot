@@ -277,6 +277,45 @@ describe("POST /telegram/webhook", () => {
     expect(saved).not.toContain(title);
   });
 
+  it("stores a private pack subscription in POLICY_KV", async () => {
+    const values = new Map<string, string>();
+    const kv = {
+      async get(key: string) {
+        return values.get(key) ?? null;
+      },
+      async put(key: string, value: string) {
+        values.set(key, value);
+      },
+    };
+    const app = createApp();
+    const response = await app.request(
+      "/telegram/webhook",
+      {
+        method: "POST",
+        headers: { "x-telegram-bot-api-secret-token": SECRET },
+        body: JSON.stringify({
+          update_id: 83,
+          message: {
+            message_id: 3,
+            date: 1761955200,
+            chat: { id: 42, type: "private" },
+            from: { id: 42 },
+            text: "/packs -100 community",
+          },
+        }),
+      },
+      {
+        WEBHOOK_SECRET: SECRET,
+        ADMIN_USER_IDS: "42",
+        POLICY_KV: kv as unknown as KVNamespace,
+      },
+    );
+    const raw = await response.text();
+    expect(response.status).toBe(200);
+    expect(raw).not.toContain("community");
+    expect([...values.values()].join("\n")).toContain("community");
+  });
+
   it("screens with the default pipeline and omits message text from the body", async () => {
     const spam = "请免费领取礼品";
     const app = createApp();

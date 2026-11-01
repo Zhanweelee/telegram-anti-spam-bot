@@ -228,6 +228,7 @@ export {
   type RulePackSource,
   type RuleSubscriptionStore,
   rulePackIdSchema,
+  ruleSubscriptionDocumentSchema,
 } from "./rule-pack.js";
 export {
   applyRuleSwitches,
