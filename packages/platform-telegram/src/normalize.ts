@@ -458,6 +458,10 @@ function sideUrls(message: Record<string, unknown>): string[] {
   if (isRecord(invoice)) {
     pushPlainUrls(invoice.description, urls);
   }
+  const venue = message.venue;
+  if (isRecord(venue)) {
+    pushPlainUrls(venue.address, urls);
+  }
   const preview = message.link_preview_options;
   if (isRecord(preview) && typeof preview.url === "string") {
     urls.push(preview.url);
