@@ -2,6 +2,7 @@ import {
   type Detector,
   type DetectorHit,
   defineDetector,
+  foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
@@ -91,7 +92,11 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       const compared = foldEncodedAlphabet(
         foldEncodedSeparators(
           foldEncodedGaps(
-            foldMatchText(foldDotLookalikes(foldFullwidthLatin(message.text))),
+            foldMatchText(
+              foldDotLookalikes(
+                foldFullwidthLatin(foldCyrillicLookalikes(message.text)),
+              ),
+            ),
           ),
         ),
       );

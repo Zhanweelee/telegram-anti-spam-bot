@@ -1,6 +1,7 @@
 import {
   type Event,
   type ForwardKind,
+  foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
@@ -412,7 +413,9 @@ const COPY_URL =
 
 function urlsInText(text: string): string[] {
   const found: string[] = [];
-  const folded = foldDotLookalikes(foldFullwidthLatin(text));
+  const folded = foldDotLookalikes(
+    foldFullwidthLatin(foldCyrillicLookalikes(text)),
+  );
   for (const match of folded.matchAll(new RegExp(COPY_URL.source, "gi"))) {
     const raw = match[0]?.replace(/[),.;!?]+$/g, "");
     if (!raw) {
@@ -629,7 +632,11 @@ function hostFromUrl(value: unknown): { host: string; invite: boolean } | null {
       foldEncodedAlphabet(
         foldEncodedSeparators(
           foldMatchText(
-            foldDotLookalikes(foldFullwidthLatin(foldEncodedGaps(value))),
+            foldDotLookalikes(
+              foldFullwidthLatin(
+                foldCyrillicLookalikes(foldEncodedGaps(value)),
+              ),
+            ),
           ),
         ),
       ),

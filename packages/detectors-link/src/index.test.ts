@@ -607,4 +607,39 @@ describe("link fixtures", () => {
     expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
     expect(JSON.stringify(ip)).not.toContain("ip63");
   });
+
+  it("folds seven cyrillic lookalikes before reading hosts", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor("bit.l\u0443/lat64"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("lat64");
+
+    const invite = await detector.detect({
+      event: eventFor("t.m\u0435/+LAT64"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("LAT64");
+
+    const ordinary = await detector.detect({
+      event: eventFor("\u0435xample.com/page64"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const ukrainian = await detector.detect({
+      event: eventFor("b\u0456t.ly/uk64"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ukrainian).toBeNull();
+  });
 });

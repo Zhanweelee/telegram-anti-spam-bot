@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,
@@ -70,6 +71,24 @@ describe("foldFullwidthLatin", () => {
     expect(foldFullwidthLatin("免\uFF21费领取")).toBe("免A费领取");
     expect(foldFullwidthLatin("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
     expect(foldFullwidthLatin("不是免费。领取")).toBe("不是免费。领取");
+  });
+});
+
+describe("foldCyrillicLookalikes", () => {
+  it("folds seven cyrillic letters and keeps the rest", () => {
+    expect(foldCyrillicLookalikes("bit.l\u0443")).toBe("bit.ly");
+    expect(foldCyrillicLookalikes("t.m\u0415")).toBe("t.mE");
+    expect(
+      foldCyrillicLookalikes("\u0430\u0435\u043E\u0440\u0441\u0443\u0445"),
+    ).toBe("aeopcyx");
+    expect(
+      foldCyrillicLookalikes("\u0410\u0415\u041E\u0420\u0421\u0423\u0425"),
+    ).toBe("AEOPCYX");
+    expect(foldCyrillicLookalikes("привет")).toBe("пpивeт");
+    expect(foldCyrillicLookalikes("ивт")).toBe("ивт");
+    expect(foldCyrillicLookalikes("b\u0456t.ly")).toBe("b\u0456t.ly");
+    expect(foldCyrillicLookalikes("免费领取")).toBe("免费领取");
+    expect(foldCyrillicLookalikes("t.me/\uFF0BCODE")).toBe("t.me/\uFF0BCODE");
   });
 });
 

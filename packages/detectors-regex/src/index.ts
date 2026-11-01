@@ -1,6 +1,7 @@
 import {
   type Detector,
   defineDetector,
+  foldCyrillicLookalikes,
   foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
@@ -68,7 +69,9 @@ export function createRegexDetector(config: RegexConfig): Detector {
         let matched = false;
         try {
           matched = expression.test(
-            foldInterpuncts(foldMatchText(foldFullwidthLatin(text))),
+            foldInterpuncts(
+              foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+            ),
           );
         } catch {
           ctx.logger.warn("regex_failed", {

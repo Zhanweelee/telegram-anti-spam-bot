@@ -255,6 +255,7 @@ export {
   runtimeDocumentSchema,
 } from "./runtime.js";
 export {
+  foldCyrillicLookalikes,
   foldDotLookalikes,
   foldEncodedAlphabet,
   foldEncodedGaps,

@@ -33,6 +33,35 @@ export function foldDotLookalikes(text: string): string {
   return text.replace(DOT_LOOKALIKES, ".");
 }
 
+const CYRILLIC_LOOKALIKES: Record<string, string> = {
+  "\u0410": "A",
+  "\u0430": "a",
+  "\u0415": "E",
+  "\u0435": "e",
+  "\u041E": "O",
+  "\u043E": "o",
+  "\u0420": "P",
+  "\u0440": "p",
+  "\u0421": "C",
+  "\u0441": "c",
+  "\u0423": "Y",
+  "\u0443": "y",
+  "\u0425": "X",
+  "\u0445": "x",
+};
+
+/**
+ * Fold seven Cyrillic letters that share a Latin shape.
+ * Ukrainian і, Cyrillic т, and every other letter stay.
+ */
+export function foldCyrillicLookalikes(text: string): string {
+  let out = "";
+  for (const char of text) {
+    out += CYRILLIC_LOOKALIKES[char] ?? char;
+  }
+  return out;
+}
+
 /**
  * Fold fullwidth Latin letters to ASCII.
  * Fullwidth digits, U+FF0B, and other characters stay.

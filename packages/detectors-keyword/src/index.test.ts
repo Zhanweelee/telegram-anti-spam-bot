@@ -102,6 +102,43 @@ describe("keyword detector", () => {
     ).toBeNull();
   });
 
+  it("folds seven cyrillic lookalikes before matching", async () => {
+    const copy = createKeywordDetector({ keywords: ["copy"] });
+    const hit = await copy.detect({
+      event: messageEvent("\u0441\u043E\u0440\u0443"),
+      logger,
+      signal,
+    });
+    expect(hit?.evidence[0]?.summary).toBe("keyword:copy");
+    const sensitive = createKeywordDetector({
+      keywords: ["COPY"],
+      caseSensitive: true,
+    });
+    expect(
+      await sensitive.detect({
+        event: messageEvent("\u0441\u043E\u0440\u0443"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      (
+        await sensitive.detect({
+          event: messageEvent("\u0421\u041E\u0420\u0423"),
+          logger,
+          signal,
+        })
+      )?.evidence[0]?.summary,
+    ).toBe("keyword:COPY");
+    expect(
+      await detector.detect({
+        event: messageEvent("привет"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
   it("matches a join profile without copying the whole name", async () => {
     const name = "广告员免费领取礼品";
     const hit = await detector.detect({

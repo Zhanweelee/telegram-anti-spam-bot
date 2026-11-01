@@ -1,6 +1,7 @@
 import {
   type Detector,
   defineDetector,
+  foldCyrillicLookalikes,
   foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
@@ -33,7 +34,9 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         const needle = foldInterpuncts(
           foldMatchText(
             foldFullwidthLatin(
-              caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+              foldCyrillicLookalikes(
+                caseSensitive ? keyword : keyword.toLocaleLowerCase(),
+              ),
             ),
           ),
         );
@@ -44,7 +47,9 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
           const haystack = foldInterpuncts(
             foldMatchText(
               foldFullwidthLatin(
-                caseSensitive ? text : text.toLocaleLowerCase(),
+                foldCyrillicLookalikes(
+                  caseSensitive ? text : text.toLocaleLowerCase(),
+                ),
               ),
             ),
           );
@@ -60,7 +65,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         reasons: ["keyword_match"],
         evidence: matched.map((keyword) => ({
           kind: "keyword" as const,
-          summary: `keyword:${foldInterpuncts(foldMatchText(foldFullwidthLatin(keyword))).slice(0, 80)}`,
+          summary: `keyword:${foldInterpuncts(foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(keyword)))).slice(0, 80)}`,
         })),
       };
     },

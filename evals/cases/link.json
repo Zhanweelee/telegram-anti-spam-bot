@@ -195,5 +195,20 @@
     "id": "fullwidth-ip",
     "text": "http://\uFF12\uFF10\uFF13.0.113.9/x",
     "label": "spam"
+  },
+  {
+    "id": "cyrillic-shortener",
+    "text": "bit.l\u0443/offer",
+    "label": "spam"
+  },
+  {
+    "id": "cyrillic-invite",
+    "text": "t.m\u0435/+abc",
+    "label": "spam"
+  },
+  {
+    "id": "cyrillic-ordinary",
+    "text": "\u0435xample.com/docs",
+    "label": "ham"
   }
 ]
