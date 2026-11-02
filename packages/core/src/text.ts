@@ -1199,7 +1199,19 @@ function androidLabelChar(char: string): boolean {
 
 /** A label unit Android can keep, including letters outside ASCII. */
 function androidLabelUnit(char: string): boolean {
-  return androidLabelChar(char) || androidLabelCode(char.charCodeAt(0));
+  const code = char.codePointAt(0);
+  return (
+    code !== undefined && (androidLabelChar(char) || androidLabelCode(code))
+  );
+}
+
+/** UTF-16 length of the label unit at `index`, or 0 when none starts there. */
+function labelUnitAt(raw: string, index: number): number {
+  const code = raw.codePointAt(index);
+  if (code === undefined || !androidLabelUnit(String.fromCodePoint(code))) {
+    return 0;
+  }
+  return code > 0xffff ? 2 : 1;
 }
 
 /** Java `\b` or the end of the text. A label cannot finish without one. */
@@ -1213,7 +1225,7 @@ function labelBoundary(raw: string, index: number): boolean {
 }
 
 function labelContinues(raw: string, index: number): boolean {
-  return index < raw.length && androidLabelUnit(raw.charAt(index));
+  return labelUnitAt(raw, index) > 0;
 }
 
 function portContinues(raw: string, index: number): boolean {
@@ -1258,14 +1270,18 @@ function acceptableLabelEnd(
 }
 
 function readAndroidLabel(raw: string, index: number): number | null {
-  if (!androidLabelUnit(raw.charAt(index))) {
+  const first = labelUnitAt(raw, index);
+  if (first === 0) {
     return null;
   }
   const start = index;
-  let next = index + 1;
-  while (next < raw.length && next - start < ANDROID_LABEL_MAX) {
-    if (androidLabelUnit(raw.charAt(next))) {
-      next += 1;
+  let next = index + first;
+  let units = 1;
+  while (next < raw.length && units < ANDROID_LABEL_MAX) {
+    const size = labelUnitAt(raw, next);
+    if (size > 0) {
+      next += size;
+      units += 1;
       continue;
     }
     const mark = raw.charAt(next);
@@ -1273,20 +1289,20 @@ function readAndroidLabel(raw: string, index: number): number | null {
       break;
     }
     let look = next;
+    let marks = 0;
     while (
       look < raw.length &&
       (raw.charAt(look) === "-" || raw.charAt(look) === "_")
     ) {
       look += 1;
+      marks += 1;
     }
-    if (
-      look >= raw.length ||
-      !androidLabelUnit(raw.charAt(look)) ||
-      look - start >= ANDROID_LABEL_MAX
-    ) {
+    const after = labelUnitAt(raw, look);
+    if (after === 0 || units + marks >= ANDROID_LABEL_MAX) {
       break;
     }
-    next = look + 1;
+    next = look + after;
+    units += marks + 1;
   }
   if (acceptableLabelEnd(raw, next, start)) {
     return next;
@@ -1306,7 +1322,8 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * U+1680, U+205F, U+FEFF, and other Android label characters stay inside the label.
  * The label still ends where the next character has no word boundary.
  * A label character can also end when `/`, `?`, a dot and another label,
- * or a finished port follows. A non-spacing mark stays transparent, so
+ * or a finished port follows. A supplementary label character counts as
+ * one unit toward the 63-character cap. A non-spacing mark stays transparent, so
  * the label still ends on the letter before it. A division slash or
  * fraction slash stays in the host until one of those continuations.
  * An underscore can sit inside a label. A label cannot end in front of one.

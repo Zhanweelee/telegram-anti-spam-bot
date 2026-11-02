@@ -39,3 +39,4 @@ Android 的单词边界只认 ASCII 字母、数字和下划线。汉字、全�
 - `http://bit.ly一@evil.com/…`、`http://bit.ly一#…` 和 `http://bit.ly一 evil.com/…` 仍删除。
 - `http://203.0.113.10一@evil.com/…` 仍按裸 IP 删除。没有协议的 `bit.ly一/…` 和 `www.bit.ly一/…` 仍删除。
 - `http://bit.ly` 加组合附加符号再写路径仍删除。路径不进证据。
+- 增补平面里的标签字同样留在带协议的主机名里。见 ADR 0214。
