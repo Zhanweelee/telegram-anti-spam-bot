@@ -6346,4 +6346,76 @@ describe("screenTelegramEvent", () => {
     expect(deletedDump).not.toContain("from149");
     expect(deletedDump).not.toContain("机密群名");
   });
+
+  it("allows an underscore Android leaves inside a bare label and deletes the trailing underscore it splits", async () => {
+    const path = "offer150";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2217,
+        message: {
+          message_id: 2217,
+          date: 1761955200,
+          chat: { id: -1008175, type: "supergroup", title: "机密群名" },
+          from: { id: 150, first_name: "Ada" },
+          text: `foo_bar.com/http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("allow");
+    expect(moderator.deleted).toEqual([]);
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const split = await normalizeUpdate({
+      update: {
+        update_id: 2218,
+        message: {
+          message_id: 2218,
+          date: 1761955200,
+          chat: { id: -1008176, type: "supergroup", title: "机密群名" },
+          from: { id: 150, first_name: "https://tinyurl.com/from150" },
+          text: `foo_.com/http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(split.status).toBe("event");
+    if (split.status !== "event") {
+      return;
+    }
+    const splitLogger = createMemoryLogger();
+    const deleted = await screenTelegramEvent(split.event, {
+      logger: splitLogger,
+      moderator: createMemoryModerator(),
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(deleted.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const deletedDump = JSON.stringify({
+      result: deleted,
+      logs: splitLogger.entries,
+    });
+    expect(deletedDump).not.toContain(path);
+    expect(deletedDump).not.toContain("from150");
+    expect(deletedDump).not.toContain("机密群名");
+  });
 });

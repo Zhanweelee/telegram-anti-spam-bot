@@ -1720,5 +1720,30 @@
     "id": "strict-tld-schemed",
     "text": "http://foo.example/http://bit.ly/offer149",
     "label": "ham"
+  },
+  {
+    "id": "underscore-label-middle",
+    "text": "foo_bar.com/http://bit.ly/offer150",
+    "label": "ham"
+  },
+  {
+    "id": "underscore-label-www",
+    "text": "www.foo_bar.com/http://bit.ly/offer150",
+    "label": "ham"
+  },
+  {
+    "id": "underscore-label-tail",
+    "text": "foo_.com/http://bit.ly/offer150",
+    "label": "spam"
+  },
+  {
+    "id": "underscore-label-head",
+    "text": "_foo.com/http://bit.ly/offer150",
+    "label": "spam"
+  },
+  {
+    "id": "underscore-label-glued",
+    "text": "example.com_http://bit.ly/offer150",
+    "label": "ham"
   }
 ]

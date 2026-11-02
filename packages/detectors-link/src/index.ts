@@ -66,8 +66,9 @@ export const defaultShorteners = [
  * stuck to an ASCII word character is not a match, and the host after
  * `://` is not read again. A bare domain and a `www.` host end at the last
  * label Android accepts as a top-level domain, so the next URL is its own
- * match. A label cannot start with a hyphen, and `http://` is not itself a
- * label. A dot in a schemed host
+ * match. A label cannot start with a hyphen or an underscore. An underscore
+ * stays inside the label only when a label character follows, and `http://`
+ * is not itself a label. A dot in a schemed host
  * starts another label only when a label character follows. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
  * info only when the next character can finish it. User info is at most
@@ -97,7 +98,7 @@ const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
 const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_BARE_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
-const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
 const URL_TLD = androidStrictTld;

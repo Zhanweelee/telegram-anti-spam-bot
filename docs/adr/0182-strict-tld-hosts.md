@@ -34,3 +34,4 @@ Android 没有协议时，主机名的最后一段必须是 `LinkifyPort` 里的
 - `example.com/http://bit.ly/…`、`example.xn--p1ai/http://bit.ly/…`、`例子.中国/http://bit.ly/…` 和 `http://foo.example/http://bit.ly/…` 留着。
 - 空格后面的 `例子.中国/http://bit.ly/…` 按后面的短链删除。
 - `foo.example/https://t.me/+…` 按邀请删除。路径不进证据。
+- 下划线夹在没有协议的标签中间时仍属于这一段。下划线开头或结尾时，后面的网址仍单独打开。见 ADR 0183。
