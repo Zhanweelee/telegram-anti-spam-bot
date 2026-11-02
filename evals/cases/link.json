@@ -605,5 +605,35 @@
     "id": "tg-query-lower-ordinary",
     "text": "tg://resolve?domain=durov&text=https%3A%2F%2Fexample.com%2Fdocs",
     "label": "ham"
+  },
+  {
+    "id": "tg-folder",
+    "text": "https://t.me/folder/FOLDER108",
+    "label": "spam"
+  },
+  {
+    "id": "tg-folder-dog",
+    "text": "https://telegram.dog/folder/FOLDER108",
+    "label": "spam"
+  },
+  {
+    "id": "tg-folder-capital",
+    "text": "https://t.me/Folder/FOLDER108",
+    "label": "ham"
+  },
+  {
+    "id": "tg-folder-other",
+    "text": "https://example.com/folder/FOLDER108",
+    "label": "ham"
+  },
+  {
+    "id": "tg-folder-deep",
+    "text": "tg://folder?slug=FOLDER108",
+    "label": "ham"
+  },
+  {
+    "id": "tg-folder-bare",
+    "text": "https://t.me/folder",
+    "label": "ham"
   }
 ]

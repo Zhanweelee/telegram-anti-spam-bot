@@ -199,6 +199,17 @@
     "reason": "invite"
   },
   {
+    "name": "android-folder",
+    "text": "https://t.me/folder/FOLDER108",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "android-folder-capital",
+    "text": "https://t.me/Folder/FOLDER108",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

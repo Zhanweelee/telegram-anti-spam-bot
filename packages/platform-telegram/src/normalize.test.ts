@@ -736,6 +736,65 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(code);
   });
 
+  it("marks an android folder invite and leaves the code out", async () => {
+    const code = "FOLDER108";
+    const outcome = await normalize({
+      update_id: 78010,
+      message: {
+        message_id: 78010,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 108 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/folder/${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Folder/${code}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(outcome.event)).not.toContain(code);
+    const capital = await normalize({
+      update_id: 78013,
+      message: {
+        message_id: 78013,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 108 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Folder/${code}`,
+          },
+        ],
+      },
+    });
+    expect(capital.status).toBe("event");
+    if (capital.status !== "event") {
+      return;
+    }
+    expect(capital.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(capital.event)).not.toContain(code);
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

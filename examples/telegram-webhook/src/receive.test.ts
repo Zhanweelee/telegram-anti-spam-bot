@@ -983,6 +983,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp109");
   });
 
+  it("keeps a hostname from an android folder invite and leaves the code out", async () => {
+    const code = "FOLDER108";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 78012,
+        message: {
+          message_id: 78012,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp108" },
+          from: { id: 108, first_name: "https://tinyurl.com/from108" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://telegram.dog/folder/${code}`,
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_78012",
+      kind: "message",
+      message: {
+        id: "78012",
+        text: "点这里",
+        hosts: ["telegram.dog"],
+        invites: ["telegram.dog"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("from108");
+    expect(dumped).not.toContain("grp108");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

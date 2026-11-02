@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-108 Android 文件夹路径 — done
+
+验收：`t.me`、`telegram.me`、`telegram.dog` 及其子域上，小写 `/folder/` 加一段邀请码记成邀请并删除。证据是 `invite:` 加主机名，不含邀请码。末尾斜杠同样命中。大写 `Folder`、没有第二段、多出来的路径、其它网站和 `tg://folder` 留着。公开的 `t.me/名字` 仍保留。默认名单仍是 ADR 0026。
+
 ### P3-107 Telegram 查询名不区分大小写 — done
 
 验收：`domain`、`phone`、`server`、`host`、`invite` 和 `slug` 不区分大小写，取第一次出现的值。`SERVER`、`HOST`、`DOMAIN`、`PHONE`、`INVITE` 或 `SLUG` 里的裸 IP、短链或邀请删除这条消息。证据只有主机名。`secret`、邀请码和路径不进证据。先出现的非空 `server` 不读后面的 `host`。网页代理上长度为 0 的 `SERVER` 改读 `host`。SOCKS 和 MTProto 的空 `server`、只含空白的 `server` 不改读。Passport 不读 `text`。小写参数名仍按原来的规则。默认名单仍是 ADR 0026。
@@ -1511,4 +1515,10 @@
 
 - 做了什么：`domain`、`phone`、`server`、`host`、`invite` 和 `slug` 不区分大小写，取第一次出现的值。选择写在 ADR 0140。
 - 学到什么：桌面端 `url_parse_params` 先把查询名收成小写，同名只留第一次。`URL.searchParams.get` 区分大小写，大写的 `SERVER` 和 `DOMAIN` 原先被当成没有这个参数。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-108
+
+- 做了什么：小写 `t.me/folder/` 记成邀请。选择写在 ADR 0141。
+- 学到什么：Android 把 `folder/` 和 `addlist/` 都交给 `checkChatlistInvite`。桌面端只改写 `addlist/`，也没有 `tg://folder`。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。

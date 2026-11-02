@@ -31,3 +31,4 @@
 - `chats.json` 整份替换、因而没有 `links` 的群不会删除邀请。
 - `tg://join?invite=` 和 `tg://addlist?slug=` 后来由 ADR 0102 记成 `t.me`。`tg://resolve` 仍当公开用户名。
 - 全是数字的 `t.me/+`、`telegram.me/+` 和 `telegram.dog/+` 后来由 ADR 0138 改成电话链接，不再记成邀请。带字母的加号路径仍是邀请。
+- `t.me/folder/`、`telegram.me/folder/` 和 `telegram.dog/folder/` 后来由 ADR 0141 记成邀请。大写 `Folder`、没有第二段和 `tg://folder` 仍不记。

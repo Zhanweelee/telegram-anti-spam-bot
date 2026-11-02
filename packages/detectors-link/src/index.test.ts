@@ -535,6 +535,61 @@ describe("link fixtures", () => {
     expect(pub).toBeNull();
   });
 
+  it("treats an android folder path as an invite and keeps the code out", async () => {
+    const code = "FOLDER108";
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(`打开 https://t.me/folder/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["invite"]);
+    expect(hit?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(hit)).not.toContain(code);
+    const me = await detector.detect({
+      event: eventFor(`https://telegram.me/folder/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("invite:telegram.me");
+    const slash = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/folder/${code}/`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("invite:www.telegram.dog");
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/Folder/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital).toBeNull();
+    const bare = await detector.detect({
+      event: eventFor("https://t.me/folder"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/folder/${code}/more`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const other = await detector.detect({
+      event: eventFor(`https://example.com/folder/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+    const deep = await detector.detect({
+      event: eventFor(`tg://folder?slug=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();

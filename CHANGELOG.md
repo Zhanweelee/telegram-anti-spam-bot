@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-108
+
+- `t.me/folder/`、`telegram.me/folder/` 和 `telegram.dog/folder/` 记成邀请。见 ADR 0141。
+- 小写路径上的邀请码按现有链接规则删除。证据只有主机名。大写 `Folder`、没有第二段和 `tg://folder` 留着。
+- 云额度的基础检测器名单没有改。
+
 ### P3-107
 
 - `domain`、`phone`、`server`、`host`、`invite` 和 `slug` 不区分大小写，取第一次出现的值。见 ADR 0140。
