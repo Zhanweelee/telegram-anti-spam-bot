@@ -1025,5 +1025,25 @@
     "id": "label-hyphen-backtrack",
     "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cccccccccc/keep",
     "label": "ham"
+  },
+  {
+    "id": "gap-stop-short",
+    "text": "http://bit.ly\ttail130.example/offer130",
+    "label": "spam"
+  },
+  {
+    "id": "gap-stop-encoded",
+    "text": "http://bit.ly%0Atail130.example/offer130",
+    "label": "spam"
+  },
+  {
+    "id": "gap-stop-ip",
+    "text": "http://203.0.113.130\u00A0tail130.example/x",
+    "label": "spam"
+  },
+  {
+    "id": "gap-stop-plain",
+    "text": "http://example.com\ttail130.example/ok",
+    "label": "ham"
   }
 ]

@@ -11,6 +11,7 @@ import {
   foldFullwidthLatin,
   foldHostInterrupters,
   foldHostScan,
+  foldHostScanKeepingGaps,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";
@@ -70,6 +71,24 @@ describe("foldHostScan", () => {
     expect(foldHostScan("t.me%2F+SIDE72")).toBe("t.me/+SIDE72");
     expect(foldHostScan("bit. ly")).toBe("bit. ly");
     expect(foldHostScan("bit%255B.%255Dly")).toBe("bit%255B.%255Dly");
+    expect(foldHostScan("http://bit.ly\tevil.com")).toBe(
+      "http://bit.lyevil.com",
+    );
+    expect(foldHostScan("http://bit.ly%0Aevil.com")).toBe(
+      "http://bit.lyevil.com",
+    );
+  });
+
+  it("keeps a gap that ends an Android link", () => {
+    expect(foldHostScanKeepingGaps("http://bit.ly\tevil.com")).toBe(
+      "http://bit.ly\tevil.com",
+    );
+    expect(foldHostScanKeepingGaps("http://bit.ly%0Aevil.com")).toBe(
+      "http://bit.ly%0Aevil.com",
+    );
+    expect(foldHostScanKeepingGaps("bit\u200b.ly")).toBe("bit\u200b.ly");
+    expect(foldHostScanKeepingGaps("b%69t.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingGaps("bit. ly")).toBe("bit. ly");
   });
 });
 

@@ -46,29 +46,34 @@ export function foldBracketDots(text: string): string {
   return text.replace(BRACKET_DOT, ".");
 }
 
+function foldHostShape(text: string): string {
+  return foldDotLookalikes(
+    foldEncodedMiddleDot(
+      foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+    ),
+  );
+}
+
+function foldHostTail(text: string): string {
+  return foldBracketDots(foldEncodedAlphabet(foldEncodedSeparators(text)));
+}
+
 /**
  * Fold plain text before a hostname scan.
  * This is the link-detector order. Structured URL parsing keeps its own order.
  * An ordinary space stays. A second percent layer stays.
+ * Gaps are removed so a short link split by an invisible character still matches.
  */
 export function foldHostScan(text: string): string {
-  return foldBracketDots(
-    foldEncodedAlphabet(
-      foldEncodedSeparators(
-        foldEncodedGaps(
-          foldMatchText(
-            foldDotLookalikes(
-              foldEncodedMiddleDot(
-                foldHostInterrupters(
-                  foldFullwidthLatin(foldCyrillicLookalikes(text)),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
+  return foldHostTail(foldEncodedGaps(foldMatchText(foldHostShape(text))));
+}
+
+/**
+ * Same host fold, with tabs, line breaks, and percent-encoded gaps left in place.
+ * Android stops at those characters. The joined host from `foldHostScan` stays separate.
+ */
+export function foldHostScanKeepingGaps(text: string): string {
+  return foldHostTail(foldHostShape(text));
 }
 
 const CYRILLIC_LOOKALIKES: Record<string, string> = {

@@ -3249,4 +3249,63 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE129");
   });
+
+  it("keeps the host Android opens when a gap ends the link", async () => {
+    const detector = createLinkDetector();
+    const path = "offer130";
+    const tail = "tail130.example";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly\t${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+    expect(JSON.stringify(short)).not.toContain(tail);
+
+    const encoded = await detector.detect({
+      event: eventFor(`http://bit.ly%0A${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encoded?.reasons).toEqual(["short_link"]);
+    expect(encoded?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(encoded)).not.toContain(path);
+    expect(JSON.stringify(encoded)).not.toContain("%0A");
+
+    const address = "203.0.113.130";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}\u00A0${tail}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(tail);
+
+    const joined = await detector.detect({
+      event: eventFor("https://bit.\nly/foldsecret"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["short_link"]);
+    expect(joined?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(joined)).not.toContain("foldsecret");
+
+    const plain = await detector.detect({
+      event: eventFor(`http://example.com\t${tail}/ok`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor("https://t.me\t/+CODE130"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE130");
+  });
 });

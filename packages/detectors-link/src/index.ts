@@ -4,6 +4,7 @@ import {
   type DetectorHit,
   defineDetector,
   foldHostScan,
+  foldHostScanKeepingGaps,
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
@@ -88,11 +89,16 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         ),
       );
       const compared = foldHostScan(text);
+      const shaped = foldHostScanKeepingGaps(text);
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
         message?.invites,
       );
-      const hosts = mergeHosts(extractHosts(compared), message?.hosts);
+      const gapHosts = shaped === compared ? [] : extractHosts(shaped);
+      const hosts = mergeHosts(extractHosts(compared), [
+        ...gapHosts,
+        ...(message?.hosts ?? []),
+      ]);
       if (hosts.length === 0 && invites.length === 0) {
         return null;
       }
