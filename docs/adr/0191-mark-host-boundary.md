@@ -36,3 +36,4 @@ JavaScript 的 `\b` 把这个符号当成非单词字符，会从中间拆出短
 - `example.com` 加符号再写 `/http://bit.ly/…`，以及符号开头的 `http://bit.ly/…`，按短链删除。路径不进证据。
 - `http://bit.ly` 加符号再写路径仍按短链删除。`点击bit.ly`、`bіt.ly` 和希腊字母 `Ι` 后面的短链仍按短链删除。
 - `http://example.com` 加符号再写短链，以及 `example.com/` 加符号再写短链，留着。
+- 百分号编码的点紧挨在 `http://` 前面时不再收成点。见 ADR 0192。

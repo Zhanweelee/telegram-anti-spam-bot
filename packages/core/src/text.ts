@@ -93,14 +93,27 @@ function foldHostTail(text: string): string {
 }
 
 /**
+ * `%2E` glued to `http://` is not a dot Android decodes.
+ * A line break between them still is. Rewrite the glued form before line
+ * breaks disappear: `!` lets the host in front end, and `x` keeps `http`
+ * from starting.
+ */
+function foldGluedEncodedDot(text: string): string {
+  return text.replace(/%2E(?=https?:\/\/)/gi, "!x");
+}
+
+/**
  * Fold plain text before a hostname scan.
  * This is the link-detector order. Structured URL parsing keeps its own order.
  * An ordinary space stays. A second percent layer stays.
  * Gaps are removed so a short link split by an invisible character still matches.
  * A dot lookalike after an ASCII dot stays in the label.
+ * `%2E` glued to a scheme stays out of that scheme.
  */
 export function foldHostScan(text: string): string {
-  return foldHostTail(foldEncodedGaps(foldMatchText(foldHostShape(text))));
+  return foldHostTail(
+    foldEncodedGaps(foldMatchText(foldGluedEncodedDot(foldHostShape(text)))),
+  );
 }
 
 /**

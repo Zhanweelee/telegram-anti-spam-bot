@@ -118,6 +118,11 @@ describe("foldHostScan", () => {
     expect(foldHostScanKeepingStops("b\u0410it.ly")).toBe("bAit.ly");
     expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
     expect(foldHostScan("bit[.]ly")).toBe("bit.ly");
+    expect(foldHostScan("example.com%2Ehttp://bit.ly")).not.toContain(
+      ".http://",
+    );
+    expect(foldHostScan("example.com%2E\nhttp://bit.ly")).toContain(".http://");
+    expect(foldHostScan("bit%2Ely")).toBe("bit.ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

@@ -1965,5 +1965,35 @@
     "id": "mark-host-iota",
     "text": "example.comΙhttp://bit.ly/offer158",
     "label": "spam"
+  },
+  {
+    "id": "encoded-dot-scheme",
+    "text": "example.com%2Ehttp://bit.ly/offer159",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-www",
+    "text": "www.example.com%2Ehttp://bit.ly/offer159",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-literal",
+    "text": "example.com.http://bit.ly/offer159",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-break",
+    "text": "example.com%2E\nhttp://bit.ly/offer159",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-invite",
+    "text": "example.com%2Ehttps://t.me/+CODE159",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host",
+    "text": "bit%2Ely/offer159",
+    "label": "spam"
   }
 ]
