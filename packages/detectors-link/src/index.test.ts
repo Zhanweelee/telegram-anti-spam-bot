@@ -688,6 +688,61 @@ describe("link fixtures", () => {
     expect(other).toBeNull();
   });
 
+  it("treats a percent-encoded space invite as an invite and keeps the code out", async () => {
+    const code = "CASE111";
+    const digits = "99881101";
+    const address = "203.0.113.111";
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(`打开 https://t.me/%20${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["invite"]);
+    expect(hit?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(hit)).not.toContain(code);
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/%20${code}?x=1`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("invite:www.telegram.dog");
+    const numeric = await detector.detect({
+      event: eventFor(
+        `https://t.me/%20${digits}?text=https%3A%2F%2F${address}%2Fhidden`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(numeric)).not.toContain(digits);
+    expect(JSON.stringify(numeric)).not.toContain(address);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/%20${code}/`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash).toBeNull();
+    const hash = await detector.detect({
+      event: eventFor(`https://t.me/%20${code}#room`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hash).toBeNull();
+    const sub = await detector.detect({
+      event: eventFor(`https://durov.t.me/%20${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub).toBeNull();
+    const dotted = await detector.detect({
+      event: eventFor("https://t.me/%20ab.cd"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();

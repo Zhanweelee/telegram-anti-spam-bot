@@ -695,5 +695,40 @@
     "id": "tg-folder-case-stays",
     "text": "https://t.me/Folder/CASE110",
     "label": "ham"
+  },
+  {
+    "id": "tg-space-invite",
+    "text": "https://t.me/%20CASE111",
+    "label": "spam"
+  },
+  {
+    "id": "tg-space-invite-dog",
+    "text": "https://telegram.dog/%20CASE111?x=1",
+    "label": "spam"
+  },
+  {
+    "id": "tg-space-invite-digits",
+    "text": "https://t.me/%2099881101",
+    "label": "spam"
+  },
+  {
+    "id": "tg-space-invite-slash",
+    "text": "https://t.me/%20CASE111/",
+    "label": "ham"
+  },
+  {
+    "id": "tg-space-invite-hash",
+    "text": "https://t.me/%20CASE111#room",
+    "label": "ham"
+  },
+  {
+    "id": "tg-space-invite-sub",
+    "text": "https://durov.t.me/%20CASE111",
+    "label": "ham"
+  },
+  {
+    "id": "tg-space-invite-dot",
+    "text": "https://t.me/%20ab.cd",
+    "label": "ham"
   }
 ]

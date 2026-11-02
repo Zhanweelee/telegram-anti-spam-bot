@@ -1106,6 +1106,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp110");
   });
 
+  it("keeps a hostname from a percent-encoded space invite and leaves the code out", async () => {
+    const code = "CASE111";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 78024,
+        message: {
+          message_id: 78024,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp111" },
+          from: { id: 111, first_name: "https://tinyurl.com/from111" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/%20${code}?x=1`,
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_78024",
+      kind: "message",
+      message: {
+        id: "78024",
+        text: "点这里",
+        hosts: ["t.me"],
+        invites: ["t.me"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("from111");
+    expect(dumped).not.toContain("grp111");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

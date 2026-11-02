@@ -255,6 +255,17 @@
     "expect": "miss"
   },
   {
+    "name": "desktop-percent-space",
+    "text": "https://t.me/%20CASE111",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "desktop-percent-space-slash",
+    "text": "https://t.me/%20CASE111/",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

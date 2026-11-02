@@ -342,11 +342,23 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
     /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/i.test(path) ||
     /^\/addlist\/[A-Za-z0-9_-]{1,128}$/i.test(path) ||
     /^\/folder\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
-    isAndroidPrefixInvite(host, path)
+    isAndroidPrefixInvite(host, path) ||
+    isPercentSpaceInvite(withScheme, host)
   ) {
     return host;
   }
   return null;
+}
+
+/** 桌面端把 `t.me/%20邀请码` 收成 `tg://join`。末尾斜杠和 `#` 不算。 */
+function isPercentSpaceInvite(raw: string, host: string): boolean {
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  if (bare !== "t.me" && bare !== "telegram.me" && bare !== "telegram.dog") {
+    return false;
+  }
+  return /^(?:https?:\/\/)?(?:www\.)?(?:t\.me|telegram\.me|telegram\.dog)\/%20[A-Za-z0-9_-]{1,128}(?:\?.*)?$/i.test(
+    raw,
+  );
 }
 
 /** Android 把 `folder.t.me/码` 收成 `t.me/folder/码`。只认这三枚标签。 */

@@ -34,3 +34,4 @@
 - `t.me/folder/`、`telegram.me/folder/` 和 `telegram.dog/folder/` 后来由 ADR 0141 记成邀请。大写 `Folder`、没有第二段和 `tg://folder` 仍不记。
 - `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 后来由 ADR 0142 记成邀请。没有第二段、其它主机和普通用户名子域仍不记。
 - `JoinChat` 和 `AddList` 后来由 ADR 0143 不区分大小写。`Folder` 仍只认小写。
+- `t.me/%20`、`telegram.me/%20` 和 `telegram.dog/%20` 后来由 ADR 0144 记成邀请。末尾斜杠、紧挨着的 `#` 和子域仍不记。
