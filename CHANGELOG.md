@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-110
+
+- `JoinChat` 和 `AddList` 不区分大小写，记成邀请。见 ADR 0143。
+- 证据只有主机名。`Folder` 仍只认小写。没有第二段和其它网站留着。
+- 云额度的基础检测器名单没有改。
+
 ### P3-109
 
 - `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 上的一段邀请码记成邀请。见 ADR 0142。

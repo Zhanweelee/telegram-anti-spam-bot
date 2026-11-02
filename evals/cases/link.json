@@ -670,5 +670,30 @@
     "id": "tg-prefix-share",
     "text": "https://share.t.me/x?url=https%3A%2F%2F203.0.113.109%2Fhidden",
     "label": "ham"
+  },
+  {
+    "id": "tg-joinchat-case",
+    "text": "https://t.me/JoinChat/CASE110",
+    "label": "spam"
+  },
+  {
+    "id": "tg-addlist-case",
+    "text": "https://telegram.dog/ADDLIST/CASE110/",
+    "label": "spam"
+  },
+  {
+    "id": "tg-joinchat-case-bare",
+    "text": "https://t.me/JOINCHAT",
+    "label": "ham"
+  },
+  {
+    "id": "tg-joinchat-case-extra",
+    "text": "https://t.me/JoinChat/CASE110/more",
+    "label": "ham"
+  },
+  {
+    "id": "tg-folder-case-stays",
+    "text": "https://t.me/Folder/CASE110",
+    "label": "ham"
   }
 ]

@@ -33,3 +33,4 @@
 - 全是数字的 `t.me/+`、`telegram.me/+` 和 `telegram.dog/+` 后来由 ADR 0138 改成电话链接，不再记成邀请。带字母的加号路径仍是邀请。
 - `t.me/folder/`、`telegram.me/folder/` 和 `telegram.dog/folder/` 后来由 ADR 0141 记成邀请。大写 `Folder`、没有第二段和 `tg://folder` 仍不记。
 - `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 后来由 ADR 0142 记成邀请。没有第二段、其它主机和普通用户名子域仍不记。
+- `JoinChat` 和 `AddList` 后来由 ADR 0143 不区分大小写。`Folder` 仍只认小写。

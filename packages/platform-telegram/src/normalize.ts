@@ -1284,8 +1284,8 @@ function isTelegramInvite(host: string, path: string): boolean {
   }
   return (
     /^\/\+[A-Za-z0-9_-]{1,128}$/.test(path) ||
-    /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
-    /^\/addlist\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/i.test(path) ||
+    /^\/addlist\/[A-Za-z0-9_-]{1,128}$/i.test(path) ||
     /^\/folder\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
     isAndroidPrefixInvite(host, path)
   );

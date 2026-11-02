@@ -1131,6 +1131,42 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes a capitalized joinchat invite and keeps the code out of logs", async () => {
+    const code = "CASE110";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 78019,
+        message: {
+          message_id: 78019,
+          date: 1761955200,
+          chat: { id: -100590, type: "supergroup", title: "机密群名" },
+          from: { id: 110 },
+          text: `打开 https://telegram.me/ADDLIST/${code}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-02T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("invite");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "invite:telegram.me",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a short link and keeps the path out of the decision", async () => {
     const path = "secretpath";
     const result = await screenTelegramEvent(

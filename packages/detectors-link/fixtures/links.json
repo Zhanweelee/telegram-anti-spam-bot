@@ -238,6 +238,23 @@
     "expect": "miss"
   },
   {
+    "name": "desktop-joinchat-case",
+    "text": "https://t.me/JoinChat/CASE110",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "desktop-addlist-case",
+    "text": "https://telegram.me/ADDLIST/CASE110",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "desktop-joinchat-bare",
+    "text": "https://t.me/JOINCHAT",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

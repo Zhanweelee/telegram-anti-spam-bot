@@ -856,6 +856,41 @@ describe("normalizeUpdate", () => {
     expect(bare.event.message?.invites).toBeUndefined();
   });
 
+  it("marks a capitalized joinchat path and leaves the code out", async () => {
+    const code = "CASE110";
+    const outcome = await normalize({
+      update_id: 78018,
+      message: {
+        message_id: 78018,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 110 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/JoinChat/${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Folder/${code}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(outcome.event)).not.toContain(code);
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

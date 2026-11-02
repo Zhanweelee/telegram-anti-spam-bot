@@ -645,6 +645,49 @@ describe("link fixtures", () => {
     expect(user).toBeNull();
   });
 
+  it("treats a capitalized joinchat or addlist path as an invite and keeps the code out", async () => {
+    const code = "CASE110";
+    const detector = createLinkDetector();
+    const joinchat = await detector.detect({
+      event: eventFor(`打开 https://t.me/JoinChat/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joinchat?.reasons).toEqual(["invite"]);
+    expect(joinchat?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(joinchat)).not.toContain(code);
+    const addlist = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/ADDLIST/${code}/`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addlist?.evidence[0]?.summary).toBe("invite:www.telegram.dog");
+    const folder = await detector.detect({
+      event: eventFor(`https://t.me/Folder/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(folder).toBeNull();
+    const bare = await detector.detect({
+      event: eventFor("https://t.me/JOINCHAT"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/JoinChat/${code}/more`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const other = await detector.detect({
+      event: eventFor(`https://example.com/JoinChat/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();

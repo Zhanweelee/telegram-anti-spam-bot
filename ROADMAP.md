@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-110 邀请路径大小写 — done
+
+验收：`t.me`、`telegram.me`、`telegram.dog` 及其子域上，`JoinChat` 和 `AddList` 任意大小写加一段邀请码记成邀请并删除。证据是 `invite:` 加主机名，不含邀请码。末尾斜杠同样命中。没有第二段、多出来的路径和其它网站留着。`Folder` 仍只认小写。公开的 `t.me/名字` 仍保留。默认名单仍是 ADR 0026。
+
 ### P3-109 Android 的 t.me 前缀邀请 — done
 
 验收：`folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 加一段邀请码记成邀请并删除。证据是 `invite:` 加这台主机名，不含邀请码。末尾斜杠和主机名大小写同样命中。没有第二段、多出来的路径、`telegram.me` 或 `telegram.dog` 上的同名子域、`www.folder.t.me` 和普通用户名子域留着。`share.t.me` 上的 `url` 不读。公开的 `t.me/名字` 仍保留。默认名单仍是 ADR 0026。
@@ -1531,4 +1535,10 @@
 
 - 做了什么：`folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 记成邀请。选择写在 ADR 0142。
 - 学到什么：Android 把单层 `名字.t.me` 收成 `t.me/名字` 再走路径。这三枚保留名因此变成邀请。桌面端只留下解析成用户名的结果。`share.t.me` 收成 `t.me/share/其它`，桌面端不读，仍不解开。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-110
+
+- 做了什么：`JoinChat` 和 `AddList` 不区分大小写，记成邀请。选择写在 ADR 0143。
+- 学到什么：桌面端 `TryConvertUrlToLocal` 用忽略大小写的正则认 `joinchat/` 和 `addlist/`。Android 的 `startsWith` 区分大小写。`folder/` 仍只认小写。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
