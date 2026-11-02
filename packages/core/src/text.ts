@@ -89,7 +89,102 @@ function foldHostShape(text: string): string {
 }
 
 function foldHostTail(text: string): string {
-  return foldBracketDots(foldEncodedAlphabet(foldEncodedSeparators(text)));
+  return foldBracketDots(
+    foldEncodedAlphabet(foldEncodedSeparators(foldEncodedScheme(text))),
+  );
+}
+
+/**
+ * A percent-encoded letter that spells `http://` or `https://` is not a
+ * scheme Android decodes. A literal scheme stays. `b%69t.ly` is not a scheme.
+ * `!` ends the text in front, and `x` keeps the host after `://` from starting.
+ */
+function foldEncodedScheme(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const taken = encodedSchemeLength(text, index);
+    if (taken > 0) {
+      out += "!x";
+      index += taken;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedSchemeLength(text: string, index: number): number {
+  const https = matchEncodedScheme(text, index, "https://");
+  if (https > "https://".length) {
+    return https;
+  }
+  const http = matchEncodedScheme(text, index, "http://");
+  if (http > "http://".length) {
+    return http;
+  }
+  return 0;
+}
+
+function matchEncodedScheme(
+  text: string,
+  index: number,
+  scheme: string,
+): number {
+  let cursor = index;
+  let encoded = false;
+  for (const expected of scheme) {
+    const taken = consumeSchemeChar(text, cursor, expected);
+    if (taken === 0) {
+      return 0;
+    }
+    if (taken > 1) {
+      encoded = true;
+    }
+    cursor += taken;
+  }
+  return encoded ? cursor - index : 0;
+}
+
+function consumeSchemeChar(
+  text: string,
+  index: number,
+  expected: string,
+): number {
+  const current = text.charAt(index);
+  if (expected === ":" || expected === "/") {
+    return current === expected ? 1 : 0;
+  }
+  if (current.toLowerCase() === expected) {
+    return 1;
+  }
+  return consumeEncodedSchemeLetter(text, index, expected);
+}
+
+function consumeEncodedSchemeLetter(
+  text: string,
+  index: number,
+  expected: string,
+): number {
+  const lower = expected.charCodeAt(0).toString(16).padStart(2, "0");
+  const upper = expected
+    .toUpperCase()
+    .charCodeAt(0)
+    .toString(16)
+    .padStart(2, "0");
+  for (const marker of ["%25", "%"] as const) {
+    if (text.slice(index, index + marker.length).toLowerCase() !== marker) {
+      continue;
+    }
+    const hex = text
+      .slice(index + marker.length, index + marker.length + 2)
+      .toLowerCase();
+    if (hex === lower || hex === upper) {
+      return marker.length + 2;
+    }
+  }
+  return 0;
 }
 
 /**
@@ -129,6 +224,7 @@ function foldGluedEncodedHyphen(text: string): string {
  * Gaps are removed so a short link split by an invisible character still matches.
  * A dot lookalike after an ASCII dot stays in the label.
  * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
+ * A percent-encoded letter that spells the scheme stays out of that scheme.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(

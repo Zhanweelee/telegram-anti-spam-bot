@@ -142,6 +142,13 @@ describe("foldHostScan", () => {
     expect(foldEncodedAlphabet("example.com%2Dhttp://bit.ly")).toContain(
       "-http://",
     );
+    expect(foldHostScan("%68ttp://bit.ly")).not.toContain("http://");
+    expect(foldHostScan("ht%74p://bit.ly")).not.toContain("http://");
+    expect(foldHostScan("ht%74\np://bit.ly")).not.toContain("http://");
+    expect(foldHostScan("http://b%69t.ly")).toBe("http://bit.ly");
+    expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
+    expect(foldHostScan("http://bit.ly")).toBe("http://bit.ly");
+    expect(foldEncodedAlphabet("%68ttp://bit.ly")).toContain("http://");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

@@ -6132,4 +6132,74 @@ describe("link fixtures", () => {
     expect(JSON.stringify(doubled)).not.toContain("short_link:bit.ly");
     expect(JSON.stringify(doubled)).not.toContain(path);
   });
+
+  it("leaves a short link spelled with a percent-encoded scheme", async () => {
+    const detector = createLinkDetector();
+    const path = "offer162";
+    const glued = [
+      `%68ttp://bit.ly/${path}`,
+      `%48TTP://bit.ly/${path}`,
+      `ht%74p://bit.ly/${path}`,
+      `htt%70://bit.ly/${path}`,
+      `http%73://bit.ly/${path}`,
+      `%68%74%74%70://bit.ly/${path}`,
+      `%2568ttp://bit.ly/${path}`,
+      `ht%2574p://bit.ly/${path}`,
+      `see %68ttp://bit.ly/${path}`,
+      `ht%74\np://bit.ly/${path}`,
+      `%68ttp://b%69t.ly/${path}`,
+      `example.com/%68ttp://bit.ly/${path}`,
+      `http://example.com/%68ttp://bit.ly/${path}`,
+    ];
+    for (const text of glued) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `http://bit.ly/${path}`,
+      `HTTP://bit.ly/${path}`,
+      `http://b%69t.ly/${path}`,
+      `https://b%69t.ly/${path}`,
+      `b%69t.ly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const invite = await detector.detect({
+      event: eventFor("t.me/+OFF%45"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("OFF%45");
+
+    const nested = await detector.detect({
+      event: eventFor(`https://bit.ly/%68ttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(nested?.reasons).toEqual(["short_link"]);
+    expect(nested?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(nested)).not.toContain("t.co");
+    expect(JSON.stringify(nested)).not.toContain(path);
+  });
 });

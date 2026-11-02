@@ -2055,5 +2055,35 @@
     "id": "encoded-hyphen-double",
     "text": "example.com%252Dhttp://bit.ly/offer161",
     "label": "ham"
+  },
+  {
+    "id": "encoded-scheme-h",
+    "text": "%68ttp://bit.ly/offer162",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-scheme-t",
+    "text": "ht%74p://bit.ly/offer162",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-scheme-break",
+    "text": "ht%74\np://bit.ly/offer162",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-scheme-literal",
+    "text": "http://bit.ly/offer162",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-scheme-host",
+    "text": "http://b%69t.ly/offer162",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-scheme-invite",
+    "text": "t.me/+OFF%45",
+    "label": "spam"
   }
 ]
