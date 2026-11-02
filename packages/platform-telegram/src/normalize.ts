@@ -500,6 +500,7 @@ function urlsInText(text: string): string[] {
 
 function sideUrls(message: Record<string, unknown>): string[] {
   const urls: string[] = [];
+  pushContactUrls(message, urls);
   const poll = message.poll;
   if (isRecord(poll)) {
     pushPlainUrls(poll.question, urls);
@@ -700,6 +701,89 @@ function pushPlainUrls(value: unknown, urls: string[]): void {
   for (const url of urlsInText(value)) {
     urls.push(url);
   }
+}
+
+/** 联系人卡片里的 URL 行会打开浏览器。电话、邮箱和备注不打开。 */
+function pushContactUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const contact = message.contact;
+  if (!isRecord(contact) || typeof contact.vcard !== "string") {
+    return;
+  }
+  for (const value of vcardUrlValues(contact.vcard)) {
+    urls.push(/^https?:/i.test(value) ? value : `http://${value}`);
+  }
+}
+
+function vcardUrlValues(vcard: string): string[] {
+  const found: string[] = [];
+  for (const line of vcardLines(vcard)) {
+    const colon = line.indexOf(":");
+    if (colon <= 0) {
+      continue;
+    }
+    const left = line.slice(0, colon);
+    const name = left.split(";")[0]?.trim().toLowerCase();
+    if (name !== "url") {
+      continue;
+    }
+    let value = line.slice(colon + 1).trim();
+    if (/encoding=quoted-printable/i.test(left)) {
+      value = decodeQuotedPrintable(value).trim();
+    }
+    if (value.length === 0 || value.length > MAX_LINK) {
+      continue;
+    }
+    found.push(value);
+    if (found.length >= MAX_HOSTS) {
+      break;
+    }
+  }
+  return found;
+}
+
+function vcardLines(vcard: string): string[] {
+  const raw = vcard.slice(0, 16384).split(/\r\n|\n|\r/);
+  const lines: string[] = [];
+  for (const rawLine of raw) {
+    const previous = lines[lines.length - 1];
+    if (
+      previous !== undefined &&
+      (rawLine.startsWith(" ") || rawLine.startsWith("\t"))
+    ) {
+      lines[lines.length - 1] = previous + rawLine.slice(1);
+      continue;
+    }
+    if (
+      previous?.endsWith("=") &&
+      /encoding=quoted-printable/i.test(previous)
+    ) {
+      lines[lines.length - 1] = previous.slice(0, -1) + rawLine;
+      continue;
+    }
+    lines.push(rawLine);
+  }
+  return lines;
+}
+
+function decodeQuotedPrintable(value: string): string {
+  const bytes: number[] = [];
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value.charAt(index);
+    const hex = value.slice(index + 1, index + 3);
+    if (char === "=" && /^[0-9A-Fa-f]{2}$/.test(hex)) {
+      bytes.push(Number.parseInt(hex, 16));
+      index += 2;
+      continue;
+    }
+    const code = char.charCodeAt(0);
+    if (code < 128) {
+      bytes.push(code);
+    }
+  }
+  return new TextDecoder().decode(new Uint8Array(bytes));
 }
 
 function preLanguageUrls(entity: Record<string, unknown>): string[] {

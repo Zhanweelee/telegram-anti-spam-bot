@@ -1275,6 +1275,75 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("keeps only the hostname from a contact vCard URL", async () => {
+    const phone = "13800138118";
+    const name = "名片姓名118";
+    const path = "card118";
+    const note = "203.0.113.161";
+    const emailHost = "cutt.ly";
+    const extra = "203.0.113.162";
+    const grouped = "203.0.113.163";
+    const code = "CARD118";
+    const outcome = await normalize({
+      update_id: 2118,
+      message: {
+        message_id: 118,
+        date: 1761955200,
+        chat: { id: -1008118, type: "supergroup" },
+        from: { id: 118 },
+        contact: {
+          phone_number: phone,
+          first_name: name,
+          vcard: [
+            "BEGIN:VCARD",
+            "FN:名片姓名118",
+            `TEL:${phone}`,
+            `NOTE:http://${note}/nope`,
+            `EMAIL:a@${emailHost}`,
+            `X-URL:http://${extra}/skip`,
+            `item1.URL:http://${grouped}/skip`,
+            `URL:https://bit.ly/${path}`,
+            "URL:http://203.0.113.151/hidden118",
+            "URL;TYPE=WORK:bit.ly/work118",
+            "URL;ENCODING=QUOTED-PRINTABLE:http://203.0.113.152=2Fsecret118",
+            `URL:https://t.me/+${code}`,
+            "URL:https://t.co/fold",
+            " 118",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    expect(outcome.event.message?.text).toBe("");
+    expect(outcome.event.message?.hosts).toEqual([
+      "bit.ly",
+      "203.0.113.151",
+      "203.0.113.152",
+      "t.me",
+      "t.co",
+    ]);
+    expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("work118");
+    expect(dumped).not.toContain("secret118");
+    expect(dumped).not.toContain("hidden118");
+    expect(dumped).not.toContain("fold118");
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(note);
+    expect(dumped).not.toContain(emailHost);
+    expect(dumped).not.toContain(extra);
+    expect(dumped).not.toContain(grouped);
+    expect(dumped).not.toContain("VCARD");
+  });
+
   it("keeps an inline bot as a flag and drops its username", async () => {
     const name = "机密代发";
     const outcome = await normalize({

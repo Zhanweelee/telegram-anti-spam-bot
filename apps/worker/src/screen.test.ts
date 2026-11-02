@@ -981,6 +981,50 @@ describe("screenTelegramEvent", () => {
     ).toBe(true);
   });
 
+  it("deletes a contact card URL and keeps the vCard out of logs", async () => {
+    const phone = "13800138118";
+    const path = "card118";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2118,
+        message: {
+          message_id: 118,
+          date: 1761955200,
+          chat: { id: -1008118, type: "supergroup", title: "机密群名" },
+          from: { id: 118 },
+          contact: {
+            phone_number: phone,
+            first_name: "名片姓名118",
+            vcard: `BEGIN:VCARD\nURL:https://bit.ly/${path}\nEND:VCARD`,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("名片姓名118");
+    expect(dumped).not.toContain("VCARD");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a hidden short link and keeps the path out of logs", async () => {
     const secret = "https://bit.ly/机密路径";
     const outcome = await normalizeUpdate({
