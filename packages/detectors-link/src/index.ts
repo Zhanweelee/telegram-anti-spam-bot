@@ -750,7 +750,7 @@ function isUsernameDraft(url: URL): boolean {
     return true;
   }
   const first = parts[0];
-  if (parts.length === 1 && first !== undefined) {
+  if (parts.length === 1 && first !== undefined && isExactDraftHost(host)) {
     return isPublicUsername(first) || isTelegramPhoneSegment(host, first);
   }
   const preview = parts[0]?.toLowerCase();
@@ -761,6 +761,9 @@ function isUsernameDraft(url: URL): boolean {
     name !== undefined &&
     isPublicUsername(name)
   ) {
+    return true;
+  }
+  if (isAppNamePath(host, parts)) {
     return true;
   }
   return isUserPostPath(host, parts);
@@ -790,6 +793,22 @@ function isUserSubdomainPath(parts: readonly string[]): boolean {
   }
   const only = parts[0];
   return parts.length === 1 && only !== undefined && /^\d{1,16}$/.test(only);
+}
+
+/** 桌面端把用户名后的一段收成 appname。对方不是 bot 时仍写入草稿。 */
+function isAppNamePath(host: string, parts: readonly string[]): boolean {
+  if (!isExactDraftHost(host) || parts.length !== 2) {
+    return false;
+  }
+  const name = parts[0];
+  const app = parts[1];
+  return (
+    name !== undefined &&
+    app !== undefined &&
+    isPublicUsername(name) &&
+    /^[A-Za-z0-9._-]{1,128}$/.test(app) &&
+    !/^\d{1,16}$/.test(app)
+  );
 }
 
 function isUserPostPath(host: string, parts: readonly string[]): boolean {

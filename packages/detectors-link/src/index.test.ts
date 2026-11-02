@@ -914,6 +914,101 @@ describe("link fixtures", () => {
     expect(textOnly).toBeNull();
   });
 
+  it("reads the draft on a username app path and keeps the name out", async () => {
+    const address = "203.0.113.114";
+    const hidden = "hidden114";
+    const code = "CODE114";
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["ip_host"]);
+    expect(hit?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(hit)).not.toContain(hidden);
+    expect(JSON.stringify(hit)).not.toContain("durov");
+    expect(JSON.stringify(hit)).not.toContain("shop");
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/durov/Shop/?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const dotted = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/durov/my.app?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(dotted)).not.toContain("my.app");
+    const deep = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=durov&appname=shop&text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov/shop?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const sub = await detector.detect({
+      event: eventFor(
+        `https://durov.t.me/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov/shop/more?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const foreign = await detector.detect({
+      event: eventFor(
+        `https://example.com/durov/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+    const reserved = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+    const nested = encodeURIComponent(
+      `https://t.me/durov/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/spam?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();
@@ -1649,7 +1744,10 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(app).toBeNull();
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain("name108");
+    expect(JSON.stringify(app)).not.toContain("durov");
 
     const reserved = await detector.detect({
       event: eventFor(

@@ -277,6 +277,17 @@
     "expect": "miss"
   },
   {
+    "name": "user-app-text",
+    "text": "https://t.me/durov/shop?text=http%3A%2F%2F203.0.113.114%2Fhidden114",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "user-app-subdomain",
+    "text": "https://durov.t.me/shop?text=http%3A%2F%2F203.0.113.114%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

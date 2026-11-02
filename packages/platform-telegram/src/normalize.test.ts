@@ -1030,6 +1030,64 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(mixed.event)).not.toContain(path);
   });
 
+  it("keeps a hostname from a username app draft and leaves the name out", async () => {
+    const address = "203.0.113.114";
+    const hidden = "hidden114";
+    const outcome = await normalize({
+      update_id: 78030,
+      message: {
+        message_id: 78030,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 114 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("shop");
+    const sub = await normalize({
+      update_id: 78031,
+      message: {
+        message_id: 78031,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 114 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://durov.t.me/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+          },
+        ],
+      },
+    });
+    expect(sub.status).toBe("event");
+    if (sub.status !== "event") {
+      return;
+    }
+    expect(sub.event.message?.hosts).toEqual(["durov.t.me"]);
+    expect(JSON.stringify(sub.event)).not.toContain(address);
+    expect(JSON.stringify(sub.event)).not.toContain(hidden);
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

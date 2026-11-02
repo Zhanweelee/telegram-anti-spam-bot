@@ -514,7 +514,7 @@
   {
     "id": "tg-user-app-text",
     "text": "https://t.me/durov/app?text=https%3A%2F%2Fbit.ly%2Foffer",
-    "label": "ham"
+    "label": "spam"
   },
   {
     "id": "tg-reserved-subdomain-text",
@@ -769,6 +769,21 @@
   {
     "id": "tg-passport-text",
     "text": "tg://resolve?domain=telegrampassport&text=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-user-app-dog",
+    "text": "https://www.telegram.dog/durov/Shop?text=http%3A%2F%2F203.0.113.114%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-user-app-subdomain",
+    "text": "https://durov.t.me/shop?text=http%3A%2F%2F203.0.113.114%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-user-app-extra",
+    "text": "https://t.me/durov/shop/more?text=http%3A%2F%2F203.0.113.114%2Fx",
     "label": "ham"
   }
 ]
