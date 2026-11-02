@@ -7276,7 +7276,7 @@ describe("link fixtures", () => {
       signal,
     });
     expect(dotted?.reasons).toEqual(["short_link"]);
-    expect(dotted?.evidence[0]?.summary).toBe("short_link:xn--3px.bit.ly");
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:example.comx.bit.ly");
     expect(JSON.stringify(dotted)).not.toContain(path);
   });
 
@@ -7352,6 +7352,107 @@ describe("link fixtures", () => {
       });
       expect(hit, text).toBeNull();
     }
+  });
+
+  it("keeps a mixed label on the host Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer187";
+    const kept = [
+      `bit.ly\u70B9\u65E5\u672C.com/${path}`,
+      `www.bit.ly\u70B9\u65E5\u672C.com/${path}`,
+      `t.co\u70B9\u65E5\u672C.com/${path}`,
+      `203.0.113.10\u70B9\u65E5\u672C.com/${path}`,
+      `bit.ly\uAC00.com/${path}`,
+      `see bit.ly\u70B9\u65E5\u672C.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C.\u4E2D\u56FD/${path}`,
+      `http://bit.ly\u70B9\u65E5\u672C.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C.evil.com/${path}`,
+      `www.bit.ly\u70B9\u65E5\u672C.evil.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C.co.uk/${path}`,
+      `bit.ly\u70B9.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C.com.notarealtld/${path}`,
+      `http://bit.ly\u70B9\u65E5\u672C.evil.com/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const dotted = await detector.detect({
+      event: eventFor(`example.com\u70B9.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["short_link"]);
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:example.comx.bit.ly");
+    expect(JSON.stringify(dotted)).not.toContain(path);
+
+    const suffix = await detector.detect({
+      event: eventFor(`\u70B9\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.reasons).toEqual(["short_link"]);
+    expect(suffix?.evidence[0]?.summary).toBe(
+      "short_link:xn--wgv71as3s.bit.ly",
+    );
+    expect(JSON.stringify(suffix)).not.toContain(path);
+
+    const fake = await detector.detect({
+      event: eventFor(`bit.ly\u70B9\u65E5\u672C.notarealtld/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fake?.reasons).toEqual(["short_link"]);
+    expect(fake?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(fake)).not.toContain(path);
+
+    const plain = await detector.detect({
+      event: eventFor(`example.com\u70B9.notarealtld/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const joined = await detector.detect({
+      event: eventFor(`bit.ly\u70B9\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["short_link"]);
+    expect(joined?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.lyx.bit.ly",
+    ]);
+    expect(JSON.stringify(joined)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.10\u70B9\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["short_link"]);
+    expect(addressed?.evidence[0]?.summary).toBe(
+      "short_link:203.0.113.10x.bit.ly",
+    );
+    expect(JSON.stringify(addressed)).not.toContain("ip_host:203.0.113.10");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+
+    const longer = await detector.detect({
+      event: eventFor(`example.com\u70B9.bit.ly.notarealtld/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(longer?.reasons).toEqual(["short_link"]);
+    expect(longer?.evidence[0]?.summary).toBe("short_link:example.comx.bit.ly");
+    expect(JSON.stringify(longer)).not.toContain(path);
   });
 
   it("joins an ideographic stop when another domain continues", async () => {

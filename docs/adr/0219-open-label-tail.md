@@ -36,4 +36,5 @@ ADR 0205 把夹在 ASCII 中间的标签字收成 `x`。`bit.ly点evil.com/…` 
 - `bit.ly点203.0.113.10/…` 按短链和裸 IP 删除。`example.com点203.0.113.10/…` 按裸 IP 删除。证据是 `203.0.113.10`。
 - `bit.ly点evil.com/…`、`bit.ly点free.com/…`、`bit.ly点free.中国/…` 和 `http://bit.ly点203.0.113.10/…` 留着。
 - `example.com点bit.ly/…` 和 `203.0.113.10点bit.ly/…` 仍留着。见 ADR 0205。
+- 点号后面仍是严格域名时，夹在中间的标签字收成 `x`。见 ADR 0220。
 - 路径不进证据。

@@ -3005,5 +3005,45 @@
     "id": "label-tail-real-tld",
     "text": "bit.ly\u70B9free.com/offer186",
     "label": "ham"
+  },
+  {
+    "id": "mixed-label-com",
+    "text": "bit.ly\u70B9\u65E5\u672C.com/offer187",
+    "label": "ham"
+  },
+  {
+    "id": "mixed-label-address",
+    "text": "203.0.113.10\u70B9\u65E5\u672C.com/offer187",
+    "label": "ham"
+  },
+  {
+    "id": "mixed-label-evil",
+    "text": "bit.ly\u70B9\u65E5\u672C.evil.com/offer187",
+    "label": "ham"
+  },
+  {
+    "id": "mixed-label-scheme",
+    "text": "http://bit.ly\u70B9\u65E5\u672C.com/offer187",
+    "label": "ham"
+  },
+  {
+    "id": "mixed-label-cjk",
+    "text": "bit.ly\u70B9\u65E5\u672C.\u4E2D\u56FD/offer187",
+    "label": "ham"
+  },
+  {
+    "id": "mixed-label-fake",
+    "text": "bit.ly\u70B9\u65E5\u672C.notarealtld/offer187",
+    "label": "spam"
+  },
+  {
+    "id": "mixed-label-suffix",
+    "text": "example.com\u70B9.bit.ly/offer187",
+    "label": "spam"
+  },
+  {
+    "id": "mixed-label-open",
+    "text": "\u70B9\u65E5\u672C.bit.ly/offer187",
+    "label": "spam"
   }
 ]

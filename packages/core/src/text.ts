@@ -750,6 +750,9 @@ function foldGraphemeJoiner(text: string): string {
  * Android keeps these characters inside the same host label.
  * Replacing the run with `x` stops a later ASCII label from being its own URL.
  * A finished host stays intact when what follows is not a strict domain.
+ * A label run before `.` and a strict domain becomes `x`, so the host
+ * Android kept together is not split into the shortener in front.
+ * A dotted tail that is not a strict domain stays, so that host still opens.
  * `。` still separates labels for the URL parser. A following scheme stays.
  */
 function foldGluedLabelRuns(text: string): string {
@@ -771,12 +774,18 @@ function foldGluedLabelRuns(text: string): string {
         }
         end += String.fromCodePoint(more).length;
       }
+      const rest = text.slice(end);
+      const asciiTail =
+        asciiHostLetter(text, end) && !separateFinishedHost(out, rest);
+      const dottedTail =
+        text.charAt(end) === "." &&
+        endsWithFinishedHost(out) &&
+        dotDomainContinues(rest);
       if (
-        asciiHostLetter(text, end) &&
+        (asciiTail || dottedTail) &&
         !startsWithScheme(text, end) &&
-        !keptMappedTail(out, text.slice(end), text, index, end) &&
-        !keptMappedHead(out, text.slice(end), text, index, end) &&
-        !separateFinishedHost(out, text.slice(end))
+        !keptMappedTail(out, rest, text, index, end) &&
+        !keptMappedHead(out, rest, text, index, end)
       ) {
         out += "x";
         index = end;
@@ -1025,6 +1034,9 @@ function foldJoiningHostDots(text: string): string {
 const STRICT_DOMAIN_TAIL = new RegExp(
   `^(?:[A-Za-z0-9-]+\\.)+(?:${androidStrictTld})(?![A-Za-z0-9-])`,
 );
+const DOT_STRICT_DOMAIN = new RegExp(
+  `^\\.(?:[A-Za-z0-9-]+\\.)*(?:${androidStrictTld})(?![A-Za-z0-9-])`,
+);
 
 /**
  * The text after a label run is a domain Android would keep on this host.
@@ -1032,6 +1044,11 @@ const STRICT_DOMAIN_TAIL = new RegExp(
  */
 function strictDomainContinues(rest: string): boolean {
   return STRICT_DOMAIN_TAIL.test(rest);
+}
+
+/** A dot and a strict domain follow, so Android keeps this label on the host. */
+function dotDomainContinues(rest: string): boolean {
+  return DOT_STRICT_DOMAIN.test(rest);
 }
 
 /**
