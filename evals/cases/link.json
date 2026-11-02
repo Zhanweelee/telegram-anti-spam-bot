@@ -2025,5 +2025,35 @@
     "id": "encoded-plus-path",
     "text": "t.me/%2BCODE160",
     "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-scheme",
+    "text": "example.com%2Dhttp://bit.ly/offer161",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-www",
+    "text": "www.example.com%2Dhttp://bit.ly/offer161",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-literal",
+    "text": "example.com-http://bit.ly/offer161",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-break",
+    "text": "example.com%2D\nhttp://bit.ly/offer161",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-invite",
+    "text": "example.com%2Dhttps://t.me/+CODE161",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-double",
+    "text": "example.com%252Dhttp://bit.ly/offer161",
+    "label": "ham"
   }
 ]

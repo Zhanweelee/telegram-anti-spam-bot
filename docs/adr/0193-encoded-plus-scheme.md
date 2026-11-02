@@ -32,3 +32,4 @@ Android 不会在匹配前把 `%2B` 收成加号。`example.com%2Bhttp://bit.ly/
 - `example.com+http://bit.ly/…`、换行或斜杠隔开的 `%2B`，以及 `t.me/%2B…`，仍按现有规则删除。路径和邀请码不进证据。
 - `https://bit.ly%2Bhttp://t.co/…` 仍按短链删除。证据是 `bit.ly`。
 - `203.0.113.160%2Bhttp://bit.ly/…` 仍按裸 IP 删除。证据是这个地址，不是后面的短链。
+- 百分号编码的连字符紧挨在 `http://` 前面时不再收成连字符。见 ADR 0194。

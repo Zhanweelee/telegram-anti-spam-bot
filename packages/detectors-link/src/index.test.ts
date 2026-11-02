@@ -6024,4 +6024,112 @@ describe("link fixtures", () => {
     expect(JSON.stringify(addressed)).not.toContain("short_link:bit.ly");
     expect(JSON.stringify(addressed)).not.toContain(path);
   });
+
+  it("leaves a short link glued on by a percent-encoded hyphen", async () => {
+    const detector = createLinkDetector();
+    const path = "offer161";
+    const glued = [
+      `example.com%2Dhttp://bit.ly/${path}`,
+      `example.com%2dhttps://bit.ly/${path}`,
+      `www.example.com%2Dhttp://bit.ly/${path}`,
+      `%2Dhttp://bit.ly/${path}`,
+      `example.com%2DHTTP://bit.ly/${path}`,
+      `http://example.com%2Dhttp://bit.ly/${path}`,
+      `example.com/%2Dhttp://bit.ly/${path}`,
+      `example.com%252Dhttp://bit.ly/${path}`,
+      `%252Dhttp://bit.ly/${path}`,
+      `example.com%25%2Dhttp://bit.ly/${path}`,
+      `example.com%25252Dhttp://bit.ly/${path}`,
+    ];
+    for (const text of glued) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const invite = await detector.detect({
+      event: eventFor("example.com%2Dhttps://t.me/+CODE161"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE161");
+    expect(JSON.stringify(invite)).not.toContain("t.me");
+
+    const opened = [
+      `example.com-http://bit.ly/${path}`,
+      `example.com%2D\nhttp://bit.ly/${path}`,
+      `example.com%2D/http://bit.ly/${path}`,
+      `example.com%2D http://bit.ly/${path}`,
+      `example.com%2D\thttp://bit.ly/${path}`,
+      `example.com%252D\nhttp://bit.ly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const plain = await detector.detect({
+      event: eventFor(`bit%2Dly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+    expect(JSON.stringify(plain)).not.toContain("bit.ly");
+    expect(JSON.stringify(plain)).not.toContain(path);
+
+    const stopped = await detector.detect({
+      event: eventFor(`https://bit.ly%2Dhttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stopped?.reasons).toEqual(["short_link"]);
+    expect(stopped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(stopped)).not.toContain("t.co");
+    expect(JSON.stringify(stopped)).not.toContain(path);
+
+    const pathed = await detector.detect({
+      event: eventFor(`https://bit.ly/%2Dhttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(pathed?.reasons).toEqual(["short_link"]);
+    expect(pathed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(pathed)).not.toContain("t.co");
+    expect(JSON.stringify(pathed)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.161%2Dhttp://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["ip_host"]);
+    expect(addressed?.evidence[0]?.summary).toBe("ip_host:203.0.113.161");
+    expect(JSON.stringify(addressed)).not.toContain("short_link:bit.ly");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+
+    const doubled = await detector.detect({
+      event: eventFor(`203.0.113.161%252Dhttp://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(doubled?.reasons).toEqual(["ip_host"]);
+    expect(doubled?.evidence[0]?.summary).toBe("ip_host:203.0.113.161");
+    expect(JSON.stringify(doubled)).not.toContain("short_link:bit.ly");
+    expect(JSON.stringify(doubled)).not.toContain(path);
+  });
 });

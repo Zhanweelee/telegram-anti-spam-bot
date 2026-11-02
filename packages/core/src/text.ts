@@ -113,18 +113,30 @@ function foldGluedEncodedPlus(text: string): string {
 }
 
 /**
+ * `%2D` and the one extra `%252D` layer glued to `http://` are not hyphens
+ * Android decodes. A line break between them still is. Rewrite the glued
+ * form before line breaks disappear: `!` lets the host in front end, and
+ * `x` keeps `http` from starting. `bit%2Dly` is not glued to a scheme.
+ */
+function foldGluedEncodedHyphen(text: string): string {
+  return text.replace(/%(?:25)?2D(?=https?:\/\/)/gi, "!x");
+}
+
+/**
  * Fold plain text before a hostname scan.
  * This is the link-detector order. Structured URL parsing keeps its own order.
  * An ordinary space stays. A second percent layer stays.
  * Gaps are removed so a short link split by an invisible character still matches.
  * A dot lookalike after an ASCII dot stays in the label.
- * `%2E` or `%2B` glued to a scheme stays out of that scheme.
+ * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
     foldEncodedGaps(
       foldMatchText(
-        foldGluedEncodedPlus(foldGluedEncodedDot(foldHostShape(text))),
+        foldGluedEncodedHyphen(
+          foldGluedEncodedPlus(foldGluedEncodedDot(foldHostShape(text))),
+        ),
       ),
     ),
   );
