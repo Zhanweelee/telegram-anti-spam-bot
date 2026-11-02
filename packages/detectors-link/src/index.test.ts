@@ -3180,4 +3180,73 @@ describe("link fixtures", () => {
     });
     expect(hyphen).toBeNull();
   });
+
+  it("keeps the host Android stops on before an underscore that cannot finish a label", async () => {
+    const detector = createLinkDetector();
+    const blocked = "a".repeat(62);
+    const path = "offer129";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly.${blocked}_b/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+    expect(JSON.stringify(short)).not.toContain(blocked);
+
+    const address = "203.0.113.129";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}.${blocked}_b/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(blocked);
+
+    const fitted = await detector.detect({
+      event: eventFor(`http://bit.ly.${"c".repeat(61)}_b/keep`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fitted).toBeNull();
+
+    const inside = await detector.detect({
+      event: eventFor("http://bit.ly_foo/keep"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(inside).toBeNull();
+
+    const trailing = await detector.detect({
+      event: eventFor("http://bit.ly_/keep"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailing).toBeNull();
+
+    const dotted = await detector.detect({
+      event: eventFor("http://203.0.113.9_/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["ip_host"]);
+    expect(dotted?.evidence[0]?.summary).toBe("ip_host:203.0.0.113");
+
+    const earlier = await detector.detect({
+      event: eventFor(`http://bit.ly.${"d".repeat(60)}-${"e".repeat(10)}/keep`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(earlier).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor(`https://t.me.${blocked}_/+CODE129`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE129");
+  });
 });

@@ -335,4 +335,33 @@ describe("androidUrlSpan", () => {
       `http://bit.ly.${fitted}`,
     );
   });
+
+  it("stops before an underscore that does not finish a label", () => {
+    const blocked = "a".repeat(62);
+    const full = "a".repeat(63);
+    const fitted = "a".repeat(61);
+    const split = "a".repeat(50);
+    const hyphen = "a".repeat(60);
+    expect(androidUrlSpan(`http://bit.ly.${blocked}_b/x`)).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan(`http://bit.ly.${blocked}_/x`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://bit.ly.${full}_/x`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://bit.ly.${split}_${"b".repeat(20)}/x`)).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan(`http://203.0.113.129.${blocked}_b/x`)).toBe(
+      "http://203.0.113.129",
+    );
+    expect(androidUrlSpan(`http://user:pass@bit.ly.${blocked}_b/x`)).toBe(
+      "http://user:pass@bit.ly",
+    );
+    expect(androidUrlSpan(`http://bit.ly.${fitted}_b/x`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly_${split}/x`)).toBeNull();
+    expect(androidUrlSpan("http://bit.ly_/x")).toBe("http://bit");
+    expect(androidUrlSpan("http://203.0.113.9_/x")).toBe("http://203.0.113");
+    expect(androidUrlSpan(`http://bit.ly.${hyphen}-${"c".repeat(10)}/x`)).toBe(
+      `http://bit.ly.${hyphen}`,
+    );
+  });
 });

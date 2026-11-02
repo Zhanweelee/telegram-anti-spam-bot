@@ -1000,5 +1000,30 @@
     "id": "exact-label-host",
     "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/keep",
     "label": "ham"
+  },
+  {
+    "id": "label-underscore-short",
+    "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_b/offer129",
+    "label": "spam"
+  },
+  {
+    "id": "label-underscore-ip",
+    "text": "http://203.0.113.129.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_b/x",
+    "label": "spam"
+  },
+  {
+    "id": "label-underscore-fit",
+    "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa_b/keep",
+    "label": "ham"
+  },
+  {
+    "id": "label-underscore-mid",
+    "text": "http://bit.ly_foo/keep",
+    "label": "ham"
+  },
+  {
+    "id": "label-hyphen-backtrack",
+    "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-cccccccccc/keep",
+    "label": "ham"
   }
 ]

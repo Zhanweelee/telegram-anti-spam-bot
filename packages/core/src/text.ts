@@ -280,6 +280,7 @@ const ANDROID_USERINFO =
   /^(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,25})?@/;
 const ANDROID_SLASH = /\u2215|\u2044|%E2%88%95|%E2%81%84/g;
 const ANDROID_LABEL_CHAR = /[A-Za-z0-9]/;
+const ANDROID_LABEL_WORD = /[A-Za-z0-9_]/;
 const ANDROID_LABEL_MAX = 63;
 
 function readAndroidLabel(raw: string, index: number): number | null {
@@ -293,11 +294,15 @@ function readAndroidLabel(raw: string, index: number): number | null {
       next += 1;
       continue;
     }
-    if (raw.charAt(next) !== "-") {
+    const mark = raw.charAt(next);
+    if (mark !== "-" && mark !== "_") {
       break;
     }
     let look = next;
-    while (look < raw.length && raw.charAt(look) === "-") {
+    while (
+      look < raw.length &&
+      (raw.charAt(look) === "-" || raw.charAt(look) === "_")
+    ) {
       look += 1;
     }
     if (
@@ -309,20 +314,25 @@ function readAndroidLabel(raw: string, index: number): number | null {
     }
     next = look + 1;
   }
-  if (
-    next - start === ANDROID_LABEL_MAX &&
-    next < raw.length &&
-    ANDROID_LABEL_CHAR.test(raw.charAt(next))
-  ) {
-    return null;
+  if (next >= raw.length || !ANDROID_LABEL_WORD.test(raw.charAt(next))) {
+    return next;
   }
-  return next;
+  for (let end = next - 1; end > start; end -= 1) {
+    if (
+      raw.charAt(end) === "-" &&
+      ANDROID_LABEL_CHAR.test(raw.charAt(end - 1))
+    ) {
+      return end;
+    }
+  }
+  return null;
 }
 
 /**
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
  * A label cannot end on a hyphen, and it cannot be longer than 63 characters.
+ * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
  * A hyphen inside user info stays with `@`.
