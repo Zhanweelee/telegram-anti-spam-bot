@@ -4803,4 +4803,75 @@ describe("screenTelegramEvent", () => {
     expect(allowed.decision.action).toBe("allow");
     expect(JSON.stringify(allowed.decision.evidence)).not.toContain("999999");
   });
+
+  it("deletes a short link Android stops on before a 64 character label", async () => {
+    const over = "a".repeat(64);
+    const path = "offer128";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2173,
+        message: {
+          message_id: 2173,
+          date: 1761955200,
+          chat: { id: -1008131, type: "supergroup", title: "机密群名" },
+          from: { id: 128, first_name: "https://tinyurl.com/from128" },
+          text: `http://bit.ly.${over}/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1008131", messageId: "2173" },
+    ]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(over);
+    expect(dumped).not.toContain("from128");
+    expect(dumped).not.toContain("机密群名");
+
+    const exact = "b".repeat(63);
+    const fitted = await normalizeUpdate({
+      update: {
+        update_id: 2174,
+        message: {
+          message_id: 2174,
+          date: 1761955200,
+          chat: { id: -1008132, type: "supergroup" },
+          from: { id: 128 },
+          text: `http://bit.ly.${exact}.example/keep`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(fitted.status).toBe("event");
+    if (fitted.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(fitted.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(JSON.stringify(allowed.decision.evidence)).not.toContain("bit.ly");
+  });
 });

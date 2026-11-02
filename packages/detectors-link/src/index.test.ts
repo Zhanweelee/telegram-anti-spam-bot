@@ -3140,4 +3140,44 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE127");
   });
+
+  it("keeps the host Android stops on before a label longer than 63 characters", async () => {
+    const detector = createLinkDetector();
+    const over = "a".repeat(64);
+    const exact = "a".repeat(63);
+    const path = "offer128";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly.${over}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+    expect(JSON.stringify(short)).not.toContain(over);
+
+    const address = "203.0.113.128";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}.${over}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(over);
+
+    const fitted = await detector.detect({
+      event: eventFor(`http://bit.ly.${exact}.example/keep`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fitted).toBeNull();
+
+    const hyphen = await detector.detect({
+      event: eventFor(`http://bit.ly.${"b".repeat(62)}-foo/keep`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphen).toBeNull();
+  });
 });

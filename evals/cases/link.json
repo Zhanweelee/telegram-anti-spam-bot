@@ -985,5 +985,20 @@
     "id": "overlong-port-plain",
     "text": "http://example.com:999999/ok",
     "label": "ham"
+  },
+  {
+    "id": "long-label-short",
+    "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/offer128",
+    "label": "spam"
+  },
+  {
+    "id": "long-label-ip",
+    "text": "http://203.0.113.128.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/x",
+    "label": "spam"
+  },
+  {
+    "id": "exact-label-host",
+    "text": "http://bit.ly.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.example/keep",
+    "label": "ham"
   }
 ]

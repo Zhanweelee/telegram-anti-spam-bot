@@ -317,4 +317,22 @@ describe("androidUrlSpan", () => {
     expect(androidUrlSpan("http://bit.ly:65535/x")).toBeNull();
     expect(androidUrlSpan("http://bit.ly:80a/x")).toBe("http://bit.ly:80");
   });
+
+  it("stops before a label longer than 63 characters", () => {
+    const exact = "a".repeat(63);
+    const over = "a".repeat(64);
+    const fitted = "a".repeat(62);
+    expect(androidUrlSpan(`http://bit.ly.${over}/x`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://bit.ly.${over}`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://203.0.113.9.${over}/x`)).toBe(
+      "http://203.0.113.9",
+    );
+    expect(androidUrlSpan(`http://user:pass@bit.ly.${over}/x`)).toBe(
+      "http://user:pass@bit.ly",
+    );
+    expect(androidUrlSpan(`http://bit.ly.${exact}/x`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly.${fitted}-foo/x`)).toBe(
+      `http://bit.ly.${fitted}`,
+    );
+  });
 });
