@@ -769,10 +769,42 @@ function isUsernameDraft(url: URL): boolean {
     const label = parts[0];
     return label !== undefined && isPublicUsername(label);
   }
+  if (isAndroidStrippedDraft(host, parts)) {
+    return true;
+  }
   if (isAppNamePath(host, parts)) {
     return true;
   }
   return isUserPostPath(host, parts);
+}
+
+/** Android 先拿掉路径开头的 `s`，剩下的用户名加一段仍会写草稿。 */
+function isAndroidStrippedDraft(
+  host: string,
+  parts: readonly string[],
+): boolean {
+  const rest = androidDraftRest(host, parts);
+  if (rest === null) {
+    return false;
+  }
+  return isAppNamePath("t.me", rest) || isUserPostPath("t.me", rest);
+}
+
+function androidDraftRest(
+  host: string,
+  parts: readonly string[],
+): readonly string[] | null {
+  if (host === "s.t.me" && parts.length === 2) {
+    return parts;
+  }
+  if (
+    (host === "t.me" || host === "telegram.me" || host === "telegram.dog") &&
+    parts.length === 3 &&
+    parts[0] === "s"
+  ) {
+    return parts.slice(1);
+  }
+  return null;
 }
 
 function isExactDraftHost(host: string): boolean {

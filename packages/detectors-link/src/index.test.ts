@@ -1635,6 +1635,85 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads the draft after Android strips a preview segment", async () => {
+    const address = "203.0.113.118";
+    const hidden = "hidden118";
+    const code = "CODE118";
+    const draft = encodeURIComponent(`http://${address}/${hidden}`);
+    const detector = createLinkDetector();
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/s/durov/123?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.reasons).toEqual(["ip_host"]);
+    expect(post?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(post)).not.toContain(hidden);
+    expect(JSON.stringify(post)).not.toContain("durov");
+    const app = await detector.detect({
+      event: eventFor(`https://telegram.dog/s/durov/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const label = await detector.detect({
+      event: eventFor(`https://s.t.me/durov/my.app?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(label?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(label)).not.toContain("my.app");
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/s/durov/9?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/S/durov/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital).toBeNull();
+    const www = await detector.detect({
+      event: eventFor(`https://www.t.me/s/durov/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(www).toBeNull();
+    const reserved = await detector.detect({
+      event: eventFor(`https://t.me/s/proxy/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/s/durov/shop/more?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const other = await detector.detect({
+      event: eventFor(`https://s.telegram.me/durov/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+    const nested = encodeURIComponent(
+      `https://t.me/s/durov/123?text=${encodeURIComponent(`http://${address}/x`)}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/s/spam/shop?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("reads a hostname when Android rewrites a label subdomain", async () => {
     const address = "203.0.113.117";
     const hidden = "hidden117";

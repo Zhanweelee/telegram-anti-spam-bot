@@ -294,6 +294,17 @@
     "reason": "ip_host"
   },
   {
+    "name": "stripped-preview-post",
+    "text": "https://t.me/s/durov/123?text=http%3A%2F%2F203.0.113.118%2Fhidden118",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "stripped-preview-capital",
+    "text": "https://t.me/S/durov/shop?text=http%3A%2F%2F203.0.113.118%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "android-s-label",
     "text": "https://s.t.me/durov?text=http%3A%2F%2F203.0.113.117%2Fhidden117",
     "expect": "hit",

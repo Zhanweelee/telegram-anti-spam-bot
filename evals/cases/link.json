@@ -817,6 +817,26 @@
     "label": "ham"
   },
   {
+    "id": "stripped-preview-post",
+    "text": "https://t.me/s/durov/123?text=http%3A%2F%2F203.0.113.118%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "stripped-preview-app",
+    "text": "https://s.t.me/durov/shop?text=http%3A%2F%2F203.0.113.118%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "stripped-preview-capital",
+    "text": "https://t.me/S/durov/shop?text=http%3A%2F%2F203.0.113.118%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "stripped-preview-www",
+    "text": "https://www.t.me/s/durov/shop?text=http%3A%2F%2F203.0.113.118%2Fx",
+    "label": "ham"
+  },
+  {
     "id": "android-s-label",
     "text": "https://s.t.me/durov?text=http%3A%2F%2F203.0.113.117%2Fx",
     "label": "spam"
