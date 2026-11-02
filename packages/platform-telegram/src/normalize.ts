@@ -576,6 +576,9 @@ function sideUrls(message: Record<string, unknown>): string[] {
   if (isRecord(invoice)) {
     pushPlainUrls(invoice.title, urls);
     pushPlainUrls(invoice.description, urls);
+    if (invoiceDescriptionOpen(message)) {
+      pushOpenedSpans(invoice.description, urls);
+    }
   }
   const venue = message.venue;
   if (isRecord(venue)) {
@@ -731,6 +734,17 @@ function gameDescriptionOpen(
     return false;
   }
   return typeof game.text !== "string" || game.text.length === 0;
+}
+
+/** 账单说明会被当成正文。已有实体时客户端不再自动加链接。 */
+function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
+  if (Array.isArray(message.entities) && message.entities.length > 0) {
+    return false;
+  }
+  return !(
+    Array.isArray(message.caption_entities) &&
+    message.caption_entities.length > 0
+  );
 }
 
 /** 联系人卡片里的 URL 行会打开浏览器。电话、邮箱和备注不打开。 */

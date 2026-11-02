@@ -9821,8 +9821,133 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(invoice.event.message?.text).toBe("今天站会");
-    expect(invoice.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(invoice.event)).not.toContain("bit.ly");
+    expect(invoice.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
     expect(JSON.stringify(invoice.event)).not.toContain(path);
+  });
+
+  it("keeps the host Android opens in an invoice description", async () => {
+    const path = "span122";
+    const slash = "\u2215";
+    const hidden = `http://bit.ly${slash}@example.com/${path}`;
+    const shown = await normalize({
+      update_id: 2140,
+      message: {
+        message_id: 140,
+        date: 1761955200,
+        chat: { id: -1008140, type: "supergroup", title: "机密群名" },
+        from: { id: 140, first_name: "from140" },
+        text: "今天站会",
+        invoice: {
+          title: "账单",
+          description: hidden,
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(shown.status).toBe("event");
+    if (shown.status !== "event") {
+      return;
+    }
+    expect(shown.event.message?.text).toBe("今天站会");
+    expect(shown.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const shownDump = JSON.stringify(shown.event);
+    expect(shownDump).not.toContain(path);
+    expect(shownDump).not.toContain("from140");
+    expect(shownDump).not.toContain("机密群名");
+    expect(shownDump).not.toContain("XTR");
+
+    const address = "203.0.113.122";
+    const ip = await normalize({
+      update_id: 2141,
+      message: {
+        message_id: 141,
+        date: 1761955200,
+        chat: { id: -1008141, type: "supergroup" },
+        from: { id: 141 },
+        invoice: {
+          title: "今天站会",
+          description: `http://${address}${slash}@example.com/${path}`,
+          currency: "XTR",
+          total_amount: 2,
+        },
+      },
+    });
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.text).toBe("今天站会");
+    expect(ip.event.message?.hosts).toEqual(["example.com", address]);
+    expect(JSON.stringify(ip.event)).not.toContain(path);
+
+    const desktop = await normalize({
+      update_id: 2142,
+      message: {
+        message_id: 142,
+        date: 1761955200,
+        chat: { id: -1008142, type: "supergroup" },
+        from: { id: 142 },
+        invoice: {
+          title: "今天站会",
+          description: `http://example.com${slash}@bit.ly/${path}`,
+          currency: "XTR",
+          total_amount: 3,
+        },
+      },
+    });
+    expect(desktop.status).toBe("event");
+    if (desktop.status !== "event") {
+      return;
+    }
+    expect(desktop.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    expect(JSON.stringify(desktop.event)).not.toContain(path);
+
+    const lower = await normalize({
+      update_id: 2143,
+      message: {
+        message_id: 143,
+        date: 1761955200,
+        chat: { id: -1008143, type: "supergroup" },
+        from: { id: 143 },
+        invoice: {
+          title: "今天站会",
+          description: `http://bit.ly%e2%88%95@example.com/${path}`,
+          currency: "XTR",
+          total_amount: 4,
+        },
+      },
+    });
+    expect(lower.status).toBe("event");
+    if (lower.status !== "event") {
+      return;
+    }
+    expect(lower.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(lower.event)).not.toContain(path);
+
+    const marked = await normalize({
+      update_id: 2144,
+      message: {
+        message_id: 144,
+        date: 1761955200,
+        chat: { id: -1008144, type: "supergroup" },
+        from: { id: 144 },
+        invoice: {
+          title: "今天站会",
+          description: hidden,
+          currency: "XTR",
+          total_amount: 5,
+        },
+        entities: [{ type: "bold", offset: 0, length: 1 }],
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(marked.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(marked.event)).not.toContain(path);
   });
 });
