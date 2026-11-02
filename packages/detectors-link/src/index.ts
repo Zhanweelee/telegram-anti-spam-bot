@@ -55,9 +55,11 @@ export const defaultShorteners = [
 ] as const;
 
 /**
- * A URL token ends at whitespace, a double quote, characters Android's
- * path cannot include, a `%` that is not two hex digits, and a code point
- * the path class omits. An apostrophe inside a path stays with this URL.
+ * A URL token ends at whitespace Android stops on, a double quote,
+ * characters Android's path cannot include, a `%` that is not two hex
+ * digits, and a code point the path class omits. U+1680, U+205F, and
+ * U+FEFF stay inside a label or a path. An apostrophe inside a path stays
+ * with this URL.
  * Punctuation that can sit in a path ends the host when
  * the path has not started, so the next URL is its own match. A scheme
  * stuck to an ASCII word character is not a match, and the host after
@@ -76,14 +78,16 @@ export const defaultShorteners = [
  * inside a `tg://` link stays with that link. `tg:` without slashes does
  * not hide the URL Android opens after it.
  */
-const URL_BREAK = '\\s<>"[\\\\\\]^`{|}\\u0000-\\u001F\\u007F';
+const URL_STOP =
+  "\\t\\n\\v\\f\\r \\u00A0\\u2000-\\u200A\\u2028\\u2029\\u202F\\u3000";
+const URL_BREAK = `${URL_STOP}<>"[\\\\\\]^\`{|}\\u0000-\\u001F\\u007F`;
 const URL_OMIT =
   "\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF";
 const URL_PAIR =
   "(?:[\\uD840-\\uD87F]|[\\uD880-\\uD8BF]|[\\uD8C0-\\uD8FF]|[\\uD900-\\uD93F]|[\\uD940-\\uD97F]|[\\uD980-\\uD9BF]|[\\uD9C0-\\uD9FF]|[\\uDA00-\\uDA3F]|[\\uDA40-\\uDA7F]|[\\uDA80-\\uDABF]|[\\uDAC0-\\uDAFF]|[\\uDB00-\\uDB3F]|[\\uDB44-\\uDB7F])[\\uDC00-\\uDFFD]";
 const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
-const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
-const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
 const URL_LABEL = `(?:${URL_LABEL_ATOM}(?:${URL_LABEL_MORE}{0,61}${URL_LABEL_ATOM})?)`;
 const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
@@ -91,7 +95,7 @@ const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_BARE_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
-const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
+const URL_UNI_LABEL = `(?:[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
 const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
 const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;

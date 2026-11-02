@@ -323,6 +323,10 @@ describe("androidUrlSpan", () => {
       "http://203.0.113.9",
     );
     expect(androidUrlSpan("http://bit.ly，广告")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly\u1680foo")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u205Ffoo")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\uFEFFfoo")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u00A0foo")).toBe("http://bit.ly");
     expect(androidUrlSpan("https://example.com/docs")).toBeNull();
     expect(androidUrlSpan("http://bit.ly@example.com/ok")).toBeNull();
   });

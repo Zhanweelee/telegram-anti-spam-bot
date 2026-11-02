@@ -1590,5 +1590,45 @@
     "id": "path-apos-invite",
     "text": "https://t.me/+CODE145'http://bit.ly/offer145",
     "label": "ham"
+  },
+  {
+    "id": "label-space-path",
+    "text": "http://example.com/\u1680http://bit.ly/offer146",
+    "label": "ham"
+  },
+  {
+    "id": "label-space-math",
+    "text": "http://example.com?\u205Fhttp://bit.ly/offer146",
+    "label": "ham"
+  },
+  {
+    "id": "label-space-bom",
+    "text": "example.com/\uFEFFhttp://bit.ly/offer146",
+    "label": "ham"
+  },
+  {
+    "id": "label-space-host",
+    "text": "http://example.com\u1680http://bit.ly/offer146",
+    "label": "ham"
+  },
+  {
+    "id": "label-space-tail",
+    "text": "http://bit.ly\u1680foo",
+    "label": "ham"
+  },
+  {
+    "id": "label-space-bare",
+    "text": "example.com\u1680http://bit.ly/offer146",
+    "label": "spam"
+  },
+  {
+    "id": "label-space-nbsp",
+    "text": "http://example.com/\u00A0http://bit.ly/offer146",
+    "label": "spam"
+  },
+  {
+    "id": "label-space-join",
+    "text": "http://bit\u1680.ly/offer146",
+    "label": "spam"
   }
 ]

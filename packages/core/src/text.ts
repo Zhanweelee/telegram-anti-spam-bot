@@ -357,14 +357,23 @@ const ANDROID_LABEL_CHAR = /[A-Za-z0-9]/;
 const ANDROID_LABEL_WORD = /[A-Za-z0-9_]/;
 const ANDROID_LABEL_MAX = 63;
 
+/** ASCII, plus the three spaces `LinkifyPort` keeps inside a label. */
+function androidLabelChar(char: string): boolean {
+  if (ANDROID_LABEL_CHAR.test(char)) {
+    return true;
+  }
+  const code = char.charCodeAt(0);
+  return code === 0x1680 || code === 0x205f || code === 0xfeff;
+}
+
 function readAndroidLabel(raw: string, index: number): number | null {
-  if (!ANDROID_LABEL_CHAR.test(raw.charAt(index))) {
+  if (!androidLabelChar(raw.charAt(index))) {
     return null;
   }
   const start = index;
   let next = index + 1;
   while (next < raw.length && next - start < ANDROID_LABEL_MAX) {
-    if (ANDROID_LABEL_CHAR.test(raw.charAt(next))) {
+    if (androidLabelChar(raw.charAt(next))) {
       next += 1;
       continue;
     }
@@ -381,7 +390,7 @@ function readAndroidLabel(raw: string, index: number): number | null {
     }
     if (
       look >= raw.length ||
-      !ANDROID_LABEL_CHAR.test(raw.charAt(look)) ||
+      !androidLabelChar(raw.charAt(look)) ||
       look - start >= ANDROID_LABEL_MAX
     ) {
       break;
@@ -392,10 +401,7 @@ function readAndroidLabel(raw: string, index: number): number | null {
     return next;
   }
   for (let end = next - 1; end > start; end -= 1) {
-    if (
-      raw.charAt(end) === "-" &&
-      ANDROID_LABEL_CHAR.test(raw.charAt(end - 1))
-    ) {
+    if (raw.charAt(end) === "-" && androidLabelChar(raw.charAt(end - 1))) {
       return end;
     }
   }
@@ -406,6 +412,7 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
  * A label cannot end on a hyphen, and it cannot be longer than 63 characters.
+ * U+1680, U+205F, and U+FEFF stay inside the label.
  * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
@@ -423,7 +430,7 @@ function userinfoSticks(raw: string, index: number): boolean {
   if (mark === "/" || mark === "?" || mark === "_") {
     return true;
   }
-  if (ANDROID_LABEL_CHAR.test(mark)) {
+  if (androidLabelChar(mark)) {
     return true;
   }
   if (mark !== ":") {
