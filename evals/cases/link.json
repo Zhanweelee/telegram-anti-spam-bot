@@ -3165,5 +3165,45 @@
     "id": "lookalike-ideograph",
     "text": "http://bit.ly\u3002/offer190",
     "label": "spam"
+  },
+  {
+    "id": "script-schemed-path",
+    "text": "http://bit.ly\u03B1/offer191",
+    "label": "ham"
+  },
+  {
+    "id": "script-schemed-query",
+    "text": "https://t.co\u0442?offer191",
+    "label": "ham"
+  },
+  {
+    "id": "script-schemed-address",
+    "text": "http://203.0.113.10\u0561/offer191",
+    "label": "ham"
+  },
+  {
+    "id": "script-schemed-latin",
+    "text": "http://bit.ly\u0153/offer191",
+    "label": "ham"
+  },
+  {
+    "id": "script-bare-path",
+    "text": "bit.ly\u03B1/offer191",
+    "label": "spam"
+  },
+  {
+    "id": "script-hash",
+    "text": "http://bit.ly\u03B1#offer191",
+    "label": "spam"
+  },
+  {
+    "id": "script-inside",
+    "text": "b\u03B1it.ly/offer191",
+    "label": "spam"
+  },
+  {
+    "id": "script-suffix",
+    "text": "http://bit.ly\u03B1.bit.ly/offer191",
+    "label": "spam"
   }
 ]

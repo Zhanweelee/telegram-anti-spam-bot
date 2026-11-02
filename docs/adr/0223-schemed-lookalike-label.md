@@ -40,3 +40,4 @@ ADR 0217 把写完的主机名和后面的 ASCII 域名之间的点状间隔号�
 - `http://bit.ly·@evil.com/…`、`http://bit.ly·#…` 和 `http://bit.ly。/…` 仍按短链删除。
 - `example.com·.bit.ly/…` 仍按短链删除。证据是收成 `x` 之后的主机名。
 - `bit.ly·.notarealtld/…` 仍按短链删除。路径不进证据。
+- 带协议的主机名里，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母留在标签里。见 ADR 0224。

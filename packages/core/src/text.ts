@@ -719,6 +719,9 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * when a bare IPv4 follows and no further domain continues. Inside an
  * `http://` or `https://` URL that letter still maps.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
+ * A Greek, Cyrillic, Armenian, or non-ASCII Latin letter stays when
+ * Android still includes it in a schemed host. The same letter before
+ * `#`, `@`, or a space still drops.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
@@ -928,9 +931,43 @@ function isHostInterrupter(char: string, code: number): boolean {
  * hostname scan. CJK, Hangul, kana, and ASCII stay. Punctuation Android
  * keeps in a label stays. A character Android leaves out of a label still
  * drops. A mapped letter after a finished bare host stays, so the next
- * ASCII letters do not glue onto that host. These letters are removed,
- * not mapped.
+ * ASCII letters do not glue onto that host. A run Android still includes
+ * in a schemed host stays, so that host is not read as the shortener in
+ * front. A run before `#`, `@`, or a space still drops. These letters are
+ * removed, not mapped.
  */
+function lastSchemeIndex(out: string): number {
+  const lower = out.toLowerCase();
+  const https = lower.lastIndexOf("https://");
+  let http = lower.lastIndexOf("http://");
+  if (https >= 0 && http === https + 1) {
+    http = lower.lastIndexOf("http://", https - 1);
+  }
+  return Math.max(https, http);
+}
+
+/**
+ * The letter run is still inside the schemed host Android highlights.
+ * Dropping it would open the shortener or address in front.
+ */
+function schemedLetterStays(out: string, run: string, rest: string): boolean {
+  if (!finishedHostIsSchemed(out) || run.length === 0) {
+    return false;
+  }
+  const start = lastSchemeIndex(out);
+  if (start < 0) {
+    return false;
+  }
+  const suffix = out.slice(start);
+  const span = androidUrlSpan(suffix + run + rest);
+  const kept = span ?? suffix + run + rest;
+  return (
+    kept.startsWith(suffix) &&
+    kept.length >= suffix.length + run.length &&
+    kept.slice(suffix.length, suffix.length + run.length) === run
+  );
+}
+
 export function foldHostInterrupters(text: string): string {
   let out = "";
   let index = 0;
@@ -942,13 +979,33 @@ export function foldHostInterrupters(text: string): string {
     const char = String.fromCodePoint(code);
     const next = index + char.length;
     if (code > 0x7f && isHostInterrupter(char, code)) {
+      let end = next;
+      while (end < text.length) {
+        const more = text.codePointAt(end);
+        if (
+          more === undefined ||
+          more <= 0x7f ||
+          !isHostInterrupter(String.fromCodePoint(more), more)
+        ) {
+          break;
+        }
+        end += String.fromCodePoint(more).length;
+      }
+      const run = text.slice(index, end);
+      if (schemedLetterStays(out, run, text.slice(end))) {
+        out += run;
+        index = end;
+        continue;
+      }
       if (
         keepTailLetter(out, text.slice(next), code) ||
         keepHeadLetter(out, text.slice(next), code)
       ) {
         out += char;
+        index = next;
+        continue;
       }
-      index = next;
+      index = end;
       continue;
     }
     out += char;
