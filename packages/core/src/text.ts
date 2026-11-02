@@ -752,6 +752,7 @@ function foldGraphemeJoiner(text: string): string {
  * A finished host stays intact when what follows is not a strict domain.
  * A label run before `.` and a strict domain becomes `x`, so the host
  * Android kept together is not split into the shortener in front.
+ * Labels in that domain may be Android label characters.
  * A dotted tail that is not a strict domain stays, so that host still opens.
  * `。` still separates labels for the URL parser. A following scheme stays.
  */
@@ -1046,9 +1047,94 @@ function strictDomainContinues(rest: string): boolean {
   return STRICT_DOMAIN_TAIL.test(rest);
 }
 
-/** A dot and a strict domain follow, so Android keeps this label on the host. */
+const STRICT_TLD_LABEL = new RegExp(`^(?:${androidStrictTld})$`);
+
+/**
+ * A dot and a strict domain follow, so Android keeps this label on the host.
+ * ASCII tails use the strict pattern. A tail with Android label characters
+ * can still be that domain. `com日本` ends on the word boundary. `中国日本`
+ * and `日本com` do not.
+ */
 function dotDomainContinues(rest: string): boolean {
-  return DOT_STRICT_DOMAIN.test(rest);
+  if (!hasNonAscii(rest)) {
+    return DOT_STRICT_DOMAIN.test(rest);
+  }
+  return unicodeDotDomain(rest);
+}
+
+function unicodeDotDomain(rest: string): boolean {
+  let index = 1;
+  let labelStart = 1;
+  let last = 0x2e;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    if (code === 0x2e) {
+      if (index === labelStart) {
+        return false;
+      }
+      if (strictTldAt(rest, labelStart, index)) {
+        return true;
+      }
+      index += 1;
+      labelStart = index;
+      last = 0x2e;
+      continue;
+    }
+    if (!domainLabelCode(code)) {
+      break;
+    }
+    if (
+      index > labelStart &&
+      wordBoundary(last, code) &&
+      strictTldAt(rest, labelStart, index)
+    ) {
+      return true;
+    }
+    last = code;
+    index += String.fromCodePoint(code).length;
+  }
+  return strictTldAt(rest, labelStart, index);
+}
+
+function strictTldAt(text: string, start: number, end: number): boolean {
+  return end > start && STRICT_TLD_LABEL.test(text.slice(start, end));
+}
+
+function domainLabelCode(code: number): boolean {
+  if (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x2d
+  ) {
+    return true;
+  }
+  return gluedLabelCode(code);
+}
+
+function hasNonAscii(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    if (text.charCodeAt(index) > 0x7f) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function wordBoundary(prev: number, next: number): boolean {
+  return asciiWord(prev) !== asciiWord(next);
+}
+
+function asciiWord(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x5f
+  );
 }
 
 /**

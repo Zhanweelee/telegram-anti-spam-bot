@@ -3045,5 +3045,45 @@
     "id": "mixed-label-open",
     "text": "\u70B9\u65E5\u672C.bit.ly/offer187",
     "label": "spam"
+  },
+  {
+    "id": "unicode-label-com",
+    "text": "bit.ly\u70B9.\u65E5\u672C.com/offer188",
+    "label": "ham"
+  },
+  {
+    "id": "unicode-label-address",
+    "text": "203.0.113.10\u70B9.\u65E5\u672C.com/offer188",
+    "label": "ham"
+  },
+  {
+    "id": "unicode-label-cjk",
+    "text": "bit.ly\u70B9.\u4E2D\u56FD/offer188",
+    "label": "ham"
+  },
+  {
+    "id": "unicode-label-scheme",
+    "text": "http://bit.ly\u70B9.\u65E5\u672C.com/offer188",
+    "label": "ham"
+  },
+  {
+    "id": "unicode-label-fake",
+    "text": "bit.ly\u70B9.\u65E5\u672C.notarealtld/offer188",
+    "label": "spam"
+  },
+  {
+    "id": "unicode-label-glued-cjk",
+    "text": "bit.ly\u70B9.\u4E2D\u56FD\u65E5\u672C/offer188",
+    "label": "spam"
+  },
+  {
+    "id": "unicode-label-suffix",
+    "text": "example.com\u70B9.\u65E5\u672C.bit.ly/offer188",
+    "label": "spam"
+  },
+  {
+    "id": "unicode-label-open",
+    "text": "\u70B9.\u65E5\u672C.bit.ly/offer188",
+    "label": "spam"
   }
 ]

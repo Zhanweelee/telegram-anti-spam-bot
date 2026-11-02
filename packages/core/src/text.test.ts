@@ -396,6 +396,61 @@ describe("foldHostScan", () => {
     expect(foldHostScan("example.com\u70B9.notarealtld")).toBe(
       "example.com\u70B9.notarealtld",
     );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672C.com")).toBe(
+      "bit.lyx.\u65E5\u672C.com",
+    );
+    expect(foldHostScanKeepingStops("bit.ly\u70B9.\u65E5\u672C.com")).toBe(
+      "bit.lyx.\u65E5\u672C.com",
+    );
+    expect(foldHostScan("bit.ly\u70B9\u65E5.\u672C.com")).toBe(
+      "bit.lyx.\u672C.com",
+    );
+    expect(foldHostScan("www.bit.ly\uAC00.\uAC00.com")).toBe(
+      "www.bit.lyx.\uAC00.com",
+    );
+    expect(foldHostScan("203.0.113.10\u70B9.\u65E5\u672C.com")).toBe(
+      "203.0.113.10x.\u65E5\u672C.com",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672C.\u4E2D\u56FD")).toBe(
+      "bit.lyx.\u65E5\u672C.\u4E2D\u56FD",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u4E2D\u56FD")).toBe(
+      "bit.lyx.\u4E2D\u56FD",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u4E2D\u56FD.com")).toBe(
+      "bit.lyx.\u4E2D\u56FD.com",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672C.com/z")).toBe(
+      "bit.lyx.\u65E5\u672C.com/z",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672C..com")).toBe(
+      "bit.ly\u70B9.\u65E5\u672C..com",
+    );
+    expect(foldHostScan("bit.ly\u70B9..\u65E5\u672C.com")).toBe(
+      "bit.ly\u70B9..\u65E5\u672C.com",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u4E2D\u56FDcom")).toBe(
+      "bit.lyx.\u4E2D\u56FDcom",
+    );
+    expect(foldHostScan("bit.ly\u70B9.com\u65E5\u672C")).toBe(
+      "bit.lyx.com\u65E5\u672C",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672C.notarealtld")).toBe(
+      "bit.ly\u70B9.\u65E5\u672C.notarealtld",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u65E5\u672Ccom")).toBe(
+      "bit.ly\u70B9.\u65E5\u672Ccom",
+    );
+    expect(foldHostScan("bit.ly\u70B9.\u4E2D\u56FD\u65E5\u672C")).toBe(
+      "bit.ly\u70B9.\u4E2D\u56FD\u65E5\u672C",
+    );
+    expect(foldHostScan("bit.ly\u70B9..com")).toBe("bit.ly\u70B9..com");
+    expect(foldHostScan("example.com\u70B9.\u65E5\u672C.bit.ly")).toBe(
+      "example.comx.\u65E5\u672C.bit.ly",
+    );
+    expect(foldHostScan("\u70B9.\u65E5\u672C.bit.ly")).toBe(
+      "\u70B9.\u65E5\u672C.bit.ly",
+    );
     expect(foldHostScan("\u70B9\u65E5\u672C.bit.ly")).toBe(
       "\u70B9\u65E5\u672C.bit.ly",
     );

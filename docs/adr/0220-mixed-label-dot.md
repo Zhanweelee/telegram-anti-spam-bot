@@ -34,3 +34,4 @@ ADR 0205 把夹在 ASCII 中间的标签字收成 `x`。ADR 0219 在后面接不
 - `bit.ly点日本.notarealtld/…` 按短链删除。证据是 `bit.ly`。
 - `example.com点.bit.ly/…` 和 `bit.ly点日本.bit.ly/…` 仍按短链删除。证据是收成 `x` 之后的主机名。
 - `点日本.bit.ly/…` 仍按短链删除。路径不进证据。
+- 点号后面的标签可以是 Android 标签字。见 ADR 0221。

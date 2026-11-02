@@ -7455,6 +7455,104 @@ describe("link fixtures", () => {
     expect(JSON.stringify(longer)).not.toContain(path);
   });
 
+  it("keeps a unicode label on the dotted host Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer188";
+    const kept = [
+      `bit.ly\u70B9.\u65E5\u672C.com/${path}`,
+      `www.bit.ly\u70B9.\u65E5\u672C.com/${path}`,
+      `t.co\u70B9.\u65E5\u672C.com/${path}`,
+      `203.0.113.10\u70B9.\u65E5\u672C.com/${path}`,
+      `bit.ly\u70B9\u65E5.\u672C.com/${path}`,
+      `bit.ly\uAC00.\uAC00.com/${path}`,
+      `see bit.ly\u70B9.\u65E5\u672C.com/${path}`,
+      `bit.ly\u70B9.\u65E5\u672C.\u4E2D\u56FD/${path}`,
+      `bit.ly\u70B9.\u4E2D\u56FD/${path}`,
+      `bit.ly\u70B9.\u4E2D\u56FD.com/${path}`,
+      `bit.ly\u70B9.\u4E2D\u56FDcom/${path}`,
+      `bit.ly\u70B9.com\u65E5\u672C/${path}`,
+      `bit.ly\u70B9.\u65E5\u672C.com.notarealtld/${path}`,
+      `bit.ly\u70B9\u65E5\u672C.\u672C.com/${path}`,
+      `http://bit.ly\u70B9.\u65E5\u672C.com/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `bit.ly\u70B9.\u65E5\u672C.notarealtld/${path}`,
+      `bit.ly\u70B9.\u65E5\u672Ccom/${path}`,
+      `bit.ly\u70B9.\u4E2D\u56FD\u65E5\u672C/${path}`,
+      `bit.ly\u70B9..com/${path}`,
+      `bit.ly\u70B9.\u65E5\u672C..com/${path}`,
+      `bit.ly\u70B9..\u65E5\u672C.com/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toEqual(["short_link"]);
+      expect(hit?.evidence[0]?.summary, text).toBe("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const suffix = await detector.detect({
+      event: eventFor(`example.com\u70B9.\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.reasons).toEqual(["short_link"]);
+    expect(suffix?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:example.comx.xn--wgv71a.bit.ly",
+    ]);
+    expect(JSON.stringify(suffix)).not.toContain(path);
+
+    const bare = await detector.detect({
+      event: eventFor(`\u70B9.\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe(
+      "short_link:xn--3px.xn--wgv71a.bit.ly",
+    );
+    expect(JSON.stringify(bare)).not.toContain(path);
+
+    const joined = await detector.detect({
+      event: eventFor(`bit.ly\u70B9.\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["short_link"]);
+    expect(joined?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.lyx.xn--wgv71a.bit.ly",
+    ]);
+    expect(JSON.stringify(joined)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.10\u70B9.\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["short_link"]);
+    expect(addressed?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:203.0.113.10x.xn--wgv71a.bit.ly",
+    ]);
+    expect(JSON.stringify(addressed)).not.toContain("ip_host:203.0.113.10");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+  });
+
   it("joins an ideographic stop when another domain continues", async () => {
     const detector = createLinkDetector();
     const path = "offer183";
