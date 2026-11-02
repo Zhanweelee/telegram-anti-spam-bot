@@ -2970,5 +2970,40 @@
     "id": "leading-mapped-domain",
     "text": "\u00AA203.0.113.10.evil.com/offer185",
     "label": "ham"
+  },
+  {
+    "id": "label-tail-free",
+    "text": "bit.ly\u70B9free/offer186",
+    "label": "spam"
+  },
+  {
+    "id": "label-tail-fake-tld",
+    "text": "bit.ly\u70B9free.notarealtld/offer186",
+    "label": "spam"
+  },
+  {
+    "id": "label-tail-address",
+    "text": "bit.ly\u70B9203.0.113.10/offer186",
+    "label": "spam"
+  },
+  {
+    "id": "label-tail-plain-address",
+    "text": "example.com\u70B9203.0.113.10/offer186",
+    "label": "spam"
+  },
+  {
+    "id": "label-tail-domain",
+    "text": "bit.ly\u70B9evil.com/offer186",
+    "label": "ham"
+  },
+  {
+    "id": "label-tail-scheme",
+    "text": "http://bit.ly\u70B9free/offer186",
+    "label": "ham"
+  },
+  {
+    "id": "label-tail-real-tld",
+    "text": "bit.ly\u70B9free.com/offer186",
+    "label": "ham"
   }
 ]

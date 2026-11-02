@@ -1,3 +1,5 @@
+import { androidStrictTld } from "./android-tlds.js";
+
 /**
  * Characters removed before a keyword or pattern match.
  * An ordinary space (U+0020) stays. Other spaces, line breaks, and
@@ -645,6 +647,8 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `bit%5B.%5Dly` and a literal closing bracket still become `.`.
  * A run of Android label characters sitting between ASCII letters or digits
  * becomes `x`, so one host is not read as the shortener inside it.
+ * A run after a finished host stays when the following text is not a
+ * strict domain, so that host and a later address still open.
  * A run before `http://` or `https://` stays. A label character
  * with no ASCII letter before it stays.
  * A run of `。` or a dot lookalike after a finished host becomes one `.`
@@ -745,6 +749,7 @@ function foldGraphemeJoiner(text: string): string {
 /**
  * Android keeps these characters inside the same host label.
  * Replacing the run with `x` stops a later ASCII label from being its own URL.
+ * A finished host stays intact when what follows is not a strict domain.
  * `。` still separates labels for the URL parser. A following scheme stays.
  */
 function foldGluedLabelRuns(text: string): string {
@@ -770,7 +775,8 @@ function foldGluedLabelRuns(text: string): string {
         asciiHostLetter(text, end) &&
         !startsWithScheme(text, end) &&
         !keptMappedTail(out, text.slice(end), text, index, end) &&
-        !keptMappedHead(out, text.slice(end), text, index, end)
+        !keptMappedHead(out, text.slice(end), text, index, end) &&
+        !separateFinishedHost(out, text.slice(end))
       ) {
         out += "x";
         index = end;
@@ -1014,6 +1020,26 @@ function foldJoiningHostDots(text: string): string {
     index += 1;
   }
   return out;
+}
+
+const STRICT_DOMAIN_TAIL = new RegExp(
+  `^(?:[A-Za-z0-9-]+\\.)+(?:${androidStrictTld})(?![A-Za-z0-9-])`,
+);
+
+/**
+ * The text after a label run is a domain Android would keep on this host.
+ * The final label has to be one of Android's strict top-level domains.
+ */
+function strictDomainContinues(rest: string): boolean {
+  return STRICT_DOMAIN_TAIL.test(rest);
+}
+
+/**
+ * A finished host should stay whole.
+ * Android opens it again when the tail is not a strict domain.
+ */
+function separateFinishedHost(out: string, rest: string): boolean {
+  return endsWithFinishedHost(out) && !strictDomainContinues(rest);
 }
 
 function isJoinDot(code: number): boolean {

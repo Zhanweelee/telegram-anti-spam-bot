@@ -1,4 +1,5 @@
 import {
+  androidStrictTld,
   androidUrlSpan,
   type Detector,
   type DetectorHit,
@@ -8,7 +9,6 @@ import {
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
-import { androidStrictTld } from "./android-tlds.js";
 
 const hostSchema = z.string().min(1).max(253);
 

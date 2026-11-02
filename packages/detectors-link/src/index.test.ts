@@ -7280,6 +7280,80 @@ describe("link fixtures", () => {
     expect(JSON.stringify(dotted)).not.toContain(path);
   });
 
+  it("opens a finished host when the label tail is not a domain", async () => {
+    const detector = createLinkDetector();
+    const path = "offer186";
+    const opened = [
+      `bit.ly\u70B9free/${path}`,
+      `bit.ly\uAC00free/${path}`,
+      `bit.ly\u70B9free.notarealtld/${path}`,
+      `see bit.ly\u70B9\u51FBfree/${path}`,
+      `t.co\u70B9hello/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toEqual(["short_link"]);
+      const summary = hit?.evidence[0]?.summary ?? "";
+      expect(
+        summary === "short_link:bit.ly" || summary === "short_link:t.co",
+        text,
+      ).toBe(true);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const both = await detector.detect({
+      event: eventFor(`bit.ly\u70B9203.0.113.10/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(both?.reasons).toEqual(["short_link", "ip_host"]);
+    expect(both?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+      "ip_host:203.0.113.10",
+    ]);
+    expect(JSON.stringify(both)).not.toContain(path);
+
+    const address = await detector.detect({
+      event: eventFor(`example.com\u70B9203.0.113.10/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(address?.reasons).toEqual(["ip_host"]);
+    expect(address?.evidence[0]?.summary).toBe("ip_host:203.0.113.10");
+    expect(JSON.stringify(address)).not.toContain(path);
+
+    const pair = await detector.detect({
+      event: eventFor(`203.0.113.10\u70B9203.0.113.11/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(pair?.reasons).toEqual(["ip_host"]);
+    expect(pair?.evidence[0]?.summary).toBe("ip_host:203.0.113.10");
+    expect(JSON.stringify(pair)).not.toContain("203.0.113.11");
+    expect(JSON.stringify(pair)).not.toContain(path);
+
+    const kept = [
+      `bit.ly\u70B9evil.com/${path}`,
+      `bit.ly\u70B9free.com/${path}`,
+      `bit.ly\u70B9free.\u4E2D\u56FD/${path}`,
+      `http://bit.ly\u70B9free/${path}`,
+      `http://bit.ly\u70B9203.0.113.10/${path}`,
+      `203.0.113.10\u70B9bit.ly/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+    }
+  });
+
   it("joins an ideographic stop when another domain continues", async () => {
     const detector = createLinkDetector();
     const path = "offer183";

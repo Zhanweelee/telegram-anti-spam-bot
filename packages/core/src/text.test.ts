@@ -334,6 +334,32 @@ describe("foldHostScan", () => {
     expect(foldHostScan("203.0.113.10\u70B9bit.ly")).toBe(
       "203.0.113.10xbit.ly",
     );
+    expect(foldHostScan("bit.ly\u70B9free")).toBe("bit.ly\u70B9free");
+    expect(foldHostScanKeepingStops("bit.ly\u70B9free")).toBe(
+      "bit.ly\u70B9free",
+    );
+    expect(foldHostScan("bit.ly\u70B9free.notarealtld")).toBe(
+      "bit.ly\u70B9free.notarealtld",
+    );
+    expect(foldHostScan("bit.ly\u70B9203.0.113.10")).toBe(
+      "bit.ly\u70B9203.0.113.10",
+    );
+    expect(foldHostScanKeepingStops("www.bit.ly\u70B9203.0.113.10")).toBe(
+      "www.bit.ly\u70B9203.0.113.10",
+    );
+    expect(foldHostScan("203.0.113.10\u70B9203.0.113.11")).toBe(
+      "203.0.113.10\u70B9203.0.113.11",
+    );
+    expect(foldHostScan("example.com\u70B9203.0.113.10")).toBe(
+      "example.com\u70B9203.0.113.10",
+    );
+    expect(foldHostScan("bit.ly\u70B9free.com")).toBe("bit.lyxfree.com");
+    expect(foldHostScan("bit.ly\u70B9free.\u4E2D\u56FD")).toBe(
+      "bit.lyxfree.\u4E2D\u56FD",
+    );
+    expect(foldHostScan("http://bit.ly\u70B9free")).toBe(
+      "http://bit.ly\u70B9free",
+    );
     expect(foldHostScan("\u70B9bit.ly")).toBe("\u70B9bit.ly");
     expect(foldHostScan("\u70B9\u51FBbit.ly")).toBe("\u70B9\u51FBbit.ly");
     expect(foldHostScan("example.com\u70B9http://bit.ly")).toBe(

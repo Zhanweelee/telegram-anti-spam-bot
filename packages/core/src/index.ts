@@ -1,3 +1,4 @@
+export { androidStrictTld } from "./android-tlds.js";
 export {
   BlocklistCapacityError,
   type BlocklistDocument,
