@@ -2620,5 +2620,30 @@
     "id": "grapheme-joiner-scheme",
     "text": "example.com\u034Fhttp://bit.ly/offer174",
     "label": "ham"
+  },
+  {
+    "id": "percent-utf8-roman",
+    "text": "http://b%E2%85%A0t.ly/offer175",
+    "label": "ham"
+  },
+  {
+    "id": "percent-utf8-info",
+    "text": "http://b%E2%84%B9t.ly/offer175",
+    "label": "ham"
+  },
+  {
+    "id": "percent-utf8-joiner",
+    "text": "http://bi%CD%8Ft.ly/offer175",
+    "label": "ham"
+  },
+  {
+    "id": "percent-utf8-letter",
+    "text": "http://b%69t.ly/offer175",
+    "label": "spam"
+  },
+  {
+    "id": "percent-utf8-path",
+    "text": "http://example.com/%E2%84%B9bit.ly/offer175",
+    "label": "ham"
   }
 ]

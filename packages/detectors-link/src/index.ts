@@ -73,7 +73,9 @@ export const defaultShorteners = [
  * The label still cannot start or end with either mark. Letters written
  * against each other still start at the ASCII word, and `http://`
  * is not itself a label. A dot in a schemed host
- * starts another label only when a label character follows. A dot lookalike
+ * starts another label only when a label character follows. A percent
+ * encoding inside that host ends it, so the hex digits are their own match.
+ * A percent encoding in the path stays with this URL. A dot lookalike
  * that follows an ASCII dot stays in that label, so the next URL is not its
  * own match. A dot lookalike written immediately before `@` also stays, so
  * the next URL is its own match. A dot before
@@ -100,8 +102,8 @@ const URL_PAIR =
   "(?:[\\uD840-\\uD87F]|[\\uD880-\\uD8BF]|[\\uD8C0-\\uD8FF]|[\\uD900-\\uD93F]|[\\uD940-\\uD97F]|[\\uD980-\\uD9BF]|[\\uD9C0-\\uD9FF]|[\\uDA00-\\uDA3F]|[\\uDA40-\\uDA7F]|[\\uDA80-\\uDABF]|[\\uDAC0-\\uDAFF]|[\\uDB00-\\uDB3F]|[\\uDB44-\\uDB7F])[\\uDC00-\\uDFFD]";
 const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
 const URL_LABEL_CHAR = `(?:\\uFEFF|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
-const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|${URL_LABEL_CHAR})`;
-const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|${URL_LABEL_CHAR})`;
+const URL_LABEL_ATOM = `(?:[A-Za-z0-9]|${URL_LABEL_CHAR})`;
+const URL_LABEL_MORE = `(?:[A-Za-z0-9_-]|${URL_LABEL_CHAR})`;
 const URL_LABEL = `(?:${URL_LABEL_ATOM}(?:${URL_LABEL_MORE}{0,61}${URL_LABEL_ATOM})?)`;
 const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";

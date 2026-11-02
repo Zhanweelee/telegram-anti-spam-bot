@@ -7404,4 +7404,47 @@ describe("link fixtures", () => {
     expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
     expect(JSON.stringify(invite)).not.toContain("CODE174");
   });
+
+  it("leaves a multi-byte percent encoding outside a schemed host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer175";
+    const closed = [
+      `http://b%E2%85%A0t.ly/${path}`,
+      `http://b%E2%84%B9t.ly/${path}`,
+      `http://bi%CD%8Ft.ly/${path}`,
+      `b%E2%85%A0t.ly/${path}`,
+      `http://%E2%84%B9bit.ly/${path}`,
+      `http://example.com/%E2%84%B9bit.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `http://b%69t.ly/${path}`,
+      `b%69t.ly/${path}`,
+      `https://bit.ly%2F${path}`,
+      `https://bit.ly/%E2%85%A0${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });
