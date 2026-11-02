@@ -1200,5 +1200,35 @@
     "id": "unfinished-percent-glued-invite",
     "text": "https://t.me%/+CODE135",
     "label": "ham"
+  },
+  {
+    "id": "omitted-path-emoji",
+    "text": "http://example.com\uD83D\uDE00http://bit.ly/offer136",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-path-slash",
+    "text": "http://example.com/\uD83D\uDE00http://bit.ly/offer136",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-path-letter",
+    "text": "http://example.com\uD800\uDD40http://bit.ly/offer136",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-path-ip",
+    "text": "http://news.example\uD83D\uDE00http://203.0.113.136/x",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-path-han",
+    "text": "http://example.com/点击http://bit.ly/offer136",
+    "label": "ham"
+  },
+  {
+    "id": "omitted-path-glued-invite",
+    "text": "https://t.me\uD83D\uDE00/+CODE136",
+    "label": "ham"
   }
 ]

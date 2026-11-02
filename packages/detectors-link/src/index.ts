@@ -56,12 +56,17 @@ export const defaultShorteners = [
 
 /**
  * A URL token ends at whitespace, quotes, characters Android's path
- * cannot include, and a `%` that is not two hex digits. The next URL is
- * then its own match. A scheme stuck to an ASCII word character is not
- * a match, and the host after `://` is not read again.
+ * cannot include, a `%` that is not two hex digits, and a code point the
+ * path class omits. The next URL is then its own match. A scheme stuck
+ * to an ASCII word character is not a match, and the host after `://`
+ * is not read again.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
-const URL_BODY = `(?:[^${URL_BREAK}%]|%[0-9A-Fa-f]{2})`;
+const URL_OMIT =
+  "\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF";
+const URL_PAIR =
+  "(?:[\\uD840-\\uD87F]|[\\uD880-\\uD8BF]|[\\uD8C0-\\uD8FF]|[\\uD900-\\uD93F]|[\\uD940-\\uD97F]|[\\uD980-\\uD9BF]|[\\uD9C0-\\uD9FF]|[\\uDA00-\\uDA3F]|[\\uDA40-\\uDA7F]|[\\uDA80-\\uDABF]|[\\uDAC0-\\uDAFF]|[\\uDB00-\\uDB3F]|[\\uDB44-\\uDB7F])[\\uDC00-\\uDFFD]";
+const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
 const token = new RegExp(
   `(?<![A-Za-z0-9_])(?:https?:\\/\\/|www\\.)(?:${URL_BODY})+|(?<!:\\/\\/)\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:\\/${URL_BODY}+)?`,
   "gi",

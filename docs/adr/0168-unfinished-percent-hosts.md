@@ -31,3 +31,4 @@ Android `LinkifyPort.WEB_URL` 的路径只收完整的 `%` 加两位十六进制
 - `http://example.com%http://bit.ly/…`、`http://example.com/%http://bit.ly/…` 和 `http://news.example%http://203.0.113.135/…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://example.com/%20http://bit.ly/…`、`http://example.com%2Ghttp://bit.ly/…` 和 `http://example.com/http://bit.ly/…` 留着。
 - 协议粘在字母或下划线上时不单独记成链接。`https://t.me%/+…` 不记成邀请。`http://example.com/%http://t.me/+…` 按邀请删除。路径不进证据。
+- 路径类没有的字符后面，Android 另外打开的主机名也留下。见 ADR 0169。
