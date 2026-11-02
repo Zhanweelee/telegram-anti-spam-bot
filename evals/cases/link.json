@@ -3125,5 +3125,45 @@
     "id": "join-unicode-suffix",
     "text": "example.com\u3002\u65E5\u672C.bit.ly/offer189",
     "label": "spam"
+  },
+  {
+    "id": "lookalike-schemed-path",
+    "text": "http://bit.ly\u00B7/offer190",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-label-dot",
+    "text": "bit.ly\u00B7.com/offer190",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-address-dot",
+    "text": "203.0.113.10\u00B7.evil.com/offer190",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-schemed-query",
+    "text": "https://t.co\u2022?offer190",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-bare-path",
+    "text": "bit.ly\u00B7/offer190",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-hash",
+    "text": "http://bit.ly\u00B7#offer190",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-suffix",
+    "text": "example.com\u00B7.bit.ly/offer190",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-ideograph",
+    "text": "http://bit.ly\u3002/offer190",
+    "label": "spam"
   }
 ]

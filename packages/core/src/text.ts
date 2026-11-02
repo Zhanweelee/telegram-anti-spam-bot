@@ -43,6 +43,9 @@ const HOST_DOT_LOOKALIKE =
  * or `@` follows it. Android keeps that character inside the label.
  * Folding it there would hide the next URL or split one URL.
  * A lookalike that separates labels still becomes `.`.
+ * After a finished host, a run stays when a schemed path, query, or port
+ * follows, or when an ASCII dot and a strict domain follow. Those marks
+ * are part of the label. The later join turns the dotted run into `x`.
  */
 function foldHostDots(text: string): string {
   let out = "";
@@ -53,8 +56,21 @@ function foldHostDots(text: string): string {
     }
     const char = String.fromCodePoint(code);
     const next = index + char.length;
+    if (hostDotLookalike(code) && endsWithFinishedHost(out)) {
+      const end = lookalikeRunEnd(text, index);
+      const rest = text.slice(end);
+      if (
+        (finishedHostIsSchemed(out) &&
+          (schemedLookalikeTail(rest) || rest.startsWith("."))) ||
+        (rest.startsWith(".") && dotDomainContinues(rest))
+      ) {
+        out += text.slice(index, end);
+        index = end;
+        continue;
+      }
+    }
     if (
-      HOST_DOT_LOOKALIKE.test(char) &&
+      hostDotLookalike(code) &&
       !out.endsWith(".") &&
       !out.endsWith("@") &&
       text.codePointAt(next) !== 0x40
@@ -67,6 +83,48 @@ function foldHostDots(text: string): string {
     index = next;
   }
   return out;
+}
+
+function hostDotLookalike(code: number): boolean {
+  return HOST_DOT_LOOKALIKE.test(String.fromCharCode(code));
+}
+
+function lookalikeRunEnd(text: string, index: number): number {
+  let end = index;
+  while (end < text.length && hostDotLookalike(text.charCodeAt(end))) {
+    end += 1;
+  }
+  return end;
+}
+
+/**
+ * The finished host is the authority of `http://` or `https://`.
+ * Text before the scheme stays, so `see http://bit.ly` still counts.
+ */
+function finishedHostIsSchemed(out: string): boolean {
+  if (!endsWithFinishedHost(out)) {
+    return false;
+  }
+  const domain = /(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}$/.exec(out);
+  const ip = domain ? null : /(?:\d{1,3}\.){3}\d{1,3}$/.exec(out);
+  const host = domain ?? ip;
+  if (host?.index === undefined) {
+    return false;
+  }
+  const prefix = out.slice(0, host.index);
+  return /https?:\/\/(?:[A-Za-z0-9$_.+!*'(),;?&=-]{1,64}(?::[A-Za-z0-9$_.+!*'(),;?&=-]{1,25})?@)?$/i.test(
+    prefix,
+  );
+}
+
+/** A schemed label can end on a path, a query, the end, or a finished port. */
+function schemedLookalikeTail(rest: string): boolean {
+  return (
+    rest.length === 0 ||
+    rest.startsWith("/") ||
+    rest.startsWith("?") ||
+    /^:\d{1,5}(?!\d)/.test(rest)
+  );
 }
 
 /**
@@ -1073,6 +1131,8 @@ function httpUrlOpen(out: string): boolean {
  * label characters. A mark before a path, a bare top-level domain, or used
  * as the only dot, stays. A lookalike already folded into a trailing dot
  * is part of that same run.
+ * A lookalike before an ASCII dot stays in the label. A strict domain
+ * after that dot replaces the run with `x`. A non-strict tail stays.
  */
 function foldJoiningHostDots(text: string): string {
   let out = "";
@@ -1088,7 +1148,15 @@ function foldJoiningHostDots(text: string): string {
         while (isJoinDot(text.charCodeAt(end))) {
           end += 1;
         }
-        if (joinDomainContinues(text.slice(end))) {
+        const rest = text.slice(end);
+        if (rest.startsWith(".")) {
+          out = dotDomainContinues(rest)
+            ? `${base}x`
+            : `${base}${text.slice(index, end)}`;
+          index = end;
+          continue;
+        }
+        if (joinDomainContinues(rest)) {
           out = `${base}.`;
           index = end;
           continue;

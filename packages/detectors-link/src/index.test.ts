@@ -8336,4 +8336,73 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps a dot lookalike inside a schemed label", async () => {
+    const detector = createLinkDetector();
+    const path = "offer190";
+    const kept = [
+      `http://bit.ly\u00B7/${path}`,
+      `https://t.co\u2022?${path}`,
+      `http://www.bit.ly\u2027/${path}`,
+      `http://203.0.113.10\u2219/${path}`,
+      `http://bit.ly\u22C5\u22C5/${path}`,
+      `http://bit.ly\u30FB:80/${path}`,
+      `http://user:pass@bit.ly\uFE52/${path}`,
+      `http://bit.ly\u00B7/http://t.co/${path}`,
+      `bit.ly\u00B7.com/${path}`,
+      `http://bit.ly\u00B7.evil.com/${path}`,
+      `bit.ly\u00B7\u00B7.com/${path}`,
+      `203.0.113.10\u00B7.evil.com/${path}`,
+      `http://bit.ly\u00B7.\u65E5\u672C.com/${path}`,
+      `http://bit.ly\uFF0E.notarealtld/${path}`,
+      `see http://bit.ly\u00B7/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      [`bit.ly\u00B7/${path}`, "short_link:bit.ly"],
+      [`www.bit.ly\u2022/${path}`, "short_link:www.bit.ly"],
+      [`203.0.113.10\u00B7/${path}`, "ip_host:203.0.113.10"],
+      [`bit.ly\u00B7?${path}`, "short_link:bit.ly"],
+      [`bit.ly\u00B7:80/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly\u00B7@evil.com/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly\u00B7#${path}`, "short_link:bit.ly"],
+      [`http://bit.ly\u3002/${path}`, "short_link:bit.ly"],
+      [`bit.ly\u00B7.notarealtld/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly\u00B7 evil.com/${path}`, "short_link:bit.ly"],
+    ] as const;
+    for (const [text, summary] of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toEqual([summary]);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const suffix = await detector.detect({
+      event: eventFor(`example.com\u00B7.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:example.comx.bit.ly",
+    ]);
+    expect(JSON.stringify(suffix)).not.toContain(path);
+  });
 });
