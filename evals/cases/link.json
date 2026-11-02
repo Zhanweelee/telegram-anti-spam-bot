@@ -1160,5 +1160,45 @@
     "id": "path-breaker-glued-invite",
     "text": "https://t.me|/+CODE134",
     "label": "ham"
+  },
+  {
+    "id": "unfinished-percent-short",
+    "text": "http://example.com%http://bit.ly/offer135",
+    "label": "spam"
+  },
+  {
+    "id": "unfinished-percent-slash",
+    "text": "http://example.com/%http://bit.ly/offer135",
+    "label": "spam"
+  },
+  {
+    "id": "unfinished-percent-ip",
+    "text": "http://news.example%http://203.0.113.135/x",
+    "label": "spam"
+  },
+  {
+    "id": "unfinished-percent-encoded",
+    "text": "http://example.com/%20http://bit.ly/offer135",
+    "label": "ham"
+  },
+  {
+    "id": "unfinished-percent-partial",
+    "text": "http://example.com%2Ghttp://bit.ly/offer135",
+    "label": "ham"
+  },
+  {
+    "id": "unfinished-percent-path",
+    "text": "http://example.com/http://bit.ly/offer135",
+    "label": "ham"
+  },
+  {
+    "id": "unfinished-percent-word",
+    "text": "seehttp://bit.ly/offer135",
+    "label": "ham"
+  },
+  {
+    "id": "unfinished-percent-glued-invite",
+    "text": "https://t.me%/+CODE135",
+    "label": "ham"
   }
 ]

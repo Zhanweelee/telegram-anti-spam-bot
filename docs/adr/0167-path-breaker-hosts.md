@@ -30,3 +30,4 @@ Android `LinkifyPort.WEB_URL` 的路径收得下字母、数字和一部分标�
 - `http://example.com|http://bit.ly/…`、`http://example.com\http://t.co/…`、`http://example.com|bit.ly/…` 和 `http://news.example|http://203.0.113.134/…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://example.com|http://news.example/…` 留着。`https://t.me|/+…` 不记成邀请。
 - `http://example.com|https://t.me/+…` 按邀请删除。路径不进证据。
+- 没写完的百分号后面，Android 另外打开的主机名也留下。见 ADR 0168。

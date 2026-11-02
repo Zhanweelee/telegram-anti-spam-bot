@@ -55,12 +55,15 @@ export const defaultShorteners = [
 ] as const;
 
 /**
- * A URL token ends at whitespace, quotes, and characters Android's path
- * cannot include. The next URL is then its own match.
+ * A URL token ends at whitespace, quotes, characters Android's path
+ * cannot include, and a `%` that is not two hex digits. The next URL is
+ * then its own match. A scheme stuck to an ASCII word character is not
+ * a match, and the host after `://` is not read again.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
+const URL_BODY = `(?:[^${URL_BREAK}%]|%[0-9A-Fa-f]{2})`;
 const token = new RegExp(
-  `(?:https?:\\/\\/|www\\.)[^${URL_BREAK}]+|\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:\\/[^${URL_BREAK}]+)?`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/|www\\.)(?:${URL_BODY})+|(?<!:\\/\\/)\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:\\/${URL_BODY}+)?`,
   "gi",
 );
 
