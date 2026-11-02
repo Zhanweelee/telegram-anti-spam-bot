@@ -250,6 +250,33 @@ describe("foldHostScan", () => {
     expect(foldHostScan("bit\u00B7ly")).toBe("bit.ly");
     expect(foldEncodedMiddleDot("%C2%B7bit.ly")).toBe("\u00B7bit.ly");
     expect(foldEncodedMiddleDot("bit%C2%B7ly")).toBe("bit\u00B7ly");
+    expect(foldHostScan("%2Ebit.ly")).toBe("2Ebit.ly");
+    expect(foldHostScan("%2ebit.ly")).toBe("2ebit.ly");
+    expect(foldHostScan("%2Ewww.bit.ly")).toBe("2Ewww.bit.ly");
+    expect(foldHostScan("%2E.bit.ly")).toBe("2E.bit.ly");
+    expect(foldHostScan("see%2Ebit.ly")).toBe("see2Ebit.ly");
+    expect(foldHostScan("example.com%2Ebit.ly")).toBe("example.com2Ebit.ly");
+    expect(foldHostScan("www%2Ebit.ly")).toBe("www2Ebit.ly");
+    expect(foldHostScan("http://%2Ebit.ly")).toBe("http://2Ebit.ly");
+    expect(foldHostScan("HTTP://%2Ebit.ly")).toBe("HTTP://2Ebit.ly");
+    expect(foldHostScan("%2E203.0.113.10")).toBe("2E203.0.113.10");
+    expect(foldHostScan("%2E.203.0.113.10")).toBe("2E.203.0.113.10");
+    expect(foldHostScan("%2Ebit.ly/http://t.co")).toBe("2Ebit.ly/http://t.co");
+    expect(foldHostScan("%2E203.0.113.10/http://t.co")).toBe(
+      "2E203.0.113.10/http://t.co",
+    );
+    expect(foldHostScan("bit%2Ely")).toBe("bit.ly");
+    expect(foldHostScan("t%2Eme/+CODE")).toBe("t.me/+CODE");
+    expect(foldHostScan("%252Ebit.ly")).toBe("%252Ebit.ly");
+    expect(foldHostScan("%2E\nbit.ly")).toBe(".bit.ly");
+    expect(foldHostScan("%2E bit.ly")).toBe(". bit.ly");
+    expect(foldHostScan("http://bit.ly%2Eevil.com")).toBe(
+      "http://bit.ly2Eevil.com",
+    );
+    expect(foldHostScan("https://example.com/%2Ebit.ly")).toBe(
+      "https://example.com/.bit.ly",
+    );
+    expect(foldEncodedSeparators("%2Ebit.ly")).toBe(".bit.ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

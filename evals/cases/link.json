@@ -2400,5 +2400,55 @@
     "id": "encoded-dot-host-tail",
     "text": "http://bit.ly%C2%B7evil.com/offer169",
     "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot",
+    "text": "%2Ebit.ly/offer170",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-ascii-dot-see",
+    "text": "see%2Ebit.ly/offer170",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-ascii-dot-ip",
+    "text": "%2E203.0.113.170/offer170",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-ascii-dot-scheme",
+    "text": "%2Ehttp://bit.ly/offer170",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-ascii-dot-inside",
+    "text": "bit%2Ely/offer170",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot-break",
+    "text": "%2E\nbit.ly/offer170",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot-www",
+    "text": "%2Ewww.bit.ly/offer170",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot-dotted",
+    "text": "%2E.bit.ly/offer170",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot-tail",
+    "text": "http://bit.ly%2Eevil.com/offer170",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-ascii-dot-open",
+    "text": "%2E203.0.113.170/http://t.co/offer170",
+    "label": "spam"
   }
 ]

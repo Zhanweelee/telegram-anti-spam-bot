@@ -39,3 +39,4 @@ Android 不会在匹配前把百分号编码的点状间隔号收成点。`%C2%B
 - `bit%C2%B7ly`、字面 `·bit.ly` 和 `bit·ly` 仍按短链删除。
 - `%C2%B7www.bit.ly/…` 和 `%C2%B7.bit.ly/…` 仍按短链删除。证据是 `b7www.bit.ly` 和 `b7.bit.ly`。
 - `http://bit.ly%C2%B7…` 仍按 `bit.ly` 删除。第二层 `%25C2%25B7` 仍留下。路径不进证据。
+- 百分号编码的 ASCII 点贴在已经写完的主机名前面时，收成 Android 留下的两位十六进制。见 ADR 0203。

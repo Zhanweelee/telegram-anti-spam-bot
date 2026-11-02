@@ -234,8 +234,40 @@ function consumeEncodedSchemeLetter(
  * breaks disappear: `!` lets the host in front end, and `x` keeps `http`
  * from starting.
  */
+/**
+ * `%2E` glued to `http://` is not a dot Android decodes.
+ * `%2E` glued to a host Android already finished is the two hex digits
+ * at the start of that host. A dot inside `bit%2Ely` still becomes `.`.
+ * A `%2E` in a path still becomes `.`. A line break or space still does.
+ */
 function foldGluedEncodedDot(text: string): string {
-  return text.replace(/%2E(?=https?:\/\/)/gi, "!x");
+  const marked = text.replace(/%2E(?=https?:\/\/)/gi, "!x");
+  let out = "";
+  let index = 0;
+  while (index < marked.length) {
+    if (gluedEncodedDot(marked, index)) {
+      out += marked.slice(index + 1, index + 3);
+      index += 3;
+      continue;
+    }
+    out += marked.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function gluedEncodedDot(text: string, index: number): boolean {
+  if (text.slice(index, index + 3).toLowerCase() !== "%2e") {
+    return false;
+  }
+  if (encodedDotSitsInPath(text, index)) {
+    return false;
+  }
+  const next = index + 3;
+  if (text.charAt(next) === "." && gluedHostBodyLength(text, next + 1) > 0) {
+    return true;
+  }
+  return gluedHostBodyLength(text, next) > 0;
 }
 
 /**
@@ -278,6 +310,13 @@ function gluedPlusHostLength(text: string, index: number): number {
   }
   const body = gluedHostBodyLength(text, index + 3);
   return body > 0 ? body + 3 : 0;
+}
+
+function encodedDotSitsInPath(text: string, index: number): boolean {
+  if (text.slice(index - 3, index).toLowerCase() === "://") {
+    return false;
+  }
+  return encodedMarkSitsInPath(text, index);
 }
 
 function encodedMarkSitsInPath(text: string, index: number): boolean {
@@ -517,6 +556,8 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * or when it sits inside `http://` before `://`.
  * A percent-encoded dot lookalike stays when a host or scheme follows it.
  * The same lookalike used as the dot inside a host still becomes `.`.
+ * `%2E` glued to a finished host becomes the two hex digits Android keeps.
+ * `%2E` used as the dot inside a host still becomes `.`.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
