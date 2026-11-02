@@ -652,8 +652,9 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * A run before `http://` or `https://` stays. A label character
  * with no ASCII letter before it stays.
  * A run of `。` or a dot lookalike after a finished host becomes one `.`
- * when another ASCII domain continues. The same mark before a path, or
- * used as the only dot, stays.
+ * when another domain continues, including Android label characters.
+ * The same mark before a path, a bare top-level domain, or used as the
+ * only dot, stays.
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
  * The same character, a Cyrillic lookalike, or a fullwidth letter stays
@@ -703,8 +704,9 @@ export function foldHostScanKeepingGaps(text: string): string {
  * Dot lookalikes stay, so a bare host written with them does
  * not swallow the next URL. The joined scan still folds those letters.
  * A run of `。` or a dot lookalike after a finished host still becomes
- * one `.` when another ASCII domain continues, so the stopped scan does
- * not open the shortener again. A lookalike that is the only dot stays.
+ * one `.` when another domain continues, including Android label
+ * characters, so the stopped scan does not open the shortener again.
+ * A lookalike that is the only dot stays.
  */
 export function foldHostScanKeepingStops(text: string): string {
   return foldJoiningHostDots(
@@ -753,7 +755,9 @@ function foldGraphemeJoiner(text: string): string {
  * A label run before `.` and a strict domain becomes `x`, so the host
  * Android kept together is not split into the shortener in front.
  * Labels in that domain may be Android label characters.
- * A dotted tail that is not a strict domain stays, so that host still opens.
+ * A label run before `。` or a dot lookalike becomes `x.` when a domain
+ * continues after that mark. A dotted tail that is not a strict domain
+ * stays, so that host still opens.
  * `。` still separates labels for the URL parser. A following scheme stays.
  */
 function foldGluedLabelRuns(text: string): string {
@@ -782,14 +786,16 @@ function foldGluedLabelRuns(text: string): string {
         text.charAt(end) === "." &&
         endsWithFinishedHost(out) &&
         dotDomainContinues(rest);
+      const joined = joinedTail(text, end);
+      const joinTail = joined > end && endsWithFinishedHost(out);
       if (
-        (asciiTail || dottedTail) &&
+        (asciiTail || dottedTail || joinTail) &&
         !startsWithScheme(text, end) &&
         !keptMappedTail(out, rest, text, index, end) &&
         !keptMappedHead(out, rest, text, index, end)
       ) {
-        out += "x";
-        index = end;
+        out += joinTail ? "x." : "x";
+        index = joinTail ? joined : end;
         continue;
       }
     }
@@ -979,6 +985,68 @@ function domainContinues(rest: string): boolean {
 }
 
 /**
+ * A domain follows an ideographic stop or dot lookalike.
+ * A bare top-level domain does not. `com.日本` does not. `日本.com` does.
+ */
+function joinDomainContinues(rest: string): boolean {
+  if (domainContinues(rest)) {
+    return true;
+  }
+  return rest.includes(".") && dottedUnicodeDomain(rest);
+}
+
+function dottedUnicodeDomain(rest: string): boolean {
+  let index = 0;
+  let labelStart = 0;
+  let last = 0;
+  let sawDot = false;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    if (code === 0x2e) {
+      if (index === labelStart) {
+        return false;
+      }
+      if (sawDot && strictTldAt(rest, labelStart, index)) {
+        return true;
+      }
+      sawDot = true;
+      index += 1;
+      labelStart = index;
+      last = 0x2e;
+      continue;
+    }
+    if (!domainLabelCode(code)) {
+      break;
+    }
+    if (
+      sawDot &&
+      index > labelStart &&
+      wordBoundary(last, code) &&
+      strictTldAt(rest, labelStart, index)
+    ) {
+      return true;
+    }
+    last = code;
+    index += String.fromCodePoint(code).length;
+  }
+  return sawDot && strictTldAt(rest, labelStart, index);
+}
+
+function joinedTail(text: string, index: number): number {
+  let end = index;
+  if (!isJoinDot(text.charCodeAt(end))) {
+    return index;
+  }
+  while (isJoinDot(text.charCodeAt(end))) {
+    end += 1;
+  }
+  return joinDomainContinues(text.slice(end)) ? end : index;
+}
+
+/**
  * Android opens this dotted IPv4 on its own.
  * A following domain keeps the address inside that longer host.
  */
@@ -1001,9 +1069,10 @@ function httpUrlOpen(out: string): boolean {
 
 /**
  * A run of ideographic stops or dot lookalikes after a finished host is
- * one ASCII dot when another ASCII domain continues. A mark before a path,
- * or used as the only dot, stays. A lookalike already folded into a trailing
- * dot is part of that same run.
+ * one ASCII dot when another domain continues. The domain may use Android
+ * label characters. A mark before a path, a bare top-level domain, or used
+ * as the only dot, stays. A lookalike already folded into a trailing dot
+ * is part of that same run.
  */
 function foldJoiningHostDots(text: string): string {
   let out = "";
@@ -1019,7 +1088,7 @@ function foldJoiningHostDots(text: string): string {
         while (isJoinDot(text.charCodeAt(end))) {
           end += 1;
         }
-        if (domainContinues(text.slice(end))) {
+        if (joinDomainContinues(text.slice(end))) {
           out = `${base}.`;
           index = end;
           continue;

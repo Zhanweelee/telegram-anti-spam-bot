@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-189
+
+- 句号和点状间隔号后面的域名可以含 Android 标签字，并收成一个 ASCII 点。见 ADR 0222。
+- `bit.ly。日本.com/…` 和 `bit.ly点日本。evil.com/…` 留着。`bit.ly。com/…` 和 `bit.ly。点日本.notarealtld/…` 仍按短链删除。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-188
 
 - 点号后面的严格域名可以使用 Android 标签字，夹在前面的标签字仍收成 `x`。见 ADR 0221。

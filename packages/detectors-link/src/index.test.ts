@@ -7553,6 +7553,92 @@ describe("link fixtures", () => {
     expect(JSON.stringify(addressed)).not.toContain(path);
   });
 
+  it("keeps a unicode label after an ideographic stop", async () => {
+    const detector = createLinkDetector();
+    const path = "offer189";
+    const kept = [
+      `bit.ly\u3002\u65E5\u672C.com/${path}`,
+      `bit.ly\u3002\u70B9\u65E5\u672C.com/${path}`,
+      `www.bit.ly\u3002\u65E5\u672C.com/${path}`,
+      `t.co\u3002\u65E5\u672C.com/${path}`,
+      `203.0.113.10\u3002\u65E5\u672C.com/${path}`,
+      `bit.ly\u3002\u3002\u65E5\u672C.com/${path}`,
+      `bit.ly\u3002\u4E2D\u56FD.com/${path}`,
+      `bit.ly\u00B7\u70B9\u65E5\u672C.com/${path}`,
+      `see bit.ly\u3002\u65E5\u672C.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C\u3002evil.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C\u3002\u3002evil.com/${path}`,
+      `bit.ly\u70B9\u65E5\u672C\u3002\u65E5\u672C.com/${path}`,
+      `203.0.113.10\u70B9\u65E5\u672C\u3002evil.com/${path}`,
+      `http://bit.ly\u3002\u65E5\u672C.com/${path}`,
+      `http://bit.ly\u70B9\u65E5\u672C\u3002evil.com/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `bit.ly\u3002com/${path}`,
+      `bit.ly\u3002\u4E2D\u56FD/${path}`,
+      `bit.ly\u70B9\u65E5\u672C\u3002com/${path}`,
+      `bit.ly\u3002\u70B9\u65E5\u672C.notarealtld/${path}`,
+      `bit.ly\u3002com.\u65E5\u672C/${path}`,
+      `bit.ly\u3002/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toEqual(["short_link"]);
+      expect(hit?.evidence[0]?.summary, text).toBe("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const suffix = await detector.detect({
+      event: eventFor(`example.com\u3002\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.reasons).toEqual(["short_link"]);
+    expect(suffix?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:example.com.xn--wgv71a.bit.ly",
+    ]);
+    expect(JSON.stringify(suffix)).not.toContain(path);
+
+    const glued = await detector.detect({
+      event: eventFor(`example.com\u70B9\u3002\u65E5\u672C.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued?.reasons).toEqual(["short_link"]);
+    expect(glued?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:example.comx.xn--wgv71a.bit.ly",
+    ]);
+    expect(JSON.stringify(glued)).not.toContain(path);
+
+    const bare = await detector.detect({
+      event: eventFor(`\u70B9\u65E5\u672C\u3002bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(bare)).not.toContain(path);
+  });
+
   it("joins an ideographic stop when another domain continues", async () => {
     const detector = createLinkDetector();
     const path = "offer183";
