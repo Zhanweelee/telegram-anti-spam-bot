@@ -32,3 +32,4 @@ Android 没有协议时，一个标签可以用连字符或下划线把字母接
 - `例_foo.com/http://bit.ly/…`、`foo-例.com/http://bit.ly/…`、`www.例_foo.com/http://bit.ly/…` 和 `点击_bit.ly/…` 留着。
 - `例_.com/http://bit.ly/…`、`例_foo.com./http://bit.ly/…`、`例_foo.example/http://bit.ly/…` 和空格后面的 `例_foo.com/http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `点击bit.ly` 仍按短链删除。
+- 没有协议的主机名在希腊字母、西里尔字母、亚美尼亚文或非 ASCII 拉丁字母前结束，后面的网址仍单独打开。见 ADR 0185。

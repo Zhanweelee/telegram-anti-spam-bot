@@ -1775,5 +1775,30 @@
     "id": "bridged-label-glued",
     "text": "点击_bit.ly/offer151",
     "label": "ham"
+  },
+  {
+    "id": "bare-letter-slash",
+    "text": "example.comα/http://bit.ly/offer152",
+    "label": "spam"
+  },
+  {
+    "id": "bare-letter-query",
+    "text": "www.example.comα?http://bit.ly/offer152",
+    "label": "spam"
+  },
+  {
+    "id": "bare-letter-schemed",
+    "text": "http://example.comα/http://bit.ly/offer152",
+    "label": "ham"
+  },
+  {
+    "id": "bare-letter-kept",
+    "text": "http://bit.lyαtail.example/offer152",
+    "label": "ham"
+  },
+  {
+    "id": "bare-letter-inside",
+    "text": "xαbit.ly/offer152",
+    "label": "ham"
   }
 ]

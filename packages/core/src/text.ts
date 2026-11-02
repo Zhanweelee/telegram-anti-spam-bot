@@ -78,8 +78,9 @@ export function foldHostScanKeepingGaps(text: string): string {
 
 /**
  * Host fold that leaves Android's stopping characters in place.
- * Percent encodings, bracketed dots, gaps, and letters outside Android's
- * label class stay. Lookalike letters still fold.
+ * Percent encodings, bracketed dots, gaps, and a letter after a finished
+ * host stay. A letter between two ASCII letters still drops, so `bαit.ly`
+ * can match. Lookalike letters still fold.
  * The joined host from `foldHostScan` stays separate.
  */
 export function foldHostScanKeepingStops(text: string): string {
@@ -146,25 +147,51 @@ export function foldHostInterrupters(text: string): string {
 }
 
 /**
- * Drop the same letters when Android keeps them inside a label.
- * Letters outside `LinkifyPort` label class stay, so the span can end
- * on the host before them. The joined scan still removes every letter.
+ * Drop a label letter only when it sits between two ASCII letters or digits.
+ * A following URL stays, so a bare host can end before that letter.
+ * The joined scan still removes every letter.
  */
 function foldHostInterruptersAndroidKeeps(text: string): string {
   let out = "";
-  for (const char of text) {
-    const code = char.codePointAt(0);
+  for (let index = 0; index < text.length; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
     if (
-      code !== undefined &&
       code > 0x7f &&
       androidLabelCode(code) &&
-      HOST_INTERRUPTER.test(char)
+      HOST_INTERRUPTER.test(char) &&
+      asciiHostLetter(text, index - 1) &&
+      asciiHostLetter(text, next) &&
+      !startsWithScheme(text, next)
     ) {
+      index = next;
       continue;
     }
     out += char;
+    index = next;
   }
   return out;
+}
+
+function asciiHostLetter(text: string, index: number): boolean {
+  if (index < 0 || index >= text.length) {
+    return false;
+  }
+  const code = text.charCodeAt(index);
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a)
+  );
+}
+
+function startsWithScheme(text: string, index: number): boolean {
+  const rest = text.slice(index, index + "https://".length).toLowerCase();
+  return rest.startsWith("https://") || rest.startsWith("http://");
 }
 
 /**

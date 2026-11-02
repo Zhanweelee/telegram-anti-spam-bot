@@ -150,10 +150,12 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       );
       const compared = foldHostScan(text);
       const shaped = foldHostScanKeepingStops(text);
-      const invites = mergeHosts(
-        extractInviteHosts(compared, inviteNames),
-        message?.invites,
-      );
+      const gapInvites =
+        shaped === compared ? [] : extractInviteHosts(shaped, inviteNames);
+      const invites = mergeHosts(extractInviteHosts(compared, inviteNames), [
+        ...gapInvites,
+        ...(message?.invites ?? []),
+      ]);
       const gapHosts = shaped === compared ? [] : extractHosts(shaped);
       const hosts = mergeHosts(extractHosts(compared), [
         ...gapHosts,

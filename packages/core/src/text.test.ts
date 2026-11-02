@@ -124,7 +124,17 @@ describe("foldHostScan", () => {
       `http://bit.ly${cyrillic}evil.com`,
     );
     expect(foldHostScan(`b${greek}it.ly`)).toBe("bit.ly");
+    expect(foldHostScan("b\u03B1it.ly")).toBe("bit.ly");
     expect(foldHostScanKeepingStops("b\u03B1it.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("example.com\u03B1/http://bit.ly")).toBe(
+      "example.com\u03B1/http://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("example.com\u03B1http://bit.ly")).toBe(
+      "example.com\u03B1http://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("example.com\u03B1https://t.me")).toBe(
+      "example.com\u03B1https://t.me",
+    );
     expect(foldHostScanKeepingStops("http://bit.ly\u00A0evil.com")).toBe(
       "http://bit.ly\u00A0evil.com",
     );
