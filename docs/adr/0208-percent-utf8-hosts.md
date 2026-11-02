@@ -34,3 +34,4 @@ Android 的主机名标签不含 `%`。`http://b%E2%85%A0t.ly/…` 被拆成 `ht
 - `http://b%E2%85%A0t.ly/…`、`http://b%E2%84%B9t.ly/…` 和 `http://bi%CD%8Ft.ly/…` 留着。
 - `http://b%69t.ly/…`、`b%69t.ly/…` 和 `https://bit.ly%2F…` 仍按短链删除。路径不进证据。
 - `http://example.com/%E2%84%B9bit.ly/…` 和 `http://%E2%84%B9bit.ly/…` 留着。
+- 亚美尼亚文、西里尔文、希腊文和拉丁文里的标点不再收成短链。见 ADR 0209。

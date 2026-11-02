@@ -4658,6 +4658,33 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("btn69");
   });
 
+  it("keeps an armenian mark inside a button url", async () => {
+    const outcome = await normalize({
+      update_id: 3617,
+      message: {
+        message_id: 187,
+        date: 1761955200,
+        chat: { id: -100921, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: "http://b\u055Ait.ly/btn176" }],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts ?? []).not.toContain("bit.ly");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("btn176");
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

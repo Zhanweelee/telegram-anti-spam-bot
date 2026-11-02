@@ -558,6 +558,15 @@ describe("foldHostInterrupters", () => {
     expect(foldHostInterrupters("안녕bit.ly")).toBe("안녕bit.ly");
     expect(foldHostInterrupters("あbit.ly")).toBe("あbit.ly");
     expect(foldHostInterrupters("免费领取")).toBe("免费领取");
+    expect(foldHostInterrupters("b\u055Ait.ly")).toBe("b\u055Ait.ly");
+    expect(foldHostInterrupters("b\u0384it.ly")).toBe("b\u0384it.ly");
+    expect(foldHostInterrupters("b\u0482it.ly")).toBe("b\u0482it.ly");
+    expect(foldHostScan("b\u055Ait.ly")).toBe("bxit.ly");
+    expect(foldHostScan("http://bit.\u055Aly")).toBe("http://bit.\u055Aly");
+    expect(foldHostScan("example.com\u055Ahttp://bit.ly")).toBe(
+      "example.com\u055Ahttp://bit.ly",
+    );
+    expect(foldHostScan("b\u0561it.ly")).toBe("bit.ly");
   });
 });
 

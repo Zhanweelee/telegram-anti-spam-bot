@@ -623,6 +623,7 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
+ * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
@@ -777,21 +778,35 @@ export function foldCyrillicLookalikes(text: string): string {
 
 /**
  * Letters that would split an ASCII hostname into a shorter tail.
- * ASCII letters stay. These letters are removed, not mapped.
+ * ASCII letters stay. Punctuation Android keeps in a label stays.
+ * A character Android leaves out of a label still drops.
+ * These letters are removed, not mapped.
  */
 const HOST_INTERRUPTER =
   /[\p{Script=Armenian}\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Latin}]/u;
+const HOST_INTERRUPTER_LETTER = /^\p{L}$/u;
+
+function isHostInterrupter(char: string, code: number): boolean {
+  if (!HOST_INTERRUPTER.test(char)) {
+    return false;
+  }
+  if (HOST_INTERRUPTER_LETTER.test(char)) {
+    return true;
+  }
+  return !androidLabelCode(code);
+}
 
 /**
  * Drop Armenian, Cyrillic, Greek, and non-ASCII Latin letters before a
- * hostname scan. CJK, Hangul, kana, and ASCII stay. These letters are
- * removed, not mapped.
+ * hostname scan. CJK, Hangul, kana, and ASCII stay. Punctuation Android
+ * keeps in a label stays. A character Android leaves out of a label still
+ * drops. These letters are removed, not mapped.
  */
 export function foldHostInterrupters(text: string): string {
   let out = "";
   for (const char of text) {
     const code = char.codePointAt(0);
-    if (code !== undefined && code > 0x7f && HOST_INTERRUPTER.test(char)) {
+    if (code !== undefined && code > 0x7f && isHostInterrupter(char, code)) {
       continue;
     }
     out += char;
@@ -801,8 +816,8 @@ export function foldHostInterrupters(text: string): string {
 
 /**
  * Drop a label letter only when it sits between two ASCII letters or digits.
- * A following URL stays, so a bare host can end before that letter.
- * The joined scan still removes every letter.
+ * Punctuation and symbols stay. A following URL stays, so a bare host can
+ * end before that letter. The joined scan still removes every letter.
  */
 function foldHostInterruptersAndroidKeeps(text: string): string {
   let out = "";
@@ -816,7 +831,7 @@ function foldHostInterruptersAndroidKeeps(text: string): string {
     if (
       code > 0x7f &&
       androidLabelCode(code) &&
-      HOST_INTERRUPTER.test(char) &&
+      isHostInterrupter(char, code) &&
       asciiHostLetter(text, index - 1) &&
       asciiHostLetter(text, next) &&
       !startsWithScheme(text, next)

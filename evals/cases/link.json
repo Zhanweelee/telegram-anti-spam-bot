@@ -2645,5 +2645,30 @@
     "id": "percent-utf8-path",
     "text": "http://example.com/%E2%84%B9bit.ly/offer175",
     "label": "ham"
+  },
+  {
+    "id": "script-punct-infix",
+    "text": "b\u055Ait.ly/offer176",
+    "label": "ham"
+  },
+  {
+    "id": "script-punct-dot",
+    "text": "http://bit.\u055Aly/offer176",
+    "label": "ham"
+  },
+  {
+    "id": "script-punct-scheme",
+    "text": "example.com\u055Ahttp://bit.ly/offer176",
+    "label": "spam"
+  },
+  {
+    "id": "script-punct-letter",
+    "text": "b\u0561it.ly/offer176",
+    "label": "spam"
+  },
+  {
+    "id": "script-punct-prefix",
+    "text": "\u055Abit.ly/offer176",
+    "label": "spam"
   }
 ]

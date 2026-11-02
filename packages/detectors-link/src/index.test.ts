@@ -7447,4 +7447,45 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps script punctuation inside the host Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer176";
+    const closed = [
+      `b\u055Ait.ly/${path}`,
+      `http://bit.\u055Aly/${path}`,
+      `b\u0384it.ly/${path}`,
+      `http://b\u0482t.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `b\u0561it.ly/${path}`,
+      `\u055Abit.ly/${path}`,
+      `example.com\u055Ahttp://bit.ly/${path}`,
+      `b\u03B1it.ly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });
