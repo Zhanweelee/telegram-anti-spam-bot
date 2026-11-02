@@ -60,7 +60,9 @@ export const defaultShorteners = [
  * path class omits. Punctuation that can sit in a path ends the host when
  * the path has not started, so the next URL is its own match. A scheme
  * stuck to an ASCII word character is not a match, and the host after
- * `://` is not read again.
+ * `://` is not read again. A bare domain and a `www.` host end at the last
+ * label, so the next URL is its own match. A label cannot start with a
+ * hyphen, and `http://` is not itself a label.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -72,8 +74,14 @@ const URL_HOST_CHAR = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9._-]|[^\\s\\u0000-\\u007F${U
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
 const URL_USERINFO = `(?:${URL_USER})+(?::(?:${URL_USER})+)?@`;
 const URL_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
+const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
+const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})+`;
+const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
+const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
+const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;
+const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST_CHAR})*${URL_TAIL}|(?:${URL_HOST_CHAR})+${URL_TAIL})|www\\.(?:${URL_HOST_CHAR})+${URL_TAIL})|(?<!:\\/\\/)\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:\\/(?:${URL_BODY})+)?`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST_CHAR})*${URL_TAIL}|(?:${URL_HOST_CHAR})+${URL_TAIL})|${URL_WWW})|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?`,
   "gi",
 );
 

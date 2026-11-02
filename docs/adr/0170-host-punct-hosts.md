@@ -36,3 +36,4 @@ Android `LinkifyPort.WEB_URL` 先读用户信息，再读主机名、一到五�
 - `http://example.com/!http://bit.ly/…` 和 `http://example.com/?http://bit.ly/…` 留着。
 - `http://user:pass@bit.ly/…` 仍按短链删除。`http://bit.ly@example.com` 留着。
 - `https://t.me!/+…` 不记成邀请。`http://example.com!https://t.me/+…` 按邀请删除。路径不进证据。
+- 裸域名和 `www.` 在最后一个标签处结束，后面 Android 另外打开的主机名也留下。见 ADR 0171。

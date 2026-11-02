@@ -1265,5 +1265,50 @@
     "id": "host-punct-glued-invite",
     "text": "https://t.me!/+CODE137",
     "label": "ham"
+  },
+  {
+    "id": "www-domain-hyphen",
+    "text": "www.example.com-http://bit.ly/offer138",
+    "label": "spam"
+  },
+  {
+    "id": "www-domain-dot",
+    "text": "www.example.com.http://bit.ly/offer138",
+    "label": "spam"
+  },
+  {
+    "id": "www-domain-mark",
+    "text": "www.example.com\u00A1http://bit.ly/offer138",
+    "label": "spam"
+  },
+  {
+    "id": "bare-domain-dot",
+    "text": "example.com.http://203.0.113.138/x",
+    "label": "spam"
+  },
+  {
+    "id": "bare-domain-port",
+    "text": "http://example.com:80-bit.ly/offer138",
+    "label": "spam"
+  },
+  {
+    "id": "www-domain-path",
+    "text": "www.example.com/!http://bit.ly/offer138",
+    "label": "ham"
+  },
+  {
+    "id": "www-domain-query",
+    "text": "www.example.com?http://bit.ly/offer138",
+    "label": "ham"
+  },
+  {
+    "id": "www-domain-schemed",
+    "text": "http://example.com\u00A1http://bit.ly/offer138",
+    "label": "ham"
+  },
+  {
+    "id": "www-domain-glued-invite",
+    "text": "www.t.me.evil.example/+CODE138",
+    "label": "ham"
   }
 ]
