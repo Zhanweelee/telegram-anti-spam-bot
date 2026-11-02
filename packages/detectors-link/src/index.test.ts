@@ -7932,4 +7932,49 @@ describe("link fixtures", () => {
     ]);
     expect(JSON.stringify(later)).not.toContain(path);
   });
+
+  it("deletes a bare address that follows a mapped letter", async () => {
+    const detector = createLinkDetector();
+    const path = "offer185";
+    const opened = [
+      `\u00AA203.0.113.10/${path}`,
+      `a\u00AA203.0.113.10/${path}`,
+      `see \u0410203.0.113.10/${path}`,
+      `\uFF41203.0.113.10/${path}`,
+      `\u00AA\u00AA203.0.113.10/${path}`,
+      `a\u0430203.0.113.10/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toEqual(["ip_host:203.0.113.10"]);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const closed = [
+      `http://\u00AA203.0.113.10/${path}`,
+      `https://\uFF41203.0.113.10/${path}`,
+      `http://user:pass@\u0410203.0.113.10/${path}`,
+      `http://example.com/\u00AA203.0.113.10/${path}`,
+      `http://example.com?\u00AA203.0.113.10`,
+      `\u00AA203.0.113.10a/${path}`,
+      `\u00AA203.0.113.10.evil.com/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });

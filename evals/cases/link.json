@@ -2935,5 +2935,40 @@
     "id": "lookalike-join-split",
     "text": "bit.ly\u00B7evil\u00B7com/offer184",
     "label": "spam"
+  },
+  {
+    "id": "leading-mapped-address",
+    "text": "\u00AA203.0.113.10/offer185",
+    "label": "spam"
+  },
+  {
+    "id": "leading-mapped-ascii",
+    "text": "a\u00AA203.0.113.10/offer185",
+    "label": "spam"
+  },
+  {
+    "id": "leading-mapped-cyrillic",
+    "text": "\u0410203.0.113.10/offer185",
+    "label": "spam"
+  },
+  {
+    "id": "leading-mapped-fullwidth",
+    "text": "\uFF41203.0.113.10/offer185",
+    "label": "spam"
+  },
+  {
+    "id": "leading-mapped-scheme",
+    "text": "http://\u00AA203.0.113.10/offer185",
+    "label": "ham"
+  },
+  {
+    "id": "leading-mapped-path",
+    "text": "http://example.com/\u00AA203.0.113.10/offer185",
+    "label": "ham"
+  },
+  {
+    "id": "leading-mapped-domain",
+    "text": "\u00AA203.0.113.10.evil.com/offer185",
+    "label": "ham"
   }
 ]

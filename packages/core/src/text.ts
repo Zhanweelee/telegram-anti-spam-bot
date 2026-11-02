@@ -137,11 +137,38 @@ function bracketSitsInPath(text: string, index: number): boolean {
 function foldHostShape(text: string): string {
   return foldHostDots(
     foldHostEncodedMiddleDot(
-      foldHostInterrupters(
-        foldMappedLatin(foldFullwidthLatin(foldCyrillicLookalikes(text))),
-      ),
+      foldHostInterrupters(foldMappedLatin(foldJoinedLookalikes(text))),
     ),
   );
+}
+
+/**
+ * Map Cyrillic lookalikes and fullwidth Latin the way the public folds do.
+ * A letter immediately before a bare IPv4 stays, so that address still opens.
+ * A letter inside an `http://` or `https://` URL still maps.
+ */
+function foldJoinedLookalikes(text: string): string {
+  let out = "";
+  for (let index = 0; index < text.length; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
+    const mapped = CYRILLIC_LOOKALIKES[char] ?? fullwidthLatin(code);
+    if (
+      mapped !== undefined &&
+      bareAddressFollows(text.slice(next)) &&
+      !httpUrlOpen(out)
+    ) {
+      out += char;
+    } else {
+      out += mapped ?? char;
+    }
+    index = next;
+  }
+  return out;
 }
 
 function foldHostTail(text: string): string {
@@ -625,6 +652,9 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * used as the only dot, stays.
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
+ * The same character, a Cyrillic lookalike, or a fullwidth letter stays
+ * when a bare IPv4 follows and no further domain continues. Inside an
+ * `http://` or `https://` URL that letter still maps.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
@@ -739,7 +769,8 @@ function foldGluedLabelRuns(text: string): string {
       if (
         asciiHostLetter(text, end) &&
         !startsWithScheme(text, end) &&
-        !keptMappedTail(out, text.slice(end), text, index, end)
+        !keptMappedTail(out, text.slice(end), text, index, end) &&
+        !keptMappedHead(out, text.slice(end), text, index, end)
       ) {
         out += "x";
         index = end;
@@ -831,7 +862,10 @@ export function foldHostInterrupters(text: string): string {
     const char = String.fromCodePoint(code);
     const next = index + char.length;
     if (code > 0x7f && isHostInterrupter(char, code)) {
-      if (keepTailLetter(out, text.slice(next), code)) {
+      if (
+        keepTailLetter(out, text.slice(next), code) ||
+        keepHeadLetter(out, text.slice(next), code)
+      ) {
         out += char;
       }
       index = next;
@@ -864,7 +898,8 @@ function foldHostInterruptersAndroidKeeps(text: string): string {
       asciiHostLetter(text, index - 1) &&
       asciiHostLetter(text, next) &&
       !startsWithScheme(text, next) &&
-      !keepTailLetter(out, text.slice(next), code)
+      !keepTailLetter(out, text.slice(next), code) &&
+      !keepHeadLetter(out, text.slice(next), code)
     ) {
       index = next;
       continue;
@@ -928,6 +963,27 @@ function domainContinues(rest: string): boolean {
 }
 
 /**
+ * Android opens this dotted IPv4 on its own.
+ * A following domain keeps the address inside that longer host.
+ */
+const BARE_IPV4_HEAD = "(?:25[0-5]|2[0-4]\\d|[01]\\d\\d|[1-9]\\d|[1-9])";
+const BARE_IPV4_MID = "(?:25[0-5]|2[0-4]\\d|[01]\\d\\d|[1-9]\\d|[1-9]|0)";
+const BARE_IPV4_LAST = "(?:25[0-5]|2[0-4]\\d|[01]\\d\\d|[1-9]\\d|\\d)";
+const BARE_IPV4 = new RegExp(
+  `^${BARE_IPV4_HEAD}\\.${BARE_IPV4_MID}\\.` +
+    `${BARE_IPV4_MID}\\.${BARE_IPV4_LAST}(?![A-Za-z0-9_])`,
+);
+
+function bareAddressFollows(rest: string): boolean {
+  return BARE_IPV4.test(rest) && !domainContinues(rest);
+}
+
+/** The letter is still inside an `http://` or `https://` URL. */
+function httpUrlOpen(out: string): boolean {
+  return /https?:\/\/\S*$/i.test(out);
+}
+
+/**
  * A run of ideographic stops or dot lookalikes after a finished host is
  * one ASCII dot when another ASCII domain continues. A mark before a path,
  * or used as the only dot, stays. A lookalike already folded into a trailing
@@ -984,6 +1040,9 @@ function keepMappedLetter(out: string, rest: string): boolean {
   if (startsWithScheme(rest, 0)) {
     return false;
   }
+  if (bareAddressFollows(rest) && !httpUrlOpen(out)) {
+    return false;
+  }
   if (endsWithSchemedHost(out)) {
     return true;
   }
@@ -1012,6 +1071,32 @@ function keepTailLetter(out: string, rest: string, code: number): boolean {
   return (
     mappedTailCode(code) && endsWithFinishedHost(out) && !domainContinues(rest)
   );
+}
+
+/** A mapped letter sits immediately before a bare IPv4 Android still opens. */
+function keepHeadLetter(out: string, rest: string, code: number): boolean {
+  return mappedTailCode(code) && bareAddressFollows(rest) && !httpUrlOpen(out);
+}
+
+/** The glued run is only mapped letters before a bare IPv4. */
+function keptMappedHead(
+  out: string,
+  rest: string,
+  text: string,
+  start: number,
+  end: number,
+): boolean {
+  if (!keepHeadLetter(out, rest, text.codePointAt(start) ?? 0)) {
+    return false;
+  }
+  for (let index = start; index < end; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined || !mappedTailCode(code)) {
+      return false;
+    }
+    index += String.fromCodePoint(code).length;
+  }
+  return true;
 }
 
 /** The glued run is only mapped letters after a host Android already closed. */
@@ -1065,7 +1150,9 @@ for (let index = 0; index < MAPPED_LATIN_PACK.length; index += 5) {
  * Map a character whose IDNA mapping is one ASCII letter.
  * A following `http://` or `https://` stays, so that URL still opens.
  * A letter after a finished bare host stays too, unless another domain
- * continues. A schemed host still maps. Fullwidth letters and Cyrillic т
+ * continues. A letter before a bare IPv4 stays, unless a domain continues
+ * or the letter is still inside an `http://` or `https://` URL.
+ * A schemed host still maps. Fullwidth letters and Cyrillic т
  * stay on their own folds.
  */
 export function foldMappedLatin(text: string): string {

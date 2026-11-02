@@ -446,6 +446,28 @@ describe("foldHostScan", () => {
     expect(foldHostScan("bit.ly\u00AAx/z")).toBe("bit.ly\u00AAx/z");
     expect(foldHostScan("www.bit.ly\u00AA/z")).toBe("www.bit.ly\u00AA/z");
     expect(foldHostScan("203.0.113.10\u00AA/z")).toBe("203.0.113.10\u00AA/z");
+    expect(foldHostScan("\u00AA203.0.113.10/z")).toBe("\u00AA203.0.113.10/z");
+    expect(foldHostScan("a\u00AA203.0.113.10/z")).toBe("a\u00AA203.0.113.10/z");
+    expect(foldHostScan("\u0410203.0.113.10/z")).toBe("\u0410203.0.113.10/z");
+    expect(foldHostScan("a\uFF41203.0.113.10/z")).toBe("a\uFF41203.0.113.10/z");
+    expect(foldHostScan("http://\u00AA203.0.113.10/z")).toBe(
+      "http://a203.0.113.10/z",
+    );
+    expect(foldHostScan("http://example.com/\u0410203.0.113.10/z")).toBe(
+      "http://example.com/A203.0.113.10/z",
+    );
+    expect(foldHostScan("\u00AA203.0.113.10.evil.com/z")).toBe(
+      "a203.0.113.10.evil.com/z",
+    );
+    expect(foldCyrillicLookalikes("\u0410203.0.113.10/z")).toBe(
+      "A203.0.113.10/z",
+    );
+    expect(foldHostScanKeepingStops("\u00AA203.0.113.10/z")).toBe(
+      "\u00AA203.0.113.10/z",
+    );
+    expect(foldHostScanKeepingStops("a\u0430203.0.113.10/z")).toBe(
+      "a\u0430203.0.113.10/z",
+    );
     expect(foldHostScan("bit.ly\u00AA?z")).toBe("bit.ly\u00AA?z");
     expect(foldHostScan("http://bit.ly\u00AA/z")).toBe("http://bit.lya/z");
     expect(foldHostScan("bit.ly\u00AAevil.com")).toBe("bit.lyaevil.com");
