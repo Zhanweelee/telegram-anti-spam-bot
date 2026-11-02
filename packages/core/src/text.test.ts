@@ -162,6 +162,14 @@ describe("foldHostScan", () => {
       `http://example.com${fullwidth}@http://bit.ly`,
     );
     expect(foldHostScan(`bit${fullwidth}ly${fullwidth}com`)).toBe("bit.ly.com");
+    expect(
+      foldHostScanKeepingStops(
+        `bit${fullwidth}ly${fullwidth}com/http://t.co/z`,
+      ),
+    ).toBe(`bit${fullwidth}ly${fullwidth}com/http://t.co/z`);
+    expect(foldHostScan(`bit${fullwidth}ly${fullwidth}com/http://t.co/z`)).toBe(
+      "bit.ly.com/http://t.co/z",
+    );
   });
 });
 

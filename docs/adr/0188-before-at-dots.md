@@ -30,3 +30,4 @@ Android 不把 `·`、`•`、`‧`、`∙`、`⋅`、`・`、`．`、`﹒` 和 
 - `http://example.com．@http://bit.ly/…`、`http://example.com·@http://bit.ly/…` 和 `http://203.0.113.155．@http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `http://example.com．@https://t.me/+…` 按邀请删除。路径不进证据。
 - `http://example.com.@http://bit.ly/…` 和 `http://example.com．/http://bit.ly/…` 留着。`bit．ly` 和 `http://user@bit．ly/…` 仍按短链删除。
+- 只用点状字符当点、又没有协议的主机名不再盖住后面的网址。见 ADR 0189。

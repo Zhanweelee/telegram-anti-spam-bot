@@ -1875,5 +1875,35 @@
     "id": "before-at-invite",
     "text": "http://example.com．@https://t.me/+CODE155",
     "label": "spam"
+  },
+  {
+    "id": "lookalike-bare-tco",
+    "text": "bit．ly．com/http://t.co/offer156",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-bare-middle",
+    "text": "bit·ly·com/http://t.co/offer156",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-bare-safe",
+    "text": "safe．com/http://bit.ly/offer156",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-bare-schemed",
+    "text": "http://bit．ly．com/http://t.co/offer156",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-bare-glue",
+    "text": "b·it.ly/offer156",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-bare-invite",
+    "text": "bit．ly．com/https://t.me/+CODE156",
+    "label": "spam"
   }
 ]

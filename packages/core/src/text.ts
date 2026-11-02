@@ -115,15 +115,13 @@ export function foldHostScanKeepingGaps(text: string): string {
  * Host fold that leaves Android's stopping characters in place.
  * Percent encodings, bracketed dots, gaps, and a letter after a finished
  * host stay. A letter between two ASCII letters still drops, so `bαit.ly`
- * can match. Lookalike letters still fold. A dot lookalike after an
- * ASCII dot stays in the label.
- * The joined host from `foldHostScan` stays separate.
+ * can match. Lookalike letters still fold. Dot lookalikes stay, so a bare
+ * host written with them does not swallow the next URL. The joined scan
+ * still turns a separating lookalike into `.`.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldHostDots(
-    foldHostInterruptersAndroidKeeps(
-      foldFullwidthLatin(foldCyrillicLookalikes(text)),
-    ),
+  return foldHostInterruptersAndroidKeeps(
+    foldFullwidthLatin(foldCyrillicLookalikes(text)),
   );
 }
 
