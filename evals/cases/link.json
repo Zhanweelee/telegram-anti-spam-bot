@@ -865,5 +865,25 @@
     "id": "tg-preview-resolve-empty",
     "text": "tg://resolve?domain=s&text=http%3A%2F%2F203.0.113.116%2Fx",
     "label": "ham"
+  },
+  {
+    "id": "android-span-short",
+    "text": "http://bit.ly\u2215@example.com/span119",
+    "label": "spam"
+  },
+  {
+    "id": "android-span-ip",
+    "text": "http://203.0.113.119\u2215@example.com/span119",
+    "label": "spam"
+  },
+  {
+    "id": "android-span-userinfo",
+    "text": "http://bit.ly@example.com/ok119",
+    "label": "ham"
+  },
+  {
+    "id": "android-span-docs",
+    "text": "http://example.com\u2215docs",
+    "label": "ham"
   }
 ]

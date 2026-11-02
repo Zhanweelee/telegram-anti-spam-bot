@@ -2806,4 +2806,91 @@ describe("link fixtures", () => {
       }),
     ).toBeNull();
   });
+
+  it("keeps the host Android stops on before a later authority", async () => {
+    const detector = createLinkDetector();
+    const path = "span119";
+    const slash = "\u2215";
+    const fraction = "\u2044";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly${slash}@example.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+
+    const fractionHit = await detector.detect({
+      event: eventFor(`http://bit.ly${fraction}@example.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fractionHit?.reasons).toEqual(["short_link"]);
+    expect(fractionHit?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const encoded = await detector.detect({
+      event: eventFor(`http://bit.ly%E2%88%95@example.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encoded?.reasons).toEqual(["short_link"]);
+    expect(encoded?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(encoded)).not.toContain(path);
+
+    const lower = await detector.detect({
+      event: eventFor(`http://bit.ly%e2%88%95@example.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(lower).toBeNull();
+
+    const address = "203.0.113.119";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}${slash}@example.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(path);
+
+    const comma = await detector.detect({
+      event: eventFor("http://bit.ly，广告"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(comma?.reasons).toEqual(["short_link"]);
+    expect(comma?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const desktop = await detector.detect({
+      event: eventFor(`http://example.com${slash}@bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(desktop?.reasons).toEqual(["short_link"]);
+    expect(desktop?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(desktop)).not.toContain(path);
+
+    const userinfo = await detector.detect({
+      event: eventFor("http://bit.ly@example.com/ok119"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(userinfo).toBeNull();
+
+    const docs = await detector.detect({
+      event: eventFor(`http://example.com${slash}docs`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(docs).toBeNull();
+
+    const plain = await detector.detect({
+      event: eventFor("https://example.com/docs"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+  });
 });

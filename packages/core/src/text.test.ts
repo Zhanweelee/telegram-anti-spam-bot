@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  androidUrlSpan,
   foldBracketDots,
   foldCyrillicLookalikes,
   foldDotLookalikes,
@@ -245,5 +246,36 @@ describe("foldEncodedAlphabet", () => {
     expect(foldEncodedAlphabet("OFF%252545R")).toBe("OFF%252545R");
     expect(foldEncodedAlphabet("b%252569t.ly")).toBe("b%252569t.ly");
     expect(foldMatchText("免%2545费领取")).toBe("免%2545费领取");
+  });
+});
+
+describe("androidUrlSpan", () => {
+  it("stops before a character that does not continue the path", () => {
+    expect(androidUrlSpan("http://bit.ly\u2215@example.com/path")).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan("http://bit.ly\u2044@example.com/path")).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan("http://bit.ly%2F@example.com/path")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly%E2%88%95@example.com/path")).toBe(
+      "http://bit.ly/@example.com/path",
+    );
+    expect(androidUrlSpan("http://203.0.113.9\u2215@example.com")).toBe(
+      "http://203.0.113.9",
+    );
+    expect(androidUrlSpan("http://bit.ly，广告")).toBe("http://bit.ly");
+    expect(androidUrlSpan("https://example.com/docs")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@example.com/ok")).toBeNull();
+  });
+
+  it("turns a division slash inside the span into a slash", () => {
+    expect(androidUrlSpan("http://example.com/a\u2215b")).toBe(
+      "http://example.com/a/b",
+    );
+    expect(androidUrlSpan("http://example.com/a%E2%88%95b")).toBe(
+      "http://example.com/a/b",
+    );
+    expect(androidUrlSpan("http://example.com/a%e2%88%95b")).toBeNull();
   });
 });

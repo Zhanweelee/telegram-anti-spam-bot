@@ -275,6 +275,48 @@ function alphabetChar(hex: string): string | null {
   return ENCODED_ALPHABET_CHAR.test(char) ? char : null;
 }
 
+const ANDROID_SCHEME = /^(https?:\/\/)/i;
+const ANDROID_USERINFO =
+  /^(?:[A-Za-z0-9$_.+!*'(),;?&=]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=]|%[0-9A-Fa-f]{2}){1,25})?@/;
+const ANDROID_SLASH = /\u2215|\u2044|%E2%88%95|%E2%81%84/g;
+
+/**
+ * URL Android highlights, when that span is shorter or replaces a slash.
+ * The matcher stops unless the next character continues a path.
+ * A division slash or fraction slash inside the span becomes `/`.
+ * The same string comes back as null.
+ */
+export function androidUrlSpan(raw: string): string | null {
+  const scheme = ANDROID_SCHEME.exec(raw);
+  if (scheme?.index !== 0) {
+    return null;
+  }
+  let index = scheme[0].length;
+  const user = ANDROID_USERINFO.exec(raw.slice(index));
+  if (user?.[0]) {
+    index += user[0].length;
+  }
+  const hostStart = index;
+  while (index < raw.length && /[A-Za-z0-9.-]/.test(raw.charAt(index))) {
+    index += 1;
+  }
+  if (index === hostStart) {
+    return null;
+  }
+  if (raw.charAt(index) === ":") {
+    const port = /^:\d{1,5}/.exec(raw.slice(index));
+    if (port?.[0]) {
+      index += port[0].length;
+    }
+  }
+  const next = raw.charAt(index);
+  const continues =
+    next.length === 0 || next === "/" || next === "?" || next === "#";
+  const span = continues ? raw : raw.slice(0, index);
+  const folded = span.replace(ANDROID_SLASH, "/");
+  return folded === raw ? null : folded;
+}
+
 function encodedGapLength(text: string, index: number): number {
   const first = readPercentByte(text, index);
   if (!first) {

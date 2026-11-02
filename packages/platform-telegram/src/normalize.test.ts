@@ -9360,4 +9360,89 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("90910");
     expect(aloneDump).not.toContain("tinyurl.com");
   });
+
+  it("opens an explicit link from the whole URL", async () => {
+    const path = "span119";
+    const slash = "\u2215";
+    const linked = await normalize({
+      update_id: 2119,
+      message: {
+        message_id: 119,
+        date: 1761955200,
+        chat: { id: -1008119, type: "supergroup", title: "机密群名" },
+        from: { id: 119 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `http://bit.ly${slash}@example.com/${path}`,
+          },
+        ],
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.text).toBe("点这里");
+    expect(linked.event.message?.hosts).toEqual(["example.com"]);
+    const linkedDump = JSON.stringify(linked.event);
+    expect(linkedDump).not.toContain(path);
+    expect(linkedDump).not.toContain(slash);
+    expect(linkedDump).not.toContain("机密群名");
+
+    const address = "203.0.113.119";
+    const ip = await normalize({
+      update_id: 2120,
+      message: {
+        message_id: 120,
+        date: 1761955200,
+        chat: { id: -1008120, type: "supergroup" },
+        from: { id: 120 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `http://${address}${slash}@example.com/${path}`,
+          },
+        ],
+      },
+    });
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(ip.event)).not.toContain(path);
+
+    const userinfo = await normalize({
+      update_id: 2121,
+      message: {
+        message_id: 121,
+        date: 1761955200,
+        chat: { id: -1008121, type: "supergroup" },
+        from: { id: 121 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "http://bit.ly@example.com/ok119",
+          },
+        ],
+      },
+    });
+    expect(userinfo.status).toBe("event");
+    if (userinfo.status !== "event") {
+      return;
+    }
+    expect(userinfo.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(userinfo.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(userinfo.event)).not.toContain("ok119");
+  });
 });

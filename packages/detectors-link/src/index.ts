@@ -1,4 +1,5 @@
 import {
+  androidUrlSpan,
   type Detector,
   type DetectorHit,
   defineDetector,
@@ -400,7 +401,7 @@ export function extractHosts(text: string): string[] {
     if (!raw) {
       continue;
     }
-    push(hostname(raw));
+    pushLinkHost(raw, push);
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
     pushMsgTextHosts(raw, push);
@@ -437,14 +438,14 @@ function pushWrappedHosts(
     return;
   }
   if (wrapped.url) {
-    push(hostname(wrapped.url));
+    pushLinkHost(wrapped.url, push);
     push(proxyServerHost(wrapped.url));
   }
   if (!wrapped.text) {
     return;
   }
   for (const inner of linkTokens(wrapped.text)) {
-    push(hostname(inner));
+    pushLinkHost(inner, push);
     push(proxyServerHost(inner));
   }
 }
@@ -502,7 +503,7 @@ function pushMsgTextHosts(
 ): void {
   const embedded = telegramMsgUrl(raw);
   if (embedded) {
-    push(hostname(embedded));
+    pushLinkHost(embedded, push);
     push(proxyServerHost(embedded));
   }
   const text = telegramMsgText(raw);
@@ -510,7 +511,7 @@ function pushMsgTextHosts(
     return;
   }
   for (const inner of linkTokens(text)) {
-    push(hostname(inner));
+    pushLinkHost(inner, push);
     push(proxyServerHost(inner));
   }
 }
@@ -557,7 +558,7 @@ function pushUsernameDraftHosts(
     return;
   }
   for (const inner of linkTokens(text)) {
-    push(hostname(inner));
+    pushLinkHost(inner, push);
     push(proxyServerHost(inner));
   }
 }
@@ -588,7 +589,7 @@ function pushPassportHosts(
     return;
   }
   for (const inner of linkTokens(callback)) {
-    push(hostname(inner));
+    pushLinkHost(inner, push);
     push(proxyServerHost(inner));
   }
 }
@@ -1077,6 +1078,15 @@ function isTelegramProxy(url: URL): boolean {
   }
   const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
   return path === "/proxy" || path === "/socks" || path === "/webproxy";
+}
+
+function pushLinkHost(raw: string, push: (host: string | null) => void): void {
+  push(hostname(raw));
+  const schemed = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+  const span = androidUrlSpan(schemed);
+  if (span !== null) {
+    push(hostname(span));
+  }
 }
 
 function hostname(raw: string): string | null {

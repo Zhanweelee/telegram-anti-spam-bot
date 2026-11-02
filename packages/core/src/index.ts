@@ -255,6 +255,7 @@ export {
   runtimeDocumentSchema,
 } from "./runtime.js";
 export {
+  androidUrlSpan,
   foldBracketDots,
   foldCyrillicLookalikes,
   foldDotLookalikes,
