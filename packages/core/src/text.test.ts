@@ -152,6 +152,12 @@ describe("foldHostScan", () => {
     expect(foldHostScan(`bit${fullwidth}ly`)).toBe("bit.ly");
     expect(foldHostScan(`bit${middle}ly`)).toBe("bit.ly");
     expect(foldDotLookalikes(`bit.${fullwidth}ly`)).toBe("bit..ly");
+    expect(foldHostScan(`http://example.com@${fullwidth}http://bit.ly`)).toBe(
+      `http://example.com@${fullwidth}http://bit.ly`,
+    );
+    expect(foldHostScan(`http://user@bit${fullwidth}ly`)).toBe(
+      "http://user@bit.ly",
+    );
   });
 });
 
@@ -358,6 +364,10 @@ describe("androidUrlSpan", () => {
 
   it("stops before an @ that cannot finish user info", () => {
     expect(androidUrlSpan("http://bit.ly@.evil.com/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly@\u4f8b.com/x")).toBeNull();
+    expect(androidUrlSpan("http://example.com@\u4f8bhttp://bit.ly/z")).toBe(
+      "http://example.com@\u4f8bhttp",
+    );
     expect(androidUrlSpan("http://bit.ly@!")).toBe("http://bit.ly");
     expect(androidUrlSpan("http://bit.ly@:999999/x")).toBe("http://bit.ly");
     expect(androidUrlSpan("http://203.0.113.133@.evil.com/x")).toBe(

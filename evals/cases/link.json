@@ -1825,5 +1825,30 @@
     "id": "adjacent-dot-separator",
     "text": "bit．ly/offer153",
     "label": "spam"
+  },
+  {
+    "id": "at-label-han",
+    "text": "http://example.com@例http://bit.ly/offer154",
+    "label": "ham"
+  },
+  {
+    "id": "at-label-mark",
+    "text": "http://example.com@．http://bit.ly/offer154",
+    "label": "ham"
+  },
+  {
+    "id": "at-label-user",
+    "text": "http://bit.ly@例.com/offer154",
+    "label": "ham"
+  },
+  {
+    "id": "at-label-bang",
+    "text": "http://example.com@!http://bit.ly/offer154",
+    "label": "spam"
+  },
+  {
+    "id": "at-label-bare",
+    "text": "example.com@例http://bit.ly/offer154",
+    "label": "spam"
   }
 ]

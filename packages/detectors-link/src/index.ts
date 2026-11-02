@@ -74,7 +74,9 @@ export const defaultShorteners = [
  * that follows an ASCII dot stays in that label, so the next URL is not its
  * own match. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
- * info only when the next character can finish it. User info is at most
+ * info when the next character can start the host label Android keeps,
+ * so that label swallows a following `http` before `://`. A dot, `!`, or
+ * `~` still ends the first host. User info is at most
  * 64 characters, and the password is at most 25. A label is at most 63
  * characters and cannot end in the middle of an ASCII word. A hyphen stays
  * inside the label only when the finished label still fits. A dotted IPv4
@@ -93,12 +95,13 @@ const URL_OMIT =
 const URL_PAIR =
   "(?:[\\uD840-\\uD87F]|[\\uD880-\\uD8BF]|[\\uD8C0-\\uD8FF]|[\\uD900-\\uD93F]|[\\uD940-\\uD97F]|[\\uD980-\\uD9BF]|[\\uD9C0-\\uD9FF]|[\\uDA00-\\uDA3F]|[\\uDA40-\\uDA7F]|[\\uDA80-\\uDABF]|[\\uDAC0-\\uDAFF]|[\\uDB00-\\uDB3F]|[\\uDB44-\\uDB7F])[\\uDC00-\\uDFFD]";
 const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
-const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
-const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_CHAR = `(?:\\uFEFF|[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|${URL_LABEL_CHAR})`;
+const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|${URL_LABEL_CHAR})`;
 const URL_LABEL = `(?:${URL_LABEL_ATOM}(?:${URL_LABEL_MORE}{0,61}${URL_LABEL_ATOM})?)`;
 const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
-const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
+const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|${URL_LABEL_CHAR}|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_BARE_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?";

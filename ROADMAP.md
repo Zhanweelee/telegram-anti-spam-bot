@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-154 `@` 后面的标签字符仍留在这一段 — done
+
+验收：`http://example.com@例http://bit.ly/…`、`http://example.com@．http://bit.ly/…` 和 `http://bit.ly@例.com/…` 留着。`http://example.com@!http://bit.ly/…` 和没有协议的 `example.com@例http://bit.ly/…` 删除这条消息。证据只有后面的主机名。路径不进证据。`http://bit.ly@.evil.com/…` 和 `http://user:pass@bit.ly/…` 仍按短链删除。`bit．ly` 仍按短链删除。默认名单仍是 ADR 0026。
+
 ### P3-153 ASCII 点后面的点状字符仍留在标签里 — done
 
 验收：`http://example.com.．http://bit.ly/…`、`http://example.com.．/http://bit.ly/…` 和 `http://example.com.·?http://bit.ly/…` 留着。`http://example.com.．/https://t.me/+…` 不记成邀请。`example.com.．http://bit.ly/…` 和 `www.example.com.．http://bit.ly/…` 删除这条消息。证据只有后面的主机名。路径不进证据。`bit．ly/…`、`example.com．/http://bit.ly/…` 和 `http://example.com..http://bit.ly/…` 仍按短链删除。默认名单仍是 ADR 0026。
@@ -1971,4 +1975,10 @@
 
 - 做了什么：主机名扫描保留紧跟在 ASCII 点后面的点状字符。选择写在 ADR 0186。
 - 学到什么：Android 把这些字符留在标签里。收成第二个点会把一条链接拆开，并删掉 Android 没有打开的短链。单独充当分隔符时仍要收成点，否则 `bit．ly` 对不上。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-154
+
+- 做了什么：`@` 后面的标签字符仍算用户信息的结尾，主机名把紧跟着的 `http` 留在同一段。选择写在 ADR 0187。
+- 学到什么：Android 把标签字符算进 `@` 后面的主机名，高亮停在 `://` 前面。点、`!` 和 `~` 仍会结束前一段，后面的短链会再打开。没有协议时 `@` 并不把两段粘在一起。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。

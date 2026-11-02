@@ -37,7 +37,7 @@ const HOST_DOT_LOOKALIKE =
   /[\u00B7\u2022\u2027\u2219\u22C5\u30FB\uFF0E\uFE52\uFF61]/;
 
 /**
- * Turn a dot lookalike into `.` unless an ASCII dot already precedes it.
+ * Turn a dot lookalike into `.` unless an ASCII dot or `@` already precedes it.
  * Android keeps that character inside the label. Folding it would split
  * one URL into a second host. A lookalike that separates labels still
  * becomes `.`.
@@ -45,7 +45,11 @@ const HOST_DOT_LOOKALIKE =
 function foldHostDots(text: string): string {
   let out = "";
   for (const char of text) {
-    if (HOST_DOT_LOOKALIKE.test(char) && !out.endsWith(".")) {
+    if (
+      HOST_DOT_LOOKALIKE.test(char) &&
+      !out.endsWith(".") &&
+      !out.endsWith("@")
+    ) {
       out += ".";
       continue;
     }
@@ -495,7 +499,7 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
  * A hyphen inside user info stays with `@`.
- * User info stays when `@` is followed by a host, a path, a finished port, `_`, or the end.
+ * User info stays when `@` is followed by a host, a label character, a path, a finished port, `_`, or the end.
  * Otherwise the highlighted host is the one before `@`.
  * A division slash or fraction slash inside the span becomes `/`.
  * The same string comes back as null.
@@ -504,11 +508,15 @@ function userinfoSticks(raw: string, index: number): boolean {
   if (index >= raw.length) {
     return true;
   }
-  const mark = raw.charAt(index);
+  const code = raw.codePointAt(index);
+  if (code === undefined) {
+    return true;
+  }
+  const mark = String.fromCodePoint(code);
   if (mark === "/" || mark === "?" || mark === "_") {
     return true;
   }
-  if (androidLabelChar(mark)) {
+  if (androidLabelChar(mark) || (code > 0x7f && androidLabelCode(code))) {
     return true;
   }
   if (mark !== ":") {

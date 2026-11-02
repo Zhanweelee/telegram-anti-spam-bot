@@ -30,3 +30,4 @@ Android 把 `·`、`•`、`‧`、`∙`、`⋅`、`・`、`．`、`﹒` 和 `�
 - `http://example.com.．http://bit.ly/…`、斜杠后面的同一段，以及问号前面的间隔号 `·`，都留着。`http://example.com.．/https://t.me/+…` 不记成邀请。
 - `example.com.．http://bit.ly/…` 和 `www.example.com.．http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `bit．ly`、`example.com．/http://bit.ly/…` 和 `http://example.com..http://bit.ly/…` 仍按短链删除。
+- `@` 后面的标签字符仍留在这一段，后面的 `http` 不再另开。见 ADR 0187。
