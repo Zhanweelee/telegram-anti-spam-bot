@@ -31,3 +31,4 @@ Android 的用户信息只到 `@`。`@` 后面如果是标签字符，这个字�
 - `http://example.com@例http://bit.ly/…`、`http://example.com@．http://bit.ly/…`、零宽空格、U+FEFF、希腊字母和句号 `。` 留着。`http://bit.ly@例.com/…` 留着。
 - `http://example.com@!http://bit.ly/…`、`http://example.com@~http://bit.ly/…` 和没有协议的 `example.com@例http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `http://bit.ly@.evil.com/…`、`http://user:pass@bit.ly/…` 和 `bit．ly` 仍按短链删除。
+- 点状字符紧挨在 `@` 前面时仍保留，后面的网址单独打开。见 ADR 0188。

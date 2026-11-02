@@ -37,23 +37,32 @@ const HOST_DOT_LOOKALIKE =
   /[\u00B7\u2022\u2027\u2219\u22C5\u30FB\uFF0E\uFE52\uFF61]/;
 
 /**
- * Turn a dot lookalike into `.` unless an ASCII dot or `@` already precedes it.
- * Android keeps that character inside the label. Folding it would split
- * one URL into a second host. A lookalike that separates labels still
- * becomes `.`.
+ * Turn a dot lookalike into `.` unless an ASCII dot or `@` already precedes it,
+ * or `@` follows it. Android keeps that character inside the label.
+ * Folding it there would hide the next URL or split one URL.
+ * A lookalike that separates labels still becomes `.`.
  */
 function foldHostDots(text: string): string {
   let out = "";
-  for (const char of text) {
+  for (let index = 0; index < text.length; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
     if (
       HOST_DOT_LOOKALIKE.test(char) &&
       !out.endsWith(".") &&
-      !out.endsWith("@")
+      !out.endsWith("@") &&
+      text.codePointAt(next) !== 0x40
     ) {
       out += ".";
+      index = next;
       continue;
     }
     out += char;
+    index = next;
   }
   return out;
 }

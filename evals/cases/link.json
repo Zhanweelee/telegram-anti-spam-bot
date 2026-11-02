@@ -1850,5 +1850,30 @@
     "id": "at-label-bare",
     "text": "example.com@例http://bit.ly/offer154",
     "label": "spam"
+  },
+  {
+    "id": "before-at-fullwidth",
+    "text": "http://example.com．@http://bit.ly/offer155",
+    "label": "spam"
+  },
+  {
+    "id": "before-at-middle",
+    "text": "http://example.com·@http://bit.ly/offer155",
+    "label": "spam"
+  },
+  {
+    "id": "before-at-dot",
+    "text": "http://example.com.@http://bit.ly/offer155",
+    "label": "ham"
+  },
+  {
+    "id": "before-at-separator",
+    "text": "bit．ly/offer155",
+    "label": "spam"
+  },
+  {
+    "id": "before-at-invite",
+    "text": "http://example.com．@https://t.me/+CODE155",
+    "label": "spam"
   }
 ]

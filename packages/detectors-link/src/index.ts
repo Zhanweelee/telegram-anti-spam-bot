@@ -72,7 +72,8 @@ export const defaultShorteners = [
  * is not itself a label. A dot in a schemed host
  * starts another label only when a label character follows. A dot lookalike
  * that follows an ASCII dot stays in that label, so the next URL is not its
- * own match. A dot before
+ * own match. A dot lookalike written immediately before `@` also stays, so
+ * the next URL is its own match. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
  * info when the next character can start the host label Android keeps,
  * so that label swallows a following `http` before `://`. A dot, `!`, or

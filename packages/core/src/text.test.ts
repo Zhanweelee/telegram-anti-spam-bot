@@ -158,6 +158,10 @@ describe("foldHostScan", () => {
     expect(foldHostScan(`http://user@bit${fullwidth}ly`)).toBe(
       "http://user@bit.ly",
     );
+    expect(foldHostScan(`http://example.com${fullwidth}@http://bit.ly`)).toBe(
+      `http://example.com${fullwidth}@http://bit.ly`,
+    );
+    expect(foldHostScan(`bit${fullwidth}ly${fullwidth}com`)).toBe("bit.ly.com");
   });
 });
 
