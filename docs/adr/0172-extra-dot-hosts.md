@@ -37,3 +37,4 @@ Android `LinkifyPort.WEB_URL` 的放松主机名里，点号只有在后面是�
 - `http://example.com.http://bit.ly/…`、`http://example.com./http://bit.ly/…`、`http://example.com.?http://bit.ly/…`、`http://example.com-http://bit.ly/…` 和 `http://example.com._http://bit.ly/…` 留着。
 - `http://bit.ly./…` 和 `http://user:pass@bit.ly./…` 仍按短链删除。`http://bit.ly@/…` 留着。
 - `https://t.me../+…` 不记成邀请。`https://t.me./+…` 仍按邀请删除。`http://example.com..https://t.me/+…` 按邀请删除。路径不进证据。
+- 用户信息超过 64 个字符，或密码超过 25 个字符时，Android 另外打开的主机名也留下。见 ADR 0173。

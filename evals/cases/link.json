@@ -1360,5 +1360,40 @@
     "id": "extra-dot-glued-invite",
     "text": "https://t.me../+CODE139",
     "label": "ham"
+  },
+  {
+    "id": "userinfo-over-user",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@http://bit.ly/offer140",
+    "label": "spam"
+  },
+  {
+    "id": "userinfo-over-pass",
+    "text": "http://user:pppppppppppppppppppppppppp@http://bit.ly/offer140",
+    "label": "spam"
+  },
+  {
+    "id": "userinfo-over-ip",
+    "text": "http://user:pppppppppppppppppppppppppp@http://203.0.113.140/x",
+    "label": "spam"
+  },
+  {
+    "id": "userinfo-fit-user",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@http://bit.ly/offer140",
+    "label": "ham"
+  },
+  {
+    "id": "userinfo-fit-pass",
+    "text": "http://user:ppppppppppppppppppppppppp@http://bit.ly/offer140",
+    "label": "ham"
+  },
+  {
+    "id": "userinfo-glued",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahttp://bit.ly/offer140",
+    "label": "ham"
+  },
+  {
+    "id": "userinfo-glued-invite",
+    "text": "https://t.me:pppppppppppppppppppppppppp@/+CODE140",
+    "label": "ham"
   }
 ]

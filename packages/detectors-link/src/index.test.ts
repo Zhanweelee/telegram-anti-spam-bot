@@ -4089,4 +4089,113 @@ describe("link fixtures", () => {
     expect(dottedInvite?.reasons).toEqual(["invite"]);
     expect(JSON.stringify(dottedInvite)).not.toContain("CODE139");
   });
+
+  it("keeps the host Android opens after user info that is too long", async () => {
+    const detector = createLinkDetector();
+    const path = "offer140";
+    const user = "a".repeat(65);
+    const fitted = "a".repeat(64);
+    const longPass = "p".repeat(26);
+    const fittedPass = "p".repeat(25);
+    const over = await detector.detect({
+      event: eventFor(`http://${user}@http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(over?.reasons).toEqual(["short_link"]);
+    expect(over?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(over)).not.toContain(path);
+    expect(JSON.stringify(over)).not.toContain(user);
+
+    const bare = await detector.detect({
+      event: eventFor(`http://${user}@bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(bare)).not.toContain(path);
+
+    const password = await detector.detect({
+      event: eventFor(`http://user:${longPass}@http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(password?.reasons).toEqual(["short_link"]);
+    expect(password?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(password)).not.toContain(path);
+    expect(JSON.stringify(password)).not.toContain(longPass);
+
+    const address = "203.0.113.140";
+    const ip = await detector.detect({
+      event: eventFor(`http://user:${longPass}@http://${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+
+    const within = await detector.detect({
+      event: eventFor(`http://${fitted}@http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(within).toBeNull();
+
+    const withinPass = await detector.detect({
+      event: eventFor(`http://user:${fittedPass}@http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(withinPass).toBeNull();
+
+    const glued = await detector.detect({
+      event: eventFor(`http://${user}http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+
+    const still = await detector.detect({
+      event: eventFor(`http://${fitted}@bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(still?.reasons).toEqual(["short_link"]);
+    expect(still?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(still)).not.toContain(path);
+
+    const normal = await detector.detect({
+      event: eventFor(`http://user:pass@bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(normal?.reasons).toEqual(["short_link"]);
+    expect(normal?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(normal)).not.toContain(path);
+
+    const realUser = await detector.detect({
+      event: eventFor("http://bit.ly@example.com"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(realUser).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor(`http://${user}@https://t.me/+CODE140`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE140");
+    expect(JSON.stringify(invite)).not.toContain(user);
+
+    const stuck = await detector.detect({
+      event: eventFor(`https://t.me:${longPass}@/+CODE140`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stuck).toBeNull();
+    expect(JSON.stringify(stuck)).not.toContain("CODE140");
+  });
 });

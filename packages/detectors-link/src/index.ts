@@ -65,7 +65,8 @@ export const defaultShorteners = [
  * hyphen, and `http://` is not itself a label. A dot in a schemed host
  * starts another label only when a label character follows. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
- * info only when the next character can finish it.
+ * info only when the next character can finish it. User info is at most
+ * 64 characters, and the password is at most 25.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -78,7 +79,7 @@ const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^\\s\\u0000-\\u007F${U
 const URL_LABEL = `(?:${URL_LABEL_ATOM}${URL_LABEL_MORE}*)`;
 const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
-const URL_USERINFO = `(?:${URL_USER})+(?::(?:${URL_USER})+)?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
+const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})+`;
