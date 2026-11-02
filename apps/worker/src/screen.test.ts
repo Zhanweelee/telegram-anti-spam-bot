@@ -1146,6 +1146,46 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes a short link Android opens in an empty game description", async () => {
+    const path = "span121";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2130,
+        message: {
+          message_id: 130,
+          date: 1761955200,
+          chat: { id: -1008130, type: "supergroup", title: "机密群名" },
+          from: { id: 130 },
+          game: {
+            title: "今天站会",
+            description: `http://bit.ly\u2215@example.com/${path}`,
+            photo: [],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a hidden telegram invite and keeps the code out of logs", async () => {
     const code = "INVITESECRET99";
     const outcome = await normalizeUpdate({

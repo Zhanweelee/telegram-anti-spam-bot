@@ -563,6 +563,9 @@ function sideUrls(message: Record<string, unknown>): string[] {
   if (isRecord(game)) {
     pushPlainUrls(game.title, urls);
     pushPlainUrls(game.description, urls);
+    if (gameDescriptionOpen(message, game)) {
+      pushOpenedSpans(game.description, urls);
+    }
     pushPlainUrls(game.text, urls);
     pushTextLinks(game.text_entities, urls);
     if (isRecord(game.animation)) {
@@ -702,6 +705,32 @@ function pushPlainUrls(value: unknown, urls: string[]): void {
   for (const url of urlsInText(value)) {
     urls.push(url);
   }
+}
+
+function pushOpenedSpans(value: unknown, urls: string[]): void {
+  if (typeof value !== "string") {
+    return;
+  }
+  for (const url of urlsInText(value)) {
+    const span = androidUrlSpan(url);
+    if (span !== null) {
+      urls.push(span);
+    }
+  }
+}
+
+/** 正文为空时，游戏说明才画出来并按网页链接高亮。 */
+function gameDescriptionOpen(
+  message: Record<string, unknown>,
+  game: Record<string, unknown>,
+): boolean {
+  if (typeof message.text === "string" && message.text.length > 0) {
+    return false;
+  }
+  if (typeof message.caption === "string" && message.caption.length > 0) {
+    return false;
+  }
+  return typeof game.text !== "string" || game.text.length === 0;
 }
 
 /** 联系人卡片里的 URL 行会打开浏览器。电话、邮箱和备注不打开。 */

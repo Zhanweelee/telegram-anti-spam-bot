@@ -9657,4 +9657,172 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(label.event)).not.toContain(path);
     expect(JSON.stringify(label.event)).not.toContain("ok120");
   });
+
+  it("keeps the host Android opens in an empty game description", async () => {
+    const path = "span121";
+    const slash = "\u2215";
+    const hidden = `http://bit.ly${slash}@example.com/${path}`;
+    const shown = await normalize({
+      update_id: 2130,
+      message: {
+        message_id: 130,
+        date: 1761955200,
+        chat: { id: -1008130, type: "supergroup", title: "机密群名" },
+        from: { id: 130, first_name: "from130" },
+        game: {
+          title: "今天站会",
+          description: hidden,
+          photo: [],
+        },
+      },
+    });
+    expect(shown.status).toBe("event");
+    if (shown.status !== "event") {
+      return;
+    }
+    expect(shown.event.message?.text).toBe("今天站会");
+    expect(shown.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const shownDump = JSON.stringify(shown.event);
+    expect(shownDump).not.toContain(path);
+    expect(shownDump).not.toContain("from130");
+    expect(shownDump).not.toContain("机密群名");
+
+    const address = "203.0.113.121";
+    const ip = await normalize({
+      update_id: 2131,
+      message: {
+        message_id: 131,
+        date: 1761955200,
+        chat: { id: -1008131, type: "supergroup" },
+        from: { id: 131 },
+        game: {
+          title: "今天站会",
+          description: `http://${address}${slash}@example.com/${path}`,
+          photo: [],
+        },
+      },
+    });
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toEqual(["example.com", address]);
+    expect(JSON.stringify(ip.event)).not.toContain(path);
+
+    const desktop = await normalize({
+      update_id: 2132,
+      message: {
+        message_id: 132,
+        date: 1761955200,
+        chat: { id: -1008132, type: "supergroup" },
+        from: { id: 132 },
+        game: {
+          title: "今天站会",
+          description: `http://example.com${slash}@bit.ly/${path}`,
+          photo: [],
+        },
+      },
+    });
+    expect(desktop.status).toBe("event");
+    if (desktop.status !== "event") {
+      return;
+    }
+    expect(desktop.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    expect(JSON.stringify(desktop.event)).not.toContain(path);
+
+    const lower = await normalize({
+      update_id: 2133,
+      message: {
+        message_id: 133,
+        date: 1761955200,
+        chat: { id: -1008133, type: "supergroup" },
+        from: { id: 133 },
+        game: {
+          title: "今天站会",
+          description: `http://bit.ly%e2%88%95@example.com/${path}`,
+          photo: [],
+        },
+      },
+    });
+    expect(lower.status).toBe("event");
+    if (lower.status !== "event") {
+      return;
+    }
+    expect(lower.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(lower.event)).not.toContain(path);
+
+    const covered = await normalize({
+      update_id: 2134,
+      message: {
+        message_id: 134,
+        date: 1761955200,
+        chat: { id: -1008134, type: "supergroup" },
+        from: { id: 134 },
+        text: "今天站会",
+        game: {
+          title: "说明",
+          description: hidden,
+          photo: [],
+        },
+      },
+    });
+    expect(covered.status).toBe("event");
+    if (covered.status !== "event") {
+      return;
+    }
+    expect(covered.event.message?.text).toBe("今天站会");
+    expect(covered.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(covered.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(covered.event)).not.toContain(path);
+
+    const attached = await normalize({
+      update_id: 2135,
+      message: {
+        message_id: 135,
+        date: 1761955200,
+        chat: { id: -1008135, type: "supergroup" },
+        from: { id: 135 },
+        game: {
+          title: "今天站会",
+          description: hidden,
+          text: "分数",
+          photo: [],
+        },
+      },
+    });
+    expect(attached.status).toBe("event");
+    if (attached.status !== "event") {
+      return;
+    }
+    expect(attached.event.message?.text).toBe("今天站会");
+    expect(attached.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(attached.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(attached.event)).not.toContain("分数");
+    expect(JSON.stringify(attached.event)).not.toContain(path);
+
+    const invoice = await normalize({
+      update_id: 2136,
+      message: {
+        message_id: 136,
+        date: 1761955200,
+        chat: { id: -1008136, type: "supergroup" },
+        from: { id: 136 },
+        invoice: {
+          title: "今天站会",
+          description: hidden,
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(invoice.status).toBe("event");
+    if (invoice.status !== "event") {
+      return;
+    }
+    expect(invoice.event.message?.text).toBe("今天站会");
+    expect(invoice.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(invoice.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(invoice.event)).not.toContain(path);
+  });
 });
