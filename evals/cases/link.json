@@ -2350,5 +2350,55 @@
     "id": "encoded-gap-host-tail",
     "text": "http://bit.ly%0Aevil.com/offer168",
     "label": "spam"
+  },
+  {
+    "id": "encoded-dot-host",
+    "text": "%C2%B7bit.ly/offer169",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host-bullet",
+    "text": "%E2%80%A2bit.ly/offer169",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host-see",
+    "text": "see%C2%B7bit.ly/offer169",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host-scheme",
+    "text": "%C2%B7http://bit.ly/offer169",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host-ip",
+    "text": "%C2%B7203.0.113.169/offer169",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-dot-host-inside",
+    "text": "bit%C2%B7ly/offer169",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-host-literal",
+    "text": "bit·ly/offer169",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-host-www",
+    "text": "%C2%B7www.bit.ly/offer169",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-host-dotted",
+    "text": "%C2%B7.bit.ly/offer169",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-dot-host-tail",
+    "text": "http://bit.ly%C2%B7evil.com/offer169",
+    "label": "spam"
   }
 ]

@@ -6234,6 +6234,115 @@ describe("link fixtures", () => {
     expect(JSON.stringify(addressed)).not.toContain(path);
   });
 
+  it("leaves a short link glued on by a percent-encoded dot lookalike", async () => {
+    const detector = createLinkDetector();
+    const path = "offer169";
+    const glued = [
+      `%C2%B7bit.ly/${path}`,
+      `%c2%b7bit.ly/${path}`,
+      `%E2%80%A2bit.ly/${path}`,
+      `%E2%80%A7bit.ly/${path}`,
+      `%E2%88%99bit.ly/${path}`,
+      `%E2%8B%85bit.ly/${path}`,
+      `%E3%83%BBbit.ly/${path}`,
+      `%EF%BC%8Ebit.ly/${path}`,
+      `%EF%B9%92bit.ly/${path}`,
+      `%EF%BD%A1bit.ly/${path}`,
+      `see%C2%B7bit.ly/${path}`,
+      `x%C2%B7bit.ly/${path}`,
+      `example.com%C2%B7bit.ly/${path}`,
+      `www%C2%B7bit.ly/${path}`,
+      `%C2%B7http://bit.ly/${path}`,
+      `%C2%B7HTTP://bit.ly/${path}`,
+      `%C2%B7https://bit.ly/${path}`,
+      `http://%C2%B7bit.ly/${path}`,
+      `https://%C2%B7bit.ly/${path}`,
+      `(%C2%B7bit.ly/${path}`,
+      `%25C2%25B7bit.ly/${path}`,
+      `%C2%B7bit.ly/http://t.co/${path}`,
+    ];
+    for (const text of glued) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const hiddenIp = await detector.detect({
+      event: eventFor(`%C2%B7203.0.113.169/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hiddenIp).toBeNull();
+    expect(JSON.stringify(hiddenIp)).not.toContain("203.0.113.169");
+    expect(JSON.stringify(hiddenIp)).not.toContain(path);
+
+    const opened = [`bit%C2%B7ly/${path}`, `bit%c2%b7ly/${path}`];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const literal = await detector.detect({
+      event: eventFor(`\u00B7bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(literal?.reasons).toEqual(["short_link"]);
+    expect(literal?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(literal)).not.toContain(path);
+
+    const inside = await detector.detect({
+      event: eventFor(`bit\u00B7ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(inside?.reasons).toEqual(["short_link"]);
+    expect(inside?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(inside)).not.toContain(path);
+
+    const prefixed = await detector.detect({
+      event: eventFor(`%C2%B7www.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.reasons).toEqual(["short_link"]);
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:b7www.bit.ly");
+    expect(JSON.stringify(prefixed)).not.toContain(path);
+
+    const dotted = await detector.detect({
+      event: eventFor(`%C2%B7.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["short_link"]);
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:b7.bit.ly");
+    expect(JSON.stringify(dotted)).not.toContain(path);
+
+    const tail = await detector.detect({
+      event: eventFor(`http://bit.ly%C2%B7evil.com/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(tail?.reasons).toEqual(["short_link"]);
+    expect(tail?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(tail)).not.toContain(path);
+  });
+
   it("leaves a short link glued on by a percent-encoded gap", async () => {
     const detector = createLinkDetector();
     const path = "offer168";

@@ -219,6 +219,37 @@ describe("foldHostScan", () => {
     expect(foldHostScan("\nbit.ly")).toBe("bit.ly");
     expect(foldEncodedGaps("%0Abit.ly")).toBe("bit.ly");
     expect(foldEncodedGaps("IN%0AVITE")).toBe("INVITE");
+    expect(foldHostScan("%C2%B7bit.ly")).toBe("%C2%B7bit.ly");
+    expect(foldHostScan("%c2%b7bit.ly")).toBe("%c2%b7bit.ly");
+    expect(foldHostScan("%E2%80%A2bit.ly")).toBe("%E2%80%A2bit.ly");
+    expect(foldHostScan("%E2%80%A7bit.ly")).toBe("%E2%80%A7bit.ly");
+    expect(foldHostScan("%E2%88%99bit.ly")).toBe("%E2%88%99bit.ly");
+    expect(foldHostScan("%E2%8B%85bit.ly")).toBe("%E2%8B%85bit.ly");
+    expect(foldHostScan("%E3%83%BBbit.ly")).toBe("%E3%83%BBbit.ly");
+    expect(foldHostScan("%EF%BC%8Ebit.ly")).toBe("%EF%BC%8Ebit.ly");
+    expect(foldHostScan("%EF%B9%92bit.ly")).toBe("%EF%B9%92bit.ly");
+    expect(foldHostScan("%EF%BD%A1bit.ly")).toBe("%EF%BD%A1bit.ly");
+    expect(foldHostScan("%C2%B7www.bit.ly")).toBe("%C2%B7www.bit.ly");
+    expect(foldHostScan("%C2%B7.bit.ly")).toBe("%C2%B7.bit.ly");
+    expect(foldHostScan("see%C2%B7bit.ly")).toBe("see%C2%B7bit.ly");
+    expect(foldHostScan("example.com%C2%B7bit.ly")).toBe(
+      "example.com%C2%B7bit.ly",
+    );
+    expect(foldHostScan("%C2%B7http://bit.ly")).toBe("%C2%B7http://bit.ly");
+    expect(foldHostScan("%C2%B7HTTP://bit.ly")).toBe("%C2%B7HTTP://bit.ly");
+    expect(foldHostScan("%C2%B7https://t.co")).toBe("%C2%B7https://t.co");
+    expect(foldHostScan("%C2%B7203.0.113.10")).toBe("%C2%B7203.0.113.10");
+    expect(foldHostScan("%C2%B7bit.ly/http://t.co")).toBe(
+      "%C2%B7bit.ly/http://t.co",
+    );
+    expect(foldHostScan("bit%C2%B7ly")).toBe("bit.ly");
+    expect(foldHostScan("bit%c2%b7ly")).toBe("bit.ly");
+    expect(foldHostScan("bit.ly%C2%B7evil.com")).toBe("bit.ly%C2%B7evil.com");
+    expect(foldHostScan("%25C2%25B7bit.ly")).toBe("%25C2%25B7bit.ly");
+    expect(foldHostScan("\u00B7bit.ly")).toBe(".bit.ly");
+    expect(foldHostScan("bit\u00B7ly")).toBe("bit.ly");
+    expect(foldEncodedMiddleDot("%C2%B7bit.ly")).toBe("\u00B7bit.ly");
+    expect(foldEncodedMiddleDot("bit%C2%B7ly")).toBe("bit\u00B7ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

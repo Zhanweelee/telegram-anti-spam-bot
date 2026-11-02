@@ -82,7 +82,7 @@ export function foldBracketDots(text: string): string {
 
 function foldHostShape(text: string): string {
   return foldHostDots(
-    foldEncodedMiddleDot(
+    foldHostEncodedMiddleDot(
       foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
     ),
   );
@@ -515,6 +515,8 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `%2F` glued to a bare host stays out of that host.
  * A percent-encoded gap stays when its hex digits are the start of the host,
  * or when it sits inside `http://` before `://`.
+ * A percent-encoded dot lookalike stays when a host or scheme follows it.
+ * The same lookalike used as the dot inside a host still becomes `.`.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
@@ -796,11 +798,27 @@ const DOT_LOOKALIKE_CHAR =
  * A second layer, and the ideographic full stop, stay.
  */
 export function foldEncodedMiddleDot(text: string): string {
+  return replaceEncodedDots(text, false);
+}
+
+/**
+ * Host scan keeps a percent-encoded dot lookalike when a host, `.` plus a
+ * host, or `http://` / `https://` follows it. Android leaves those hex
+ * digits in the next label. `bit%C2%B7ly` still becomes a dot.
+ */
+function foldHostEncodedMiddleDot(text: string): string {
+  return replaceEncodedDots(text, true);
+}
+
+function replaceEncodedDots(text: string, keepBeforeHost: boolean): string {
   let out = "";
   let index = 0;
   while (index < text.length) {
     const found = encodedDot(text, index);
-    if (found !== null) {
+    if (
+      found !== null &&
+      !(keepBeforeHost && encodedDotSitsBeforeHost(text, index + found.length))
+    ) {
       out += found.char;
       index += found.length;
       continue;
@@ -809,6 +827,17 @@ export function foldEncodedMiddleDot(text: string): string {
     index += 1;
   }
   return out;
+}
+
+function encodedDotSitsBeforeHost(text: string, index: number): boolean {
+  const scheme = text.slice(index, index + 8).toLowerCase();
+  if (scheme.startsWith("https://") || scheme.startsWith("http://")) {
+    return true;
+  }
+  if (text.charAt(index) === "." && gluedHostBodyLength(text, index + 1) > 0) {
+    return true;
+  }
+  return gluedHostBodyLength(text, index) > 0;
 }
 
 function encodedDot(
