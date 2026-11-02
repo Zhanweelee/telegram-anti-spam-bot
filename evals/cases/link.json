@@ -2840,5 +2840,35 @@
     "id": "plane-label-over",
     "text": "http://bit.ly\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00\uD840\uDC00/offer181",
     "label": "spam"
+  },
+  {
+    "id": "mapped-tail-domain",
+    "text": "bit.ly\u00AAevil.com/offer182",
+    "label": "ham"
+  },
+  {
+    "id": "mapped-tail-scheme",
+    "text": "http://bit.ly\u00AA/offer182",
+    "label": "ham"
+  },
+  {
+    "id": "mapped-tail-path",
+    "text": "bit.ly\u00AA/offer182",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-tail-www",
+    "text": "www.bit.ly\u00AA/offer182",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-tail-cyr",
+    "text": "t.co\u0430/offer182",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-tail-ip",
+    "text": "203.0.113.10\u00AA/offer182",
+    "label": "spam"
   }
 ]

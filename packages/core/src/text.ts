@@ -724,7 +724,11 @@ function foldGluedLabelRuns(text: string): string {
         }
         end += String.fromCodePoint(more).length;
       }
-      if (asciiHostLetter(text, end) && !startsWithScheme(text, end)) {
+      if (
+        asciiHostLetter(text, end) &&
+        !startsWithScheme(text, end) &&
+        !keptMappedTail(out, text.slice(end), text, index, end)
+      ) {
         out += "x";
         index = end;
         continue;
@@ -800,16 +804,29 @@ function isHostInterrupter(char: string, code: number): boolean {
  * Drop Armenian, Cyrillic, Greek, and non-ASCII Latin letters before a
  * hostname scan. CJK, Hangul, kana, and ASCII stay. Punctuation Android
  * keeps in a label stays. A character Android leaves out of a label still
- * drops. These letters are removed, not mapped.
+ * drops. A mapped letter after a finished bare host stays, so the next
+ * ASCII letters do not glue onto that host. These letters are removed,
+ * not mapped.
  */
 export function foldHostInterrupters(text: string): string {
   let out = "";
-  for (const char of text) {
-    const code = char.codePointAt(0);
-    if (code !== undefined && code > 0x7f && isHostInterrupter(char, code)) {
+  let index = 0;
+  while (index < text.length) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
+    if (code > 0x7f && isHostInterrupter(char, code)) {
+      if (keepTailLetter(out, text.slice(next), code)) {
+        out += char;
+      }
+      index = next;
       continue;
     }
     out += char;
+    index = next;
   }
   return out;
 }
@@ -834,7 +851,8 @@ function foldHostInterruptersAndroidKeeps(text: string): string {
       isHostInterrupter(char, code) &&
       asciiHostLetter(text, index - 1) &&
       asciiHostLetter(text, next) &&
-      !startsWithScheme(text, next)
+      !startsWithScheme(text, next) &&
+      !keepTailLetter(out, text.slice(next), code)
     ) {
       index = next;
       continue;
@@ -860,6 +878,101 @@ function asciiHostLetter(text: string, index: number): boolean {
 function startsWithScheme(text: string, index: number): boolean {
   const rest = text.slice(index, index + "https://".length).toLowerCase();
   return rest.startsWith("https://") || rest.startsWith("http://");
+}
+
+/** A bare host or IPv4 that Android has already closed. */
+function endsWithFinishedHost(out: string): boolean {
+  return (
+    /(?:^|[^A-Za-z0-9])(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}$/.test(out) ||
+    /(?:^|[^0-9])(?:\d{1,3}\.){3}\d{1,3}$/.test(out)
+  );
+}
+
+/**
+ * The finished host is the authority of `http://` or `https://`.
+ * Android keeps the next letter inside that schemed label.
+ */
+function endsWithSchemedHost(out: string): boolean {
+  const domain = /(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,63}$/.exec(out);
+  const ip = domain ? null : /(?:\d{1,3}\.){3}\d{1,3}$/.exec(out);
+  const host = domain ?? ip;
+  if (host?.index === undefined) {
+    return false;
+  }
+  const prefix = out.slice(0, host.index);
+  return /^https?:\/\/(?:[A-Za-z0-9$_.+!*'(),;?&=-]{1,64}(?::[A-Za-z0-9$_.+!*'(),;?&=-]{1,25})?@)?$/i.test(
+    prefix,
+  );
+}
+
+/**
+ * A further domain follows, so Android keeps the current letter in that host.
+ * A path, a query, or the end of the text does not.
+ */
+function domainContinues(rest: string): boolean {
+  return /^[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,63}(?![A-Za-z0-9-])/.test(
+    rest,
+  );
+}
+
+/**
+ * Map this letter to ASCII.
+ * A following scheme stays put. A letter after a finished bare host stays
+ * too, unless another domain continues. A schemed host still maps.
+ */
+function keepMappedLetter(out: string, rest: string): boolean {
+  if (startsWithScheme(rest, 0)) {
+    return false;
+  }
+  if (endsWithSchemedHost(out)) {
+    return true;
+  }
+  if (!endsWithFinishedHost(out)) {
+    return true;
+  }
+  return domainContinues(rest);
+}
+
+/** An IDNA letter, Cyrillic lookalike, or fullwidth letter. */
+function mappedTailCode(code: number): boolean {
+  if (MAPPED_LATIN[code] !== undefined) {
+    return true;
+  }
+  if (CYRILLIC_LOOKALIKES[String.fromCodePoint(code)] !== undefined) {
+    return true;
+  }
+  return fullwidthLatin(code) !== undefined;
+}
+
+/**
+ * Keep a mapped letter that Android already closed out of a bare host.
+ * Dropping it would glue the next ASCII letters onto that host.
+ */
+function keepTailLetter(out: string, rest: string, code: number): boolean {
+  return (
+    mappedTailCode(code) && endsWithFinishedHost(out) && !domainContinues(rest)
+  );
+}
+
+/** The glued run is only mapped letters after a host Android already closed. */
+function keptMappedTail(
+  out: string,
+  rest: string,
+  text: string,
+  start: number,
+  end: number,
+): boolean {
+  if (!keepTailLetter(out, rest, text.codePointAt(start) ?? 0)) {
+    return false;
+  }
+  for (let index = start; index < end; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined || !mappedTailCode(code)) {
+      return false;
+    }
+    index += String.fromCodePoint(code).length;
+  }
+  return true;
 }
 
 /**
@@ -891,7 +1004,9 @@ for (let index = 0; index < MAPPED_LATIN_PACK.length; index += 5) {
 /**
  * Map a character whose IDNA mapping is one ASCII letter.
  * A following `http://` or `https://` stays, so that URL still opens.
- * Fullwidth letters and Cyrillic т stay on their own folds.
+ * A letter after a finished bare host stays too, unless another domain
+ * continues. A schemed host still maps. Fullwidth letters and Cyrillic т
+ * stay on their own folds.
  */
 export function foldMappedLatin(text: string): string {
   let out = "";
@@ -903,7 +1018,7 @@ export function foldMappedLatin(text: string): string {
     const char = String.fromCodePoint(code);
     const next = index + char.length;
     const mapped = MAPPED_LATIN[code];
-    if (mapped !== undefined && !startsWithScheme(text, next)) {
+    if (mapped !== undefined && keepMappedLetter(out, text.slice(next))) {
       out += mapped;
       index = next;
       continue;
@@ -966,8 +1081,10 @@ export function foldFullwidthLatin(text: string): string {
 
 /**
  * Map a Cyrillic lookalike or fullwidth letter to ASCII, unless the next
- * characters are `http://` or `https://`. Android does not treat that
- * letter as a word character, so the bare host ends and the URL opens.
+ * characters are `http://` or `https://`, or the letter follows a finished
+ * bare host and no further domain continues. A schemed host still maps.
+ * Android does not treat that letter as a word character, so the bare host
+ * ends and the URL opens.
  */
 function foldAndroidLetterUnlessScheme(text: string): string {
   let out = "";
@@ -979,7 +1096,7 @@ function foldAndroidLetterUnlessScheme(text: string): string {
     const char = String.fromCodePoint(code);
     const next = index + char.length;
     const mapped = CYRILLIC_LOOKALIKES[char] ?? fullwidthLatin(code);
-    if (mapped !== undefined && !startsWithScheme(text, next)) {
+    if (mapped !== undefined && keepMappedLetter(out, text.slice(next))) {
       out += mapped;
       index = next;
       continue;

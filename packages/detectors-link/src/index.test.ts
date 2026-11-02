@@ -7753,4 +7753,64 @@ describe("link fixtures", () => {
     expect(JSON.stringify(later)).not.toContain("bit.ly");
     expect(JSON.stringify(later)).not.toContain(path);
   });
+
+  it("deletes a mapped letter after a finished host Android already opened", async () => {
+    const detector = createLinkDetector();
+    const path = "offer182";
+    const opened = [
+      [`bit.ly\u00AA/${path}`, "short_link:bit.ly"],
+      [`www.bit.ly\u00AA/${path}`, "short_link:www.bit.ly"],
+      [`t.co\u0430/${path}`, "short_link:t.co"],
+      [`bit.ly\u2139/${path}`, "short_link:bit.ly"],
+      [`goo.gl\u00AA/${path}`, "short_link:goo.gl"],
+      [`203.0.113.10\u00AA/${path}`, "ip_host:203.0.113.10"],
+      [`bit.ly\uFF41/${path}`, "short_link:bit.ly"],
+      [`bit.ly\u00AAx/${path}`, "short_link:bit.ly"],
+      [`bit.ly\u00AA:80/${path}`, "short_link:bit.ly"],
+      [`b\u2139t.ly/${path}`, "short_link:bit.ly"],
+    ] as const;
+    for (const [text, summary] of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toEqual([summary]);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const closed = [
+      `bit.ly\u2139evil.com/${path}`,
+      `bit.ly\u00AAevil.com/${path}`,
+      `http://bit.ly\u00AA/${path}`,
+      `https://www.bit.ly\u00AA/${path}`,
+      `http://user@bit.ly\u00AA/${path}`,
+      `example.com\u2139bit.ly/${path}`,
+      `b\u0430it.ly/${path}`,
+      `notbit.ly\u00AA/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const later = await detector.detect({
+      event: eventFor(`bit.ly\u00AAhttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(later?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(later)).not.toContain(path);
+  });
 });
