@@ -837,4 +837,34 @@ describe("androidUrlSpan", () => {
       `http://bit.ly.${hyphen}`,
     );
   });
+
+  it("keeps a label character when the schemed URL continues", () => {
+    const mark = "\u4e00";
+    expect(androidUrlSpan(`http://bit.ly${mark}/z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}?z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}.evil.com/z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly.${mark}/z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}:80/z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}:80`)).toBeNull();
+    expect(androidUrlSpan(`http://t.co${mark}/z`)).toBeNull();
+    expect(androidUrlSpan(`http://203.0.113.10${mark}/z`)).toBeNull();
+    expect(androidUrlSpan(`http://bit.ly${mark}@evil.com/z`)).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan(`http://bit.ly${mark}@`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://bit.ly${mark}#z`)).toBe("http://bit.ly");
+    expect(androidUrlSpan(`http://bit.ly${mark} evil.com`)).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan(`http://bit.ly${mark}. evil.com`)).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan(`http://203.0.113.10${mark}@evil.com`)).toBe(
+      "http://203.0.113.10",
+    );
+    expect(androidUrlSpan(`http://bit.ly${mark}:80@evil.com`)).toBe(
+      `http://bit.ly${mark}:80`,
+    );
+  });
 });

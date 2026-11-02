@@ -83,7 +83,10 @@ export const defaultShorteners = [
  * right after `://` is an empty authority, so that query stays here.
  * A one-to-five digit port with no host stays on that URL when `/` or `?`
  * follows. Six digits are not a port. `http:///…` still opens the host the
- * parser reads. `@` is user
+ * parser reads. A label character Android keeps stays on a schemed host
+ * when a path, a dot and another label, or a finished port follows.
+ * `@`, `#`, and a space still open the host that ends on the previous word.
+ * `@` is user
  * info when the next character can start the host label Android keeps,
  * so that label swallows a following `http` before `://`. A dot, `!`, or
  * `~` still ends the first host. User info is at most
@@ -566,7 +569,9 @@ export function extractHosts(text: string): string[] {
     if (!raw || covered(start, start + full.length)) {
       continue;
     }
-    pushLinkHost(cutClosedHostSlash(marked, raw, start + raw.length), push);
+    const end = start + raw.length;
+    const follow = end < marked.length ? marked.charAt(end) : "";
+    pushLinkHost(cutClosedHostSlash(marked, raw, end), push, follow);
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
     pushMsgTextHosts(raw, push);
@@ -1268,10 +1273,14 @@ function cutClosedHostSlash(text: string, raw: string, end: number): string {
   return out;
 }
 
-function pushLinkHost(raw: string, push: (host: string | null) => void): void {
+function pushLinkHost(
+  raw: string,
+  push: (host: string | null) => void,
+  follow = "",
+): void {
   push(hostname(raw));
   const schemed = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
-  const span = androidUrlSpan(schemed);
+  const span = androidUrlSpan(follow === "" ? schemed : `${schemed}${follow}`);
   if (span !== null) {
     push(hostname(span));
   }

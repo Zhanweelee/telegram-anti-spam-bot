@@ -2770,5 +2770,35 @@
     "id": "empty-port-real",
     "text": "http://bit.ly:80/offer179",
     "label": "spam"
+  },
+  {
+    "id": "schemed-label-path",
+    "text": "http://bit.ly\u4e00/offer180",
+    "label": "ham"
+  },
+  {
+    "id": "schemed-label-port",
+    "text": "http://bit.ly\u4e00:80/offer180",
+    "label": "ham"
+  },
+  {
+    "id": "schemed-label-dot",
+    "text": "http://bit.ly\u4e00.evil.com/offer180",
+    "label": "ham"
+  },
+  {
+    "id": "schemed-label-at",
+    "text": "http://bit.ly\u4e00@evil.com/offer180",
+    "label": "spam"
+  },
+  {
+    "id": "schemed-label-gap",
+    "text": "http://bit.ly\u4e00 evil.com/offer180",
+    "label": "spam"
+  },
+  {
+    "id": "schemed-label-bare",
+    "text": "bit.ly\u4e00/offer180",
+    "label": "spam"
   }
 ]

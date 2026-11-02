@@ -1212,6 +1212,23 @@ function labelBoundary(raw: string, index: number): boolean {
   return last !== next;
 }
 
+function labelContinues(raw: string, index: number): boolean {
+  return index < raw.length && androidLabelUnit(raw.charAt(index));
+}
+
+function portContinues(raw: string, index: number): boolean {
+  const port = /^:\d{1,5}(?!\d)/.exec(raw.slice(index));
+  if (!port?.[0]) {
+    return false;
+  }
+  const after = index + port[0].length;
+  if (after >= raw.length) {
+    return true;
+  }
+  const next = raw.charAt(after);
+  return next === "/" || next === "?" || labelBoundary(raw, after);
+}
+
 function acceptableLabelEnd(
   raw: string,
   index: number,
@@ -1227,10 +1244,17 @@ function acceptableLabelEnd(
   if (labelBoundary(raw, index)) {
     return true;
   }
+  if (index >= raw.length || /^\p{Mn}$/u.test(last)) {
+    return false;
+  }
   const next = raw.charAt(index);
-  return (
-    (last === "\u2215" || last === "\u2044") && (next === "/" || next === "?")
-  );
+  if (next === "/" || next === "?") {
+    return true;
+  }
+  if (next === "." && labelContinues(raw, index + 1)) {
+    return true;
+  }
+  return next === ":" && portContinues(raw, index);
 }
 
 function readAndroidLabel(raw: string, index: number): number | null {
@@ -1281,7 +1305,10 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * A label cannot end on a hyphen, and it cannot be longer than 63 characters.
  * U+1680, U+205F, U+FEFF, and other Android label characters stay inside the label.
  * The label still ends where the next character has no word boundary.
- * A division slash or fraction slash can end the label when `/` or `?` follows.
+ * A label character can also end when `/`, `?`, a dot and another label,
+ * or a finished port follows. A non-spacing mark stays transparent, so
+ * the label still ends on the letter before it. A division slash or
+ * fraction slash stays in the host until one of those continuations.
  * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.

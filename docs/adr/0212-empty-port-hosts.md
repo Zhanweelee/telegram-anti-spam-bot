@@ -32,3 +32,4 @@
 - `http://:80/203.0.113.10/…` 留着。`http://:80/t.me/+…` 不记成邀请。邀请码不进证据。
 - `http://:999999/bit.ly/…`、`http://:/bit.ly/…` 和 `http://:80 /bit.ly/…` 仍删除。
 - `http://bit.ly:80/…` 和 `https://t.me/+…` 仍删除。`http://example.com:80/bit.ly/…` 留着。路径不进证据。
+- 带协议的主机名里，Android 留在标签中的字不再收成短链。见 ADR 0213。

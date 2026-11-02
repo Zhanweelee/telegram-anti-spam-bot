@@ -7629,4 +7629,60 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps a schemed label character Android leaves in the host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer180";
+    const mark = "\u4e00";
+    const closed = [
+      `http://bit.ly${mark}/${path}`,
+      `https://t.co${mark}?${path}`,
+      `http://bit.ly${mark}`,
+      `http://bit.ly${mark}.evil.com/${path}`,
+      `http://bit.ly.${mark}/${path}`,
+      `http://bit.ly${mark}:80/${path}`,
+      `http://bit.ly${mark}:80`,
+      `http://bit.ly${mark}:80@evil.com/${path}`,
+      `http://bit.ly${mark}/http://t.co/${path}`,
+      `http://www.bit.ly${mark}/${path}`,
+      `http://203.0.113.10${mark}/${path}`,
+      `http://t.me${mark}/+${path}`,
+      `http://bit.ly\uff0c/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113");
+      expect(JSON.stringify(hit), text).not.toContain("t.me");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `http://bit.ly${mark}@evil.com/${path}`,
+      `https://t.co${mark}@evil.com/${path}`,
+      `http://bit.ly${mark}#evil.com/${path}`,
+      `http://bit.ly${mark} evil.com/${path}`,
+      `http://bit.ly${mark}. evil.com/${path}`,
+      `http://203.0.113.10${mark}@evil.com/${path}`,
+      `bit.ly${mark}/${path}`,
+      `www.bit.ly${mark}/${path}`,
+      `http://bit.ly${mark}/${path} http://t.co/${path}`,
+      `https://t.me/+${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).not.toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });
