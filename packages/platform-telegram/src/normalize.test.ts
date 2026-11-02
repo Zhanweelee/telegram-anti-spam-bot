@@ -8478,6 +8478,211 @@ describe("normalizeUpdate", () => {
     expect(richDump).not.toContain("bit.ly");
   });
 
+  it("keeps the host Android opens in an inline query", async () => {
+    const path = "span124";
+    const slash = "\u2215";
+    const hidden = `http://bit.ly${slash}@example.com/${path}`;
+    const shown = await normalize({
+      update_id: 2160,
+      message: {
+        message_id: 160,
+        date: 1761955200,
+        chat: { id: -1008160, type: "supergroup", title: "机密群名" },
+        from: { id: 160, first_name: "from160" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: hidden,
+                callback_data: "https://ow.ly/cb124",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shown.status).toBe("event");
+    if (shown.status !== "event") {
+      return;
+    }
+    expect(shown.event.message?.text).toBe("今天站会");
+    expect(shown.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(shown.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const shownDump = JSON.stringify(shown.event);
+    expect(shownDump).not.toContain(path);
+    expect(shownDump).not.toContain("from160");
+    expect(shownDump).not.toContain("机密群名");
+    expect(shownDump).not.toContain("cb124");
+    expect(shownDump).not.toContain("ow.ly");
+
+    const address = "203.0.113.124";
+    const current = await normalize({
+      update_id: 2161,
+      message: {
+        message_id: 161,
+        date: 1761955200,
+        chat: { id: -1008161, type: "supergroup" },
+        from: { id: 161 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "当前",
+                switch_inline_query_current_chat: `http://${address}${slash}@example.com/${path}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(current.status).toBe("event");
+    if (current.status !== "event") {
+      return;
+    }
+    expect(current.event.message?.hosts).toEqual(["example.com", address]);
+    expect(JSON.stringify(current.event)).not.toContain(path);
+
+    const chosen = await normalize({
+      update_id: 2162,
+      message: {
+        message_id: 162,
+        date: 1761955200,
+        chat: { id: -1008162, type: "supergroup" },
+        from: { id: 162 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "挑选",
+                switch_inline_query_chosen_chat: {
+                  query: `http://example.com${slash}@bit.ly/${path}`,
+                  allow_group_chats: true,
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(chosen.status).toBe("event");
+    if (chosen.status !== "event") {
+      return;
+    }
+    expect(chosen.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    expect(JSON.stringify(chosen.event)).not.toContain(path);
+    expect(JSON.stringify(chosen.event)).not.toContain("allow_group_chats");
+
+    const lower = await normalize({
+      update_id: 2163,
+      message: {
+        message_id: 163,
+        date: 1761955200,
+        chat: { id: -1008163, type: "supergroup" },
+        from: { id: 163 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: `http://bit.ly%e2%88%95@example.com/${path}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(lower.status).toBe("event");
+    if (lower.status !== "event") {
+      return;
+    }
+    expect(lower.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(lower.event)).not.toContain(path);
+
+    const label = await normalize({
+      update_id: 2164,
+      message: {
+        message_id: 164,
+        date: 1761955200,
+        chat: { id: -1008164, type: "supergroup" },
+        from: { id: 164 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: hidden,
+                switch_inline_query: "https://example.com/ok124",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(label.status).toBe("event");
+    if (label.status !== "event") {
+      return;
+    }
+    expect(label.event.message?.text).toBe("今天站会");
+    expect(label.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(label.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(label.event)).not.toContain(path);
+
+    const rich = await normalize({
+      update_id: 2165,
+      message: {
+        message_id: 165,
+        date: 1761955200,
+        chat: { id: -1008165, type: "supergroup" },
+        from: { id: 165 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [{ text: "打开", switch_inline_query: hidden }],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("今天站会");
+    expect(rich.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    expect(JSON.stringify(rich.event)).not.toContain(path);
+
+    const wrapped = `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/share/url?url=${encodeURIComponent(`https://bit.ly/${path}`)}`)}`;
+    const nested = await normalize({
+      update_id: 2166,
+      message: {
+        message_id: 166,
+        date: 1761955200,
+        chat: { id: -1008166, type: "supergroup" },
+        from: { id: 166 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [[{ text: "打开", switch_inline_query: wrapped }]],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.hosts).toEqual(["t.me"]);
+    const nestedDump = JSON.stringify(nested.event);
+    expect(nestedDump).not.toContain("bit.ly");
+    expect(nestedDump).not.toContain(path);
+  });
+
   it("keeps hostnames from a sender tag", async () => {
     const phrase = "请免费领取礼品";
     const code = "TAG79";

@@ -900,12 +900,18 @@ function pushSwitchInlineQueries(
   button: Record<string, unknown>,
   urls: string[],
 ): void {
-  pushPlainUrls(button.switch_inline_query, urls);
-  pushPlainUrls(button.switch_inline_query_current_chat, urls);
+  pushOpenedQuery(button.switch_inline_query, urls);
+  pushOpenedQuery(button.switch_inline_query_current_chat, urls);
   const chosen = button.switch_inline_query_chosen_chat;
   if (isRecord(chosen)) {
-    pushPlainUrls(chosen.query, urls);
+    pushOpenedQuery(chosen.query, urls);
   }
+}
+
+/** 查询会写进输入框。发送预览对这段文字做网页链接高亮。 */
+function pushOpenedQuery(value: unknown, urls: string[]): void {
+  pushPlainUrls(value, urls);
+  pushOpenedSpans(value, urls);
 }
 
 function hostFromUrl(
