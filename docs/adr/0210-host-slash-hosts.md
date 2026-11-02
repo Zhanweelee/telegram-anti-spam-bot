@@ -33,3 +33,4 @@ Android 在 `@` 或 `#` 前面会退回除号之前的主机名。`http://bit.ly
 - `http://∕203.0.113.10/…` 和 `http://203.0.113.9∕/…` 留着。`http://bit.ly∕http://bit.ly/…` 留着。
 - `∕bit.ly/…`、`http://bit.ly∕@example.com/…`、`http://user∕@bit.ly/…` 和 `http://bit.ly%E2%88%95@example.com/…` 仍删除。
 - `http://bit.ly∕#evil.com/…` 和 `http://203.0.113.9∕@example.com/…` 仍删除。路径不进证据。
+- `://` 后面直接是问号时，问号里的主机名不再另记。见 ADR 0211。

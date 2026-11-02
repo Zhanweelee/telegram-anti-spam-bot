@@ -8372,4 +8372,76 @@ describe("screenTelegramEvent", () => {
     expect(deletedDump).not.toContain("from177");
     expect(deletedDump).not.toContain("机密群名");
   });
+
+  it("allows an empty authority query and deletes a collapsed host", async () => {
+    const path = "offer178";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2273,
+        message: {
+          message_id: 2273,
+          date: 1761955200,
+          chat: { id: -1008231, type: "supergroup", title: "机密群名" },
+          from: { id: 178, first_name: "Ada" },
+          text: `http://?bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("allow");
+    expect(moderator.deleted).toEqual([]);
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const split = await normalizeUpdate({
+      update: {
+        update_id: 2274,
+        message: {
+          message_id: 2274,
+          date: 1761955200,
+          chat: { id: -1008232, type: "supergroup", title: "机密群名" },
+          from: { id: 178, first_name: "https://tinyurl.com/from178" },
+          text: `http:///bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(split.status).toBe("event");
+    if (split.status !== "event") {
+      return;
+    }
+    const splitLogger = createMemoryLogger();
+    const deleted = await screenTelegramEvent(split.event, {
+      logger: splitLogger,
+      moderator: createMemoryModerator(),
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(deleted.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const deletedDump = JSON.stringify({
+      result: deleted,
+      logs: splitLogger.entries,
+    });
+    expect(deletedDump).not.toContain(path);
+    expect(deletedDump).not.toContain("from178");
+    expect(deletedDump).not.toContain("机密群名");
+  });
 });

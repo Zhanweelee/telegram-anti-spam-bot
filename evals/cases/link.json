@@ -2705,5 +2705,40 @@
     "id": "host-slash-at",
     "text": "http://bit.ly\u2215@example.com/offer177",
     "label": "spam"
+  },
+  {
+    "id": "empty-query-prefix",
+    "text": "http://?bit.ly/offer178",
+    "label": "ham"
+  },
+  {
+    "id": "empty-query-https",
+    "text": "https://?bit.ly/offer178",
+    "label": "ham"
+  },
+  {
+    "id": "empty-query-slash",
+    "text": "http:///?bit.ly/offer178",
+    "label": "ham"
+  },
+  {
+    "id": "empty-query-ip",
+    "text": "http://?203.0.113.10/offer178",
+    "label": "ham"
+  },
+  {
+    "id": "empty-query-triple",
+    "text": "http:///bit.ly/offer178",
+    "label": "spam"
+  },
+  {
+    "id": "empty-query-hash",
+    "text": "http://#bit.ly/offer178",
+    "label": "spam"
+  },
+  {
+    "id": "empty-query-host",
+    "text": "http://bit.ly?offer178",
+    "label": "spam"
   }
 ]

@@ -79,7 +79,9 @@ export const defaultShorteners = [
  * that follows an ASCII dot stays in that label, so the next URL is not its
  * own match. A dot lookalike written immediately before `@` also stays, so
  * the next URL is its own match. A dot before
- * a port, a slash, or a question mark stays with this URL. `@` is user
+ * a port, a slash, or a question mark stays with this URL. A `?` or `/`
+ * right after `://` is an empty authority, so that query stays here.
+ * `http:///…` still opens the host the parser reads. `@` is user
  * info when the next character can start the host label Android keeps,
  * so that label swallows a following `http` before `://`. A dot, `!`, or
  * `~` still ends the first host. User info is at most
@@ -166,7 +168,7 @@ const URL_END = `(?![A-Za-z0-9_])(?!${URL_MARK})`;
 const URL_BEFORE = `(?<![A-Za-z0-9_](?:${URL_MARK})*)`;
 const URL_EDGE = `(?:${URL_BEFORE}(?=[A-Za-z0-9_])|(?<=[A-Za-z0-9_](?:${URL_MARK})*)(?![A-Za-z0-9_]))`;
 const token = new RegExp(
-  `${URL_BEFORE}(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)(?:^|${URL_EDGE})(?:${URL_BARE}|${URL_IP})${URL_BARE_TAIL}${URL_END}`,
+  `${URL_BEFORE}(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL}|[/?](?:${URL_BODY})*)|${URL_WWW})${URL_END}|(?<!:\\/\\/)(?:^|${URL_EDGE})(?:${URL_BARE}|${URL_IP})${URL_BARE_TAIL}${URL_END}`,
   "gi",
 );
 

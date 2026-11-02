@@ -7535,4 +7535,50 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps an empty authority query with the scheme Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer178";
+    const closed = [
+      `http://?bit.ly/${path}`,
+      `https://?bit.ly/${path}`,
+      `http://?203.0.113.10/${path}`,
+      `http:///?bit.ly/${path}`,
+      `http://?http://bit.ly/${path}`,
+      `http://?t.me/+${path}`,
+      `http://example.com?bit.ly/${path}`,
+      `http://example.com/?bit.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113");
+      expect(JSON.stringify(hit), text).not.toContain("t.me");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `http:///bit.ly/${path}`,
+      `http:////bit.ly/${path}`,
+      `http://bit.ly?${path}`,
+      `http://#bit.ly/${path}`,
+      `http://?bit.ly/x http://t.co/${path}`,
+      `https://t.me/+${path}`,
+      `bit.ly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).not.toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });
