@@ -66,7 +66,9 @@ export const defaultShorteners = [
  * starts another label only when a label character follows. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
  * info only when the next character can finish it. User info is at most
- * 64 characters, and the password is at most 25.
+ * 64 characters, and the password is at most 25. A label is at most 63
+ * characters and cannot end in the middle of an ASCII word. A hyphen stays
+ * inside the label only when the finished label still fits.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -76,19 +78,20 @@ const URL_PAIR =
 const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
 const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
 const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
-const URL_LABEL = `(?:${URL_LABEL_ATOM}${URL_LABEL_MORE}*)`;
+const URL_LABEL = `(?:${URL_LABEL_ATOM}(?:${URL_LABEL_MORE}{0,61}${URL_LABEL_ATOM})?)`;
 const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
 const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
-const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
-const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})+`;
+const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
+const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
 const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
 const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;
 const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
+const URL_END = "(?![A-Za-z0-9_])";
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?${URL_END}`,
   "gi",
 );
 

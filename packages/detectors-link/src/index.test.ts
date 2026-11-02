@@ -4198,4 +4198,121 @@ describe("link fixtures", () => {
     expect(stuck).toBeNull();
     expect(JSON.stringify(stuck)).not.toContain("CODE140");
   });
+
+  it("keeps the host Android opens after a label that does not fit", async () => {
+    const detector = createLinkDetector();
+    const path = "offer141";
+    const over = await detector.detect({
+      event: eventFor(`http://${"a".repeat(59)}-http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(over?.reasons).toEqual(["short_link"]);
+    expect(over?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(over)).not.toContain(path);
+    expect(JSON.stringify(over)).not.toContain("a".repeat(59));
+
+    const bare = await detector.detect({
+      event: eventFor(`http://${"a".repeat(60)}-bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(bare)).not.toContain(path);
+
+    const address = "203.0.113.141";
+    const ip = await detector.detect({
+      event: eventFor(`http://${"a".repeat(60)}-http://${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+
+    const dotted = await detector.detect({
+      event: eventFor(`http://${"a".repeat(64)}.http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["short_link"]);
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(dotted)).not.toContain(path);
+
+    const repeated = await detector.detect({
+      event: eventFor(`http://${"a-".repeat(40)}http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(repeated?.reasons).toEqual(["short_link"]);
+    expect(repeated?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(repeated)).not.toContain(path);
+
+    const fitted = await detector.detect({
+      event: eventFor(`http://${"a".repeat(58)}-http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fitted).toBeNull();
+
+    const fittedBare = await detector.detect({
+      event: eventFor(`http://${"a".repeat(59)}-bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fittedBare).toBeNull();
+
+    const fittedDot = await detector.detect({
+      event: eventFor(`http://${"a".repeat(63)}.http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fittedDot).toBeNull();
+
+    const glued = await detector.detect({
+      event: eventFor(`http://${"a".repeat(65)}http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+
+    const underscored = await detector.detect({
+      event: eventFor(`http://${"a".repeat(62)}_http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(underscored).toBeNull();
+
+    const inPath = await detector.detect({
+      event: eventFor(
+        `http://example.com/${"a".repeat(70)}-http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(inPath).toBeNull();
+
+    const inside = await detector.detect({
+      event: eventFor(`http://bit.ly_foo/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(inside).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor(`http://${"a".repeat(63)}-https://t.me/+CODE141`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE141");
+
+    const stuck = await detector.detect({
+      event: eventFor(`https://t.me-${"a".repeat(63)}/+CODE141`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stuck).toBeNull();
+    expect(JSON.stringify(stuck)).not.toContain("CODE141");
+  });
 });

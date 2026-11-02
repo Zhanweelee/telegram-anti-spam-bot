@@ -33,3 +33,4 @@ Android `LinkifyPort.WEB_URL` 的用户信息最多 64 个字符，冒号后面�
 - 64 个字符的用户名或 25 个字符的密码再接 `@http://bit.ly/…` 留着。65 个字符直接粘上 `http://bit.ly/…` 留着。
 - 放得下的 `user:pass@bit.ly/…` 和 64 个字符再接 `@bit.ly/…` 仍按短链删除。`http://bit.ly@example.com` 留着。
 - `https://t.me:` 加 26 个字符再接 `@/+…` 不记成邀请。放不下的用户信息后面单独的 `https://t.me/+…` 按邀请删除。路径不进证据。
+- 标签超过 63 个字符，或连字符让标签放不下时，Android 另外打开的主机名也留下。见 ADR 0174。

@@ -1395,5 +1395,45 @@
     "id": "userinfo-glued-invite",
     "text": "https://t.me:pppppppppppppppppppppppppp@/+CODE140",
     "label": "ham"
+  },
+  {
+    "id": "label-fit-http",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-http://bit.ly/offer141",
+    "label": "spam"
+  },
+  {
+    "id": "label-fit-bare",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bit.ly/offer141",
+    "label": "spam"
+  },
+  {
+    "id": "label-fit-ip",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-http://203.0.113.141/x",
+    "label": "spam"
+  },
+  {
+    "id": "label-fit-within",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-http://bit.ly/offer141",
+    "label": "ham"
+  },
+  {
+    "id": "label-fit-dot",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.http://bit.ly/offer141",
+    "label": "ham"
+  },
+  {
+    "id": "label-fit-glued",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaahttp://bit.ly/offer141",
+    "label": "ham"
+  },
+  {
+    "id": "label-fit-path",
+    "text": "http://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-http://bit.ly/offer141",
+    "label": "ham"
+  },
+  {
+    "id": "label-fit-stuck-invite",
+    "text": "https://t.me-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/+CODE141",
+    "label": "ham"
   }
 ]
