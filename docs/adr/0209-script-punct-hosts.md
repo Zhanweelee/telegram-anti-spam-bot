@@ -33,3 +33,4 @@ Android 把这些标点留在主机名标签里。`b՚it.ly/…`、`http://bit.�
 - `b՚it.ly/…`、`http://bit.՚ly/…`、`b΄it.ly/…` 和 `http://b҂t.ly/…` 留着。
 - `bաit.ly/…`、`bαit.ly/…` 和 `՚bit.ly/…` 仍按短链删除。Android 标签里没有的字仍删掉，`b` 和 `it.ly` 还是短链。
 - `example.com՚http://bit.ly/…` 按后面的短链删除。路径不进证据。
+- 主机名里的除号不再收成短链。见 ADR 0210。

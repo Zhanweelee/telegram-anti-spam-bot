@@ -1183,6 +1183,7 @@ const ANDROID_SCHEME = /^(https?:\/\/)/i;
 const ANDROID_USERINFO =
   /^(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,25})?@/;
 const ANDROID_SLASH = /\u2215|\u2044|%E2%88%95|%E2%81%84/g;
+const ANDROID_ENCODED_SLASH = /%E2%88%95|%E2%81%84/g;
 const ANDROID_LABEL_CHAR = /[A-Za-z0-9]/;
 const ANDROID_LABEL_WORD = /[A-Za-z0-9_]/;
 const ANDROID_LABEL_MAX = 63;
@@ -1216,11 +1217,20 @@ function acceptableLabelEnd(
   index: number,
   start: number,
 ): boolean {
-  if (index <= start || !labelBoundary(raw, index)) {
+  if (index <= start) {
     return false;
   }
   const last = raw.charAt(index - 1);
-  return last !== "-" && last !== "_";
+  if (last === "-" || last === "_") {
+    return false;
+  }
+  if (labelBoundary(raw, index)) {
+    return true;
+  }
+  const next = raw.charAt(index);
+  return (
+    (last === "\u2215" || last === "\u2044") && (next === "/" || next === "?")
+  );
 }
 
 function readAndroidLabel(raw: string, index: number): number | null {
@@ -1271,14 +1281,15 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * A label cannot end on a hyphen, and it cannot be longer than 63 characters.
  * U+1680, U+205F, U+FEFF, and other Android label characters stay inside the label.
  * The label still ends where the next character has no word boundary.
+ * A division slash or fraction slash can end the label when `/` or `?` follows.
  * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
  * A hyphen inside user info stays with `@`.
  * User info stays when `@` is followed by a host, a label character, a path, a finished port, `_`, or the end.
  * Otherwise the highlighted host is the one before `@`.
- * A division slash or fraction slash inside the span becomes `/`.
- * The same string comes back as null.
+ * A division slash or fraction slash in the path becomes `/`.
+ * One inside the host stays. The same string comes back as null.
  */
 function userinfoSticks(raw: string, index: number): boolean {
   if (index >= raw.length) {
@@ -1338,7 +1349,10 @@ export function androidUrlSpan(raw: string): string | null {
   const continues =
     next.length === 0 || next === "/" || next === "?" || next === "#";
   const span = continues ? raw : raw.slice(0, index);
-  const folded = span.replace(ANDROID_SLASH, "/");
+  const pathAt = continues ? index : span.length;
+  const folded =
+    span.slice(0, pathAt).replace(ANDROID_ENCODED_SLASH, "/") +
+    span.slice(pathAt).replace(ANDROID_SLASH, "/");
   return folded === raw ? null : folded;
 }
 

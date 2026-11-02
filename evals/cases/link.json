@@ -2670,5 +2670,40 @@
     "id": "script-punct-prefix",
     "text": "\u055Abit.ly/offer176",
     "label": "spam"
+  },
+  {
+    "id": "host-slash-prefix",
+    "text": "http://\u2215bit.ly/offer177",
+    "label": "ham"
+  },
+  {
+    "id": "host-slash-fraction",
+    "text": "https://\u2044bit.ly/offer177",
+    "label": "ham"
+  },
+  {
+    "id": "host-slash-path",
+    "text": "http://bit.ly\u2215/offer177",
+    "label": "ham"
+  },
+  {
+    "id": "host-slash-query",
+    "text": "http://bit.ly\u2215?offer177",
+    "label": "ham"
+  },
+  {
+    "id": "host-slash-ip",
+    "text": "http://\u2215203.0.113.10/offer177",
+    "label": "ham"
+  },
+  {
+    "id": "host-slash-bare",
+    "text": "\u2215bit.ly/offer177",
+    "label": "spam"
+  },
+  {
+    "id": "host-slash-at",
+    "text": "http://bit.ly\u2215@example.com/offer177",
+    "label": "spam"
   }
 ]

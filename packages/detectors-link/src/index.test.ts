@@ -7488,4 +7488,51 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps a division slash inside the host Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer177";
+    const closed = [
+      `http://\u2215bit.ly/${path}`,
+      `https://\u2044bit.ly/${path}`,
+      `http://bit.ly\u2215/${path}`,
+      `http://bit.ly\u2215?${path}`,
+      `http://bit.ly\u2215`,
+      `http://\u2215203.0.113.10/${path}`,
+      `http://203.0.113.9\u2215/${path}`,
+      `http://bit.ly\u2215http://bit.ly/${path}`,
+      `http://example.com\u2215/bit.ly/${path}`,
+      `http://%E2%88%95bit.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `\u2215bit.ly/${path}`,
+      `http://bit.ly\u2215@example.com/${path}`,
+      `http://user\u2215@bit.ly/${path}`,
+      `http://example.com\u2215@bit.ly/${path}`,
+      `http://bit.ly%E2%88%95@example.com/${path}`,
+      `http://bit.ly\u2215#evil.com/${path}`,
+      `http://203.0.113.9\u2215@example.com/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).not.toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });

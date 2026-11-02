@@ -4685,6 +4685,64 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("btn176");
   });
 
+  it("keeps a division slash inside an inline query", async () => {
+    const outcome = await normalize({
+      update_id: 3618,
+      message: {
+        message_id: 188,
+        date: 1761955200,
+        chat: { id: -100922, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: "http://\u2215bit.ly/btn177",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts ?? []).not.toContain("bit.ly");
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("btn177");
+
+    const opened = await normalize({
+      update_id: 3619,
+      message: {
+        message_id: 189,
+        date: 1761955200,
+        chat: { id: -100923, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                switch_inline_query: "http://bit.ly\u2215@example.com/btn177",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts ?? []).toContain("bit.ly");
+    expect(JSON.stringify(opened.event)).not.toContain("btn177");
+  });
+
   it("uses inline button text when earlier text is missing", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalize({

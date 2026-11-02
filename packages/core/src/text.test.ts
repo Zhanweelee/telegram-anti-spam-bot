@@ -723,6 +723,25 @@ describe("androidUrlSpan", () => {
     expect(androidUrlSpan("http://user:pass@bit.ly/p")).toBeNull();
   });
 
+  it("leaves a division slash inside the host", () => {
+    expect(androidUrlSpan("http://\u2215bit.ly/z")).toBeNull();
+    expect(androidUrlSpan("https://\u2044bit.ly/z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u2215/z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u2215?z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u2215")).toBeNull();
+    expect(androidUrlSpan("http://\u2215203.0.113.10/z")).toBeNull();
+    expect(androidUrlSpan("http://203.0.113.9\u2215/z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u2215http://evil.com/z")).toBe(
+      "http://bit.ly\u2215http",
+    );
+    expect(androidUrlSpan("http://bit.ly\u2215@example.com/path")).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan("http://bit.ly\u2215#evil.com/z")).toBe(
+      "http://bit.ly",
+    );
+  });
+
   it("turns a division slash inside the span into a slash", () => {
     expect(androidUrlSpan("http://example.com/a\u2215b")).toBe(
       "http://example.com/a/b",

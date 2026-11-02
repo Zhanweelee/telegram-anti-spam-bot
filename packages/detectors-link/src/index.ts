@@ -557,11 +557,12 @@ export function extractHosts(text: string): string[] {
   token.lastIndex = 0;
   for (const match of marked.matchAll(token)) {
     const start = match.index ?? 0;
-    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
-    if (!raw || covered(start, start + (match[0]?.length ?? 0))) {
+    const full = match[0] ?? "";
+    const raw = full.replace(/[),.;!?]+$/g, "");
+    if (!raw || covered(start, start + full.length)) {
       continue;
     }
-    pushLinkHost(raw, push);
+    pushLinkHost(cutClosedHostSlash(marked, raw, start + raw.length), push);
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
     pushMsgTextHosts(raw, push);
@@ -1239,6 +1240,28 @@ function isTelegramProxy(url: URL): boolean {
   }
   const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
   return path === "/proxy" || path === "/socks" || path === "/webproxy";
+}
+
+/**
+ * A division slash at the end of this match stays when `/`, `?`, or the end
+ * follows. Android keeps that slash in the host. Any other follower makes
+ * the label end before the slash.
+ */
+function cutClosedHostSlash(text: string, raw: string, end: number): string {
+  let out = raw;
+  let cursor = end;
+  while (out.endsWith("\u2215") || out.endsWith("\u2044")) {
+    if (cursor >= text.length) {
+      break;
+    }
+    const follow = text.charAt(cursor);
+    if (follow === "/" || follow === "?") {
+      break;
+    }
+    out = out.slice(0, -1);
+    cursor -= 1;
+  }
+  return out;
 }
 
 function pushLinkHost(raw: string, push: (host: string | null) => void): void {
