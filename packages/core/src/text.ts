@@ -513,10 +513,12 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * A percent-encoded letter that spells the scheme stays out of that scheme.
  * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
  * `%2F` glued to a bare host stays out of that host.
+ * A percent-encoded gap stays when its hex digits are the start of the host,
+ * or when it sits inside `http://` before `://`.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
-    foldEncodedGaps(
+    foldHostEncodedGaps(
       foldMatchText(
         foldGluedEncodedHyphen(
           foldGluedEncodedPlus(foldGluedEncodedDot(foldHostShape(text))),
@@ -742,13 +744,26 @@ function fullwidthLatin(code: number): string | undefined {
  * `%20`, `%2E`, `%2520`, and `%252E` stay. A third layer stays.
  */
 export function foldEncodedGaps(text: string): string {
+  return dropEncodedGaps(text, true);
+}
+
+/**
+ * Host scan keeps an encoded gap whose hex digits open the host Android
+ * actually shows, and a gap inside `http://` before `://`. A gap after a
+ * label character still drops, so `bit%E2%80%8B.ly` stays one host.
+ */
+function foldHostEncodedGaps(text: string): string {
+  return dropEncodedGaps(text, false);
+}
+
+function dropEncodedGaps(text: string, everyGap: boolean): string {
   let out = "";
   let index = 0;
   while (index < text.length) {
     const skipped = encodedGapLength(text, index);
     const doubled = skipped > 0 ? 0 : doubleEncodedGapLength(text, index);
     const taken = skipped > 0 ? skipped : doubled;
-    if (taken > 0) {
+    if (taken > 0 && (everyGap || encodedGapJoinsLabel(text, index, taken))) {
       index += taken;
       continue;
     }
@@ -756,6 +771,21 @@ export function foldEncodedGaps(text: string): string {
     index += 1;
   }
   return out;
+}
+
+function encodedGapJoinsLabel(
+  text: string,
+  index: number,
+  taken: number,
+): boolean {
+  if (!/[A-Za-z0-9_-]/.test(text.charAt(index - 1))) {
+    return false;
+  }
+  let cursor = index + taken;
+  while (/[A-Za-z]/.test(text.charAt(cursor))) {
+    cursor += 1;
+  }
+  return text.slice(cursor, cursor + 3) !== "://";
 }
 
 const DOT_LOOKALIKE_CHAR =

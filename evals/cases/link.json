@@ -2295,5 +2295,60 @@
     "id": "encoded-host-body-suffix",
     "text": "%2B2b%77ww.bit.ly/offer167",
     "label": "spam"
+  },
+  {
+    "id": "encoded-gap-host",
+    "text": "%0Abit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-tab",
+    "text": "%09bit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-nbsp",
+    "text": "%C2%A0bit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-zwsp",
+    "text": "%E2%80%8Bbit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-double",
+    "text": "%250Abit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-ip",
+    "text": "%0A203.0.113.168/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-scheme",
+    "text": "ht%0Atp://bit.ly/offer168",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-gap-host-inside",
+    "text": "bit%E2%80%8B.ly/offer168",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-gap-host-break",
+    "text": "http:%0A//bit.ly/offer168",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-gap-host-www",
+    "text": "%0Awww.bit.ly/offer168",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-gap-host-tail",
+    "text": "http://bit.ly%0Aevil.com/offer168",
+    "label": "spam"
   }
 ]
