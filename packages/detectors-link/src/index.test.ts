@@ -1254,6 +1254,119 @@ describe("link fixtures", () => {
     expect(ordinaryEncoded).toBeNull();
   });
 
+  it("reads the url inside the other telegram share links and leaves the path out", async () => {
+    const detector = createLinkDetector();
+    const short = await detector.detect({
+      event: eventFor(
+        "https://t.me/share?url=https%3A%2F%2Fbit.ly%2Fname102&text=hello",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain("name102");
+
+    const address = await detector.detect({
+      event: eventFor(
+        "https://t.me/msg/url?url=http%3A%2F%2F203.0.113.9%2Fpath102",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(address?.reasons).toEqual(["ip_host"]);
+    expect(address?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(address)).not.toContain("path102");
+
+    const code = "code102";
+    const invite = await detector.detect({
+      event: eventFor(`tg://share?url=https://t.me/+${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+
+    const preview = await detector.detect({
+      event: eventFor(
+        "tg://iv?url=https%3A%2F%2Fbit.ly%2Fname102&rhash=RHASH102",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview?.reasons).toEqual(["short_link"]);
+    expect(preview?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(preview)).not.toContain("name102");
+    expect(JSON.stringify(preview)).not.toContain("RHASH102");
+
+    const composed = await detector.detect({
+      event: eventFor("tg://msg?url=https%3A%2F%2Fbit.ly%2Fname102&to=durov"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(composed?.reasons).toEqual(["short_link"]);
+    expect(composed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(composed)).not.toContain("name102");
+    expect(JSON.stringify(composed)).not.toContain("durov");
+
+    const comment = await detector.detect({
+      event: eventFor(
+        "https://t.me/share?url=https%3A%2F%2Fexample.com%2Fok102&text=see%20https%3A%2F%2Fbit.ly%2Fname102",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(comment?.reasons).toEqual(["short_link"]);
+    expect(comment?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(comment)).not.toContain("name102");
+    expect(JSON.stringify(comment)).not.toContain("ok102");
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://t.me/share?url=https%3A%2F%2Fexample.com%2Fok102&text=hello",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const username = await detector.detect({
+      event: eventFor("https://t.me/msg?url=https%3A%2F%2Fbit.ly%2Fname102"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(username).toBeNull();
+
+    const other = await detector.detect({
+      event: eventFor(
+        "https://t.me/share/other?url=https%3A%2F%2Fbit.ly%2Fname102",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://example.com/share?url=https%3A%2F%2Fbit.ly%2Fname102",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const nested = encodeURIComponent(
+      `https://t.me/share/url?url=${encodeURIComponent("https://bit.ly/name102")}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/share?url=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("reads a join request bio when the event has no message", async () => {
     const detector = createLinkDetector();
     const bio = parseEvent({

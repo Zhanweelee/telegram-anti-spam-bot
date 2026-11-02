@@ -5004,6 +5004,221 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(foreign.event)).not.toContain("name99");
   });
 
+  it("keeps a hostname from the other telegram share links and leaves the path out", async () => {
+    const shared = await normalize({
+      update_id: 7110,
+      message: {
+        message_id: 490,
+        date: 1761955200,
+        chat: {
+          id: -101260,
+          type: "supergroup",
+          title: "https://cutt.ly/grp102",
+        },
+        from: { id: 102, first_name: "https://tinyurl.com/from102" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: "https://t.me/share?url=https%3A%2F%2Fbit.ly%2Fname102&text=hello",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shared.status).toBe("event");
+    if (shared.status !== "event") {
+      return;
+    }
+    expect(shared.event.message?.text).toBe("今天站会");
+    expect(shared.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(shared.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const sharedDump = JSON.stringify(shared.event);
+    expect(sharedDump).not.toContain("name102");
+    expect(sharedDump).not.toContain("from102");
+    expect(sharedDump).not.toContain("grp102");
+
+    const address = await normalize({
+      update_id: 7111,
+      message: {
+        message_id: 491,
+        date: 1761955200,
+        chat: { id: -101261, type: "supergroup", title: "keep-title" },
+        from: { id: 102, first_name: "from102" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: "https://t.me/msg/url?url=http%3A%2F%2F203.0.113.9%2Fpath102",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(address.status).toBe("event");
+    if (address.status !== "event") {
+      return;
+    }
+    expect(address.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    const addressDump = JSON.stringify(address.event);
+    expect(addressDump).not.toContain("path102");
+    expect(addressDump).not.toContain("from102");
+    expect(addressDump).not.toContain("keep-title");
+
+    const code = "code102";
+    const invite = await normalize({
+      update_id: 7112,
+      message: {
+        message_id: 492,
+        date: 1761955200,
+        chat: { id: -101262, type: "supergroup" },
+        from: { id: 102 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: `tg://share?url=${encodeURIComponent(`https://t.me/+${code}`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+
+    const preview = await normalize({
+      update_id: 7113,
+      message: {
+        message_id: 493,
+        date: 1761955200,
+        chat: { id: -101263, type: "supergroup" },
+        from: { id: 102 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "预览",
+                url: "tg://iv?url=https%3A%2F%2Fbit.ly%2Fname102&rhash=RHASH102",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(preview.status).toBe("event");
+    if (preview.status !== "event") {
+      return;
+    }
+    expect(preview.event.message?.hosts).toEqual(["bit.ly"]);
+    const previewDump = JSON.stringify(preview.event);
+    expect(previewDump).not.toContain("name102");
+    expect(previewDump).not.toContain("RHASH102");
+
+    const composed = await normalize({
+      update_id: 7114,
+      message: {
+        message_id: 494,
+        date: 1761955200,
+        chat: { id: -101264, type: "supergroup" },
+        from: { id: 102 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "私聊",
+                url: "tg://msg?url=https%3A%2F%2Fbit.ly%2Fname102&to=durov",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(composed.status).toBe("event");
+    if (composed.status !== "event") {
+      return;
+    }
+    expect(composed.event.message?.text).toBe("今天站会");
+    expect(composed.event.message?.hosts).toEqual(["bit.ly"]);
+    const composedDump = JSON.stringify(composed.event);
+    expect(composedDump).not.toContain("name102");
+    expect(composedDump).not.toContain("durov");
+
+    const phrase = await normalize({
+      update_id: 7115,
+      message: {
+        message_id: 495,
+        date: 1761955200,
+        chat: { id: -101265, type: "supergroup" },
+        from: { id: 102 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: "https://t.me/share?url=https%3A%2F%2Fexample.com%2Fok102&text=%E8%AF%B7%E5%85%8D%E8%B4%B9%E9%A2%86%E5%8F%96%E7%A4%BC%E5%93%81",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(phrase.status).toBe("event");
+    if (phrase.status !== "event") {
+      return;
+    }
+    expect(phrase.event.message?.text).toBe("今天站会");
+    expect(phrase.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    const phraseDump = JSON.stringify(phrase.event);
+    expect(phraseDump).not.toContain("免费领取");
+    expect(phraseDump).not.toContain("ok102");
+
+    const username = await normalize({
+      update_id: 7116,
+      message: {
+        message_id: 496,
+        date: 1761955200,
+        chat: { id: -101266, type: "supergroup" },
+        from: { id: 102 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: "https://t.me/msg?url=https%3A%2F%2Fbit.ly%2Fname102",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(username.status).toBe("event");
+    if (username.status !== "event") {
+      return;
+    }
+    expect(username.event.message?.hosts).toEqual(["t.me"]);
+    const usernameDump = JSON.stringify(username.event);
+    expect(usernameDump).not.toContain("bit.ly");
+    expect(usernameDump).not.toContain("name102");
+  });
+
   it("keeps a hostname from a telegram msg link and leaves the path out", async () => {
     const hidden = await normalize({
       update_id: 6910,

@@ -375,5 +375,35 @@
     "id": "tg-msg-recipient",
     "text": "tg://msg?to=203.0.113.9&text=hello",
     "label": "ham"
+  },
+  {
+    "id": "tg-share-alias-short",
+    "text": "https://t.me/share?url=https%3A%2F%2Fbit.ly%2Foffer&text=hello",
+    "label": "spam"
+  },
+  {
+    "id": "tg-msg-path-ip",
+    "text": "https://t.me/msg/url?url=http%3A%2F%2F203.0.113.9%2Fpath",
+    "label": "spam"
+  },
+  {
+    "id": "tg-share-command-invite",
+    "text": "tg://share?url=https%3A%2F%2Ft.me%2F%2Bjoin102",
+    "label": "spam"
+  },
+  {
+    "id": "tg-iv-command-ordinary",
+    "text": "tg://iv?url=https%3A%2F%2Fexample.com%2Fdocs&rhash=hash",
+    "label": "ham"
+  },
+  {
+    "id": "tg-msg-url-short",
+    "text": "tg://msg?url=https%3A%2F%2Fbit.ly%2Foffer&to=durov",
+    "label": "spam"
+  },
+  {
+    "id": "tg-username-url",
+    "text": "https://t.me/msg?url=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "ham"
   }
 ]

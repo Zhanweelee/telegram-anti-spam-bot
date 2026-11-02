@@ -918,11 +918,21 @@ function msgTextExtras(
   if (!isTelegramMsg(url)) {
     return [];
   }
+  const found: { host: string; invite: boolean }[] = [];
+  const embedded = queryValue(folded, "url");
+  if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
+    const inner = hostFromUrl(embedded, false);
+    if (inner) {
+      found.push({ host: inner.host, invite: inner.invite });
+      for (const extra of inner.extras ?? []) {
+        found.push(extra);
+      }
+    }
+  }
   const text = queryValue(folded, "text");
   if (text === null || text.length === 0 || text.length > MAX_TEXT) {
-    return [];
+    return found;
   }
-  const found: { host: string; invite: boolean }[] = [];
   for (const raw of urlsInText(text)) {
     const inner = hostFromUrl(raw, false);
     if (!inner) {
@@ -964,7 +974,7 @@ function isTelegramShare(url: URL): boolean {
     const host = url.hostname.toLowerCase();
     const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
     const command = host.length > 0 ? host : path;
-    return command === "msg_url";
+    return command === "msg_url" || command === "share" || command === "iv";
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return false;
@@ -978,7 +988,12 @@ function isTelegramShare(url: URL): boolean {
     return false;
   }
   const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
-  return path === "/share/url" || path === "/iv";
+  return (
+    path === "/share/url" ||
+    path === "/share" ||
+    path === "/iv" ||
+    path === "/msg/url"
+  );
 }
 
 const telegramProxyHosts = ["t.me", "telegram.me", "telegram.dog"];

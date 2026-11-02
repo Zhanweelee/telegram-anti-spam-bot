@@ -454,6 +454,11 @@ function pushMsgTextHosts(
   raw: string,
   push: (host: string | null) => void,
 ): void {
+  const embedded = telegramMsgUrl(raw);
+  if (embedded) {
+    push(hostname(embedded));
+    push(proxyServerHost(embedded));
+  }
   const text = telegramMsgText(raw);
   if (!text) {
     return;
@@ -469,6 +474,11 @@ function pushMsgTextInvites(
   names: ReadonlySet<string>,
   push: (host: string | null) => void,
 ): void {
+  const embedded = telegramMsgUrl(raw);
+  if (embedded) {
+    push(inviteHost(embedded, names));
+    push(deepInviteHost(embedded, names));
+  }
   const text = telegramMsgText(raw);
   if (!text) {
     return;
@@ -481,14 +491,19 @@ function pushMsgTextInvites(
   }
 }
 
-function telegramMsgText(raw: string): string | null {
-  let url: URL;
-  try {
-    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
-  } catch {
+function telegramMsgUrl(raw: string): string | null {
+  if (!isTelegramMsgRaw(raw)) {
     return null;
   }
-  if (!isTelegramMsg(url)) {
+  const embedded = queryValue(raw, "url");
+  if (embedded === null || embedded.length === 0 || embedded.length > 2048) {
+    return null;
+  }
+  return embedded;
+}
+
+function telegramMsgText(raw: string): string | null {
+  if (!isTelegramMsgRaw(raw)) {
     return null;
   }
   const text = queryValue(raw, "text");
@@ -496,6 +511,16 @@ function telegramMsgText(raw: string): string | null {
     return null;
   }
   return text;
+}
+
+function isTelegramMsgRaw(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
+  } catch {
+    return false;
+  }
+  return isTelegramMsg(url);
 }
 
 function isTelegramMsg(url: URL): boolean {
@@ -526,7 +551,7 @@ function isTelegramShare(url: URL): boolean {
     const host = url.hostname.toLowerCase();
     const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
     const command = host.length > 0 ? host : path;
-    return command === "msg_url";
+    return command === "msg_url" || command === "share" || command === "iv";
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return false;
@@ -540,7 +565,12 @@ function isTelegramShare(url: URL): boolean {
     return false;
   }
   const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
-  return path === "/share/url" || path === "/iv";
+  return (
+    path === "/share/url" ||
+    path === "/share" ||
+    path === "/iv" ||
+    path === "/msg/url"
+  );
 }
 
 function linkTokens(text: string): string[] {

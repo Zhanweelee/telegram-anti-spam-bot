@@ -3141,4 +3141,114 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(ordinary.event)).not.toContain("bit.ly");
     expect(JSON.stringify(ordinary.logger.entries)).not.toContain("grp101");
   });
+
+  it("deletes the other telegram share links whose url carries an address", async () => {
+    const screenShare = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "https://cutt.ly/grp102",
+            },
+            from: { id: 102, first_name: "https://tinyurl.com/from102" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "分享", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenShare(
+      7120,
+      -100760,
+      "https://t.me/share?url=https%3A%2F%2Fbit.ly%2Fname102&text=hello",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100760", messageId: "7120" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name102");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from102");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("grp102");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name102",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const address = await screenShare(
+      7121,
+      -100761,
+      "今天站会",
+      "https://t.me/msg/url?url=http%3A%2F%2F203.0.113.9%2Fpath102",
+    );
+    expect(address.result.decision.action).toBe("delete");
+    expect(address.result.decision.reasons).toContain("ip_host");
+    expect(address.event.message?.text).toBe("今天站会");
+    expect(address.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    expect(JSON.stringify(address.event)).not.toContain("path102");
+    expect(JSON.stringify(address.logger.entries)).not.toContain("from102");
+    expect(JSON.stringify(address.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const keyword = await screenShare(
+      7122,
+      -100762,
+      "今天站会",
+      "tg://msg?url=https%3A%2F%2Fexample.com%2Fok102&text=请免费领取礼品&to=durov",
+    );
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(keyword.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.event)).not.toContain("durov");
+    expect(JSON.stringify(keyword.event)).not.toContain("ok102");
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("grp102");
+
+    const username = await screenShare(
+      7123,
+      -100763,
+      "https://t.me/msg?url=https%3A%2F%2Fbit.ly%2Fname102",
+    );
+    expect(username.result.decision.action).toBe("allow");
+    expect(username.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(username.result.decision.evidence)).not.toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(username.logger.entries)).not.toContain("from102");
+  });
 });

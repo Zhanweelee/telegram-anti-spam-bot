@@ -654,6 +654,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp101");
   });
 
+  it("keeps a hostname from the other telegram share links and leaves the path out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 19,
+        message: {
+          message_id: 190,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp102" },
+          from: { id: 102, first_name: "https://tinyurl.com/from102" },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "分享",
+                  url: "https://t.me/share?url=https%3A%2F%2Fbit.ly%2Fname102&text=hello",
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_19",
+      kind: "message",
+      message: {
+        id: "190",
+        text: "今天站会",
+        hosts: ["t.me", "bit.ly"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("name102");
+    expect(dumped).not.toContain("from102");
+    expect(dumped).not.toContain("grp102");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",
