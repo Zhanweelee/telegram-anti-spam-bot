@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### 工具
+
+- GitHub Actions 升到 `actions/checkout@v7`、`actions/setup-node@v7`、`pnpm/action-setup@v6` 和 `actions/github-script@v9`。`cache: pnpm` 仍显式打开。健康报告脚本仍用注入的 `github.rest`。
+
 ### 文档
 
 - D1 免费计划单个数据库的上限是 500 MB，账号合计仍是 5 GB。每次 invocation 最多 50 次查询，`db.batch()` 算一次。见 `docs/limits.md`。
