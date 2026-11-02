@@ -619,7 +619,7 @@ function isTelegramProxy(url: URL): boolean {
     const host = url.hostname.toLowerCase();
     const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
     const command = host.length > 0 ? host : path;
-    return command === "proxy" || command === "socks";
+    return command === "proxy" || command === "socks" || command === "webproxy";
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     return false;
@@ -633,7 +633,7 @@ function isTelegramProxy(url: URL): boolean {
     return false;
   }
   const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
-  return path === "/proxy" || path === "/socks";
+  return path === "/proxy" || path === "/socks" || path === "/webproxy";
 }
 
 function hostname(raw: string): string | null {

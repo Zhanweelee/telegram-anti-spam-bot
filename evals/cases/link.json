@@ -405,5 +405,25 @@
     "id": "tg-username-url",
     "text": "https://t.me/msg?url=https%3A%2F%2Fbit.ly%2Foffer",
     "label": "ham"
+  },
+  {
+    "id": "tg-webproxy-ip",
+    "text": "https://t.me/webproxy?server=203.0.113.9&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-webproxy-short",
+    "text": "tg://webproxy?server=bit.ly%2Foffer&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-webproxy-ordinary",
+    "text": "https://t.me/webproxy?server=proxy.example.com&secret=secret",
+    "label": "ham"
+  },
+  {
+    "id": "tg-web-server",
+    "text": "https://t.me/web?server=203.0.113.9",
+    "label": "ham"
   }
 ]

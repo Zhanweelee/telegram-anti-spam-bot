@@ -3251,4 +3251,112 @@ describe("screenTelegramEvent", () => {
     );
     expect(JSON.stringify(username.logger.entries)).not.toContain("from102");
   });
+
+  it("deletes a telegram web proxy link whose server is an address", async () => {
+    const screenWebProxy = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "https://cutt.ly/grp103",
+            },
+            from: { id: 103, first_name: "https://tinyurl.com/from103" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "网页代理", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenWebProxy(
+      7210,
+      -100770,
+      "https://t.me/webproxy?server=203.0.113.9&secret=SECRET103",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("ip_host");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100770", messageId: "7210" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("SECRET103");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from103");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("grp103");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "SECRET103",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const shortened = await screenWebProxy(
+      7211,
+      -100771,
+      "今天站会",
+      "tg://webproxy?server=bit.ly%2Fname103&secret=SECRET103",
+    );
+    expect(shortened.result.decision.action).toBe("delete");
+    expect(shortened.result.decision.reasons).toContain("short_link");
+    expect(shortened.event.message?.text).toBe("今天站会");
+    expect(shortened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(shortened.event)).not.toContain("name103");
+    expect(JSON.stringify(shortened.event)).not.toContain("SECRET103");
+    expect(JSON.stringify(shortened.logger.entries)).not.toContain("from103");
+    expect(JSON.stringify(shortened.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const ordinary = await screenWebProxy(
+      7212,
+      -100772,
+      "今天站会",
+      "https://t.me/webproxy?server=proxy.example.com&secret=SECRET103",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("SECRET103");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("grp103");
+
+    const reserved = await screenWebProxy(
+      7213,
+      -100773,
+      "https://t.me/web?server=203.0.113.9&secret=SECRET103",
+    );
+    expect(reserved.result.decision.action).toBe("allow");
+    expect(reserved.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(reserved.result.decision.evidence)).not.toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(reserved.logger.entries)).not.toContain("SECRET103");
+  });
 });

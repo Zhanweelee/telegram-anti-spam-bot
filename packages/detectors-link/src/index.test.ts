@@ -704,6 +704,64 @@ describe("link fixtures", () => {
     expect(nearby).toBeNull();
   });
 
+  it("reads the server host from a telegram web proxy link and leaves the secret out", async () => {
+    const detector = createLinkDetector();
+    const secret = "SECRET103";
+    const ip = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=203.0.113.9&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(ip)).not.toContain(secret);
+
+    const shortened = await detector.detect({
+      event: eventFor(`tg://webproxy?server=bit.ly%2Fname103&secret=${secret}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name103");
+    expect(JSON.stringify(shortened)).not.toContain(secret);
+
+    const bare = await detector.detect({
+      event: eventFor("tg:webproxy?server=198.51.100.23"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["ip_host"]);
+    expect(bare?.evidence[0]?.summary).toBe("ip_host:198.51.100.23");
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=proxy.example.com&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        `https://example.com/webproxy?server=203.0.113.9&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const reserved = await detector.detect({
+      event: eventFor("https://t.me/web?server=203.0.113.9"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+  });
+
   it("reads the url inside a telegram share link and leaves the path out", async () => {
     const detector = createLinkDetector();
     const shared = await detector.detect({

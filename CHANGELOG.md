@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-101
+
+- 网页代理链接里的 `server` 按裸 IP 或短链删除这条消息。见 ADR 0134。
+- `secret` 和路径不进证据。`t.me/web` 和其它网站的 `server` 不读。
+- 云额度的基础检测器名单没有改。
+
 ### P3-100
 
 - `t.me/share`、`t.me/msg/url`、`tg://share`、`tg://iv` 和私聊预填链接里的 `url` 按裸 IP、短链或邀请删除这条消息。见 ADR 0133。

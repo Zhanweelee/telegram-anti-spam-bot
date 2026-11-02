@@ -621,6 +621,10 @@
 
 验收：`t.me/share?url=`、`t.me/msg/url`、`tg://share`、`tg://iv` 和 `tg://msg?url=` 的 `url` 是 `bit.ly`、裸 IP 或 `t.me/+` 时删除这条消息。证据只有主机名。路径、`rhash` 和收件人用户名不进证据。`example.com` 保留。`t.me/msg?url=`、`t.me/share/other` 和其它网站的 `url` 不读。再套一层分享链接仍放行。附带句子里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-101 网页代理链接的 server 只留主机名 — done
+
+验收：`t.me/webproxy`、`tg://webproxy` 和 `tg:webproxy` 的 `server` 是裸 IP 或 `bit.ly` 时删除这条消息。证据只有主机名。`secret` 和路径不进证据。`proxy.example.com` 保留。`example.com/webproxy?server=` 和 `t.me/web?server=` 不读。默认名单仍是 ADR 0026。
+
 ## 自升级
 
 ### S0-01 Dependabot、每周 CI、社区模板 — done
@@ -1441,4 +1445,10 @@
 
 - 做了什么：`t.me/share`、`t.me/msg/url`、`tg://share`、`tg://iv` 和私聊预填上的 `url` 只留主机名，短链、裸 IP 或邀请仍走现有链接规则。选择写在 ADR 0133。
 - 学到什么：文档里的第一种分享写法是 `t.me/share?url=`。`t.me/msg?url=` 仍是用户名。再套一层就停住。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-101
+
+- 做了什么：网页代理链接的 `server` 只留主机名，裸 IP 或短链仍走现有链接规则。选择写在 ADR 0134。
+- 学到什么：要连的主机在 `t.me/webproxy` 和 `tg://webproxy` 的 `server` 里。`secret` 是连接材料。`t.me/web` 不是这条路径。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
