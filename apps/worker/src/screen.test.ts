@@ -3734,6 +3734,127 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(thread.event)).not.toContain("bit.ly");
   });
 
+  it("deletes a telegram link whose query name is capitalized", async () => {
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 78001,
+        message: {
+          message_id: 78001,
+          date: 1761955200,
+          chat: {
+            id: -100830,
+            type: "supergroup",
+            title: "https://cutt.ly/grp109",
+          },
+          from: { id: 109, first_name: "https://tinyurl.com/from109" },
+          text: "tg://resolve?DOMAIN=durov&TEXT=https%3A%2F%2F203.0.113.109%2Fname109",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100830", messageId: "78001" },
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain("name109");
+    expect(JSON.stringify(logger.entries)).not.toContain("durov");
+    expect(JSON.stringify(logger.entries)).not.toContain("from109");
+    expect(JSON.stringify(logger.entries)).not.toContain("grp109");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "ip_host:203.0.113.109",
+    );
+
+    const proxy = await normalizeUpdate({
+      update: {
+        update_id: 78002,
+        message: {
+          message_id: 78002,
+          date: 1761955200,
+          chat: { id: -100831, type: "supergroup" },
+          from: { id: 109 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "代理",
+                  url: "https://t.me/proxy?SERVER=bit.ly&secret=sek109",
+                },
+              ],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(proxy.status).toBe("event");
+    if (proxy.status !== "event") {
+      return;
+    }
+    const deleted = await screenTelegramEvent(proxy.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toContain("short_link");
+    expect(proxy.event.message?.text).toBe("今天站会");
+    expect(proxy.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(proxy.event)).not.toContain("sek109");
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 78003,
+        message: {
+          message_id: 78003,
+          date: 1761955200,
+          chat: { id: -100832, type: "supergroup" },
+          from: { id: 109 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "空白",
+                  url: "tg://socks?SERVER=%20&HOST=203.0.113.109",
+                },
+              ],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(blank.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("203.0.113.109");
+  });
+
   it("deletes a phone link whose draft text is an address", async () => {
     const outcome = await normalizeUpdate({
       update: {

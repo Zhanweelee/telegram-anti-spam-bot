@@ -1308,6 +1308,123 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads telegram query names without caring about their case", async () => {
+    const detector = createLinkDetector();
+    const shortened = await detector.detect({
+      event: eventFor(
+        "tg://resolve?DOMAIN=durov&TEXT=https%3A%2F%2Fbit.ly%2Fname109",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name109");
+    expect(JSON.stringify(shortened)).not.toContain("durov");
+
+    const address = await detector.detect({
+      event: eventFor(
+        "tg://resolve?DOMAIN=durov&TEXT=https%3A%2F%2F203.0.113.109%2Fname109",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(address?.reasons).toEqual(["ip_host"]);
+    expect(address?.evidence[0]?.summary).toBe("ip_host:203.0.113.109");
+    expect(JSON.stringify(address)).not.toContain("name109");
+    expect(JSON.stringify(address)).not.toContain("durov");
+
+    const phone = await detector.detect({
+      event: eventFor(
+        "tg://resolve?PHONE=79990001109&TEXT=https%3A%2F%2F203.0.113.110%2Fphone109",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(phone?.reasons).toEqual(["ip_host"]);
+    expect(phone?.evidence[0]?.summary).toBe("ip_host:203.0.113.110");
+    expect(JSON.stringify(phone)).not.toContain("phone109");
+    expect(JSON.stringify(phone)).not.toContain("79990001109");
+
+    const proxy = await detector.detect({
+      event: eventFor("https://t.me/proxy?SERVER=bit.ly&secret=sek109"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(proxy?.reasons).toEqual(["short_link"]);
+    expect(proxy?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(proxy)).not.toContain("sek109");
+
+    const web = await detector.detect({
+      event: eventFor("tg://webproxy?SERVER=&HOST=203.0.113.109"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(web?.reasons).toEqual(["ip_host"]);
+    expect(web?.evidence[0]?.summary).toBe("ip_host:203.0.113.109");
+
+    const code = "AbC109";
+    const invite = await detector.detect({
+      event: eventFor(`tg://join?INVITE=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+
+    const slug = await detector.detect({
+      event: eventFor("tg://addlist?SLUG=list109"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slug?.reasons).toEqual(["invite"]);
+    expect(slug?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(slug)).not.toContain("list109");
+
+    const blank = await detector.detect({
+      event: eventFor("tg://socks?SERVER=%20&HOST=203.0.113.109"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(blank).toBeNull();
+
+    const passport = await detector.detect({
+      event: eventFor(
+        "tg://resolve?DOMAIN=telegrampassport&TEXT=https%3A%2F%2F203.0.113.109%2Fname109",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(passport).toBeNull();
+    expect(JSON.stringify(passport)).not.toContain("name109");
+
+    const preferred = await detector.detect({
+      event: eventFor("tg://proxy?SERVER=example.com&HOST=203.0.113.109"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preferred).toBeNull();
+
+    const first = await detector.detect({
+      event: eventFor("https://t.me/proxy?SERVER=bit.ly&server=example.com"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(first?.reasons).toEqual(["short_link"]);
+    expect(first?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const lower = await detector.detect({
+      event: eventFor(
+        "tg://resolve?domain=durov&text=https%3A%2F%2Fbit.ly%2Fname109",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(lower?.reasons).toEqual(["short_link"]);
+    expect(lower?.evidence[0]?.summary).toBe("short_link:bit.ly");
+  });
+
   it("treats a numeric telegram plus link as a phone draft", async () => {
     const detector = createLinkDetector();
     const bare = await detector.detect({

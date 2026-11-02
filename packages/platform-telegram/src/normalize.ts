@@ -983,11 +983,11 @@ function isUsernameDraft(url: URL): boolean {
     if (command !== "resolve") {
       return false;
     }
-    const domain = url.searchParams.get("domain");
+    const domain = searchParam(url, "domain");
     if (domain !== null && domain.length > 0) {
       return isPublicUsername(domain);
     }
-    const phone = url.searchParams.get("phone");
+    const phone = searchParam(url, "phone");
     return phone !== null && /^\+?\d{1,20}$/.test(phone);
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -1122,6 +1122,17 @@ function isTelegramMsg(url: URL): boolean {
   return command === "msg";
 }
 
+/** 查询名不区分大小写，取第一次出现的值。值保持解析后的样子。 */
+function searchParam(url: URL, name: string): string | null {
+  const wanted = name.toLowerCase();
+  for (const [key, value] of url.searchParams) {
+    if (key.toLowerCase() === wanted) {
+      return value;
+    }
+  }
+  return null;
+}
+
 function queryValue(raw: string, name: string): string | null {
   const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
   const value = match?.[1];
@@ -1196,9 +1207,9 @@ function proxyServerHost(url: URL): string | null {
 }
 
 function proxyAddress(url: URL): string | null {
-  const server = url.searchParams.get("server");
+  const server = searchParam(url, "server");
   if (server === null || (server.length === 0 && isWebProxy(url))) {
-    return url.searchParams.get("host");
+    return searchParam(url, "host");
   }
   return server;
 }
@@ -1247,9 +1258,9 @@ function telegramDeepInvite(
   const command = host.length > 0 ? host : path;
   const code =
     command === "join"
-      ? url.searchParams.get("invite")
+      ? searchParam(url, "invite")
       : command === "addlist"
-        ? url.searchParams.get("slug")
+        ? searchParam(url, "slug")
         : null;
   if (code === null || !/^[A-Za-z0-9_-]{1,128}$/.test(code)) {
     return null;

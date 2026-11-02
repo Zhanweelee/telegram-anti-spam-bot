@@ -550,5 +550,60 @@
     "id": "tg-joinchat-digits",
     "text": "https://t.me/joinchat/79990001107",
     "label": "spam"
+  },
+  {
+    "id": "tg-query-domain-text",
+    "text": "tg://resolve?DOMAIN=durov&TEXT=https%3A%2F%2F203.0.113.109%2Fname",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-phone-text",
+    "text": "tg://resolve?PHONE=79990001109&TEXT=https%3A%2F%2Fbit.ly%2Fname",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-server",
+    "text": "https://t.me/proxy?SERVER=bit.ly&secret=sek",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-server-first",
+    "text": "https://t.me/proxy?SERVER=bit.ly&server=example.com",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-webproxy-host",
+    "text": "tg://webproxy?SERVER=&HOST=203.0.113.109",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-invite",
+    "text": "tg://join?INVITE=AbC109",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-slug",
+    "text": "tg://addlist?SLUG=list109",
+    "label": "spam"
+  },
+  {
+    "id": "tg-query-blank-server",
+    "text": "tg://socks?SERVER=%20&HOST=203.0.113.109",
+    "label": "ham"
+  },
+  {
+    "id": "tg-query-passport",
+    "text": "tg://resolve?DOMAIN=telegrampassport&TEXT=https%3A%2F%2F203.0.113.109%2Fname",
+    "label": "ham"
+  },
+  {
+    "id": "tg-query-server-wins",
+    "text": "tg://proxy?SERVER=example.com&HOST=203.0.113.109",
+    "label": "ham"
+  },
+  {
+    "id": "tg-query-lower-ordinary",
+    "text": "tg://resolve?domain=durov&text=https%3A%2F%2Fexample.com%2Fdocs",
+    "label": "ham"
   }
 ]

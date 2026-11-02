@@ -5833,6 +5833,149 @@ describe("normalizeUpdate", () => {
     expect(threadDump).not.toContain("durov");
   });
 
+  it("reads telegram query names without caring about their case", async () => {
+    const proxy = await normalize({
+      update_id: 7810,
+      message: {
+        message_id: 560,
+        date: 1761955200,
+        chat: { id: -101330, type: "supergroup", title: "keep-title" },
+        from: { id: 109, first_name: "from109" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "代理",
+                url: "https://t.me/proxy?SERVER=203.0.113.109&secret=sek109",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(proxy.status).toBe("event");
+    if (proxy.status !== "event") {
+      return;
+    }
+    expect(proxy.event.message?.text).toBe("今天站会");
+    expect(proxy.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(proxy.event.message?.hosts).toEqual(["t.me", "203.0.113.109"]);
+    expect(proxy.event.message?.invites).toBeUndefined();
+    const proxyDump = JSON.stringify(proxy.event);
+    expect(proxyDump).not.toContain("sek109");
+    expect(proxyDump).not.toContain("from109");
+    expect(proxyDump).not.toContain("keep-title");
+
+    const draft = await normalize({
+      update_id: 7811,
+      message: {
+        message_id: 561,
+        date: 1761955200,
+        chat: { id: -101331, type: "supergroup" },
+        from: { id: 109 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "用户",
+                url: "tg://resolve?DOMAIN=durov&TEXT=https%3A%2F%2Fbit.ly%2Fname109",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(draft.status).toBe("event");
+    if (draft.status !== "event") {
+      return;
+    }
+    expect(draft.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(draft.event.message?.invites).toBeUndefined();
+    const draftDump = JSON.stringify(draft.event);
+    expect(draftDump).not.toContain("name109");
+    expect(draftDump).not.toContain("durov");
+
+    const web = await normalize({
+      update_id: 7812,
+      message: {
+        message_id: 562,
+        date: 1761955200,
+        chat: { id: -101332, type: "supergroup" },
+        from: { id: 109 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "网页",
+                url: "tg://webproxy?SERVER=&HOST=203.0.113.110",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(web.status).toBe("event");
+    if (web.status !== "event") {
+      return;
+    }
+    expect(web.event.message?.hosts).toEqual(["203.0.113.110"]);
+
+    const code = "AbC109";
+    const invite = await normalize({
+      update_id: 7813,
+      message: {
+        message_id: 563,
+        date: 1761955200,
+        chat: { id: -101333, type: "supergroup" },
+        from: { id: 109 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "加入", url: `tg://join?INVITE=${code}` }],
+          ],
+        },
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+
+    const blank = await normalize({
+      update_id: 7814,
+      message: {
+        message_id: 564,
+        date: 1761955200,
+        chat: { id: -101334, type: "supergroup" },
+        from: { id: 109 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "空白",
+                url: "tg://socks?SERVER=%20&HOST=203.0.113.109",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(blank.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("203.0.113.109");
+  });
+
   it("keeps a hostname from a phone draft and leaves the number out", async () => {
     const phrase = "请免费领取礼品";
     const shortened = await normalize({
