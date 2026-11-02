@@ -1905,5 +1905,35 @@
     "id": "lookalike-bare-invite",
     "text": "bit．ly．com/https://t.me/+CODE156",
     "label": "spam"
+  },
+  {
+    "id": "scheme-letter-cyr",
+    "text": "example.comАhttp://bit.ly/offer157",
+    "label": "spam"
+  },
+  {
+    "id": "scheme-letter-wide",
+    "text": "example.comＡhttp://bit.ly/offer157",
+    "label": "spam"
+  },
+  {
+    "id": "scheme-letter-lead",
+    "text": "bАhttp://bit.ly/offer157",
+    "label": "spam"
+  },
+  {
+    "id": "scheme-letter-schemed",
+    "text": "http://example.comАhttp://bit.ly/offer157",
+    "label": "ham"
+  },
+  {
+    "id": "scheme-letter-inside",
+    "text": "bАbit.ly/offer157",
+    "label": "ham"
+  },
+  {
+    "id": "scheme-letter-invite",
+    "text": "example.comАhttps://t.me/+CODE157",
+    "label": "spam"
   }
 ]

@@ -106,6 +106,16 @@ describe("foldHostScan", () => {
       "http://bit.ly\tevil.com",
     );
     expect(foldHostScanKeepingStops("b\u0456t.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("example.com\u0410http://bit.ly")).toBe(
+      "example.com\u0410http://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("example.com\uFF21http://bit.ly")).toBe(
+      "example.com\uFF21http://bit.ly",
+    );
+    expect(foldHostScan("example.com\u0410http://bit.ly")).toBe(
+      "example.comAhttp://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("b\u0410it.ly")).toBe("bAit.ly");
     expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
     expect(foldHostScan("bit[.]ly")).toBe("bit.ly");
   });

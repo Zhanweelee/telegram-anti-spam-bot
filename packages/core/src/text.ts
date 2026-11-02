@@ -115,14 +115,13 @@ export function foldHostScanKeepingGaps(text: string): string {
  * Host fold that leaves Android's stopping characters in place.
  * Percent encodings, bracketed dots, gaps, and a letter after a finished
  * host stay. A letter between two ASCII letters still drops, so `bαit.ly`
- * can match. Lookalike letters still fold. Dot lookalikes stay, so a bare
- * host written with them does not swallow the next URL. The joined scan
- * still turns a separating lookalike into `.`.
+ * can match. A Cyrillic lookalike or fullwidth letter stays when `http://`
+ * or `https://` follows it, so a bare host can end. Other lookalike letters
+ * still fold. Dot lookalikes stay, so a bare host written with them does
+ * not swallow the next URL. The joined scan still folds those letters.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldHostInterruptersAndroidKeeps(
-    foldFullwidthLatin(foldCyrillicLookalikes(text)),
-  );
+  return foldHostInterruptersAndroidKeeps(foldAndroidLetterUnlessScheme(text));
 }
 
 const CYRILLIC_LOOKALIKES: Record<string, string> = {
@@ -273,17 +272,45 @@ export function foldFullwidthLatin(text: string): string {
       out += char;
       continue;
     }
-    if (code >= 0xff21 && code <= 0xff3a) {
-      out += String.fromCodePoint(code - 0xff21 + 0x41);
-      continue;
+    out += fullwidthLatin(code) ?? char;
+  }
+  return out;
+}
+
+/**
+ * Map a Cyrillic lookalike or fullwidth letter to ASCII, unless the next
+ * characters are `http://` or `https://`. Android does not treat that
+ * letter as a word character, so the bare host ends and the URL opens.
+ */
+function foldAndroidLetterUnlessScheme(text: string): string {
+  let out = "";
+  for (let index = 0; index < text.length; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
     }
-    if (code >= 0xff41 && code <= 0xff5a) {
-      out += String.fromCodePoint(code - 0xff41 + 0x61);
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
+    const mapped = CYRILLIC_LOOKALIKES[char] ?? fullwidthLatin(code);
+    if (mapped !== undefined && !startsWithScheme(text, next)) {
+      out += mapped;
+      index = next;
       continue;
     }
     out += char;
+    index = next;
   }
   return out;
+}
+
+function fullwidthLatin(code: number): string | undefined {
+  if (code >= 0xff21 && code <= 0xff3a) {
+    return String.fromCodePoint(code - 0xff21 + 0x41);
+  }
+  if (code >= 0xff41 && code <= 0xff5a) {
+    return String.fromCodePoint(code - 0xff41 + 0x61);
+  }
+  return undefined;
 }
 
 /**
