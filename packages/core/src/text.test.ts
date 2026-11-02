@@ -109,6 +109,26 @@ describe("foldHostScan", () => {
     expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
     expect(foldHostScan("bit[.]ly")).toBe("bit.ly");
   });
+
+  it("keeps a supplementary letter Android leaves out of a label", () => {
+    const greek = "\u{10140}";
+    const latin = "\u{10780}";
+    const cyrillic = "\u{1E030}";
+    expect(foldHostScanKeepingStops(`http://bit.ly${greek}evil.com`)).toBe(
+      `http://bit.ly${greek}evil.com`,
+    );
+    expect(foldHostScanKeepingStops(`http://bit.ly${latin}evil.com`)).toBe(
+      `http://bit.ly${latin}evil.com`,
+    );
+    expect(foldHostScanKeepingStops(`http://bit.ly${cyrillic}evil.com`)).toBe(
+      `http://bit.ly${cyrillic}evil.com`,
+    );
+    expect(foldHostScan(`b${greek}it.ly`)).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("b\u03B1it.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("http://bit.ly\u00A0evil.com")).toBe(
+      "http://bit.ly\u00A0evil.com",
+    );
+  });
 });
 
 describe("foldBracketDots", () => {

@@ -3375,4 +3375,74 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE131");
   });
+
+  it("keeps the host Android opens when a supplementary letter follows", async () => {
+    const detector = createLinkDetector();
+    const path = "offer132";
+    const tail = "tail132.example";
+    const greek = "\u{10140}";
+    const latin = "\u{10780}";
+    const marked = await detector.detect({
+      event: eventFor(`http://bit.ly${greek}${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(marked?.reasons).toEqual(["short_link"]);
+    expect(marked?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(marked)).not.toContain(path);
+    expect(JSON.stringify(marked)).not.toContain(tail);
+    expect(JSON.stringify(marked)).not.toContain(greek);
+
+    const extended = await detector.detect({
+      event: eventFor(`http://bit.ly${latin}${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extended?.reasons).toEqual(["short_link"]);
+    expect(extended?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(extended)).not.toContain(latin);
+
+    const address = "203.0.113.132";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}${greek}${tail}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(tail);
+    expect(JSON.stringify(ip)).not.toContain(greek);
+
+    const joined = await detector.detect({
+      event: eventFor(`http://b${greek}it.ly/keep`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["short_link"]);
+    expect(joined?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(joined)).not.toContain(greek);
+
+    const included = await detector.detect({
+      event: eventFor(`http://bit.ly\u03B1${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(included).toBeNull();
+
+    const plain = await detector.detect({
+      event: eventFor(`http://example.com${greek}${tail}/ok`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor(`https://t.me${greek}/+CODE132`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE132");
+    expect(JSON.stringify(invite)).not.toContain(greek);
+  });
 });

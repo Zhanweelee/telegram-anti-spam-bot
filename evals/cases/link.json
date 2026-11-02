@@ -1070,5 +1070,35 @@
     "id": "encoded-stop-plain",
     "text": "http://example.com%2Etail131.example/ok",
     "label": "ham"
+  },
+  {
+    "id": "omitted-letter-short",
+    "text": "http://bit.ly\uD800\uDD40tail132.example/offer132",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-letter-latin",
+    "text": "http://bit.ly\uD801\uDF80tail132.example/offer132",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-letter-ip",
+    "text": "http://203.0.113.132\uD800\uDD40tail132.example/x",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-letter-joined",
+    "text": "http://b\uD800\uDD40it.ly/keep",
+    "label": "spam"
+  },
+  {
+    "id": "omitted-letter-plain",
+    "text": "http://example.com\uD800\uDD40tail132.example/ok",
+    "label": "ham"
+  },
+  {
+    "id": "omitted-letter-bmp",
+    "text": "http://bit.ly\u03B1tail132.example/offer132",
+    "label": "ham"
   }
 ]

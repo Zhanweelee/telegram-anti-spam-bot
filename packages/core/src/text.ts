@@ -78,12 +78,15 @@ export function foldHostScanKeepingGaps(text: string): string {
 
 /**
  * Host fold that leaves Android's stopping characters in place.
- * Percent encodings, bracketed dots, and gaps stay. Lookalike letters still fold.
+ * Percent encodings, bracketed dots, gaps, and letters outside Android's
+ * label class stay. Lookalike letters still fold.
  * The joined host from `foldHostScan` stays separate.
  */
 export function foldHostScanKeepingStops(text: string): string {
   return foldDotLookalikes(
-    foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+    foldHostInterruptersAndroidKeeps(
+      foldFullwidthLatin(foldCyrillicLookalikes(text)),
+    ),
   );
 }
 
@@ -140,6 +143,61 @@ export function foldHostInterrupters(text: string): string {
     out += char;
   }
   return out;
+}
+
+/**
+ * Drop the same letters when Android keeps them inside a label.
+ * Letters outside `LinkifyPort` label class stay, so the span can end
+ * on the host before them. The joined scan still removes every letter.
+ */
+function foldHostInterruptersAndroidKeeps(text: string): string {
+  let out = "";
+  for (const char of text) {
+    const code = char.codePointAt(0);
+    if (
+      code !== undefined &&
+      code > 0x7f &&
+      androidLabelCode(code) &&
+      HOST_INTERRUPTER.test(char)
+    ) {
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
+/**
+ * Non-ASCII code points in `LinkifyPort.UCS_CHAR_FIXED`.
+ * The caller already skipped ASCII.
+ */
+function androidLabelCode(code: number): boolean {
+  if (
+    code === 0x00a0 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x3000
+  ) {
+    return false;
+  }
+  if (code >= 0x00a0 && code <= 0xd7ff) {
+    return true;
+  }
+  if (code >= 0xf900 && code <= 0xfdcf) {
+    return true;
+  }
+  if (code >= 0xfdf0 && code <= 0xffef) {
+    return true;
+  }
+  if (code >= 0x20000 && code <= 0xdfffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  if (code >= 0xe1000 && code <= 0xefffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  return false;
 }
 
 /**

@@ -30,3 +30,4 @@ Android `LinkifyPort.WEB_URL` 不会跨过 `%` 或 `[`。`http://bit.ly%2Eevil.c
 - `http://bit.ly%2E…`、`http://bit.ly%65…`、`http://bit.ly[.]…` 和 `http://203.0.113.131%2E…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://example.com%2E…` 留着。`b%69t.ly` 和 `bit[.]ly` 仍删除。
 - `https://t.me%2E…/+…` 不改记成邀请。路径和百分号编码不进证据。
+- Android 标签类没有收录的增补字母前，高亮停住的主机名另外留下。见 ADR 0165。
