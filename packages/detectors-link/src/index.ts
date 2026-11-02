@@ -765,6 +765,10 @@ function isUsernameDraft(url: URL): boolean {
   ) {
     return true;
   }
+  if (host === "s.t.me" && parts.length === 1) {
+    const label = parts[0];
+    return label !== undefined && isPublicUsername(label);
+  }
   if (isAppNamePath(host, parts)) {
     return true;
   }
@@ -955,7 +959,9 @@ function isTelegramShare(url: URL): boolean {
     path === "/share/url" ||
     path === "/share" ||
     path === "/iv" ||
-    path === "/msg/url"
+    path === "/msg/url" ||
+    (host === "share.t.me" && path === "/url") ||
+    (host === "msg.t.me" && path === "/url")
   );
 }
 

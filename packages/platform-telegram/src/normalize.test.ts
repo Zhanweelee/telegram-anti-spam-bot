@@ -1147,6 +1147,37 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sub.event)).not.toContain(hidden);
   });
 
+  it("keeps a hostname from an Android label subdomain and leaves the name out", async () => {
+    const address = "203.0.113.117";
+    const hidden = "hidden117";
+    const outcome = await normalize({
+      update_id: 78041,
+      message: {
+        message_id: 78041,
+        date: 1761955200,
+        chat: { id: -100591, type: "supergroup" },
+        from: { id: 117 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://s.t.me/durov?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["s.t.me", address]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+  });
+
   it("keeps a hostname from a preview resolve and leaves the name out", async () => {
     const address = "203.0.113.116";
     const hidden = "hidden116";

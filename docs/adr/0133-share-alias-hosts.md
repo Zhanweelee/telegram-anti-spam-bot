@@ -32,3 +32,4 @@ ADR 0130 读了 `t.me/share/url`、`t.me/iv` 和 `tg://msg_url` 的 `url`。Tele
 - 附带句子里的关键词留着。正文就是这条链接时，链接原文仍在 `message.text`。
 - 再套一层分享链接仍停在外层。`rhash` 和收件人用户名不进证据。
 - 网页代理链接的 `server` 后来由 ADR 0134 只留下主机名。`secret` 和路径仍不进证据。
+- `share.t.me/url` 和 `msg.t.me/url` 后来由 ADR 0149 按这两条分享链接读取。`share.t.me/other` 仍不读。

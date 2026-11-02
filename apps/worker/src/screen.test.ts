@@ -1319,6 +1319,44 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes an Android label subdomain draft and keeps the name out of logs", async () => {
+    const address = "203.0.113.117";
+    const hidden = "hidden117";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 78042,
+        message: {
+          message_id: 78042,
+          date: 1761955200,
+          chat: { id: -100591, type: "supergroup", title: "机密群名" },
+          from: { id: 117 },
+          text: `打开 https://s.t.me/durov?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-02T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      `ip_host:${address}`,
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a preview resolve draft and keeps the name out of logs", async () => {
     const address = "203.0.113.116";
     const hidden = "hidden116";

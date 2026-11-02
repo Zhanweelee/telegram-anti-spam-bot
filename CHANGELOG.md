@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-116
+
+- `s.t.me/用户名`、`share.t.me/url` 和 `msg.t.me/url` 只留主机名。见 ADR 0149。
+- 裸 IP、短链或邀请按现有链接规则删除。用户名和路径不进证据。其它标签仍不读。
+- 云额度的基础检测器名单没有改。
+
 ### P3-115
 
 - `tg://resolve?domain=s&appname=` 的 `text` 只留主机名。见 ADR 0148。

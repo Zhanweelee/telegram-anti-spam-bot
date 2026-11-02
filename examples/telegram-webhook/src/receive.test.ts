@@ -1275,6 +1275,48 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp115");
   });
 
+  it("keeps a hostname from an Android label subdomain and leaves the name out", async () => {
+    const address = "203.0.113.117";
+    const hidden = "hidden117";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 78043,
+        message: {
+          message_id: 78043,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp117" },
+          from: { id: 117, first_name: "https://tinyurl.com/from117" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://s.t.me/durov?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_78043",
+      kind: "message",
+      message: {
+        id: "78043",
+        text: "点这里",
+        hosts: ["s.t.me", address],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("from117");
+    expect(dumped).not.toContain("grp117");
+  });
+
   it("keeps a hostname from a preview resolve and leaves the name out", async () => {
     const address = "203.0.113.116";
     const hidden = "hidden116";

@@ -1635,6 +1635,72 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads a hostname when Android rewrites a label subdomain", async () => {
+    const address = "203.0.113.117";
+    const hidden = "hidden117";
+    const code = "CODE117";
+    const draft = encodeURIComponent(`http://${address}/${hidden}`);
+    const detector = createLinkDetector();
+    const preview = await detector.detect({
+      event: eventFor(`https://s.t.me/durov?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview?.reasons).toEqual(["ip_host"]);
+    expect(preview?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(preview)).not.toContain(hidden);
+    expect(JSON.stringify(preview)).not.toContain("durov");
+    const share = await detector.detect({
+      event: eventFor(`https://share.t.me/url?url=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(share?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://msg.t.me/url?url=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const reserved = await detector.detect({
+      event: eventFor(`https://s.t.me/proxy?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+    const otherHost = await detector.detect({
+      event: eventFor(`https://s.telegram.me/durov?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(otherHost).toBeNull();
+    const otherShare = await detector.detect({
+      event: eventFor(`https://share.t.me/other?url=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(otherShare).toBeNull();
+    const bareShare = await detector.detect({
+      event: eventFor(`https://share.t.me?url=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bareShare).toBeNull();
+    const nested = encodeURIComponent(
+      `https://s.t.me/durov?text=${encodeURIComponent(`http://${address}/x`)}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://s.t.me/spam?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("reads the draft when a preview resolve rewrites domain s", async () => {
     const address = "203.0.113.116";
     const hidden = "hidden116";

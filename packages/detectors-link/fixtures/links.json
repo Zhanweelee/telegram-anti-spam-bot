@@ -294,6 +294,28 @@
     "reason": "ip_host"
   },
   {
+    "name": "android-s-label",
+    "text": "https://s.t.me/durov?text=http%3A%2F%2F203.0.113.117%2Fhidden117",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "android-s-label-reserved",
+    "text": "https://s.t.me/proxy?text=http%3A%2F%2F203.0.113.117%2Fx",
+    "expect": "miss"
+  },
+  {
+    "name": "android-share-label",
+    "text": "https://share.t.me/url?url=http%3A%2F%2F203.0.113.117%2Fx",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "android-share-label-other",
+    "text": "https://share.t.me/other?url=http%3A%2F%2F203.0.113.117%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "preview-resolve-text",
     "text": "tg://resolve?domain=s&appname=durov&text=http%3A%2F%2F203.0.113.116%2Fhidden116",
     "expect": "hit",
