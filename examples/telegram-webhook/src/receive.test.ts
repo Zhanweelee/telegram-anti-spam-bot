@@ -736,6 +736,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp103");
   });
 
+  it("keeps a hostname from the host alias on a telegram proxy link and leaves the secret out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 21,
+        message: {
+          message_id: 210,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp104" },
+          from: { id: 104, first_name: "https://tinyurl.com/from104" },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "代理",
+                  url: "https://t.me/proxy?host=203.0.113.9&port=443&secret=SECRET104",
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_21",
+      kind: "message",
+      message: {
+        id: "210",
+        text: "今天站会",
+        hosts: ["t.me", "203.0.113.9"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("SECRET104");
+    expect(dumped).not.toContain("from104");
+    expect(dumped).not.toContain("grp104");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

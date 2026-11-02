@@ -762,6 +762,95 @@ describe("link fixtures", () => {
     expect(reserved).toBeNull();
   });
 
+  it("reads the host alias on a telegram proxy link and leaves the secret out", async () => {
+    const detector = createLinkDetector();
+    const secret = "SECRET104";
+    const ip = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?host=203.0.113.9&port=443&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(ip)).not.toContain(secret);
+
+    const shortened = await detector.detect({
+      event: eventFor(`tg://webproxy?host=bit.ly%2Fname104&secret=${secret}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name104");
+    expect(JSON.stringify(shortened)).not.toContain(secret);
+
+    const socks = await detector.detect({
+      event: eventFor(
+        "tg:socks?host=198.51.100.23&port=1080&user=user104&pass=pass104",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(socks?.reasons).toEqual(["ip_host"]);
+    expect(socks?.evidence[0]?.summary).toBe("ip_host:198.51.100.23");
+    expect(JSON.stringify(socks)).not.toContain("user104");
+    expect(JSON.stringify(socks)).not.toContain("pass104");
+
+    const serverWins = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?server=example.com&host=203.0.113.9&port=443&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(serverWins).toBeNull();
+
+    const emptyServer = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?server=&host=203.0.113.9&port=443&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(emptyServer).toBeNull();
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        `https://t.me/socks?host=proxy.example.com&port=1080&user=user104`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const named = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?proxy=203.0.113.9&port=443&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+
+    const reserved = await detector.detect({
+      event: eventFor("https://t.me/web?host=203.0.113.9"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        `https://example.com/proxy?host=203.0.113.9&port=443&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+  });
+
   it("reads the url inside a telegram share link and leaves the path out", async () => {
     const detector = createLinkDetector();
     const shared = await detector.detect({

@@ -607,7 +607,7 @@ function proxyServerHost(raw: string): string | null {
   if (!isTelegramProxy(url)) {
     return null;
   }
-  const server = url.searchParams.get("server");
+  const server = url.searchParams.get("server") ?? url.searchParams.get("host");
   if (server === null || server.length === 0) {
     return null;
   }

@@ -30,3 +30,4 @@ Telegram Desktop 的网页代理用 `https://t.me/webproxy` 和 `tg://webproxy` 
 - 网页代理的 `server` 是裸 IP 或默认短链时，现有链接规则删除这条消息。证据仍只有主机名。
 - `proxy.example.com` 留着。`example.com/webproxy?server=` 和 `t.me/web?server=` 仍按外层主机名判断。
 - 正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
+- 没有 `server` 时的 `host` 后来由 ADR 0135 只留下主机名。空的 `server` 仍不改读。

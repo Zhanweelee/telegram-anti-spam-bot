@@ -3359,4 +3359,115 @@ describe("screenTelegramEvent", () => {
     );
     expect(JSON.stringify(reserved.logger.entries)).not.toContain("SECRET103");
   });
+
+  it("deletes a telegram proxy link whose host alias is an address", async () => {
+    const screenHost = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "https://cutt.ly/grp104",
+            },
+            from: { id: 104, first_name: "https://tinyurl.com/from104" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "代理", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenHost(
+      7310,
+      -100780,
+      "https://t.me/proxy?host=203.0.113.9&port=443&secret=SECRET104",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("ip_host");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100780", messageId: "7310" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("SECRET104");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from104");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("grp104");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "SECRET104",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const shortened = await screenHost(
+      7311,
+      -100781,
+      "今天站会",
+      "tg://webproxy?host=bit.ly%2Fname104&secret=SECRET104",
+    );
+    expect(shortened.result.decision.action).toBe("delete");
+    expect(shortened.result.decision.reasons).toContain("short_link");
+    expect(shortened.event.message?.text).toBe("今天站会");
+    expect(shortened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(shortened.event)).not.toContain("name104");
+    expect(JSON.stringify(shortened.event)).not.toContain("SECRET104");
+    expect(JSON.stringify(shortened.logger.entries)).not.toContain("from104");
+    expect(JSON.stringify(shortened.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const ordinary = await screenHost(
+      7312,
+      -100782,
+      "今天站会",
+      "https://t.me/socks?host=proxy.example.com&port=1080&user=user104&pass=pass104",
+    );
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("user104");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("pass104");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("grp104");
+
+    const emptyServer = await screenHost(
+      7313,
+      -100783,
+      "https://t.me/proxy?server=&host=203.0.113.9&port=443&secret=SECRET104",
+    );
+    expect(emptyServer.result.decision.action).toBe("allow");
+    expect(emptyServer.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(emptyServer.result.decision.evidence)).not.toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(emptyServer.logger.entries)).not.toContain(
+      "SECRET104",
+    );
+  });
 });

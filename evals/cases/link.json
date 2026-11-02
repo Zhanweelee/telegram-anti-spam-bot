@@ -425,5 +425,30 @@
     "id": "tg-web-server",
     "text": "https://t.me/web?server=203.0.113.9",
     "label": "ham"
+  },
+  {
+    "id": "tg-proxy-host-ip",
+    "text": "https://t.me/proxy?host=203.0.113.9&port=443&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-webproxy-host-short",
+    "text": "tg://webproxy?host=bit.ly%2Foffer&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-socks-host-ordinary",
+    "text": "https://t.me/socks?host=proxy.example.com&port=1080",
+    "label": "ham"
+  },
+  {
+    "id": "tg-proxy-empty-server",
+    "text": "https://t.me/proxy?server=&host=203.0.113.9&port=443",
+    "label": "ham"
+  },
+  {
+    "id": "tg-proxy-query-name",
+    "text": "https://t.me/proxy?proxy=203.0.113.9&port=443&secret=secret",
+    "label": "ham"
   }
 ]
