@@ -29,4 +29,5 @@ ADR 0030 把 `t.me/addlist/` 记成邀请。Android 的 `LaunchActivity` 在路�
 
 - `https://t.me/folder/…`、`telegram.me/folder/…` 和 `telegram.dog/folder/…` 按现有邀请规则删除。证据仍是 `invite:` 加主机名。
 - `https://t.me/Folder/…`、`https://t.me/folder`、`https://example.com/folder/…` 和 `tg://folder?slug=` 留着。
+- `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 后来由 ADR 0142 记成邀请。
 - 邀请码不进证据。公开的 `t.me/名字` 仍保留。

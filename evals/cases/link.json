@@ -635,5 +635,40 @@
     "id": "tg-folder-bare",
     "text": "https://t.me/folder",
     "label": "ham"
+  },
+  {
+    "id": "tg-prefix-folder",
+    "text": "https://folder.t.me/PREFIX109",
+    "label": "spam"
+  },
+  {
+    "id": "tg-prefix-addlist",
+    "text": "https://addlist.t.me/PREFIX109/",
+    "label": "spam"
+  },
+  {
+    "id": "tg-prefix-joinchat",
+    "text": "https://joinchat.t.me/PREFIX109",
+    "label": "spam"
+  },
+  {
+    "id": "tg-prefix-bare",
+    "text": "https://folder.t.me",
+    "label": "ham"
+  },
+  {
+    "id": "tg-prefix-me",
+    "text": "https://folder.telegram.me/PREFIX109",
+    "label": "ham"
+  },
+  {
+    "id": "tg-prefix-user",
+    "text": "https://durov.t.me/PREFIX109",
+    "label": "ham"
+  },
+  {
+    "id": "tg-prefix-share",
+    "text": "https://share.t.me/x?url=https%3A%2F%2F203.0.113.109%2Fhidden",
+    "label": "ham"
   }
 ]

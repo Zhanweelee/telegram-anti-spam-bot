@@ -341,11 +341,24 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
     /^\/\+[A-Za-z0-9_-]{1,128}$/.test(path) ||
     /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
     /^\/addlist\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
-    /^\/folder\/[A-Za-z0-9_-]{1,128}$/.test(path)
+    /^\/folder\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
+    isAndroidPrefixInvite(host, path)
   ) {
     return host;
   }
   return null;
+}
+
+/** Android 把 `folder.t.me/码` 收成 `t.me/folder/码`。只认这三枚标签。 */
+function isAndroidPrefixInvite(host: string, path: string): boolean {
+  if (!host.endsWith(".t.me")) {
+    return false;
+  }
+  const label = host.slice(0, -".t.me".length);
+  if (label !== "folder" && label !== "addlist" && label !== "joinchat") {
+    return false;
+  }
+  return /^\/[A-Za-z0-9_-]{1,128}$/.test(path);
 }
 
 function isTelegramPhonePath(host: string, path: string): boolean {

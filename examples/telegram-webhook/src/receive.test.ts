@@ -1024,6 +1024,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp108");
   });
 
+  it("keeps a hostname from an android prefix invite and leaves the code out", async () => {
+    const code = "PREFIX109";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 78017,
+        message: {
+          message_id: 78017,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp109" },
+          from: { id: 109, first_name: "https://tinyurl.com/from109" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://addlist.t.me/${code}/`,
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_78017",
+      kind: "message",
+      message: {
+        id: "78017",
+        text: "点这里",
+        hosts: ["addlist.t.me"],
+        invites: ["addlist.t.me"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("from109");
+    expect(dumped).not.toContain("grp109");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

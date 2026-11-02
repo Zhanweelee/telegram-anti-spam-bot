@@ -795,6 +795,67 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(capital.event)).not.toContain(code);
   });
 
+  it("marks an android prefix invite and leaves the code out", async () => {
+    const code = "PREFIX109";
+    const outcome = await normalize({
+      update_id: 78014,
+      message: {
+        message_id: 78014,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 109 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://folder.t.me/${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://folder.telegram.me/${code}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.invites).toEqual(["folder.t.me"]);
+    expect(outcome.event.message?.hosts).toEqual([
+      "folder.t.me",
+      "folder.telegram.me",
+    ]);
+    expect(JSON.stringify(outcome.event)).not.toContain(code);
+    const bare = await normalize({
+      update_id: 78015,
+      message: {
+        message_id: 78015,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 109 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "https://addlist.t.me",
+          },
+        ],
+      },
+    });
+    expect(bare.status).toBe("event");
+    if (bare.status !== "event") {
+      return;
+    }
+    expect(bare.event.message?.invites).toBeUndefined();
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

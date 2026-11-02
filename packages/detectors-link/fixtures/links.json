@@ -210,6 +210,34 @@
     "expect": "miss"
   },
   {
+    "name": "android-prefix-folder",
+    "text": "https://folder.t.me/PREFIX109",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "android-prefix-addlist",
+    "text": "https://addlist.t.me/PREFIX109",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "android-prefix-joinchat",
+    "text": "https://joinchat.t.me/PREFIX109",
+    "expect": "hit",
+    "reason": "invite"
+  },
+  {
+    "name": "android-prefix-bare",
+    "text": "https://folder.t.me",
+    "expect": "miss"
+  },
+  {
+    "name": "android-prefix-other-host",
+    "text": "https://folder.telegram.me/PREFIX109",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-109
+
+- `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 上的一段邀请码记成邀请。见 ADR 0142。
+- 证据只有主机名。没有第二段、`telegram.me` 上的同名子域和普通用户名子域留着。
+- 云额度的基础检测器名单没有改。
+
 ### P3-108
 
 - `t.me/folder/`、`telegram.me/folder/` 和 `telegram.dog/folder/` 记成邀请。见 ADR 0141。
