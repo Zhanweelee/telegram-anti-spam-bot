@@ -1045,5 +1045,30 @@
     "id": "gap-stop-plain",
     "text": "http://example.com\ttail130.example/ok",
     "label": "ham"
+  },
+  {
+    "id": "encoded-stop-short",
+    "text": "http://bit.ly%2Etail131.example/offer131",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-stop-letter",
+    "text": "http://bit.ly%65tail131.example/offer131",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-stop-ip",
+    "text": "http://203.0.113.131%2Etail131.example/x",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-stop-bracket",
+    "text": "http://bit.ly[.]tail131.example/offer131",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-stop-plain",
+    "text": "http://example.com%2Etail131.example/ok",
+    "label": "ham"
   }
 ]

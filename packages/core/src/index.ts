@@ -267,6 +267,7 @@ export {
   foldHostInterrupters,
   foldHostScan,
   foldHostScanKeepingGaps,
+  foldHostScanKeepingStops,
   foldInterpuncts,
   foldMatchText,
 } from "./text.js";

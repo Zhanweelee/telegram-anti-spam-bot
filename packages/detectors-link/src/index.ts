@@ -4,7 +4,7 @@ import {
   type DetectorHit,
   defineDetector,
   foldHostScan,
-  foldHostScanKeepingGaps,
+  foldHostScanKeepingStops,
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
@@ -89,7 +89,7 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         ),
       );
       const compared = foldHostScan(text);
-      const shaped = foldHostScanKeepingGaps(text);
+      const shaped = foldHostScanKeepingStops(text);
       const invites = mergeHosts(
         extractInviteHosts(compared, inviteNames),
         message?.invites,

@@ -76,6 +76,17 @@ export function foldHostScanKeepingGaps(text: string): string {
   return foldHostTail(foldHostShape(text));
 }
 
+/**
+ * Host fold that leaves Android's stopping characters in place.
+ * Percent encodings, bracketed dots, and gaps stay. Lookalike letters still fold.
+ * The joined host from `foldHostScan` stays separate.
+ */
+export function foldHostScanKeepingStops(text: string): string {
+  return foldDotLookalikes(
+    foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+  );
+}
+
 const CYRILLIC_LOOKALIKES: Record<string, string> = {
   "\u0406": "I",
   "\u0410": "A",
