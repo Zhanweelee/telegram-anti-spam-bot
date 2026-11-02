@@ -856,6 +856,120 @@ describe("normalizeUpdate", () => {
     expect(bare.event.message?.invites).toBeUndefined();
   });
 
+  it("marks a business chat link and leaves the slug out", async () => {
+    const code = "BIZCHAT123";
+    const outcome = await normalize({
+      update_id: 2150,
+      message: {
+        message_id: 2150,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 123 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/m/${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://m.t.me/${code}`,
+          },
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://message?slug=${code}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.invites).toEqual(["t.me", "m.t.me"]);
+    expect(outcome.event.message?.hosts).toEqual(["t.me", "m.t.me"]);
+    expect(JSON.stringify(outcome.event)).not.toContain(code);
+    const capital = await normalize({
+      update_id: 2151,
+      message: {
+        message_id: 2151,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 123 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://telegram.dog/M/${code}`,
+          },
+        ],
+      },
+    });
+    expect(capital.status).toBe("event");
+    if (capital.status !== "event") {
+      return;
+    }
+    expect(capital.event.message?.invites).toEqual(["telegram.dog"]);
+    const slash = await normalize({
+      update_id: 2152,
+      message: {
+        message_id: 2152,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 123 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/m/${code}/`,
+          },
+        ],
+      },
+    });
+    expect(slash.status).toBe("event");
+    if (slash.status !== "event") {
+      return;
+    }
+    expect(slash.event.message?.invites).toBeUndefined();
+    const query = await normalize({
+      update_id: 2153,
+      message: {
+        message_id: 2153,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 123 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/m/${code}?text=https%3A%2F%2Fbit.ly%2Fhidden123`,
+          },
+        ],
+      },
+    });
+    expect(query.status).toBe("event");
+    if (query.status !== "event") {
+      return;
+    }
+    expect(query.event.message?.invites).toEqual(["t.me"]);
+    expect(query.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(query.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(query.event)).not.toContain(code);
+    expect(JSON.stringify(query.event)).not.toContain("hidden123");
+  });
+
   it("marks a capitalized joinchat path and leaves the code out", async () => {
     const code = "CASE110";
     const outcome = await normalize({

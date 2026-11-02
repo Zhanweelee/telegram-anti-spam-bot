@@ -645,6 +645,77 @@ describe("link fixtures", () => {
     expect(user).toBeNull();
   });
 
+  it("treats a business chat link as an invite and keeps the slug out", async () => {
+    const code = "BIZCHAT123";
+    const detector = createLinkDetector();
+    const path = await detector.detect({
+      event: eventFor(`打开 https://t.me/m/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(path?.reasons).toEqual(["invite"]);
+    expect(path?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(path)).not.toContain(code);
+    const dotted = await detector.detect({
+      event: eventFor("https://telegram.dog/M/ab.cd"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.evidence[0]?.summary).toBe("invite:telegram.dog");
+    const prefix = await detector.detect({
+      event: eventFor(`https://m.t.me/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefix?.evidence[0]?.summary).toBe("invite:m.t.me");
+    const deep = await detector.detect({
+      event: eventFor(`tg://message?slug=${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("invite:t.me");
+    const bare = await detector.detect({
+      event: eventFor("https://t.me/m"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/m/${code}/`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/m/${code}/more`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const other = await detector.detect({
+      event: eventFor(`https://example.com/m/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(`https://m.telegram.me/${code}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    const query = await detector.detect({
+      event: eventFor(
+        `https://t.me/m/${code}?text=https%3A%2F%2Fbit.ly%2Fhidden123`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(query?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(query)).not.toContain("bit.ly");
+    expect(JSON.stringify(query)).not.toContain("hidden123");
+  });
+
   it("treats a capitalized joinchat or addlist path as an invite and keeps the code out", async () => {
     const code = "CASE110";
     const detector = createLinkDetector();

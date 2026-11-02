@@ -33,3 +33,4 @@ ADR 0141 把小写 `t.me/folder/` 记成邀请。Android 的 `LaunchActivity` �
 - `JoinChat` 和 `AddList` 后来由 ADR 0143 不区分大小写。`Folder` 仍只认小写。
 - `t.me/%20`、`telegram.me/%20` 和 `telegram.dog/%20` 后来由 ADR 0144 记成邀请。末尾斜杠、紧挨着的 `#` 和子域仍不记。
 - 邀请码不进证据。公开的 `t.me/名字` 仍保留。
+- `m.t.me/` 后来由 ADR 0156 记成业务聊天链接。`share.t.me` 仍不解开。

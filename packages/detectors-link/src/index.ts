@@ -315,10 +315,14 @@ function canonicalDeepInvite(url: URL): string | null {
   const code =
     command === "join"
       ? searchParam(url, "invite")
-      : command === "addlist"
+      : command === "addlist" || command === "message"
         ? searchParam(url, "slug")
         : null;
-  if (code === null || !/^[A-Za-z0-9_-]{1,128}$/.test(code)) {
+  const pattern =
+    command === "message"
+      ? /^[A-Za-z0-9._-]{1,128}$/
+      : /^[A-Za-z0-9_-]{1,128}$/;
+  if (code === null || !pattern.test(code)) {
     return null;
   }
   return "t.me";
@@ -336,7 +340,8 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
   if (!matchesHost(host, names)) {
     return null;
   }
-  const path = url.pathname.replace(/\/+$/, "") || "/";
+  const rawPath = url.pathname || "/";
+  const path = rawPath.replace(/\/+$/, "") || "/";
   if (isTelegramPhonePath(host, path)) {
     return null;
   }
@@ -346,11 +351,24 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
     /^\/addlist\/[A-Za-z0-9_-]{1,128}$/i.test(path) ||
     /^\/folder\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
     isAndroidPrefixInvite(host, path) ||
+    isBusinessChatLink(host, rawPath) ||
     isPercentSpaceInvite(withScheme, host)
   ) {
     return host;
   }
   return null;
+}
+
+/** 桌面端把 `t.me/m/短码` 收成 `tg://message`。末尾斜杠不算。 */
+function isBusinessChatLink(host: string, path: string): boolean {
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  if (
+    (bare === "t.me" || bare === "telegram.me" || bare === "telegram.dog") &&
+    /^\/m\/[A-Za-z0-9._-]{1,128}$/i.test(path)
+  ) {
+    return true;
+  }
+  return host === "m.t.me" && /^\/[A-Za-z0-9._-]{1,128}$/i.test(path);
 }
 
 /** 桌面端把 `t.me/%20邀请码` 收成 `tg://join`。末尾斜杠和 `#` 不算。 */

@@ -885,5 +885,50 @@
     "id": "android-span-docs",
     "text": "http://example.com\u2215docs",
     "label": "ham"
+  },
+  {
+    "id": "tg-business-chat",
+    "text": "https://t.me/m/BIZCHAT123",
+    "label": "spam"
+  },
+  {
+    "id": "tg-business-chat-case",
+    "text": "https://telegram.dog/M/ab.cd",
+    "label": "spam"
+  },
+  {
+    "id": "tg-business-prefix",
+    "text": "https://m.t.me/BIZCHAT123",
+    "label": "spam"
+  },
+  {
+    "id": "tg-business-deep",
+    "text": "tg://message?slug=BIZCHAT123",
+    "label": "spam"
+  },
+  {
+    "id": "tg-business-bare",
+    "text": "https://t.me/m",
+    "label": "ham"
+  },
+  {
+    "id": "tg-business-slash",
+    "text": "https://t.me/m/BIZCHAT123/",
+    "label": "ham"
+  },
+  {
+    "id": "tg-business-extra",
+    "text": "https://t.me/m/BIZCHAT123/more",
+    "label": "ham"
+  },
+  {
+    "id": "tg-business-other",
+    "text": "https://example.com/m/BIZCHAT123",
+    "label": "ham"
+  },
+  {
+    "id": "tg-business-me",
+    "text": "https://m.telegram.me/BIZCHAT123",
+    "label": "ham"
   }
 ]
