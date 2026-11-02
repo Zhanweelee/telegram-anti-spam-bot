@@ -785,5 +785,25 @@
     "id": "tg-user-app-extra",
     "text": "https://t.me/durov/shop/more?text=http%3A%2F%2F203.0.113.114%2Fx",
     "label": "ham"
+  },
+  {
+    "id": "tg-long-app-text",
+    "text": "https://t.me/durov/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-long-subdomain-post",
+    "text": "https://durov.t.me/99999999999999999?text=http%3A%2F%2F203.0.113.115%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-long-passport-segment",
+    "text": "https://t.me/telegrampassport/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?callback_url=http%3A%2F%2F203.0.113.115%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-long-subdomain-app",
+    "text": "https://durov.t.me/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fx",
+    "label": "ham"
   }
 ]

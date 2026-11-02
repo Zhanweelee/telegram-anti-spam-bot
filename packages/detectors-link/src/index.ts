@@ -673,7 +673,7 @@ function isPassportSubdomain(raw: string, url: URL): boolean {
     return true;
   }
   const only = parts[0];
-  return parts.length === 1 && only !== undefined && /^\d{1,16}$/.test(only);
+  return parts.length === 1 && only !== undefined && /^\d+$/.test(only);
 }
 
 function isPassportPath(parts: readonly string[]): boolean {
@@ -684,20 +684,18 @@ function isPassportPath(parts: readonly string[]): boolean {
     return true;
   }
   if (parts.length === 2) {
-    return /^[A-Za-z0-9._-]{1,128}$/.test(parts[1] ?? "");
+    return /^[A-Za-z0-9._-]+$/.test(parts[1] ?? "");
   }
   if (parts.length === 3) {
     const mid = (parts[1] ?? "").toLowerCase();
     const last = (parts[2] ?? "").toLowerCase();
-    if (mid === "s" && (/^\d{1,16}$/.test(last) || last === "live")) {
+    if (mid === "s" && (/^\d+$/.test(last) || last === "live")) {
       return true;
     }
-    if ((mid === "a" || mid === "c") && /^\d{1,16}$/.test(last)) {
+    if ((mid === "a" || mid === "c") && /^\d+$/.test(last)) {
       return true;
     }
-    return (
-      /^\d{1,16}$/.test(parts[1] ?? "") && /^\d{1,16}$/.test(parts[2] ?? "")
-    );
+    return /^\d+$/.test(parts[1] ?? "") && /^\d+$/.test(parts[2] ?? "");
   }
   return false;
 }
@@ -792,7 +790,7 @@ function isUserSubdomainPath(parts: readonly string[]): boolean {
     return true;
   }
   const only = parts[0];
-  return parts.length === 1 && only !== undefined && /^\d{1,16}$/.test(only);
+  return parts.length === 1 && only !== undefined && /^\d+$/.test(only);
 }
 
 /** 桌面端把用户名后的一段收成 appname。对方不是 bot 时仍写入草稿。 */
@@ -806,8 +804,8 @@ function isAppNamePath(host: string, parts: readonly string[]): boolean {
     name !== undefined &&
     app !== undefined &&
     isPublicUsername(name) &&
-    /^[A-Za-z0-9._-]{1,128}$/.test(app) &&
-    !/^\d{1,16}$/.test(app)
+    /^[A-Za-z0-9._-]+$/.test(app) &&
+    !/^\d+$/.test(app)
   );
 }
 
@@ -821,7 +819,7 @@ function isUserPostPath(host: string, parts: readonly string[]): boolean {
     name !== undefined &&
     post !== undefined &&
     isPublicUsername(name) &&
-    /^\d{1,16}$/.test(post)
+    /^\d+$/.test(post)
   );
 }
 

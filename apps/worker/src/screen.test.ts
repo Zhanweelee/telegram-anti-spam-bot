@@ -1280,6 +1280,45 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes a long desktop path draft and keeps the segment out of logs", async () => {
+    const address = "203.0.113.115";
+    const hidden = "hidden115";
+    const app = "b".repeat(129);
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 78036,
+        message: {
+          message_id: 78036,
+          date: 1761955200,
+          chat: { id: -100590, type: "supergroup", title: "机密群名" },
+          from: { id: 115 },
+          text: `打开 https://t.me/durov/${app}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-02T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      `ip_host:${address}`,
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(app);
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("deletes a short link and keeps the path out of the decision", async () => {
     const path = "secretpath";
     const result = await screenTelegramEvent(

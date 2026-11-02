@@ -1009,6 +1009,68 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads drafts and passport callbacks on long desktop path segments", async () => {
+    const address = "203.0.113.115";
+    const hidden = "hidden115";
+    const app = "a".repeat(129);
+    const post = "9".repeat(17);
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`http://${address}/${hidden}`);
+    const hit = await detector.detect({
+      event: eventFor(`https://t.me/durov/${app}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["ip_host"]);
+    expect(hit?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(hit)).not.toContain(hidden);
+    expect(JSON.stringify(hit)).not.toContain(app);
+    const sub = await detector.detect({
+      event: eventFor(`https://durov.t.me/${post}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const callback = encodeURIComponent(`http://${address}/${hidden}`);
+    const passport = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/${app}?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(passport?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(passport)).not.toContain(app);
+    const thread = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/${post}/${post}?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(thread?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const subPassport = await detector.detect({
+      event: eventFor(
+        `https://telegrampassport.t.me/${post}?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(subPassport?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const subApp = await detector.detect({
+      event: eventFor(`https://durov.t.me/${app}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(subApp).toBeNull();
+    const userThread = await detector.detect({
+      event: eventFor(`https://t.me/durov/${post}/${post}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(userThread).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();

@@ -1088,6 +1088,65 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sub.event)).not.toContain(hidden);
   });
 
+  it("keeps a hostname from a long desktop path segment", async () => {
+    const address = "203.0.113.115";
+    const hidden = "hidden115";
+    const app = "a".repeat(129);
+    const post = "9".repeat(17);
+    const draft = encodeURIComponent(`http://${address}/${hidden}`);
+    const outcome = await normalize({
+      update_id: 78034,
+      message: {
+        message_id: 78034,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 115 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov/${app}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(app);
+    const sub = await normalize({
+      update_id: 78035,
+      message: {
+        message_id: 78035,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 115 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://durov.t.me/${post}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(sub.status).toBe("event");
+    if (sub.status !== "event") {
+      return;
+    }
+    expect(sub.event.message?.hosts).toEqual(["durov.t.me", address]);
+    expect(JSON.stringify(sub.event)).not.toContain(post);
+    expect(JSON.stringify(sub.event)).not.toContain(hidden);
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

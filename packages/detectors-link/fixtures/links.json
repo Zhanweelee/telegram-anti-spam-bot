@@ -288,6 +288,17 @@
     "expect": "miss"
   },
   {
+    "name": "long-app-text",
+    "text": "https://t.me/durov/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fhidden115",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "long-subdomain-app",
+    "text": "https://durov.t.me/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

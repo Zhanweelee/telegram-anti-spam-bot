@@ -31,3 +31,4 @@ ADR 0137 和 ADR 0139 不读 Passport 上的 `text`。桌面端取消这份表�
 - `https://t.me/telegrampassport?callback_url=`、`tg://passport?callback_url=` 和 `https://telegrampassport.t.me?callback_url=` 里的裸 IP、默认短链或邀请按现有链接规则删除。证据仍只有主机名。
 - `example.com`、大小写不对的 `TelegramPassport`、对不上的多段路径和只有 `text` 的 Passport 链接留着。
 - 再套一层 Passport 链接仍放行。`nonce` 和路径不进证据。
+- 附加段和数字路径后来由 ADR 0147 去掉 16 和 128 的上限。`callback_url` 仍只留主机名。
