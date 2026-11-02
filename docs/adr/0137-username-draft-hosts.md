@@ -38,4 +38,5 @@ Android 在打开用户对话时把这个 `text` 放进 `start_text`。桌面端
 - 一段数字的 `t.me/用户名/123` 和 `用户名.t.me` 后来由 ADR 0139 读取 `text`。用户名后再加一段应用名后来由 ADR 0146 读取 `text`。讨论串、子域上的应用名和 Passport 的 `text` 仍不读。
 - `domain` 和 `phone` 后来由 ADR 0140 不区分大小写，取第一次出现的值。Passport 仍不读 `text`。
 - Passport 的 `callback_url` 后来由 ADR 0145 只留主机名。`nonce`、公钥和路径仍不进证据。
+- `tg://resolve?domain=s&appname=` 后来由 ADR 0148 改写成用户名后再读 `text`。`domain` 必须正好是小写 `s`。
 - 其它子域上的单段路径后来由 ADR 0146 不再读取。精确主机和一层 `www.` 上的单段公开用户名仍读。

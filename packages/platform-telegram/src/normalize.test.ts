@@ -1147,6 +1147,38 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sub.event)).not.toContain(hidden);
   });
 
+  it("keeps a hostname from a preview resolve and leaves the name out", async () => {
+    const address = "203.0.113.116";
+    const hidden = "hidden116";
+    const outcome = await normalize({
+      update_id: 78038,
+      message: {
+        message_id: 78038,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 116 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://resolve?domain=s&appname=durov&text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["203.0.113.116"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+    expect(dumped).not.toContain("appname");
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

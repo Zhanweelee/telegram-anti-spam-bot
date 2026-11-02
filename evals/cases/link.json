@@ -805,5 +805,20 @@
     "id": "tg-long-subdomain-app",
     "text": "https://durov.t.me/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fx",
     "label": "ham"
+  },
+  {
+    "id": "tg-preview-resolve",
+    "text": "tg://resolve?domain=s&appname=durov&text=http%3A%2F%2F203.0.113.116%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-preview-resolve-dotted",
+    "text": "tg://resolve?domain=s&appname=my.bot&text=http%3A%2F%2F203.0.113.116%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-preview-resolve-empty",
+    "text": "tg://resolve?domain=s&text=http%3A%2F%2F203.0.113.116%2Fx",
+    "label": "ham"
   }
 ]

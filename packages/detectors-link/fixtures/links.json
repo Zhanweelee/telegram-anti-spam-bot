@@ -294,6 +294,17 @@
     "reason": "ip_host"
   },
   {
+    "name": "preview-resolve-text",
+    "text": "tg://resolve?domain=s&appname=durov&text=http%3A%2F%2F203.0.113.116%2Fhidden116",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "preview-resolve-dotted",
+    "text": "tg://resolve?domain=s&appname=my.bot&text=http%3A%2F%2F203.0.113.116%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "long-subdomain-app",
     "text": "https://durov.t.me/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=http%3A%2F%2F203.0.113.115%2Fx",
     "expect": "miss"

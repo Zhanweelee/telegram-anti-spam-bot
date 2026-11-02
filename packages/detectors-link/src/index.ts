@@ -727,6 +727,10 @@ function isUsernameDraft(url: URL): boolean {
     }
     const domain = searchParam(url, "domain");
     if (domain !== null && domain.length > 0) {
+      if (domain === "s") {
+        const appname = searchParam(url, "appname");
+        return appname !== null && isPublicUsername(appname);
+      }
       return isPublicUsername(domain);
     }
     const phone = searchParam(url, "phone");

@@ -1635,6 +1635,66 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads the draft when a preview resolve rewrites domain s", async () => {
+    const address = "203.0.113.116";
+    const hidden = "hidden116";
+    const code = "CODE116";
+    const draft = encodeURIComponent(`http://${address}/${hidden}`);
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&appname=durov&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["ip_host"]);
+    expect(hit?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(hit)).not.toContain(hidden);
+    expect(JSON.stringify(hit)).not.toContain("durov");
+    const bare = await detector.detect({
+      event: eventFor(`tg:resolve?DOMAIN=s&APPNAME=Durov&TEXT=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const invite = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=s&appname=durov&text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const dotted = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&appname=my.bot&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted).toBeNull();
+    const reserved = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&appname=proxy&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+    const empty = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(empty).toBeNull();
+    const nested = encodeURIComponent(
+      `tg://resolve?domain=s&appname=durov&text=${encodeURIComponent(`http://${address}/x`)}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&appname=spam&text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("reads the draft on a telegram username link and leaves the path out", async () => {
     const detector = createLinkDetector();
     const shortened = await detector.detect({
