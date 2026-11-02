@@ -720,8 +720,9 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `http://` or `https://` URL that letter still maps.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * A Greek, Cyrillic, Armenian, or non-ASCII Latin letter stays when
- * Android still includes it in a schemed host. The same letter before
- * `#`, `@`, or a space still drops.
+ * Android still includes it in a schemed host, including a label after a
+ * dot. The same letter before `#`, `@`, a space, or an empty label still
+ * drops.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
@@ -932,8 +933,9 @@ function isHostInterrupter(char: string, code: number): boolean {
  * keeps in a label stays. A character Android leaves out of a label still
  * drops. A mapped letter after a finished bare host stays, so the next
  * ASCII letters do not glue onto that host. A run Android still includes
- * in a schemed host stays, so that host is not read as the shortener in
- * front. A run before `#`, `@`, or a space still drops. These letters are
+ * in a schemed host stays, including a label after a dot, so that host is
+ * not read as the shortener in front. A run before `#`, `@`, or a space
+ * still drops. An empty label still drops. These letters are
  * removed, not mapped.
  */
 function lastSchemeIndex(out: string): number {
@@ -948,10 +950,12 @@ function lastSchemeIndex(out: string): number {
 
 /**
  * The letter run is still inside the schemed host Android highlights.
- * Dropping it would open the shortener or address in front.
+ * A dot after that host can start another label. Dropping the run would
+ * open the shortener or address in front. An empty label does not.
  */
 function schemedLetterStays(out: string, run: string, rest: string): boolean {
-  if (!finishedHostIsSchemed(out) || run.length === 0) {
+  const dotted = out.endsWith(".") && finishedHostIsSchemed(out.slice(0, -1));
+  if ((!finishedHostIsSchemed(out) && !dotted) || run.length === 0) {
     return false;
   }
   const start = lastSchemeIndex(out);

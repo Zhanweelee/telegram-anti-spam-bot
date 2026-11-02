@@ -8494,4 +8494,82 @@ describe("link fixtures", () => {
     ]);
     expect(JSON.stringify(suffix)).not.toContain(path);
   });
+
+  it("keeps a dotted script label on a schemed host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer192";
+    const greek = "\u03B1";
+    const kept = [
+      `http://bit.ly.${greek}/${path}`,
+      `https://t.co.\u0442?${path}`,
+      `http://bit.ly.${greek}`,
+      `http://bit.ly.${greek}:80/${path}`,
+      `http://www.bit.ly.${greek}/${path}`,
+      `http://203.0.113.10.\u0561/${path}`,
+      `http://user:pass@bit.ly.${greek}/${path}`,
+      `see http://bit.ly.\u0153/${path}`,
+      `http://bit.ly.${greek}${greek}/${path}`,
+      `http://bit.ly.${greek}/http://t.co/${path}`,
+      `http://bit.ly.${greek}.evil.com/${path}`,
+      `http://bit.ly.${greek}com/${path}`,
+      `http://example.com.${greek}/http://bit.ly/${path}`,
+      `http://bit.ly.${greek.repeat(63)}/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      [`bit.ly.${greek}/${path}`, "short_link:bit.ly"],
+      [`www.bit.ly.${greek}/${path}`, "short_link:www.bit.ly"],
+      [`203.0.113.10.${greek}/${path}`, "ip_host:203.0.113.10"],
+      [`http://bit.ly.${greek}#${path}`, "short_link:bit.ly"],
+      [`http://bit.ly.${greek}@evil.com/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly.${greek} evil.com/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly..${greek}/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly.${greek}:999999/${path}`, "short_link:bit.ly"],
+      [`http://bit.ly.${greek.repeat(64)}/${path}`, "short_link:bit.ly"],
+      [`http://b${greek}it.ly/${path}`, "short_link:bit.ly"],
+    ] as const;
+    for (const [text, summary] of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toEqual([summary]);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const later = await detector.detect({
+      event: eventFor(`http://bit.ly.${greek}/${path} http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(later?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:t.co",
+    ]);
+    expect(JSON.stringify(later)).not.toContain(path);
+
+    const suffix = await detector.detect({
+      event: eventFor(`http://bit.ly.${greek}.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly.xn--mxa.bit.ly",
+    ]);
+    expect(JSON.stringify(suffix)).not.toContain(path);
+  });
 });

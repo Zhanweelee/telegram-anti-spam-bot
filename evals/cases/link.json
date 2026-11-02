@@ -3205,5 +3205,40 @@
     "id": "script-suffix",
     "text": "http://bit.ly\u03B1.bit.ly/offer191",
     "label": "spam"
+  },
+  {
+    "id": "dotted-script-path",
+    "text": "http://bit.ly.\u03B1/offer192",
+    "label": "ham"
+  },
+  {
+    "id": "dotted-script-query",
+    "text": "https://t.co.\u0442?offer192",
+    "label": "ham"
+  },
+  {
+    "id": "dotted-script-address",
+    "text": "http://203.0.113.10.\u0561/offer192",
+    "label": "ham"
+  },
+  {
+    "id": "dotted-script-bare",
+    "text": "bit.ly.\u03B1/offer192",
+    "label": "spam"
+  },
+  {
+    "id": "dotted-script-hash",
+    "text": "http://bit.ly.\u03B1#offer192",
+    "label": "spam"
+  },
+  {
+    "id": "dotted-script-empty",
+    "text": "http://bit.ly..\u03B1/offer192",
+    "label": "spam"
+  },
+  {
+    "id": "dotted-script-suffix",
+    "text": "http://bit.ly.\u03B1.bit.ly/offer192",
+    "label": "spam"
   }
 ]
