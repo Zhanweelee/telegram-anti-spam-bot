@@ -611,7 +611,7 @@
 
 ### P3-98 私聊预填链接的 text 只留主机名 — done
 
-验收：`tg://msg` 和 `tg:msg` 的 `text` 是裸 IP、短链或 `tg://join` 时删除这条消息。证据只有主机名。路径和收件人用户名不进证据。`example.com` 保留。`to`、`tg://search` 和 `t.me/durov?text=` 不读。再套一层预填链接仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
+验收：`tg://msg` 和 `tg:msg` 的 `text` 是裸 IP、短链或 `tg://join` 时删除这条消息。证据只有主机名。路径和收件人用户名不进证据。`example.com` 保留。`to` 和 `tg://search` 不读。公开用户名上的 `text` 后来由 P3-104 读取。再套一层预填链接仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
 ### P3-99 抽奖频道名字只留主机名 — done
 
@@ -632,6 +632,10 @@
 ### P3-103 网页代理空的 server 改读 host — done
 
 验收：`t.me/webproxy`、`tg://webproxy` 和 `tg:webproxy` 的 `server` 为空、`host` 是裸 IP 或 `bit.ly` 时删除这条消息。证据只有主机名。`secret` 和路径不进证据。已有非空 `server` 时不读 `host`。SOCKS 和 MTProto 的空 `server` 不改读。只含空白的 `server` 不改读。`proxy.example.com` 保留。默认名单仍是 ADR 0026。
+
+### P3-104 用户名链接的 text 只留主机名 — done
+
+验收：`t.me/用户名`、`t.me/s/用户名`、`tg://resolve?domain=` 和 `tg://resolve?phone=` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、号码和路径不进证据。`example.com` 保留。帖子路径、代理命令、`telegrampassport`、`tg://search` 和其它网站的 `text` 不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
 ## 自升级
 
@@ -1471,4 +1475,10 @@
 
 - 做了什么：网页代理的 `server` 为空时改读 `host`，只留主机名。裸 IP 或短链仍走现有链接规则。选择写在 ADR 0136。
 - 学到什么：桌面端只对 WEB 代理把长度为 0 的 `server` 当成没有。SOCKS 和 MTProto 不读 `host`。只含空白的 `server` 不算空。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-104
+
+- 做了什么：公开用户名、`t.me/s/用户名` 和 `tg://resolve` 的 `text` 只留主机名。裸 IP、短链或邀请仍走现有链接规则。选择写在 ADR 0137。
+- 学到什么：Android 把这段字放进用户对话的 `start_text`。桌面端放进 `PeerByLinkInfo.text`。帖子路径和 Passport 不放进输入框。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。

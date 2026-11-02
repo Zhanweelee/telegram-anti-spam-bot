@@ -262,6 +262,7 @@ function extractInviteHosts(
     pushInvite(inviteHost(stripped, names));
     pushWrappedInvites(stripped, names, pushInvite);
     pushMsgTextInvites(stripped, names, pushInvite);
+    pushUsernameDraftInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
       return found;
     }
@@ -276,6 +277,7 @@ function extractInviteHosts(
     pushInvite(deepInviteHost(stripped, names));
     pushWrappedInvites(stripped, names, pushInvite);
     pushMsgTextInvites(stripped, names, pushInvite);
+    pushUsernameDraftInvites(stripped, names, pushInvite);
     if (found.length >= 8) {
       return found;
     }
@@ -362,6 +364,7 @@ export function extractHosts(text: string): string[] {
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
     pushMsgTextHosts(raw, push);
+    pushUsernameDraftHosts(raw, push);
     if (found.length >= 8) {
       return found;
     }
@@ -375,6 +378,7 @@ export function extractHosts(text: string): string[] {
     push(proxyServerHost(raw));
     pushWrappedHosts(raw, push);
     pushMsgTextHosts(raw, push);
+    pushUsernameDraftHosts(raw, push);
     if (found.length >= 8) {
       return found;
     }
@@ -501,6 +505,137 @@ function telegramMsgUrl(raw: string): string | null {
   }
   return embedded;
 }
+
+function pushUsernameDraftHosts(
+  raw: string,
+  push: (host: string | null) => void,
+): void {
+  const text = usernameDraftText(raw);
+  if (!text) {
+    return;
+  }
+  for (const inner of linkTokens(text)) {
+    push(hostname(inner));
+    push(proxyServerHost(inner));
+  }
+}
+
+function pushUsernameDraftInvites(
+  raw: string,
+  names: ReadonlySet<string>,
+  push: (host: string | null) => void,
+): void {
+  const text = usernameDraftText(raw);
+  if (!text) {
+    return;
+  }
+  for (const inner of linkTokens(text)) {
+    push(inviteHost(inner, names));
+  }
+  for (const inner of deepTokens(text)) {
+    push(deepInviteHost(inner, names));
+  }
+}
+
+function usernameDraftText(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(raw) ? raw : `http://${raw}`);
+  } catch {
+    return null;
+  }
+  if (!isUsernameDraft(url)) {
+    return null;
+  }
+  const text = queryValue(raw, "text");
+  if (text === null || text.length === 0 || text.length > 4096) {
+    return null;
+  }
+  return text;
+}
+
+function isUsernameDraft(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    if (command !== "resolve") {
+      return false;
+    }
+    const domain = url.searchParams.get("domain");
+    if (domain !== null && domain.length > 0) {
+      return isPublicUsername(domain);
+    }
+    const phone = url.searchParams.get("phone");
+    return phone !== null && /^\+?\d{1,20}$/.test(phone);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => host === name || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  const first = parts[0];
+  if (parts.length === 1 && first !== undefined) {
+    return isPublicUsername(first);
+  }
+  const preview = parts[0]?.toLowerCase();
+  const name = parts[1];
+  return (
+    parts.length === 2 &&
+    preview === "s" &&
+    name !== undefined &&
+    isPublicUsername(name)
+  );
+}
+
+function isPublicUsername(value: string): boolean {
+  return (
+    /^[A-Za-z0-9_]{1,32}$/.test(value) &&
+    !reservedUsernames.has(value.toLowerCase())
+  );
+}
+
+const reservedUsernames = new Set([
+  "addemoji",
+  "addlist",
+  "addstickers",
+  "addstyle",
+  "addtheme",
+  "auction",
+  "bg",
+  "boost",
+  "c",
+  "call",
+  "confirmphone",
+  "contact",
+  "folder",
+  "getpremium",
+  "invoice",
+  "iv",
+  "joinchat",
+  "login",
+  "m",
+  "msg",
+  "newbot",
+  "nft",
+  "proxy",
+  "s",
+  "setlanguage",
+  "share",
+  "socks",
+  "stargift_auction",
+  "telegrampassport",
+  "stargift_preview",
+  "web",
+  "webproxy",
+]);
 
 function telegramMsgText(raw: string): string | null {
   if (!isTelegramMsgRaw(raw)) {

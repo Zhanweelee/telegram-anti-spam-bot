@@ -475,5 +475,30 @@
     "id": "tg-webproxy-blank-server",
     "text": "https://t.me/webproxy?server=%20&host=203.0.113.9&secret=secret",
     "label": "ham"
+  },
+  {
+    "id": "tg-username-text-ip",
+    "text": "https://t.me/durov?text=https%3A%2F%2F203.0.113.9%2Fpath",
+    "label": "spam"
+  },
+  {
+    "id": "tg-resolve-text-short",
+    "text": "tg://resolve?domain=durov&text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "spam"
+  },
+  {
+    "id": "tg-username-text-ordinary",
+    "text": "https://t.me/durov?text=https%3A%2F%2Fexample.com%2Fdocs",
+    "label": "ham"
+  },
+  {
+    "id": "tg-username-post-text",
+    "text": "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "ham"
+  },
+  {
+    "id": "tg-passport-text",
+    "text": "tg://resolve?domain=telegrampassport&text=tg%3A%2F%2Fjoin%3Finvite%3Doffer",
+    "label": "ham"
   }
 ]

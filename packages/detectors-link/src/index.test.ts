@@ -1084,13 +1084,121 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(profile).toBeNull();
+    expect(profile?.reasons).toEqual(["ip_host"]);
+    expect(profile?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(profile)).not.toContain("path100");
 
     const nested = encodeURIComponent(
       `tg://msg?text=${encodeURIComponent("https://203.0.113.9/path100")}`,
     );
     const wrapped = await detector.detect({
       event: eventFor(`tg://msg?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
+  it("reads the draft on a telegram username link and leaves the path out", async () => {
+    const detector = createLinkDetector();
+    const shortened = await detector.detect({
+      event: eventFor(
+        "tg://resolve?domain=durov&text=https%3A%2F%2Fbit.ly%2Fname106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name106");
+    expect(JSON.stringify(shortened)).not.toContain("durov");
+
+    const preview = await detector.detect({
+      event: eventFor(
+        "https://t.me/s/durov?text=http%3A%2F%2F198.51.100.26%2Fpath106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview?.reasons).toEqual(["ip_host"]);
+    expect(preview?.evidence[0]?.summary).toBe("ip_host:198.51.100.26");
+    expect(JSON.stringify(preview)).not.toContain("path106");
+
+    const phone = await detector.detect({
+      event: eventFor(
+        "tg:resolve?phone=79990001106&text=https%3A%2F%2Fcutt.ly%2Fname106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(phone?.reasons).toEqual(["short_link"]);
+    expect(phone?.evidence[0]?.summary).toBe("short_link:cutt.ly");
+    expect(JSON.stringify(phone)).not.toContain("name106");
+    expect(JSON.stringify(phone)).not.toContain("79990001106");
+
+    const code = "code106";
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/durov?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://t.me/durov?text=https%3A%2F%2Fexample.com%2Fok106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const post = await detector.detect({
+      event: eventFor(
+        "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Fname106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post).toBeNull();
+
+    const proxy = await detector.detect({
+      event: eventFor(
+        "https://t.me/proxy?server=example.com&text=https%3A%2F%2Fbit.ly%2Fname106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(proxy).toBeNull();
+
+    const passport = await detector.detect({
+      event: eventFor(
+        "tg://resolve?domain=telegrampassport&text=tg%3A%2F%2Fjoin%3Finvite%3Dcode106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(passport).toBeNull();
+    expect(JSON.stringify(passport)).not.toContain("code106");
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://example.com/durov?text=https%3A%2F%2Fbit.ly%2Fname106",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const nested = encodeURIComponent(
+      "https://t.me/durov?text=https%3A%2F%2Fbit.ly%2Fname106",
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/spam?text=${nested}`),
       logger: createMemoryLogger(),
       signal,
     });

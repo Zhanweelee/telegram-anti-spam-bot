@@ -824,7 +824,11 @@ function hostFromUrl(
   }
   const proxy = proxyServerHost(url);
   const wrapped = unwrap
-    ? [...wrappedExtras(folded, url), ...msgTextExtras(folded, url)]
+    ? [
+        ...wrappedExtras(folded, url),
+        ...msgTextExtras(folded, url),
+        ...usernameDraftExtras(folded, url),
+      ]
     : [];
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     if (proxy !== null) {
@@ -945,6 +949,114 @@ function msgTextExtras(
   }
   return found;
 }
+
+function usernameDraftExtras(
+  folded: string,
+  url: URL,
+): { host: string; invite: boolean }[] {
+  if (!isUsernameDraft(url)) {
+    return [];
+  }
+  const text = queryValue(folded, "text");
+  if (text === null || text.length === 0 || text.length > MAX_TEXT) {
+    return [];
+  }
+  const found: { host: string; invite: boolean }[] = [];
+  for (const raw of urlsInText(text)) {
+    const inner = hostFromUrl(raw, false);
+    if (!inner) {
+      continue;
+    }
+    found.push({ host: inner.host, invite: inner.invite });
+    for (const extra of inner.extras ?? []) {
+      found.push(extra);
+    }
+  }
+  return found;
+}
+
+function isUsernameDraft(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    if (command !== "resolve") {
+      return false;
+    }
+    const domain = url.searchParams.get("domain");
+    if (domain !== null && domain.length > 0) {
+      return isPublicUsername(domain);
+    }
+    const phone = url.searchParams.get("phone");
+    return phone !== null && /^\+?\d{1,20}$/.test(phone);
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (
+    !telegramProxyHosts.some(
+      (name) => name === host || host.endsWith(`.${name}`),
+    )
+  ) {
+    return false;
+  }
+  const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  const first = parts[0];
+  if (parts.length === 1 && first !== undefined) {
+    return isPublicUsername(first);
+  }
+  const preview = parts[0]?.toLowerCase();
+  const name = parts[1];
+  return (
+    parts.length === 2 &&
+    preview === "s" &&
+    name !== undefined &&
+    isPublicUsername(name)
+  );
+}
+
+function isPublicUsername(value: string): boolean {
+  return (
+    /^[A-Za-z0-9_]{1,32}$/.test(value) &&
+    !reservedUsernames.has(value.toLowerCase())
+  );
+}
+
+const reservedUsernames = new Set([
+  "addemoji",
+  "addlist",
+  "addstickers",
+  "addstyle",
+  "addtheme",
+  "auction",
+  "bg",
+  "boost",
+  "c",
+  "call",
+  "confirmphone",
+  "contact",
+  "folder",
+  "getpremium",
+  "invoice",
+  "iv",
+  "joinchat",
+  "login",
+  "m",
+  "msg",
+  "newbot",
+  "nft",
+  "proxy",
+  "s",
+  "setlanguage",
+  "share",
+  "socks",
+  "stargift_auction",
+  "telegrampassport",
+  "stargift_preview",
+  "web",
+  "webproxy",
+]);
 
 function isTelegramMsg(url: URL): boolean {
   if (url.protocol !== "tg:") {

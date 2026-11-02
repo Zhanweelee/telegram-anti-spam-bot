@@ -33,4 +33,5 @@
 - `text` 里是裸 IP、默认短链或邀请时，现有链接规则删除这条消息。证据仍只有主机名。
 - `example.com` 留着。`to` 上的地址、`tg://search` 和 `t.me/durov?text=` 仍按外层判断。
 - 按钮上的 `text` 里的关键词留着。正文就是这条链接时，链接原文仍在 `message.text`。
+- 公开用户名、`t.me/s/用户名` 和 `tg://resolve` 上的 `text` 后来由 ADR 0137 只留下主机名。帖子路径和 `telegrampassport` 仍不读。
 - 抽奖要加入的频道名字后来由 ADR 0132 只留下主机名。频道 id、用户名和中奖者姓名仍不进事件。

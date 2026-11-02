@@ -5669,6 +5669,100 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(foreign.event)).not.toContain("path100");
   });
 
+  it("keeps a hostname from a username draft and leaves the path out", async () => {
+    const profile = await normalize({
+      update_id: 7510,
+      message: {
+        message_id: 530,
+        date: 1761955200,
+        chat: { id: -101300, type: "supergroup", title: "keep-title" },
+        from: { id: 106, first_name: "from106" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: "https://t.me/durov?text=https%3A%2F%2F203.0.113.9%2Fpath106",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(profile.status).toBe("event");
+    if (profile.status !== "event") {
+      return;
+    }
+    expect(profile.event.message?.text).toBe("今天站会");
+    expect(profile.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    expect(profile.event.message?.invites).toBeUndefined();
+    const profileDump = JSON.stringify(profile.event);
+    expect(profileDump).not.toContain("path106");
+    expect(profileDump).not.toContain("durov");
+    expect(profileDump).not.toContain("from106");
+    expect(profileDump).not.toContain("keep-title");
+
+    const shortened = await normalize({
+      update_id: 7511,
+      message: {
+        message_id: 531,
+        date: 1761955200,
+        chat: { id: -101301, type: "supergroup" },
+        from: { id: 106 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: "tg://resolve?domain=durov&text=https%3A%2F%2Fbit.ly%2Fname106",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shortened.status).toBe("event");
+    if (shortened.status !== "event") {
+      return;
+    }
+    expect(shortened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(shortened.event.message?.invites).toBeUndefined();
+    const shortenedDump = JSON.stringify(shortened.event);
+    expect(shortenedDump).not.toContain("name106");
+    expect(shortenedDump).not.toContain("durov");
+
+    const post = await normalize({
+      update_id: 7512,
+      message: {
+        message_id: 532,
+        date: 1761955200,
+        chat: { id: -101302, type: "supergroup" },
+        from: { id: 106 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "帖子",
+                url: "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Fname106",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(post.status).toBe("event");
+    if (post.status !== "event") {
+      return;
+    }
+    expect(post.event.message?.hosts).toEqual(["t.me"]);
+    const postDump = JSON.stringify(post.event);
+    expect(postDump).not.toContain("bit.ly");
+    expect(postDump).not.toContain("name106");
+  });
+
   it("keeps a hostname from a giveaway chat title and leaves the name out", async () => {
     const linked = await normalize({
       update_id: 7010,

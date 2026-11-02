@@ -3568,4 +3568,85 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(socks.logger.entries)).not.toContain("pass105");
     expect(JSON.stringify(socks.logger.entries)).not.toContain("grp105");
   });
+
+  it("deletes a username link whose draft text is an address", async () => {
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 7510,
+        message: {
+          message_id: 7510,
+          date: 1761955200,
+          chat: {
+            id: -100800,
+            type: "supergroup",
+            title: "https://cutt.ly/grp106",
+          },
+          from: { id: 106, first_name: "https://tinyurl.com/from106" },
+          text: "https://t.me/durov?text=https%3A%2F%2F203.0.113.9%2Fpath106",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100800", messageId: "7510" },
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain("path106");
+    expect(JSON.stringify(logger.entries)).not.toContain("from106");
+    expect(JSON.stringify(logger.entries)).not.toContain("grp106");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const ordinary = await normalizeUpdate({
+      update: {
+        update_id: 7511,
+        message: {
+          message_id: 7511,
+          date: 1761955200,
+          chat: { id: -100801, type: "supergroup" },
+          from: { id: 106 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "帖子",
+                  url: "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Fname106",
+                },
+              ],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(ordinary.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(ordinary.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(ordinary.event)).not.toContain("name106");
+  });
 });
