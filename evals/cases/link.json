@@ -1995,5 +1995,35 @@
     "id": "encoded-dot-host",
     "text": "bit%2Ely/offer159",
     "label": "spam"
+  },
+  {
+    "id": "encoded-plus-scheme",
+    "text": "example.com%2Bhttp://bit.ly/offer160",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-www",
+    "text": "www.example.com%2Bhttp://bit.ly/offer160",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-literal",
+    "text": "example.com+http://bit.ly/offer160",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-break",
+    "text": "example.com%2B\nhttp://bit.ly/offer160",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-invite",
+    "text": "example.com%2Bhttps://t.me/+CODE160",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-path",
+    "text": "t.me/%2BCODE160",
+    "label": "spam"
   }
 ]

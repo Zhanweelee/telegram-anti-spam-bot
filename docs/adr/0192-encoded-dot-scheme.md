@@ -31,3 +31,4 @@ Android 不会在匹配前把 `%2E` 收成点。`example.com%2Ehttp://bit.ly/…
 - `example.com%2Ehttp://bit.ly/…`、`www.example.com%2Ehttp://bit.ly/…`、`%2Ehttp://bit.ly/…` 和 `http://example.com%2Ehttp://bit.ly/…` 留着。`example.com%2Ehttps://t.me/+…` 不记成邀请。
 - `example.com.http://bit.ly/…`、换行或斜杠隔开的 `%2E`，以及 `bit%2Ely`，仍按短链删除。路径不进证据。
 - `203.0.113.159%2Ehttp://bit.ly/…` 仍按裸 IP 删除。证据是这个地址，不是后面的短链。
+- 百分号编码的加号紧挨在 `http://` 前面时不再收成加号。见 ADR 0193。

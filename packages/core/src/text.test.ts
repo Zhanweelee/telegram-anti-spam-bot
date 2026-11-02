@@ -123,6 +123,11 @@ describe("foldHostScan", () => {
     );
     expect(foldHostScan("example.com%2E\nhttp://bit.ly")).toContain(".http://");
     expect(foldHostScan("bit%2Ely")).toBe("bit.ly");
+    expect(foldHostScan("example.com%2Bhttp://bit.ly")).not.toContain(
+      "+http://",
+    );
+    expect(foldHostScan("example.com%2B\nhttp://bit.ly")).toContain("+http://");
+    expect(foldHostScan("t.me/%2BCODE")).toBe("t.me/+CODE");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {
