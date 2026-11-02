@@ -40,3 +40,4 @@ Android 不会在匹配前把 `%2F` 收成斜杠。`%2Fbit.ly/…`、`see%2Fbit.
 - `/bit.ly/…`、换行、空格、制表符或字面斜杠隔开的 `%2F`，以及 `http:%2F/bit.ly/…` 和 `https://bit.ly%2F…`，仍按短链删除。`t.me%2F+…` 仍按邀请删除。路径和邀请码不进证据。
 - `https://bit.ly%2Fhttp://t.co/…` 仍按短链删除。证据是 `bit.ly`。
 - `example.com%2Fwww.bit.ly/…` 仍按短链删除。证据是 `2fwww.bit.ly`。
+- 百分号编码的连字符紧挨着裸主机名时不再收成连字符。见 ADR 0199。

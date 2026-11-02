@@ -2200,5 +2200,45 @@
     "id": "encoded-slash-host-www",
     "text": "example.com%2Fwww.bit.ly/offer165",
     "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-host",
+    "text": "%2Dbit.ly/offer166",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-host-double",
+    "text": "%252Dbit.ly/offer166",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-host-ip",
+    "text": "%2D203.0.113.166/offer166",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-host-plain",
+    "text": "bit%2Dly/offer166",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-hyphen-host-break",
+    "text": "example.com%2D\nbit.ly/offer166",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-host-slash",
+    "text": "example.com%2D/bit.ly/offer166",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-host-literal",
+    "text": "-bit.ly/offer166",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-hyphen-host-www",
+    "text": "%2Dwww.bit.ly/offer166",
+    "label": "spam"
   }
 ]

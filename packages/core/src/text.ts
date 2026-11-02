@@ -266,14 +266,14 @@ function gluedPlusHostLength(text: string, index: number): number {
   if (text.slice(index, index + 3).toLowerCase() !== "%2b") {
     return 0;
   }
-  if (plusSitsInPath(text, index)) {
+  if (encodedMarkSitsInPath(text, index)) {
     return 0;
   }
   const body = gluedHostBodyLength(text, index + 3);
   return body > 0 ? body + 3 : 0;
 }
 
-function plusSitsInPath(text: string, index: number): boolean {
+function encodedMarkSitsInPath(text: string, index: number): boolean {
   if (text.charAt(index - 1) === "/") {
     return true;
   }
@@ -310,13 +310,43 @@ function neutralizeGluedHost(host: string): string {
 }
 
 /**
- * `%2D` and the one extra `%252D` layer glued to `http://` are not hyphens
- * Android decodes. A line break between them still is. Rewrite the glued
- * form before line breaks disappear: `!` lets the host in front end, and
- * `x` keeps `http` from starting. `bit%2Dly` is not glued to a scheme.
+ * `%2D` and the one extra `%252D` layer glued to `http://` or to a bare
+ * host are not hyphens Android decodes. A line break between them still is.
+ * Rewrite the glued form before line breaks disappear: `!` lets the host in
+ * front end, and `x` keeps `http` from starting. A bare host keeps its path,
+ * with the last label replaced so the shortener suffix cannot match.
+ * `bit%2Dly` is not glued to a host.
  */
 function foldGluedEncodedHyphen(text: string): string {
-  return text.replace(/%(?:25)?2D(?=https?:\/\/)/gi, "!x");
+  const scheme = text.replace(/%(?:25)?2D(?=https?:\/\/)/gi, "!x");
+  let out = "";
+  let index = 0;
+  while (index < scheme.length) {
+    const marker = gluedHyphenMarkerLength(scheme, index);
+    if (marker > 0 && !encodedMarkSitsInPath(scheme, index)) {
+      const body = gluedHostBodyLength(scheme, index + marker);
+      if (body > 0) {
+        out += neutralizeGluedHost(
+          scheme.slice(index + marker, index + marker + body),
+        );
+        index += marker + body;
+        continue;
+      }
+    }
+    out += scheme.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function gluedHyphenMarkerLength(text: string, index: number): number {
+  if (text.slice(index, index + 5).toLowerCase() === "%252d") {
+    return 5;
+  }
+  if (text.slice(index, index + 3).toLowerCase() === "%2d") {
+    return 3;
+  }
+  return 0;
 }
 
 /**
@@ -327,6 +357,7 @@ function foldGluedEncodedHyphen(text: string): string {
  * A dot lookalike after an ASCII dot stays in the label.
  * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
  * `%2B` glued to a bare host stays out of that host.
+ * `%2D` glued to a bare host stays out of that host.
  * A percent-encoded letter that spells the scheme stays out of that scheme.
  * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
  * `%2F` glued to a bare host stays out of that host.
