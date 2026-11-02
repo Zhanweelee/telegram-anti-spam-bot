@@ -3649,4 +3649,83 @@ describe("screenTelegramEvent", () => {
     expect(ordinary.event.message?.hosts).toEqual(["t.me"]);
     expect(JSON.stringify(ordinary.event)).not.toContain("name106");
   });
+
+  it("deletes a phone link whose draft text is an address", async () => {
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 7610,
+        message: {
+          message_id: 7610,
+          date: 1761955200,
+          chat: {
+            id: -100810,
+            type: "supergroup",
+            title: "https://cutt.ly/grp107",
+          },
+          from: { id: 107, first_name: "https://tinyurl.com/from107" },
+          text: "https://t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100810", messageId: "7610" },
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain("name107");
+    expect(JSON.stringify(logger.entries)).not.toContain("79990001107");
+    expect(JSON.stringify(logger.entries)).not.toContain("from107");
+    expect(JSON.stringify(logger.entries)).not.toContain("grp107");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(result.decision.evidence)).not.toContain("invite");
+
+    const bare = await normalizeUpdate({
+      update: {
+        update_id: 7611,
+        message: {
+          message_id: 7611,
+          date: 1761955200,
+          chat: { id: -100811, type: "supergroup" },
+          from: { id: 107 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "电话", url: "https://t.me/+79990001107" }],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bare.status).toBe("event");
+    if (bare.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(bare.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(bare.event.message?.hosts).toEqual(["t.me"]);
+    expect(bare.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(bare.event)).not.toContain("79990001107");
+  });
 });

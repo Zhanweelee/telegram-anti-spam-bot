@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-105
+
+- 全是数字的 `t.me/+`、`telegram.me/+` 和 `telegram.dog/+` 不再记成邀请。`text` 按裸 IP、短链或邀请删除这条消息。见 ADR 0138。
+- 号码不进证据。带字母的加号路径、`joinchat` 和 `tg://join` 仍是邀请。
+- 云额度的基础检测器名单没有改。
+
 ### P3-104
 
 - 公开用户名、`t.me/s/用户名` 和 `tg://resolve` 的 `text` 按裸 IP、短链或邀请删除这条消息。见 ADR 0137。

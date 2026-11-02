@@ -1205,6 +1205,116 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("treats a numeric telegram plus link as a phone draft", async () => {
+    const detector = createLinkDetector();
+    const bare = await detector.detect({
+      event: eventFor("https://t.me/+79990001107"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+
+    const shortened = await detector.detect({
+      event: eventFor(
+        "https://t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name107");
+    expect(JSON.stringify(shortened)).not.toContain("79990001107");
+
+    const address = await detector.detect({
+      event: eventFor(
+        "https://telegram.dog/+79990001107?text=http%3A%2F%2F203.0.113.50%2Fpath107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(address?.reasons).toEqual(["ip_host"]);
+    expect(address?.evidence[0]?.summary).toBe("ip_host:203.0.113.50");
+    expect(JSON.stringify(address)).not.toContain("path107");
+
+    const code = "code107";
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.me/+79990001107?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    expect(JSON.stringify(invite)).not.toContain("79990001107");
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://t.me/%2B79990001107?text=https%3A%2F%2Fexample.com%2Fok107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const letters = await detector.detect({
+      event: eventFor(
+        "https://t.me/+AbC107?text=https%3A%2F%2Fbit.ly%2Fname107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(letters?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(letters)).not.toContain("bit.ly");
+    expect(JSON.stringify(letters)).not.toContain("name107");
+
+    const joined = await detector.detect({
+      event: eventFor("https://t.me/joinchat/79990001107"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["invite"]);
+    expect(joined?.evidence[0]?.summary).toBe("invite:t.me");
+
+    const deep = await detector.detect({
+      event: eventFor("tg://join?invite=79990001107"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.reasons).toEqual(["invite"]);
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://example.com/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const other = await detector.detect({
+      event: eventFor(
+        "https://news.t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(other)).not.toContain("bit.ly");
+
+    const nested = encodeURIComponent(
+      "https://t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/spam?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
   it("folds dot lookalikes into ascii dots before reading hosts", async () => {
     const detector = createLinkDetector();
     const short = await detector.detect({

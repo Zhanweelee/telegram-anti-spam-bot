@@ -34,3 +34,4 @@ Android 在打开用户对话时把这个 `text` 放进 `start_text`。桌面端
 - 这些链接的 `text` 是裸 IP、默认短链或邀请时，现有链接规则删除这条消息。证据仍只有主机名。
 - `example.com` 留着。没有 `text` 的 `t.me/durov` 和 `tg://resolve?domain=durov` 仍放行。
 - 正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
+- `https://t.me/+` 后全是数字的写法后来由 ADR 0138 改成同一条电话预填。带字母的加号路径仍不读 `text`。

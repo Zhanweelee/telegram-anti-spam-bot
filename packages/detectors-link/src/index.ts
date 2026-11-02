@@ -334,6 +334,9 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
     return null;
   }
   const path = url.pathname.replace(/\/+$/, "") || "/";
+  if (isTelegramPhonePath(host, path)) {
+    return null;
+  }
   if (
     /^\/\+[A-Za-z0-9_-]{1,128}$/.test(path) ||
     /^\/joinchat\/[A-Za-z0-9_-]{1,128}$/.test(path) ||
@@ -342,6 +345,15 @@ function inviteHost(raw: string, names: ReadonlySet<string>): string | null {
     return host;
   }
   return null;
+}
+
+function isTelegramPhonePath(host: string, path: string): boolean {
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  if (bare !== "t.me" && bare !== "telegram.me" && bare !== "telegram.dog") {
+    return false;
+  }
+  const segment = path.startsWith("/") ? path.slice(1) : path;
+  return /^\+\d{1,128}$/.test(segment);
 }
 
 export function extractHosts(text: string): string[] {
@@ -583,7 +595,7 @@ function isUsernameDraft(url: URL): boolean {
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
   const first = parts[0];
   if (parts.length === 1 && first !== undefined) {
-    return isPublicUsername(first);
+    return isPublicUsername(first) || isTelegramPhoneSegment(host, first);
   }
   const preview = parts[0]?.toLowerCase();
   const name = parts[1];
@@ -593,6 +605,14 @@ function isUsernameDraft(url: URL): boolean {
     name !== undefined &&
     isPublicUsername(name)
   );
+}
+
+function isTelegramPhoneSegment(host: string, segment: string): boolean {
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  if (bare !== "t.me" && bare !== "telegram.me" && bare !== "telegram.dog") {
+    return false;
+  }
+  return /^\+\d{1,128}$/.test(segment);
 }
 
 function isPublicUsername(value: string): boolean {

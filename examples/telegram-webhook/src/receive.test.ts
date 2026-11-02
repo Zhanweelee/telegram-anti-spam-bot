@@ -859,6 +859,48 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp106");
   });
 
+  it("keeps a hostname from a phone draft and leaves the number out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 24,
+        message: {
+          message_id: 240,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp107" },
+          from: { id: 107, first_name: "https://tinyurl.com/from107" },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "电话",
+                  url: "https://t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Fname107",
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_24",
+      kind: "message",
+      message: {
+        id: "240",
+        text: "今天站会",
+        hosts: ["t.me", "bit.ly"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("name107");
+    expect(dumped).not.toContain("79990001107");
+    expect(dumped).not.toContain("from107");
+    expect(dumped).not.toContain("grp107");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

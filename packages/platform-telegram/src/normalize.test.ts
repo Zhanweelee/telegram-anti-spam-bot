@@ -5763,6 +5763,100 @@ describe("normalizeUpdate", () => {
     expect(postDump).not.toContain("name106");
   });
 
+  it("keeps a hostname from a phone draft and leaves the number out", async () => {
+    const phrase = "请免费领取礼品";
+    const shortened = await normalize({
+      update_id: 7610,
+      message: {
+        message_id: 540,
+        date: 1761955200,
+        chat: { id: -101310, type: "supergroup", title: "keep-title" },
+        from: { id: 107, first_name: "from107" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "电话",
+                url: `https://t.me/+79990001107?text=${encodeURIComponent(`${phrase} https://bit.ly/name107`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shortened.status).toBe("event");
+    if (shortened.status !== "event") {
+      return;
+    }
+    expect(shortened.event.message?.text).toBe("今天站会");
+    expect(shortened.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(shortened.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(shortened.event.message?.invites).toBeUndefined();
+    const shortenedDump = JSON.stringify(shortened.event);
+    expect(shortenedDump).not.toContain("name107");
+    expect(shortenedDump).not.toContain("79990001107");
+    expect(shortenedDump).not.toContain(phrase);
+    expect(shortenedDump).not.toContain("from107");
+    expect(shortenedDump).not.toContain("keep-title");
+
+    const bare = await normalize({
+      update_id: 7611,
+      message: {
+        message_id: 541,
+        date: 1761955200,
+        chat: { id: -101311, type: "supergroup" },
+        from: { id: 107 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "电话", url: "https://www.t.me/+79990001107" }],
+          ],
+        },
+      },
+    });
+    expect(bare.status).toBe("event");
+    if (bare.status !== "event") {
+      return;
+    }
+    expect(bare.event.message?.hosts).toEqual(["www.t.me"]);
+    expect(bare.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(bare.event)).not.toContain("79990001107");
+
+    const letters = await normalize({
+      update_id: 7612,
+      message: {
+        message_id: 542,
+        date: 1761955200,
+        chat: { id: -101312, type: "supergroup" },
+        from: { id: 107 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "邀请",
+                url: "https://t.me/+AbC107?text=https%3A%2F%2Fbit.ly%2Fname107",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(letters.status).toBe("event");
+    if (letters.status !== "event") {
+      return;
+    }
+    expect(letters.event.message?.hosts).toEqual(["t.me"]);
+    expect(letters.event.message?.invites).toEqual(["t.me"]);
+    const lettersDump = JSON.stringify(letters.event);
+    expect(lettersDump).not.toContain("bit.ly");
+    expect(lettersDump).not.toContain("name107");
+    expect(lettersDump).not.toContain("AbC107");
+  });
+
   it("keeps a hostname from a giveaway chat title and leaves the name out", async () => {
     const linked = await normalize({
       update_id: 7010,

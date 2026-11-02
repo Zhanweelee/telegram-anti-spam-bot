@@ -500,5 +500,30 @@
     "id": "tg-passport-text",
     "text": "tg://resolve?domain=telegrampassport&text=tg%3A%2F%2Fjoin%3Finvite%3Doffer",
     "label": "ham"
+  },
+  {
+    "id": "tg-phone-plus",
+    "text": "https://t.me/+79990001107",
+    "label": "ham"
+  },
+  {
+    "id": "tg-phone-plus-text-short",
+    "text": "https://t.me/+79990001107?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "spam"
+  },
+  {
+    "id": "tg-phone-plus-text-ordinary",
+    "text": "https://telegram.me/+79990001107?text=https%3A%2F%2Fexample.com%2Fdocs",
+    "label": "ham"
+  },
+  {
+    "id": "tg-phone-plus-letters",
+    "text": "https://t.me/+AbC107?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "spam"
+  },
+  {
+    "id": "tg-joinchat-digits",
+    "text": "https://t.me/joinchat/79990001107",
+    "label": "spam"
   }
 ]
