@@ -74,7 +74,8 @@ export const defaultShorteners = [
  * inside the label only when the finished label still fits. A dotted IPv4
  * with no scheme is its own match when Android opens it. That bare host
  * keeps a port of one to five digits and a path or query. A dot before
- * the path does not stay, so the next URL is its own match. An address
+ * the path does not stay on a bare host or a `www.` host, so the next URL
+ * is its own match. A schemed host keeps that dot. An address
  * inside a `tg://` link stays with that link. `tg:` without slashes does
  * not hide the URL Android opens after it.
  */
@@ -98,7 +99,7 @@ const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
 const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
-const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;
+const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_BARE_TAIL}`;
 const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
 const URL_IP_HEAD = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])";
 const URL_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";

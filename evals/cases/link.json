@@ -1655,5 +1655,30 @@
     "id": "label-tail-slash",
     "text": "http://bit.ly\u2215@example.com/offer147",
     "label": "spam"
+  },
+  {
+    "id": "www-dot-slash",
+    "text": "www.example.com./http://bit.ly/offer148",
+    "label": "spam"
+  },
+  {
+    "id": "www-dot-query",
+    "text": "www.example.com.?http://bit.ly/offer148",
+    "label": "spam"
+  },
+  {
+    "id": "www-dot-port",
+    "text": "www.example.com.:80/http://bit.ly/offer148",
+    "label": "spam"
+  },
+  {
+    "id": "www-dot-query-kept",
+    "text": "www.example.com?http://bit.ly/offer148",
+    "label": "ham"
+  },
+  {
+    "id": "www-dot-schemed",
+    "text": "http://www.example.com./http://bit.ly/offer148",
+    "label": "ham"
   }
 ]
