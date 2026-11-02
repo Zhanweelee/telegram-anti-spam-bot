@@ -2505,5 +2505,55 @@
     "id": "encoded-bracket-host-open",
     "text": "%5B.%5D203.0.113.171/http://t.co/offer171",
     "label": "spam"
+  },
+  {
+    "id": "label-glue-cjk",
+    "text": "example.com\u70B9bit.ly/offer172",
+    "label": "ham"
+  },
+  {
+    "id": "label-glue-hangul",
+    "text": "example.com\uAC00bit.ly/offer172",
+    "label": "ham"
+  },
+  {
+    "id": "label-glue-tail",
+    "text": "bit.ly\u70B9evil.com/offer172",
+    "label": "ham"
+  },
+  {
+    "id": "label-glue-ip",
+    "text": "203.0.113.10\u70B9bit.ly/offer172",
+    "label": "ham"
+  },
+  {
+    "id": "label-glue-prefix",
+    "text": "\u70B9\u51FBbit.ly/offer172",
+    "label": "spam"
+  },
+  {
+    "id": "label-glue-scheme",
+    "text": "example.com\u70B9http://bit.ly/offer172",
+    "label": "spam"
+  },
+  {
+    "id": "label-glue-www",
+    "text": "example.com\u70B9www.bit.ly/offer172",
+    "label": "spam"
+  },
+  {
+    "id": "label-glue-break",
+    "text": "example.com\u70B9\nbit.ly/offer172",
+    "label": "spam"
+  },
+  {
+    "id": "label-glue-dot",
+    "text": "example.com\u3002bit.ly/offer172",
+    "label": "spam"
+  },
+  {
+    "id": "label-glue-slash",
+    "text": "example.com\u70B9/bit.ly/offer172",
+    "label": "spam"
   }
 ]

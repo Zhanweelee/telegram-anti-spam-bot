@@ -317,6 +317,68 @@ describe("foldHostScan", () => {
     );
     expect(foldHostScan("%255B.%255Dbit.ly")).toBe("%255B.%255Dbit.ly");
     expect(foldBracketDots("%5B.%5Dbit.ly")).toBe(".bit.ly");
+    expect(foldHostScan("example.com\u70B9bit.ly")).toBe("example.comxbit.ly");
+    expect(foldHostScan("example.com\u70B9\u51FBbit.ly")).toBe(
+      "example.comxbit.ly",
+    );
+    expect(foldHostScan("bit.ly\u70B9evil.com")).toBe("bit.lyxevil.com");
+    expect(foldHostScan("www.bit.ly\u70B9evil.com")).toBe(
+      "www.bit.lyxevil.com",
+    );
+    expect(foldHostScan("example.com\uAC00bit.ly")).toBe("example.comxbit.ly");
+    expect(foldHostScan("example.com\u3042bit.ly")).toBe("example.comxbit.ly");
+    expect(foldHostScan("example.com\u05D0bit.ly")).toBe("example.comxbit.ly");
+    expect(foldHostScan("example.com\u263Abit.ly")).toBe("example.comxbit.ly");
+    expect(foldHostScan("x\u70B9bit.ly")).toBe("xxbit.ly");
+    expect(foldHostScan("b\u70B9it.ly")).toBe("bxit.ly");
+    expect(foldHostScan("203.0.113.10\u70B9bit.ly")).toBe(
+      "203.0.113.10xbit.ly",
+    );
+    expect(foldHostScan("\u70B9bit.ly")).toBe("\u70B9bit.ly");
+    expect(foldHostScan("\u70B9\u51FBbit.ly")).toBe("\u70B9\u51FBbit.ly");
+    expect(foldHostScan("example.com\u70B9http://bit.ly")).toBe(
+      "example.com\u70B9http://bit.ly",
+    );
+    expect(foldHostScan("example.com\u70B9HTTP://bit.ly")).toBe(
+      "example.com\u70B9HTTP://bit.ly",
+    );
+    expect(foldHostScan("example.com\u70B9https://t.co")).toBe(
+      "example.com\u70B9https://t.co",
+    );
+    expect(foldHostScan("example.com\u3002bit.ly")).toBe(
+      "example.com\u3002bit.ly",
+    );
+    expect(foldHostScan("example.com\uE000bit.ly")).toBe(
+      "example.com\uE000bit.ly",
+    );
+    expect(foldHostScan("example.com\u{10140}bit.ly")).toBe(
+      "example.combit.ly",
+    );
+    expect(foldHostScanKeepingStops("example.com\u{10140}bit.ly")).toBe(
+      "example.com\u{10140}bit.ly",
+    );
+    expect(foldHostScan("example.com\u70B9/bit.ly")).toBe(
+      "example.com\u70B9/bit.ly",
+    );
+    expect(foldHostScan("bit.ly\u70B9/z")).toBe("bit.ly\u70B9/z");
+    expect(foldHostScan("example.com\u70B9.bit.ly")).toBe(
+      "example.com\u70B9.bit.ly",
+    );
+    expect(foldHostScan("example.com\u70B9www.bit.ly")).toBe(
+      "example.comxwww.bit.ly",
+    );
+    expect(foldHostScan("bi\uFE0Ft.ly")).toBe("bit.ly");
+    expect(foldHostScan("b\u0442it.ly")).toBe("bit.ly");
+    expect(foldHostScan("bit\u00B7ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("example.com\u70B9bit.ly")).toBe(
+      "example.comxbit.ly",
+    );
+    expect(foldHostScanKeepingStops("example.com\u70B9http://bit.ly")).toBe(
+      "example.com\u70B9http://bit.ly",
+    );
+    expect(foldHostInterrupters("example.com\u70B9bit.ly")).toBe(
+      "example.com\u70B9bit.ly",
+    );
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

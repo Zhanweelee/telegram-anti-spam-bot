@@ -41,3 +41,4 @@ Android 不把 `%5B.%5D` 收成点。`%5B.%5Dbit.ly/…` 打开的是 `5Dbit.ly`
 - `bit%5B.%5Dly`、`bit[.]ly`、`[.]bit.ly` 和 `%5B.]bit.ly` 仍按短链删除。换行、空格或制表符后面的网址仍按短链删除。
 - `%5B.%5Dwww.bit.ly/…` 和 `%5B.%5D.bit.ly/…` 仍按短链删除。证据是 `5dwww.bit.ly` 和 `5d.bit.ly`。
 - `http://bit.ly%5B.%5D…` 仍按 `bit.ly` 删除。`t%5B.%5Dme/+…` 仍按邀请删除。第二层 `%255B` 仍留下。路径不进证据。
+- 汉字和其它 Android 留在标签里的字夹在 ASCII 中间时收成 `x`。见 ADR 0205。

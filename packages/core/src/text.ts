@@ -614,14 +614,20 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `%2E` used as the dot inside a host still becomes `.`.
  * An encoded bracket pair glued to a finished host becomes its closing hex.
  * `bit%5B.%5Dly` and a literal closing bracket still become `.`.
+ * A run of Android label characters sitting between ASCII letters or digits
+ * becomes `x`, so one host is not read as the shortener inside it.
+ * A run before `http://` or `https://` stays. `。` stays. A label character
+ * with no ASCII letter before it stays.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
     foldHostEncodedGaps(
-      foldMatchText(
-        foldGluedEncodedHyphen(
-          foldGluedEncodedPlus(
-            foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+      foldGluedLabelRuns(
+        foldMatchText(
+          foldGluedEncodedHyphen(
+            foldGluedEncodedPlus(
+              foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+            ),
           ),
         ),
       ),
@@ -647,7 +653,54 @@ export function foldHostScanKeepingGaps(text: string): string {
  * not swallow the next URL. The joined scan still folds those letters.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldHostInterruptersAndroidKeeps(foldAndroidLetterUnlessScheme(text));
+  return foldGluedLabelRuns(
+    foldHostInterruptersAndroidKeeps(foldAndroidLetterUnlessScheme(text)),
+  );
+}
+
+/**
+ * Android keeps these characters inside the same host label.
+ * Replacing the run with `x` stops a later ASCII label from being its own URL.
+ * `。` still separates labels for the URL parser. A following scheme stays.
+ */
+function foldGluedLabelRuns(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
+    if (gluedLabelCode(code) && asciiHostLetter(text, index - 1)) {
+      let end = next;
+      while (end < text.length) {
+        const more = text.codePointAt(end);
+        if (more === undefined || !gluedLabelCode(more)) {
+          break;
+        }
+        end += String.fromCodePoint(more).length;
+      }
+      if (asciiHostLetter(text, end) && !startsWithScheme(text, end)) {
+        out += "x";
+        index = end;
+        continue;
+      }
+    }
+    out += char;
+    index = next;
+  }
+  return out;
+}
+
+const GLUED_LABEL_SKIP = new Set([
+  0x00b7, 0x2022, 0x2027, 0x2219, 0x22c5, 0x3002, 0x30fb, 0xff0e, 0xfe52,
+  0xff61,
+]);
+
+function gluedLabelCode(code: number): boolean {
+  return code > 0x7f && !GLUED_LABEL_SKIP.has(code) && androidLabelCode(code);
 }
 
 const CYRILLIC_LOOKALIKES: Record<string, string> = {
