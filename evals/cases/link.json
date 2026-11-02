@@ -1800,5 +1800,30 @@
     "id": "bare-letter-inside",
     "text": "xαbit.ly/offer152",
     "label": "ham"
+  },
+  {
+    "id": "adjacent-dot-schemed",
+    "text": "http://example.com.．http://bit.ly/offer153",
+    "label": "ham"
+  },
+  {
+    "id": "adjacent-dot-path",
+    "text": "http://example.com.．/http://bit.ly/offer153",
+    "label": "ham"
+  },
+  {
+    "id": "adjacent-dot-query",
+    "text": "http://example.com.·?http://bit.ly/offer153",
+    "label": "ham"
+  },
+  {
+    "id": "adjacent-dot-bare",
+    "text": "example.com.．http://bit.ly/offer153",
+    "label": "spam"
+  },
+  {
+    "id": "adjacent-dot-separator",
+    "text": "bit．ly/offer153",
+    "label": "spam"
   }
 ]

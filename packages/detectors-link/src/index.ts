@@ -70,7 +70,9 @@ export const defaultShorteners = [
  * The label still cannot start or end with either mark. Letters written
  * against each other still start at the ASCII word, and `http://`
  * is not itself a label. A dot in a schemed host
- * starts another label only when a label character follows. A dot before
+ * starts another label only when a label character follows. A dot lookalike
+ * that follows an ASCII dot stays in that label, so the next URL is not its
+ * own match. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
  * info only when the next character can finish it. User info is at most
  * 64 characters, and the password is at most 25. A label is at most 63

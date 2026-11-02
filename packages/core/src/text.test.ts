@@ -139,6 +139,20 @@ describe("foldHostScan", () => {
       "http://bit.ly\u00A0evil.com",
     );
   });
+
+  it("keeps a dot lookalike that already follows an ascii dot", () => {
+    const fullwidth = "\uFF0E";
+    const middle = "\u00B7";
+    expect(foldHostScan(`http://example.com.${fullwidth}http://bit.ly`)).toBe(
+      `http://example.com.${fullwidth}http://bit.ly`,
+    );
+    expect(
+      foldHostScanKeepingStops(`http://example.com.${middle}http://bit.ly`),
+    ).toBe(`http://example.com.${middle}http://bit.ly`);
+    expect(foldHostScan(`bit${fullwidth}ly`)).toBe("bit.ly");
+    expect(foldHostScan(`bit${middle}ly`)).toBe("bit.ly");
+    expect(foldDotLookalikes(`bit.${fullwidth}ly`)).toBe("bit..ly");
+  });
 });
 
 describe("foldBracketDots", () => {

@@ -33,6 +33,27 @@ export function foldDotLookalikes(text: string): string {
   return text.replace(DOT_LOOKALIKES, ".");
 }
 
+const HOST_DOT_LOOKALIKE =
+  /[\u00B7\u2022\u2027\u2219\u22C5\u30FB\uFF0E\uFE52\uFF61]/;
+
+/**
+ * Turn a dot lookalike into `.` unless an ASCII dot already precedes it.
+ * Android keeps that character inside the label. Folding it would split
+ * one URL into a second host. A lookalike that separates labels still
+ * becomes `.`.
+ */
+function foldHostDots(text: string): string {
+  let out = "";
+  for (const char of text) {
+    if (HOST_DOT_LOOKALIKE.test(char) && !out.endsWith(".")) {
+      out += ".";
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
 /**
  * Bracket pairs that stand in for a dot in a hostname.
  * One percent-encoded pair counts. A second layer and a space inside stay.
@@ -47,7 +68,7 @@ export function foldBracketDots(text: string): string {
 }
 
 function foldHostShape(text: string): string {
-  return foldDotLookalikes(
+  return foldHostDots(
     foldEncodedMiddleDot(
       foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
     ),
@@ -63,6 +84,7 @@ function foldHostTail(text: string): string {
  * This is the link-detector order. Structured URL parsing keeps its own order.
  * An ordinary space stays. A second percent layer stays.
  * Gaps are removed so a short link split by an invisible character still matches.
+ * A dot lookalike after an ASCII dot stays in the label.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(foldEncodedGaps(foldMatchText(foldHostShape(text))));
@@ -80,11 +102,12 @@ export function foldHostScanKeepingGaps(text: string): string {
  * Host fold that leaves Android's stopping characters in place.
  * Percent encodings, bracketed dots, gaps, and a letter after a finished
  * host stay. A letter between two ASCII letters still drops, so `bαit.ly`
- * can match. Lookalike letters still fold.
+ * can match. Lookalike letters still fold. A dot lookalike after an
+ * ASCII dot stays in the label.
  * The joined host from `foldHostScan` stays separate.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldDotLookalikes(
+  return foldHostDots(
     foldHostInterruptersAndroidKeeps(
       foldFullwidthLatin(foldCyrillicLookalikes(text)),
     ),

@@ -32,3 +32,4 @@ Android 的单词边界只认 ASCII 字母、数字和下划线。希腊字母�
 - `example.comα/http://bit.ly/…`、`www.example.comα?http://bit.ly/…`、`foo_bar.com` 加西里尔字母再接短链，以及 `203.0.113.152é/http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `example.comα/https://t.me/+…` 按邀请删除。路径不进证据。
 - `http://example.comα/http://bit.ly/…`、`http://bit.lyαtail.example/…` 和 `xαbit.ly/…` 留着。`bαit.ly` 和 `点击bit.ly` 仍按短链删除。
+- ASCII 点后面的点状字符仍留在带协议的标签里，后面的网址不再另开。见 ADR 0186。
