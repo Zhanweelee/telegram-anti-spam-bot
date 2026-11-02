@@ -1,4 +1,5 @@
 import {
+  androidUrlSpan,
   type Event,
   type ForwardKind,
   foldBracketDots,
@@ -995,10 +996,7 @@ function wrappedExtras(
   const text = queryValue(folded, "text");
   if (text !== null && text.length > 0 && text.length <= MAX_TEXT) {
     for (const raw of urlsInText(text)) {
-      const inner = hostFromUrl(raw, false);
-      if (inner) {
-        found.push({ host: inner.host, invite: inner.invite });
-      }
+      pushDraftUrl(raw, found, false);
     }
   }
   return found;
@@ -1027,14 +1025,7 @@ function msgTextExtras(
     return found;
   }
   for (const raw of urlsInText(text)) {
-    const inner = hostFromUrl(raw, false);
-    if (!inner) {
-      continue;
-    }
-    found.push({ host: inner.host, invite: inner.invite });
-    for (const extra of inner.extras ?? []) {
-      found.push(extra);
-    }
+    pushDraftUrl(raw, found, true);
   }
   return found;
 }
@@ -1155,16 +1146,43 @@ function usernameDraftExtras(
   }
   const found: { host: string; invite: boolean }[] = [];
   for (const raw of urlsInText(text)) {
-    const inner = hostFromUrl(raw, false);
-    if (!inner) {
-      continue;
-    }
-    found.push({ host: inner.host, invite: inner.invite });
-    for (const extra of inner.extras ?? []) {
-      found.push(extra);
-    }
+    pushDraftUrl(raw, found, true);
   }
   return found;
+}
+
+function pushDraftUrl(
+  raw: string,
+  found: { host: string; invite: boolean }[],
+  nested: boolean,
+): void {
+  appendParsed(hostFromUrl(raw, false), found, nested);
+  const span = androidUrlSpan(raw);
+  if (span === null) {
+    return;
+  }
+  appendParsed(hostFromUrl(span, false), found, nested);
+}
+
+function appendParsed(
+  link: {
+    host: string;
+    invite: boolean;
+    extras?: { host: string; invite: boolean }[];
+  } | null,
+  found: { host: string; invite: boolean }[],
+  nested: boolean,
+): void {
+  if (!link) {
+    return;
+  }
+  found.push({ host: link.host, invite: link.invite });
+  if (!nested) {
+    return;
+  }
+  for (const extra of link.extras ?? []) {
+    found.push(extra);
+  }
 }
 
 function isUsernameDraft(url: URL): boolean {

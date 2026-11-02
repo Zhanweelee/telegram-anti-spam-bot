@@ -9445,4 +9445,216 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(userinfo.event)).not.toContain("bit.ly");
     expect(JSON.stringify(userinfo.event)).not.toContain("ok119");
   });
+
+  it("keeps the host Android stops on inside a compose draft", async () => {
+    const path = "span120";
+    const slash = "\u2215";
+    const hidden = `http://bit.ly${slash}@example.com/${path}`;
+    const profile = await normalize({
+      update_id: 2122,
+      message: {
+        message_id: 122,
+        date: 1761955200,
+        chat: { id: -1008122, type: "supergroup", title: "机密群名" },
+        from: { id: 122, first_name: "from122" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: `https://t.me/durov?text=${encodeURIComponent(hidden)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(profile.status).toBe("event");
+    if (profile.status !== "event") {
+      return;
+    }
+    expect(profile.event.message?.text).toBe("今天站会");
+    expect(profile.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    const profileDump = JSON.stringify(profile.event);
+    expect(profileDump).not.toContain(path);
+    expect(profileDump).not.toContain("durov");
+    expect(profileDump).not.toContain("from122");
+    expect(profileDump).not.toContain("机密群名");
+
+    const address = "203.0.113.120";
+    const ip = await normalize({
+      update_id: 2123,
+      message: {
+        message_id: 123,
+        date: 1761955200,
+        chat: { id: -1008123, type: "supergroup" },
+        from: { id: 123 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: `https://t.me/durov?text=${encodeURIComponent(`http://${address}${slash}@example.com/${path}`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toEqual(["t.me", "example.com", address]);
+    expect(JSON.stringify(ip.event)).not.toContain(path);
+
+    const desktop = await normalize({
+      update_id: 2124,
+      message: {
+        message_id: 124,
+        date: 1761955200,
+        chat: { id: -1008124, type: "supergroup" },
+        from: { id: 124 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: `https://t.me/durov?text=${encodeURIComponent(`http://example.com${slash}@bit.ly/${path}`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(desktop.status).toBe("event");
+    if (desktop.status !== "event") {
+      return;
+    }
+    expect(desktop.event.message?.hosts).toEqual([
+      "t.me",
+      "bit.ly",
+      "example.com",
+    ]);
+    expect(JSON.stringify(desktop.event)).not.toContain(path);
+
+    const lower = await normalize({
+      update_id: 2125,
+      message: {
+        message_id: 125,
+        date: 1761955200,
+        chat: { id: -1008125, type: "supergroup" },
+        from: { id: 125 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: `https://t.me/durov?text=${encodeURIComponent(`http://bit.ly%e2%88%95@example.com/${path}`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(lower.status).toBe("event");
+    if (lower.status !== "event") {
+      return;
+    }
+    expect(lower.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(lower.event)).not.toContain(path);
+
+    const share = await normalize({
+      update_id: 2126,
+      message: {
+        message_id: 126,
+        date: 1761955200,
+        chat: { id: -1008126, type: "supergroup" },
+        from: { id: 126 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "分享",
+                url: `https://t.me/share/url?text=${encodeURIComponent(hidden)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(share.status).toBe("event");
+    if (share.status !== "event") {
+      return;
+    }
+    expect(share.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(share.event)).not.toContain(path);
+
+    const msg = await normalize({
+      update_id: 2127,
+      message: {
+        message_id: 127,
+        date: 1761955200,
+        chat: { id: -1008127, type: "supergroup" },
+        from: { id: 127 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "私聊",
+                url: `tg://msg?text=${encodeURIComponent(hidden)}&to=durov`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(msg.status).toBe("event");
+    if (msg.status !== "event") {
+      return;
+    }
+    expect(msg.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const msgDump = JSON.stringify(msg.event);
+    expect(msgDump).not.toContain(path);
+    expect(msgDump).not.toContain("durov");
+
+    const label = await normalize({
+      update_id: 2128,
+      message: {
+        message_id: 128,
+        date: 1761955200,
+        chat: { id: -1008128, type: "supergroup" },
+        from: { id: 128 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: hidden, url: "https://example.org/ok120" }],
+          ],
+        },
+      },
+    });
+    expect(label.status).toBe("event");
+    if (label.status !== "event") {
+      return;
+    }
+    expect(label.event.message?.hosts).toEqual(["example.com", "example.org"]);
+    expect(JSON.stringify(label.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(label.event)).not.toContain(path);
+    expect(JSON.stringify(label.event)).not.toContain("ok120");
+  });
 });
