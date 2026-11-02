@@ -970,5 +970,20 @@
     "id": "single-dot-label",
     "text": "http://bit.ly.evil.com/keep",
     "label": "ham"
+  },
+  {
+    "id": "overlong-port-short",
+    "text": "http://bit.ly:999999/offer127",
+    "label": "spam"
+  },
+  {
+    "id": "overlong-port-ip",
+    "text": "http://203.0.113.127:999999/x",
+    "label": "spam"
+  },
+  {
+    "id": "overlong-port-plain",
+    "text": "http://example.com:999999/ok",
+    "label": "ham"
   }
 ]

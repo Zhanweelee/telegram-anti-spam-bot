@@ -306,4 +306,15 @@ describe("androidUrlSpan", () => {
     expect(androidUrlSpan("http://bit.ly/x")).toBeNull();
     expect(androidUrlSpan("http://bit.ly./x")).toBe("http://bit.ly");
   });
+
+  it("stops before a port longer than five digits", () => {
+    expect(androidUrlSpan("http://bit.ly:999999/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly:999999")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://203.0.113.9:999999/x")).toBe(
+      "http://203.0.113.9",
+    );
+    expect(androidUrlSpan("http://bit.ly:80/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly:65535/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly:80a/x")).toBe("http://bit.ly:80");
+  });
 });

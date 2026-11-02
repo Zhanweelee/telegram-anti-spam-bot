@@ -32,3 +32,4 @@ ADR 0152 和 ADR 0158 按 Android `LinkifyPort.WEB_URL` 留下高亮提前停住
 - `http://bit.ly../…`、`http://bit.ly..evil.com/…` 和 `http://203.0.113.9../…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://bit.ly.evil.com/…` 留着。
 - `https://t.me../+…` 不记成邀请。再套一层仍放行。路径不进证据。
+- 端口超过五位数字时，高亮停在端口前面。见 ADR 0160。

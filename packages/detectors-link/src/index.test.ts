@@ -3093,4 +3093,51 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE126");
   });
+
+  it("keeps the host Android stops on before an overlong port", async () => {
+    const detector = createLinkDetector();
+    const path = "offer127";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly:999999/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+    expect(JSON.stringify(short)).not.toContain("999999");
+
+    const address = "203.0.113.127";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}:999999/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain("999999");
+
+    const plain = await detector.detect({
+      event: eventFor("http://example.com:999999/ok"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const port = await detector.detect({
+      event: eventFor("http://bit.ly:80/ok127"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(port?.reasons).toEqual(["short_link"]);
+    expect(port?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const invite = await detector.detect({
+      event: eventFor("https://t.me:999999/+CODE127"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE127");
+  });
 });

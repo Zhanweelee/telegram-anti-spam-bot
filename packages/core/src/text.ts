@@ -310,6 +310,7 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
  * A label cannot end on a hyphen. A dot starts a label only when one follows.
+ * A port is one to five digits and cannot end in the middle of a longer number.
  * A hyphen inside user info stays with `@`.
  * A division slash or fraction slash inside the span becomes `/`.
  * The same string comes back as null.
@@ -337,7 +338,7 @@ export function androidUrlSpan(raw: string): string | null {
     index = next;
   }
   if (raw.charAt(index) === ":") {
-    const port = /^:\d{1,5}/.exec(raw.slice(index));
+    const port = /^:\d{1,5}(?!\d)/.exec(raw.slice(index));
     if (port?.[0]) {
       index += port[0].length;
     }
