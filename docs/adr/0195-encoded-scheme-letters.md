@@ -32,3 +32,4 @@ Android 不会在匹配前把 `%68`、`%74`、`%70`、`%73` 收成字母。`%68t
 - `%68ttp://bit.ly/…`、`ht%74p://bit.ly/…`、`htt%70://bit.ly/…`、`http%73://bit.ly/…`、`%2568ttp://bit.ly/…` 和换行拆开的 `ht%74` 加 `p://bit.ly/…` 留着。`example.com/%68ttp://bit.ly/…` 留着。
 - `http://bit.ly/…`、`http://b%69t.ly/…` 和 `b%69t.ly` 仍按短链删除。`t.me/+OFF%45` 仍按邀请删除。路径不进证据。
 - `https://bit.ly/%68ttp://t.co/…` 仍按短链删除。证据是 `bit.ly`。
+- 百分号编码的斜杠拼出 `://`，或紧挨在协议前面时，不再收成斜杠。见 ADR 0196。

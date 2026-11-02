@@ -95,21 +95,24 @@ function foldHostTail(text: string): string {
 }
 
 /**
- * A percent-encoded letter that spells `http://` or `https://` is not a
- * scheme Android decodes. A literal scheme stays. `b%69t.ly` is not a scheme.
- * `!` ends the text in front, and `x` keeps the host after `://` from starting.
+ * A percent-encoded letter, colon, or slash that spells `http://` or
+ * `https://` is not a scheme Android decodes. `%2F` glued to a written
+ * scheme is not a slash either. A literal scheme stays. `b%69t.ly` and
+ * `t.me%2F+…` are not schemes. `!` ends the text in front, and `x` keeps
+ * the host after `://` from starting.
  */
 function foldEncodedScheme(text: string): string {
+  const prepared = text.replace(/%2F(?=https?:\/\/)/gi, "!x");
   let out = "";
   let index = 0;
-  while (index < text.length) {
-    const taken = encodedSchemeLength(text, index);
+  while (index < prepared.length) {
+    const taken = encodedSchemeLength(prepared, index);
     if (taken > 0) {
       out += "!x";
       index += taken;
       continue;
     }
-    out += text.charAt(index);
+    out += prepared.charAt(index);
     index += 1;
   }
   return out;
@@ -154,12 +157,29 @@ function consumeSchemeChar(
 ): number {
   const current = text.charAt(index);
   if (expected === ":" || expected === "/") {
-    return current === expected ? 1 : 0;
+    if (current === expected) {
+      return 1;
+    }
+    return consumeEncodedMark(text, index, expected === ":" ? "3a" : "2f");
   }
   if (current.toLowerCase() === expected) {
     return 1;
   }
   return consumeEncodedSchemeLetter(text, index, expected);
+}
+
+function consumeEncodedMark(text: string, index: number, hex: string): number {
+  const single = text.slice(index, index + 3).toLowerCase();
+  if (single === `%${hex}`) {
+    return 3;
+  }
+  if (
+    hex === "3a" &&
+    text.slice(index, index + 5).toLowerCase() === `%25${hex}`
+  ) {
+    return 5;
+  }
+  return 0;
 }
 
 function consumeEncodedSchemeLetter(
@@ -225,6 +245,7 @@ function foldGluedEncodedHyphen(text: string): string {
  * A dot lookalike after an ASCII dot stays in the label.
  * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
  * A percent-encoded letter that spells the scheme stays out of that scheme.
+ * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(

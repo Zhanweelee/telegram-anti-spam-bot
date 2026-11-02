@@ -2085,5 +2085,35 @@
     "id": "encoded-scheme-invite",
     "text": "t.me/+OFF%45",
     "label": "spam"
+  },
+  {
+    "id": "encoded-slash-lead",
+    "text": "%2Fhttp://bit.ly/offer163",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-slash-scheme",
+    "text": "http:%2F%2Fbit.ly/offer163",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-slash-break",
+    "text": "example.com%2F\nhttp://bit.ly/offer163",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-bare",
+    "text": "http:%2F/bit.ly/offer163",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-invite",
+    "text": "t.me%2F+CODE163",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-path",
+    "text": "https://bit.ly%2Fname163",
+    "label": "spam"
   }
 ]

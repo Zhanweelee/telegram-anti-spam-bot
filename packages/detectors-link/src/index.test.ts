@@ -6202,4 +6202,86 @@ describe("link fixtures", () => {
     expect(JSON.stringify(nested)).not.toContain("t.co");
     expect(JSON.stringify(nested)).not.toContain(path);
   });
+
+  it("leaves a short link spelled with a percent-encoded slash", async () => {
+    const detector = createLinkDetector();
+    const path = "offer163";
+    const glued = [
+      `%2Fhttp://bit.ly/${path}`,
+      `%2fhttps://bit.ly/${path}`,
+      `!%2Fhttp://bit.ly/${path}`,
+      `(%2Fhttp://bit.ly/${path}`,
+      `see %2Fhttp://bit.ly/${path}`,
+      `example.com%2Fhttp://bit.ly/${path}`,
+      `http:%2F%2Fbit.ly/${path}`,
+      `http:/%2Fbit.ly/${path}`,
+      `https:%2F%2Fbit.ly/${path}`,
+      `HTTP:%2F%2Fbit.ly/${path}`,
+      `http%3A%2F%2Fbit.ly/${path}`,
+      `http%3A/%2Fbit.ly/${path}`,
+      `http%253A%2F%2Fbit.ly/${path}`,
+      `%252Fhttp://bit.ly/${path}`,
+    ];
+    for (const text of glued) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `example.com%2F\nhttp://bit.ly/${path}`,
+      `example.com%2F/http://bit.ly/${path}`,
+      `example.com%2F http://bit.ly/${path}`,
+      `http:%2F/bit.ly/${path}`,
+      `https://bit.ly%2Fname${path}`,
+      `http://bit.ly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const invite = await detector.detect({
+      event: eventFor("t.me%2F+CODE163"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("CODE163");
+
+    const nested = await detector.detect({
+      event: eventFor(`https://bit.ly%2Fhttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(nested?.reasons).toEqual(["short_link"]);
+    expect(nested?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(nested)).not.toContain("t.co");
+    expect(JSON.stringify(nested)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.163%2Fhttp://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["ip_host"]);
+    expect(addressed?.evidence[0]?.summary).toBe("ip_host:203.0.113.163");
+    expect(JSON.stringify(addressed)).not.toContain("short_link:bit.ly");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+  });
 });

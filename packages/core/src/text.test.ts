@@ -149,6 +149,13 @@ describe("foldHostScan", () => {
     expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
     expect(foldHostScan("http://bit.ly")).toBe("http://bit.ly");
     expect(foldEncodedAlphabet("%68ttp://bit.ly")).toContain("http://");
+    expect(foldHostScan("%2Fhttp://bit.ly")).toBe("!xhttp://bit.ly");
+    expect(foldHostScan("http:%2F%2Fbit.ly")).toBe("!xbit.ly");
+    expect(foldHostScan("http%3A%2F%2Fbit.ly")).toBe("!xbit.ly");
+    expect(foldHostScan("http%253A%2F%2Fbit.ly")).toBe("!xbit.ly");
+    expect(foldHostScan("t.me%2F+CODE")).toBe("t.me/+CODE");
+    expect(foldHostScan("https://bit.ly%2Fname")).toBe("https://bit.ly/name");
+    expect(foldEncodedSeparators("%2Fhttp://bit.ly")).toBe("/http://bit.ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {
