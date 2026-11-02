@@ -218,13 +218,75 @@ function foldGluedEncodedDot(text: string): string {
 }
 
 /**
- * `%2B` glued to `http://` is not a plus Android decodes.
+ * `%2B` glued to `http://` or to a bare host is not a plus Android decodes.
  * A line break between them still is. Rewrite the glued form before line
  * breaks disappear: `!` lets the host in front end, and `x` keeps `http`
- * from starting. `t.me/%2B…` is not glued to a scheme, so it still folds.
+ * from starting. A bare host keeps its path, with the last label replaced
+ * so the shortener suffix cannot match. `t.me/%2B…` is a path, so it still
+ * folds. `%2F%2B` is that same path before the slash is decoded.
  */
 function foldGluedEncodedPlus(text: string): string {
-  return text.replace(/%2B(?=https?:\/\/)/gi, "!x");
+  const scheme = text.replace(/%2B(?=https?:\/\/)/gi, "!x");
+  let out = "";
+  let index = 0;
+  while (index < scheme.length) {
+    const taken = gluedPlusHostLength(scheme, index);
+    if (taken > 0) {
+      out += neutralizeGluedHost(scheme.slice(index + 3, index + taken));
+      index += taken;
+      continue;
+    }
+    out += scheme.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function gluedPlusHostLength(text: string, index: number): number {
+  if (text.slice(index, index + 3).toLowerCase() !== "%2b") {
+    return 0;
+  }
+  if (plusSitsInPath(text, index)) {
+    return 0;
+  }
+  const body = gluedHostBodyLength(text, index + 3);
+  return body > 0 ? body + 3 : 0;
+}
+
+function plusSitsInPath(text: string, index: number): boolean {
+  if (text.charAt(index - 1) === "/") {
+    return true;
+  }
+  return text.slice(index - 3, index).toLowerCase() === "%2f";
+}
+
+function gluedHostBodyLength(text: string, index: number): number {
+  const rest = text.slice(index);
+  const ip = /^(?:\d{1,3}\.){3}\d{1,3}/.exec(rest);
+  if (ip?.[0] && quadIsAddress(ip[0], text.charAt(index + ip[0].length))) {
+    return ip[0].length;
+  }
+  const host =
+    /^(?:[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?\.){1,8}[a-z]{2,63}/i.exec(rest);
+  return host?.[0].length ?? 0;
+}
+
+function quadIsAddress(quad: string, next: string): boolean {
+  if (next === "." || (next >= "0" && next <= "9")) {
+    return false;
+  }
+  return quad.split(".").every((part) => {
+    const value = Number(part);
+    return part === String(value) && value <= 255;
+  });
+}
+
+function neutralizeGluedHost(host: string): string {
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+    return "!0.arpa";
+  }
+  const dot = host.lastIndexOf(".");
+  return `!${host.slice(0, dot)}.arpa`;
 }
 
 /**
@@ -244,6 +306,7 @@ function foldGluedEncodedHyphen(text: string): string {
  * Gaps are removed so a short link split by an invisible character still matches.
  * A dot lookalike after an ASCII dot stays in the label.
  * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
+ * `%2B` glued to a bare host stays out of that host.
  * A percent-encoded letter that spells the scheme stays out of that scheme.
  * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
  */

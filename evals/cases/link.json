@@ -2115,5 +2115,50 @@
     "id": "encoded-slash-path",
     "text": "https://bit.ly%2Fname163",
     "label": "spam"
+  },
+  {
+    "id": "encoded-plus-host",
+    "text": "%2Bbit.ly/offer164",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-host-ip",
+    "text": "example.com%2B203.0.113.164",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-host-invite",
+    "text": "example.com%2Bt.me/+CODE164",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-host-path",
+    "text": "%2Bexample.com/bit.ly/offer164",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-plus-host-break",
+    "text": "example.com%2B\nbit.ly/offer164",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-host-slash",
+    "text": "example.com%2B/bit.ly/offer164",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-host-literal",
+    "text": "example.com+bit.ly/offer164",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-host-kept",
+    "text": "t.me/%2BCODE164",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-plus-host-www",
+    "text": "example.com%2Bwww.bit.ly/offer164",
+    "label": "spam"
   }
 ]

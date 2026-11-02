@@ -128,6 +128,15 @@ describe("foldHostScan", () => {
     );
     expect(foldHostScan("example.com%2B\nhttp://bit.ly")).toContain("+http://");
     expect(foldHostScan("t.me/%2BCODE")).toBe("t.me/+CODE");
+    expect(foldHostScan("%2Bbit.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("example.com%2Bwww.bit.ly")).toBe(
+      "example.com!www.bit.arpa",
+    );
+    expect(foldHostScan("%2B203.0.113.10")).toBe("!0.arpa");
+    expect(foldHostScan("%2Bexample.com/bit.ly")).toBe("!example.arpa/bit.ly");
+    expect(foldHostScan("example.com%2B\nbit.ly")).toBe("example.com+bit.ly");
+    expect(foldHostScan("t.me%2F%2BCODE")).toBe("t.me/+CODE");
+    expect(foldEncodedSeparators("%2Bbit.ly")).toBe("+bit.ly");
     expect(foldHostScan("example.com%2Dhttp://bit.ly")).not.toContain(
       "-http://",
     );
