@@ -80,6 +80,60 @@ export function foldBracketDots(text: string): string {
   return text.replace(BRACKET_DOT, ".");
 }
 
+/**
+ * An encoded closing bracket glued to a finished host is the two hex
+ * digits Android keeps. `bit%5B.%5Dly` and a literal `]` still become `.`.
+ * A pair in a path, or after a line break, still becomes `.`.
+ */
+function foldGluedBracketDots(text: string): string {
+  const pattern = new RegExp(BRACKET_DOT.source, "gi");
+  let out = "";
+  let index = 0;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    const raw = match[0] ?? "";
+    out += text.slice(index, start);
+    const closer = encodedBracketHex(raw);
+    if (
+      closer !== null &&
+      !bracketSitsInPath(text, start) &&
+      bracketOpensNext(text, start + raw.length)
+    ) {
+      out += closer;
+    } else {
+      out += raw;
+    }
+    index = start + raw.length;
+  }
+  return out + text.slice(index);
+}
+
+function encodedBracketHex(raw: string): string | null {
+  const tail = raw.slice(-3);
+  if (/^%(?:5d|29|7d)$/i.test(tail)) {
+    return tail.slice(1);
+  }
+  return null;
+}
+
+function bracketOpensNext(text: string, index: number): boolean {
+  const scheme = text.slice(index, index + 8).toLowerCase();
+  if (scheme.startsWith("https://") || scheme.startsWith("http://")) {
+    return true;
+  }
+  if (text.charAt(index) === "." && gluedHostBodyLength(text, index + 1) > 0) {
+    return true;
+  }
+  return gluedHostBodyLength(text, index) > 0;
+}
+
+function bracketSitsInPath(text: string, index: number): boolean {
+  if (text.slice(index - 3, index).toLowerCase() === "://") {
+    return false;
+  }
+  return encodedMarkSitsInPath(text, index);
+}
+
 function foldHostShape(text: string): string {
   return foldHostDots(
     foldHostEncodedMiddleDot(
@@ -558,13 +612,17 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * The same lookalike used as the dot inside a host still becomes `.`.
  * `%2E` glued to a finished host becomes the two hex digits Android keeps.
  * `%2E` used as the dot inside a host still becomes `.`.
+ * An encoded bracket pair glued to a finished host becomes its closing hex.
+ * `bit%5B.%5Dly` and a literal closing bracket still become `.`.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
     foldHostEncodedGaps(
       foldMatchText(
         foldGluedEncodedHyphen(
-          foldGluedEncodedPlus(foldGluedEncodedDot(foldHostShape(text))),
+          foldGluedEncodedPlus(
+            foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+          ),
         ),
       ),
     ),

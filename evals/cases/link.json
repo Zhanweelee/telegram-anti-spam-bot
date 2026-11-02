@@ -2450,5 +2450,60 @@
     "id": "encoded-ascii-dot-open",
     "text": "%2E203.0.113.170/http://t.co/offer170",
     "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host",
+    "text": "%5B.%5Dbit.ly/offer171",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-host-paren",
+    "text": "%28.%29bit.ly/offer171",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-host-see",
+    "text": "see%5B.%5Dbit.ly/offer171",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-host-scheme",
+    "text": "%5B.%5Dhttp://bit.ly/offer171",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-host-ip",
+    "text": "%5B.%5D203.0.113.171/offer171",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-bracket-host-inside",
+    "text": "bit%5B.%5Dly/offer171",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host-literal",
+    "text": "[.]bit.ly/offer171",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host-close",
+    "text": "%5B.]bit.ly/offer171",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host-www",
+    "text": "%5B.%5Dwww.bit.ly/offer171",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host-break",
+    "text": "%5B.%5D\nbit.ly/offer171",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-bracket-host-open",
+    "text": "%5B.%5D203.0.113.171/http://t.co/offer171",
+    "label": "spam"
   }
 ]
