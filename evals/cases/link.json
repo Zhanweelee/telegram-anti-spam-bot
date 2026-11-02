@@ -1230,5 +1230,40 @@
     "id": "omitted-path-glued-invite",
     "text": "https://t.me\uD83D\uDE00/+CODE136",
     "label": "ham"
+  },
+  {
+    "id": "host-punct-bang",
+    "text": "http://example.com!http://bit.ly/offer137",
+    "label": "spam"
+  },
+  {
+    "id": "host-punct-hash",
+    "text": "http://example.com#http://bit.ly/offer137",
+    "label": "spam"
+  },
+  {
+    "id": "host-punct-colon",
+    "text": "http://news.example:http://203.0.113.137/x",
+    "label": "spam"
+  },
+  {
+    "id": "host-punct-path",
+    "text": "http://example.com/!http://bit.ly/offer137",
+    "label": "ham"
+  },
+  {
+    "id": "host-punct-query",
+    "text": "http://example.com/?http://bit.ly/offer137",
+    "label": "ham"
+  },
+  {
+    "id": "host-punct-userinfo",
+    "text": "http://bit.ly@example.com",
+    "label": "ham"
+  },
+  {
+    "id": "host-punct-glued-invite",
+    "text": "https://t.me!/+CODE137",
+    "label": "ham"
   }
 ]

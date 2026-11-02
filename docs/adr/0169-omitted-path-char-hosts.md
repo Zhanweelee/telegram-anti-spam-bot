@@ -31,3 +31,4 @@ Android `LinkifyPort.WEB_URL` 的路径只收标签字符、一小部分标点�
 - `http://example.com` 后接表情或 U+10140 再接 `http://bit.ly/…`，以及 `http://news.example` 后接表情再接 `http://203.0.113.136/…`，按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://example.com/点击http://bit.ly/…` 留着。`http://bit.ly` 后接希腊字母 `α` 再接别的标签也留着。
 - `https://t.me` 和表情后面的 `/+…` 不记成邀请。`http://example.com/` 后接表情再接 `https://t.me/+…` 按邀请删除。路径不进证据。
+- 主机名后面、路径还没开始时的标点，Android 另外打开的主机名也留下。见 ADR 0170。

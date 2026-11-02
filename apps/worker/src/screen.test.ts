@@ -5432,4 +5432,72 @@ describe("screenTelegramEvent", () => {
     expect(allowed.decision.action).toBe("allow");
     expect(JSON.stringify(allowed.decision.evidence)).not.toContain("bit.ly");
   });
+
+  it("deletes a short link Android opens after punctuation that ends the host", async () => {
+    const path = "offer137";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2191,
+        message: {
+          message_id: 2191,
+          date: 1761955200,
+          chat: { id: -1008149, type: "supergroup", title: "机密群名" },
+          from: { id: 137, first_name: "https://tinyurl.com/from137" },
+          text: `http://example.com!http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1008149", messageId: "2191" },
+    ]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("from137");
+    expect(dumped).not.toContain("机密群名");
+
+    const plain = await normalizeUpdate({
+      update: {
+        update_id: 2192,
+        message: {
+          message_id: 2192,
+          date: 1761955200,
+          chat: { id: -1008150, type: "supergroup" },
+          from: { id: 137 },
+          text: `http://example.com/!http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(plain.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(JSON.stringify(allowed.decision.evidence)).not.toContain("bit.ly");
+  });
 });
