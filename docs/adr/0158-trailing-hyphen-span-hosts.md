@@ -34,3 +34,4 @@ ADR 0152 按 Android `LinkifyPort.WEB_URL` 留下高亮提前停住的主机名�
 - `http://bit.ly-foo/…` 和 `http://203.0.113.9-1/…` 留着。
 - `http://bit.ly-@example.com` 和 `http://bit.ly:x-@example.com` 留着。`http://example.com-@bit.ly` 仍因整段里的 `bit.ly` 删除。
 - `https://t.me-/+…` 不记成邀请。再套一层仍放行。路径不进证据。
+- 句点后面没有新标签时，高亮停在前一个标签。见 ADR 0159。

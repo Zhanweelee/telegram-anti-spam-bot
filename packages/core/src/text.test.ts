@@ -292,4 +292,18 @@ describe("androidUrlSpan", () => {
     expect(androidUrlSpan("http://example.com-@bit.ly/p")).toBeNull();
     expect(androidUrlSpan("http://bit.ly:80/x")).toBeNull();
   });
+
+  it("stops before a dot that does not start another label", () => {
+    expect(androidUrlSpan("http://bit.ly../x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly.../x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly..")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly..evil.com/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://203.0.113.9../x")).toBe("http://203.0.113.9");
+    expect(androidUrlSpan("http://user:pass@bit.ly../x")).toBe(
+      "http://user:pass@bit.ly",
+    );
+    expect(androidUrlSpan("http://bit.ly.evil.com/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly./x")).toBe("http://bit.ly");
+  });
 });

@@ -950,5 +950,25 @@
     "id": "hyphen-userinfo",
     "text": "http://bit.ly-@example.com/ok125",
     "label": "ham"
+  },
+  {
+    "id": "double-dot-short",
+    "text": "http://bit.ly../offer126",
+    "label": "spam"
+  },
+  {
+    "id": "double-dot-tail",
+    "text": "http://bit.ly..evil.com/x",
+    "label": "spam"
+  },
+  {
+    "id": "double-dot-ip",
+    "text": "http://203.0.113.126../x",
+    "label": "spam"
+  },
+  {
+    "id": "single-dot-label",
+    "text": "http://bit.ly.evil.com/keep",
+    "label": "ham"
   }
 ]

@@ -279,13 +279,38 @@ const ANDROID_SCHEME = /^(https?:\/\/)/i;
 const ANDROID_USERINFO =
   /^(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,25})?@/;
 const ANDROID_SLASH = /\u2215|\u2044|%E2%88%95|%E2%81%84/g;
-const ANDROID_HOST_CHAR = /[A-Za-z0-9.]/;
 const ANDROID_LABEL_CHAR = /[A-Za-z0-9]/;
+
+function readAndroidLabel(raw: string, index: number): number | null {
+  if (!ANDROID_LABEL_CHAR.test(raw.charAt(index))) {
+    return null;
+  }
+  let next = index + 1;
+  while (next < raw.length) {
+    if (ANDROID_LABEL_CHAR.test(raw.charAt(next))) {
+      next += 1;
+      continue;
+    }
+    if (raw.charAt(next) !== "-") {
+      break;
+    }
+    let look = next;
+    while (look < raw.length && raw.charAt(look) === "-") {
+      look += 1;
+    }
+    if (look >= raw.length || !ANDROID_LABEL_CHAR.test(raw.charAt(look))) {
+      break;
+    }
+    next = look + 1;
+  }
+  return next;
+}
 
 /**
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
- * A label cannot end on a hyphen. A hyphen inside user info stays with `@`.
+ * A label cannot end on a hyphen. A dot starts a label only when one follows.
+ * A hyphen inside user info stays with `@`.
  * A division slash or fraction slash inside the span becomes `/`.
  * The same string comes back as null.
  */
@@ -299,27 +324,17 @@ export function androidUrlSpan(raw: string): string | null {
   if (user?.[0]) {
     index += user[0].length;
   }
-  const hostStart = index;
-  while (index < raw.length) {
-    const char = raw.charAt(index);
-    if (ANDROID_HOST_CHAR.test(char)) {
-      index += 1;
-      continue;
-    }
-    if (char !== "-") {
-      break;
-    }
-    let look = index;
-    while (look < raw.length && raw.charAt(look) === "-") {
-      look += 1;
-    }
-    if (look >= raw.length || !ANDROID_LABEL_CHAR.test(raw.charAt(look))) {
-      break;
-    }
-    index = look + 1;
-  }
-  if (index === hostStart) {
+  const first = readAndroidLabel(raw, index);
+  if (first === null) {
     return null;
+  }
+  index = first;
+  while (raw.charAt(index) === ".") {
+    const next = readAndroidLabel(raw, index + 1);
+    if (next === null) {
+      break;
+    }
+    index = next;
   }
   if (raw.charAt(index) === ":") {
     const port = /^:\d{1,5}/.exec(raw.slice(index));

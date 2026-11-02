@@ -3047,4 +3047,50 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE125");
   });
+
+  it("keeps the host Android stops on before an empty label", async () => {
+    const detector = createLinkDetector();
+    const path = "offer126";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly../${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+
+    const tail = await detector.detect({
+      event: eventFor("http://bit.ly..evil.com/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(tail?.reasons).toEqual(["short_link"]);
+    expect(tail?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(tail)).not.toContain("evil.com");
+
+    const address = "203.0.113.126";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}../x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+
+    const joined = await detector.detect({
+      event: eventFor("http://bit.ly.evil.com/keep"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor("https://t.me../+CODE126"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE126");
+  });
 });
