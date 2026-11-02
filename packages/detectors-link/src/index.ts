@@ -70,7 +70,8 @@ export const defaultShorteners = [
  * characters and cannot end in the middle of an ASCII word. A hyphen stays
  * inside the label only when the finished label still fits. A dotted IPv4
  * with no scheme is its own match when Android opens it. An address inside
- * a `tg:` link stays with that link.
+ * a `tg://` link stays with that link. `tg:` without slashes does not hide
+ * the URL Android opens after it.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -456,8 +457,12 @@ function isTelegramPhonePath(host: string, path: string): boolean {
 function deepCovers(text: string): (start: number, end: number) => boolean {
   const spans: Array<[number, number]> = [];
   for (const match of text.matchAll(new RegExp(deepLink.source, "gi"))) {
+    const raw = match[0] ?? "";
+    if (!/^tg:\/\//i.test(raw)) {
+      continue;
+    }
     const from = match.index ?? 0;
-    spans.push([from, from + match[0].length]);
+    spans.push([from, from + raw.length]);
   }
   return (start, end) => spans.some(([from, to]) => start >= from && end <= to);
 }

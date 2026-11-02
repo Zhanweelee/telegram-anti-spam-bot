@@ -1475,5 +1475,35 @@
     "id": "bare-ip-path",
     "text": "http://example.com/203.0.113.142/offer142",
     "label": "ham"
+  },
+  {
+    "id": "tg-plain-http",
+    "text": "tg:http://bit.ly/offer143",
+    "label": "spam"
+  },
+  {
+    "id": "tg-plain-ip",
+    "text": "tg:203.0.113.143/x",
+    "label": "spam"
+  },
+  {
+    "id": "tg-plain-seen",
+    "text": "see tg:http://t.co/offer143",
+    "label": "spam"
+  },
+  {
+    "id": "tg-slashed-http",
+    "text": "tg://http://bit.ly/offer143",
+    "label": "ham"
+  },
+  {
+    "id": "tg-slashed-ip",
+    "text": "tg://203.0.113.143/x",
+    "label": "ham"
+  },
+  {
+    "id": "tg-slashed-buried",
+    "text": "tg://msg?text=https%3A%2F%2Fexample.com%2Fok143&to=198.51.100.20",
+    "label": "ham"
   }
 ]

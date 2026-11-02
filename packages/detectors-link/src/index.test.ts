@@ -4433,4 +4433,78 @@ describe("link fixtures", () => {
     expect(invite?.reasons).toEqual(["invite"]);
     expect(JSON.stringify(invite)).not.toContain("CODE142");
   });
+
+  it("keeps the host Android opens after tg: without slashes", async () => {
+    const detector = createLinkDetector();
+    const path = "offer143";
+    const plain = await detector.detect({
+      event: eventFor(`tg:http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain?.reasons).toEqual(["short_link"]);
+    expect(plain?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(plain)).not.toContain(path);
+
+    const address = "203.0.113.143";
+    const ip = await detector.detect({
+      event: eventFor(`tg:${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain("/x");
+
+    const seen = await detector.detect({
+      event: eventFor(`see tg:http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(seen?.reasons).toEqual(["short_link"]);
+    expect(seen?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(seen)).not.toContain(path);
+
+    const slashed = await detector.detect({
+      event: eventFor(`tg://http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slashed).toBeNull();
+    expect(JSON.stringify(slashed)).not.toContain("bit.ly");
+
+    const slashedIp = await detector.detect({
+      event: eventFor(`tg://${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slashedIp).toBeNull();
+    expect(JSON.stringify(slashedIp)).not.toContain(address);
+
+    const buried = await detector.detect({
+      event: eventFor(
+        "tg://msg?text=https%3A%2F%2Fexample.com%2Fok143&to=198.51.100.20",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(buried).toBeNull();
+    expect(JSON.stringify(buried)).not.toContain("198.51.100.20");
+
+    const join = await detector.detect({
+      event: eventFor("tg:join?invite=CODE143"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(join?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(join)).not.toContain("CODE143");
+
+    const linked = await detector.detect({
+      event: eventFor("tg:https://t.me/+CODE143"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(linked?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(linked)).not.toContain("CODE143");
+  });
 });
