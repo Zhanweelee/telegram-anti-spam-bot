@@ -925,6 +925,40 @@ describe("foldHostInterrupters", () => {
     expect(foldHostScan(`http://bit.ly.${"\u03B1".repeat(64)}/z`)).toBe(
       "http://bit.ly./z",
     );
+    expect(foldHostScan("http://bit.ly\u3002\u03B1/z")).toBe(
+      "http://bit.ly\u3002\u03B1/z",
+    );
+    expect(foldHostScan("https://t.co\u3002\u0442?z")).toBe(
+      "https://t.co\u3002\u0442?z",
+    );
+    expect(foldHostScan("http://203.0.113.10\u3002\u0561/z")).toBe(
+      "http://203.0.113.10\u3002\u0561/z",
+    );
+    expect(foldHostScan("http://bit.ly\uFF0E\u03B1/z")).toBe(
+      "http://bit.ly.\u03B1/z",
+    );
+    expect(foldHostScan("http://bit.ly\uFF61\u0153:80/z")).toBe(
+      "http://bit.ly.\u0153:80/z",
+    );
+    expect(foldHostScan("see http://bit.ly\u3002\u03B1/z")).toBe(
+      "see http://bit.ly\u3002\u03B1/z",
+    );
+    expect(foldHostScan("http://bit.ly\u3002\u03B1#z")).toBe(
+      "http://bit.ly\u3002#z",
+    );
+    expect(foldHostScan("http://bit.ly\u3002\u03B1@evil.com")).toBe(
+      "http://bit.ly\u3002@evil.com",
+    );
+    expect(foldHostScan("bit.ly\u3002\u03B1/z")).toBe("bit.ly\u3002/z");
+    expect(foldHostScan("http://bit.ly\u3002\u3002\u03B1/z")).toBe(
+      "http://bit.ly\u3002\u3002/z",
+    );
+    expect(foldHostScan(`http://bit.ly\u3002${"\u03B1".repeat(61)}/z`)).toBe(
+      "http://bit.ly\u3002/z",
+    );
+    expect(foldHostScan(`http://bit.ly\u3002${"\u03B1".repeat(60)}/z`)).toBe(
+      `http://bit.ly\u3002${"\u03B1".repeat(60)}/z`,
+    );
   });
 });
 

@@ -3240,5 +3240,40 @@
     "id": "dotted-script-suffix",
     "text": "http://bit.ly.\u03B1.bit.ly/offer192",
     "label": "spam"
+  },
+  {
+    "id": "ideo-script-path",
+    "text": "http://bit.ly\u3002\u03B1/offer193",
+    "label": "ham"
+  },
+  {
+    "id": "ideo-script-query",
+    "text": "https://t.co\u3002\u0442?offer193",
+    "label": "ham"
+  },
+  {
+    "id": "ideo-script-address",
+    "text": "http://203.0.113.10\u3002\u0561/offer193",
+    "label": "ham"
+  },
+  {
+    "id": "ideo-script-fullwidth",
+    "text": "http://bit.ly\uFF0E\u03B1/offer193",
+    "label": "ham"
+  },
+  {
+    "id": "ideo-script-bare",
+    "text": "bit.ly\u3002\u03B1/offer193",
+    "label": "spam"
+  },
+  {
+    "id": "ideo-script-hash",
+    "text": "http://bit.ly\u3002\u03B1#offer193",
+    "label": "spam"
+  },
+  {
+    "id": "ideo-script-suffix",
+    "text": "http://bit.ly\u3002\u03B1.bit.ly/offer193",
+    "label": "spam"
   }
 ]

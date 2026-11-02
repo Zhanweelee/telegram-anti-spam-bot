@@ -721,8 +721,8 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * A Greek, Cyrillic, Armenian, or non-ASCII Latin letter stays when
  * Android still includes it in a schemed host, including a label after a
- * dot. The same letter before `#`, `@`, a space, or an empty label still
- * drops.
+ * dot or an ideographic, fullwidth, or halfwidth dot. The same letter
+ * before `#`, `@`, a space, or an empty label still drops.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
@@ -933,10 +933,10 @@ function isHostInterrupter(char: string, code: number): boolean {
  * keeps in a label stays. A character Android leaves out of a label still
  * drops. A mapped letter after a finished bare host stays, so the next
  * ASCII letters do not glue onto that host. A run Android still includes
- * in a schemed host stays, including a label after a dot, so that host is
- * not read as the shortener in front. A run before `#`, `@`, or a space
- * still drops. An empty label still drops. These letters are
- * removed, not mapped.
+ * in a schemed host stays, including a label after a dot or an
+ * ideographic, fullwidth, or halfwidth dot, so that host is not read as
+ * the shortener in front. A run before `#`, `@`, or a space still drops.
+ * An empty label still drops. These letters are removed, not mapped.
  */
 function lastSchemeIndex(out: string): number {
   const lower = out.toLowerCase();
@@ -949,12 +949,25 @@ function lastSchemeIndex(out: string): number {
 }
 
 /**
+ * One trailing separator can still belong to the schemed host.
+ * ASCII `.` starts another label. `。`, `．`, and `｡` stay inside Android's
+ * label and are dots for the URL parser. A second mark is an empty label.
+ */
+function trailingSchemedDot(out: string): boolean {
+  const code = out.charCodeAt(out.length - 1);
+  const dot =
+    code === 0x2e || code === 0x3002 || code === 0xff0e || code === 0xff61;
+  return dot && finishedHostIsSchemed(out.slice(0, -1));
+}
+
+/**
  * The letter run is still inside the schemed host Android highlights.
- * A dot after that host can start another label. Dropping the run would
- * open the shortener or address in front. An empty label does not.
+ * A dot after that host can start another label. An ideographic, fullwidth,
+ * or halfwidth dot stays in the label. Dropping the run would open the
+ * shortener or address in front. An empty label does not.
  */
 function schemedLetterStays(out: string, run: string, rest: string): boolean {
-  const dotted = out.endsWith(".") && finishedHostIsSchemed(out.slice(0, -1));
+  const dotted = trailingSchemedDot(out);
   if ((!finishedHostIsSchemed(out) && !dotted) || run.length === 0) {
     return false;
   }
