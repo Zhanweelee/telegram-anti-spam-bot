@@ -30,3 +30,4 @@ Android `LinkifyPort.WEB_URL` 会先尝试把 `@` 前面的一段当成用户信
 - `http://bit.ly@.…` 和 `http://203.0.113.133@.…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `http://bit.ly@example.com`、`http://bit.ly@/…`、`http://bit.ly@:80/…`、`http://bit.ly@` 和 `http://bit.ly@_…` 留着。`http://example.com@.…` 留着。
 - `https://t.me@.…/+…` 不改记成邀请。路径不进证据。
+- 路径里放不下的字符后面，Android 另外打开的主机名也留下。见 ADR 0167。

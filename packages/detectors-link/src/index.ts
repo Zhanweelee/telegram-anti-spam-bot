@@ -54,8 +54,15 @@ export const defaultShorteners = [
   "shorturl.at",
 ] as const;
 
-const token =
-  /(?:https?:\/\/|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
+/**
+ * A URL token ends at whitespace, quotes, and characters Android's path
+ * cannot include. The next URL is then its own match.
+ */
+const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
+const token = new RegExp(
+  `(?:https?:\\/\\/|www\\.)[^${URL_BREAK}]+|\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:\\/[^${URL_BREAK}]+)?`,
+  "gi",
+);
 
 const deepLink = /(?<![A-Za-z0-9./])tg:(?:\/\/)?[^\s<>"']+/gi;
 

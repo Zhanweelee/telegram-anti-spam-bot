@@ -1130,5 +1130,35 @@
     "id": "dropped-userinfo-plain",
     "text": "http://example.com@.tail133.example/ok",
     "label": "ham"
+  },
+  {
+    "id": "path-breaker-short",
+    "text": "http://example.com|http://bit.ly/offer134",
+    "label": "spam"
+  },
+  {
+    "id": "path-breaker-bare",
+    "text": "http://example.com|bit.ly/offer134",
+    "label": "spam"
+  },
+  {
+    "id": "path-breaker-slash",
+    "text": "http://example.com\\http://t.co/offer134",
+    "label": "spam"
+  },
+  {
+    "id": "path-breaker-ip",
+    "text": "http://news.example|http://203.0.113.134/x",
+    "label": "spam"
+  },
+  {
+    "id": "path-breaker-plain",
+    "text": "http://example.com|http://news.example/ok",
+    "label": "ham"
+  },
+  {
+    "id": "path-breaker-glued-invite",
+    "text": "https://t.me|/+CODE134",
+    "label": "ham"
   }
 ]

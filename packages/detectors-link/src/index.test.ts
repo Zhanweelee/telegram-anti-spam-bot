@@ -3506,4 +3506,68 @@ describe("link fixtures", () => {
     expect(invite).toBeNull();
     expect(JSON.stringify(invite)).not.toContain("CODE133");
   });
+
+  it("keeps the host Android opens after a character the path cannot include", async () => {
+    const detector = createLinkDetector();
+    const path = "offer134";
+    const piped = await detector.detect({
+      event: eventFor(`http://example.com|http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(piped?.reasons).toEqual(["short_link"]);
+    expect(piped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(piped)).not.toContain(path);
+    expect(JSON.stringify(piped)).not.toContain("example.com");
+
+    const slashed = await detector.detect({
+      event: eventFor(`http://example.com\\http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slashed?.reasons).toEqual(["short_link"]);
+    expect(slashed?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(slashed)).not.toContain(path);
+
+    const bare = await detector.detect({
+      event: eventFor(`http://example.com|bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(bare)).not.toContain(path);
+
+    const address = "203.0.113.134";
+    const ip = await detector.detect({
+      event: eventFor(`http://news.example|http://${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+
+    const plain = await detector.detect({
+      event: eventFor("http://example.com|http://news.example/ok"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor("http://example.com|https://t.me/+CODE134"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE134");
+
+    const glued = await detector.detect({
+      event: eventFor("https://t.me|/+CODE134"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+    expect(JSON.stringify(glued)).not.toContain("CODE134");
+  });
 });
