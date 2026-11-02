@@ -29,3 +29,4 @@ Android `LinkifyPort.WEB_URL` 的协议是 `tg://`，两个斜杠不能少。`tg
 - `tg:http://bit.ly/…`、`see tg:http://t.co/…` 和 `tg:203.0.113.143/…` 按现有短链或裸 IP 规则删除。证据仍只有主机名。
 - `tg://http://bit.ly/…` 和 `tg://203.0.113.143/…` 留着。`tg://msg?…&to=198.51.100.20` 不因为这个参数删除。
 - `tg:join?invite=…` 和 `tg:https://t.me/+…` 仍按邀请删除。邀请码和路径不进证据。
+- 裸域名和裸 IP 的问号仍属于这一段。见 ADR 0177。

@@ -69,9 +69,11 @@ export const defaultShorteners = [
  * 64 characters, and the password is at most 25. A label is at most 63
  * characters and cannot end in the middle of an ASCII word. A hyphen stays
  * inside the label only when the finished label still fits. A dotted IPv4
- * with no scheme is its own match when Android opens it. An address inside
- * a `tg://` link stays with that link. `tg:` without slashes does not hide
- * the URL Android opens after it.
+ * with no scheme is its own match when Android opens it. That bare host
+ * keeps a port of one to five digits and a path or query. A dot before
+ * the path does not stay, so the next URL is its own match. An address
+ * inside a `tg://` link stays with that link. `tg:` without slashes does
+ * not hide the URL Android opens after it.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -86,6 +88,7 @@ const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
 const URL_USERINFO = `(?:${URL_USER}){1,64}(?::(?:${URL_USER}){1,25})?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
 const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
+const URL_BARE_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
@@ -98,7 +101,7 @@ const URL_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const URL_IP = `${URL_IP_HEAD}\\.${URL_IP_MID}\\.${URL_IP_MID}\\.${URL_IP_LAST}`;
 const URL_END = "(?![A-Za-z0-9_])";
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b(?:${URL_BARE}|${URL_IP})(?:\\/(?:${URL_BODY})+)?${URL_END}`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b(?:${URL_BARE}|${URL_IP})${URL_BARE_TAIL}${URL_END}`,
   "gi",
 );
 

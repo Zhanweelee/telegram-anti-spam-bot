@@ -1505,5 +1505,40 @@
     "id": "tg-slashed-buried",
     "text": "tg://msg?text=https%3A%2F%2Fexample.com%2Fok143&to=198.51.100.20",
     "label": "ham"
+  },
+  {
+    "id": "bare-query",
+    "text": "example.com?http://bit.ly/offer144",
+    "label": "ham"
+  },
+  {
+    "id": "bare-query-port",
+    "text": "example.com:80?http://bit.ly/offer144",
+    "label": "ham"
+  },
+  {
+    "id": "bare-query-short",
+    "text": "bit.ly?http://t.co/offer144",
+    "label": "spam"
+  },
+  {
+    "id": "bare-query-ip",
+    "text": "203.0.113.144?http://bit.ly/offer144",
+    "label": "spam"
+  },
+  {
+    "id": "bare-query-bang",
+    "text": "example.com:80!http://bit.ly/offer144",
+    "label": "spam"
+  },
+  {
+    "id": "bare-query-long-port",
+    "text": "example.com:123456-http://bit.ly/offer144",
+    "label": "spam"
+  },
+  {
+    "id": "bare-query-dot",
+    "text": "example.com./http://bit.ly/offer144",
+    "label": "spam"
   }
 ]
