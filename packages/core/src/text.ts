@@ -410,9 +410,33 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
  * A hyphen inside user info stays with `@`.
+ * User info stays when `@` is followed by a host, a path, a finished port, `_`, or the end.
+ * Otherwise the highlighted host is the one before `@`.
  * A division slash or fraction slash inside the span becomes `/`.
  * The same string comes back as null.
  */
+function userinfoSticks(raw: string, index: number): boolean {
+  if (index >= raw.length) {
+    return true;
+  }
+  const mark = raw.charAt(index);
+  if (mark === "/" || mark === "?" || mark === "_") {
+    return true;
+  }
+  if (ANDROID_LABEL_CHAR.test(mark)) {
+    return true;
+  }
+  if (mark !== ":") {
+    return false;
+  }
+  const port = /^:\d{1,5}(?!\d)/.exec(raw.slice(index));
+  if (!port?.[0]) {
+    return false;
+  }
+  const after = index + port[0].length;
+  return after >= raw.length || !ANDROID_LABEL_WORD.test(raw.charAt(after));
+}
+
 export function androidUrlSpan(raw: string): string | null {
   const scheme = ANDROID_SCHEME.exec(raw);
   if (scheme?.index !== 0) {
@@ -420,7 +444,7 @@ export function androidUrlSpan(raw: string): string | null {
   }
   let index = scheme[0].length;
   const user = ANDROID_USERINFO.exec(raw.slice(index));
-  if (user?.[0]) {
+  if (user?.[0] && userinfoSticks(raw, index + user[0].length)) {
     index += user[0].length;
   }
   const first = readAndroidLabel(raw, index);

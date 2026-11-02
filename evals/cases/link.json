@@ -1100,5 +1100,35 @@
     "id": "omitted-letter-bmp",
     "text": "http://bit.ly\u03B1tail132.example/offer132",
     "label": "ham"
+  },
+  {
+    "id": "dropped-userinfo-short",
+    "text": "http://bit.ly@.tail133.example/offer133",
+    "label": "spam"
+  },
+  {
+    "id": "dropped-userinfo-ip",
+    "text": "http://203.0.113.133@.tail133.example/x",
+    "label": "spam"
+  },
+  {
+    "id": "dropped-userinfo-real",
+    "text": "http://bit.ly@example.com/ok133",
+    "label": "ham"
+  },
+  {
+    "id": "dropped-userinfo-path",
+    "text": "http://bit.ly@/offer133",
+    "label": "ham"
+  },
+  {
+    "id": "dropped-userinfo-port",
+    "text": "http://bit.ly@:80/offer133",
+    "label": "ham"
+  },
+  {
+    "id": "dropped-userinfo-plain",
+    "text": "http://example.com@.tail133.example/ok",
+    "label": "ham"
   }
 ]

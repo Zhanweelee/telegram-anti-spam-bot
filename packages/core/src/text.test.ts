@@ -327,6 +327,25 @@ describe("androidUrlSpan", () => {
     expect(androidUrlSpan("http://bit.ly@example.com/ok")).toBeNull();
   });
 
+  it("stops before an @ that cannot finish user info", () => {
+    expect(androidUrlSpan("http://bit.ly@.evil.com/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly@!")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly@:999999/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://203.0.113.133@.evil.com/x")).toBe(
+      "http://203.0.113.133",
+    );
+    expect(androidUrlSpan("http://bit.ly:pass@.evil.com")).toBe(
+      "http://bit.ly",
+    );
+    expect(androidUrlSpan("http://bit.ly@example.com/ok")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@?x=1")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@:80/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly@_evil")).toBeNull();
+    expect(androidUrlSpan("http://user:pass@bit.ly/p")).toBeNull();
+  });
+
   it("turns a division slash inside the span into a slash", () => {
     expect(androidUrlSpan("http://example.com/a\u2215b")).toBe(
       "http://example.com/a/b",

@@ -3445,4 +3445,65 @@ describe("link fixtures", () => {
     expect(JSON.stringify(invite)).not.toContain("CODE132");
     expect(JSON.stringify(invite)).not.toContain(greek);
   });
+
+  it("keeps the host Android opens when @ cannot finish user info", async () => {
+    const detector = createLinkDetector();
+    const path = "offer133";
+    const tail = "tail133.example";
+    const marked = await detector.detect({
+      event: eventFor(`http://bit.ly@.${tail}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(marked?.reasons).toEqual(["short_link"]);
+    expect(marked?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(marked)).not.toContain(path);
+    expect(JSON.stringify(marked)).not.toContain(tail);
+
+    const address = "203.0.113.133";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}@.${tail}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain(tail);
+
+    const real = await detector.detect({
+      event: eventFor("http://bit.ly@example.com/ok133"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(real).toBeNull();
+
+    const rooted = await detector.detect({
+      event: eventFor(`http://bit.ly@/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(rooted).toBeNull();
+
+    const port = await detector.detect({
+      event: eventFor(`http://bit.ly@:80/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(port).toBeNull();
+
+    const plain = await detector.detect({
+      event: eventFor(`http://example.com@.${tail}/ok`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain).toBeNull();
+
+    const invite = await detector.detect({
+      event: eventFor(`https://t.me@.evil.example/+CODE133`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE133");
+  });
 });
