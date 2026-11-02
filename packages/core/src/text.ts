@@ -97,22 +97,42 @@ function foldHostTail(text: string): string {
 /**
  * A percent-encoded letter, colon, or slash that spells `http://` or
  * `https://` is not a scheme Android decodes. `%2F` glued to a written
- * scheme is not a slash either. A literal scheme stays. `b%69t.ly` and
- * `t.me%2F+…` are not schemes. `!` ends the text in front, and `x` keeps
- * the host after `://` from starting.
+ * scheme is not a slash either. `%2F` glued to a bare host is not a slash.
+ * A literal scheme stays. `b%69t.ly` and `t.me%2F+…` are not schemes.
+ * `!` ends the text in front, and `x` keeps the host after `://` from
+ * starting. A bare host keeps its path, with the last label replaced so
+ * the shortener suffix cannot match.
  */
 function foldEncodedScheme(text: string): string {
   const prepared = text.replace(/%2F(?=https?:\/\/)/gi, "!x");
-  let out = "";
+  let schemes = "";
   let index = 0;
   while (index < prepared.length) {
     const taken = encodedSchemeLength(prepared, index);
     if (taken > 0) {
-      out += "!x";
+      schemes += "!x";
       index += taken;
       continue;
     }
-    out += prepared.charAt(index);
+    schemes += prepared.charAt(index);
+    index += 1;
+  }
+  return foldGluedEncodedSlashHost(schemes);
+}
+
+function foldGluedEncodedSlashHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (text.slice(index, index + 3).toLowerCase() === "%2f") {
+      const body = gluedHostBodyLength(text, index + 3);
+      if (body > 0) {
+        out += neutralizeGluedHost(text.slice(index + 3, index + 3 + body));
+        index += 3 + body;
+        continue;
+      }
+    }
+    out += text.charAt(index);
     index += 1;
   }
   return out;
@@ -309,6 +329,7 @@ function foldGluedEncodedHyphen(text: string): string {
  * `%2B` glued to a bare host stays out of that host.
  * A percent-encoded letter that spells the scheme stays out of that scheme.
  * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
+ * `%2F` glued to a bare host stays out of that host.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(

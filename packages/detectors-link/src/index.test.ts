@@ -6135,6 +6135,105 @@ describe("link fixtures", () => {
     expect(JSON.stringify(hiddenIp)).not.toContain("203.0.113.164");
   });
 
+  it("leaves a short link glued on by a percent-encoded slash host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer165";
+    const glued = [
+      `%2Fbit.ly/${path}`,
+      `%2fbit.ly/${path}`,
+      `see%2Fbit.ly/${path}`,
+      `see %2Fbit.ly/${path}`,
+      `(%2Fbit.ly/${path}`,
+      `!%2Fbit.ly/${path}`,
+      `www%2Fbit.ly/${path}`,
+      `example.com%2Fbit.ly/${path}`,
+      `%2Fexample.com/bit.ly/${path}`,
+      `%2Fexample.com/http://bit.ly/${path}`,
+      `%252Fbit.ly/${path}`,
+      `%2Fhttp://bit.ly/${path}`,
+    ];
+    for (const text of glued) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const hiddenIp = await detector.detect({
+      event: eventFor(`%2F203.0.113.165/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hiddenIp).toBeNull();
+    expect(JSON.stringify(hiddenIp)).not.toContain("203.0.113.165");
+    expect(JSON.stringify(hiddenIp)).not.toContain(path);
+
+    const kept = await detector.detect({
+      event: eventFor("t.me%2F+CODE165"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(kept?.reasons).toEqual(["invite"]);
+    expect(kept?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(kept)).not.toContain("CODE165");
+
+    const opened = [
+      `/bit.ly/${path}`,
+      `example.com%2F\nbit.ly/${path}`,
+      `example.com%2F bit.ly/${path}`,
+      `example.com%2F/bit.ly/${path}`,
+      `example.com%2F\tbit.ly/${path}`,
+      `http:%2F/bit.ly/${path}`,
+      `https://bit.ly%2Fname${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const prefixed = await detector.detect({
+      event: eventFor(`example.com%2Fwww.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.reasons).toEqual(["short_link"]);
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:2fwww.bit.ly");
+    expect(JSON.stringify(prefixed)).not.toContain(path);
+
+    const stopped = await detector.detect({
+      event: eventFor(`https://bit.ly%2Fhttp://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stopped?.reasons).toEqual(["short_link"]);
+    expect(stopped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(stopped)).not.toContain("t.co");
+    expect(JSON.stringify(stopped)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.165%2Fbit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["ip_host"]);
+    expect(addressed?.evidence[0]?.summary).toBe("ip_host:203.0.113.165");
+    expect(JSON.stringify(addressed)).not.toContain("short_link:bit.ly");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+  });
+
   it("leaves a short link glued on by a percent-encoded hyphen", async () => {
     const detector = createLinkDetector();
     const path = "offer161";

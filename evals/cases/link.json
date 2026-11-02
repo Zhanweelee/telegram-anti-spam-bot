@@ -2160,5 +2160,45 @@
     "id": "encoded-plus-host-www",
     "text": "example.com%2Bwww.bit.ly/offer164",
     "label": "spam"
+  },
+  {
+    "id": "encoded-slash-host",
+    "text": "%2Fbit.ly/offer165",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-slash-host-ip",
+    "text": "%2F203.0.113.165/offer165",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-slash-host-path",
+    "text": "%2Fexample.com/bit.ly/offer165",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-slash-host-break",
+    "text": "example.com%2F\nbit.ly/offer165",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-host-slash",
+    "text": "example.com%2F/bit.ly/offer165",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-host-bare",
+    "text": "http:%2F/bit.ly/offer165",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-host-invite",
+    "text": "t.me%2F+CODE165",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-slash-host-www",
+    "text": "example.com%2Fwww.bit.ly/offer165",
+    "label": "spam"
   }
 ]
