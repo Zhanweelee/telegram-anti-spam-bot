@@ -1540,5 +1540,55 @@
     "id": "bare-query-dot",
     "text": "example.com./http://bit.ly/offer144",
     "label": "spam"
+  },
+  {
+    "id": "path-apos",
+    "text": "http://example.com/'http://bit.ly/offer145",
+    "label": "ham"
+  },
+  {
+    "id": "path-apos-bare",
+    "text": "example.com/'http://bit.ly/offer145",
+    "label": "ham"
+  },
+  {
+    "id": "path-apos-www",
+    "text": "www.example.com/'http://bit.ly/offer145",
+    "label": "ham"
+  },
+  {
+    "id": "path-apos-query",
+    "text": "http://example.com?x='http://bit.ly/offer145",
+    "label": "ham"
+  },
+  {
+    "id": "path-apos-short",
+    "text": "bit.ly/'http://t.co/offer145",
+    "label": "spam"
+  },
+  {
+    "id": "path-apos-ip",
+    "text": "203.0.113.145/'http://bit.ly/offer145",
+    "label": "spam"
+  },
+  {
+    "id": "path-apos-host",
+    "text": "http://example.com'http://bit.ly/offer145",
+    "label": "spam"
+  },
+  {
+    "id": "path-apos-glued",
+    "text": "example.com'bit.ly/offer145",
+    "label": "spam"
+  },
+  {
+    "id": "path-apos-dquote",
+    "text": "http://example.com/\"http://bit.ly/offer145",
+    "label": "spam"
+  },
+  {
+    "id": "path-apos-invite",
+    "text": "https://t.me/+CODE145'http://bit.ly/offer145",
+    "label": "ham"
   }
 ]

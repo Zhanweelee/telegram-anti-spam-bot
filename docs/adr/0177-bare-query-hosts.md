@@ -30,3 +30,4 @@ Android 没有协议时，裸域名和点分 IPv4 可以接一到五位端口，
 - `203.0.113.144?http://bit.ly/…` 仍按裸 IP 删除。证据只有这个地址。
 - `example.com:80!http://bit.ly/…`、`example.com:123456-http://bit.ly/…` 和 `example.com./http://bit.ly/…` 仍删除后面的短链。
 - `t.me/+…?http://bit.ly/…` 仍按邀请删除。邀请码和问号里的主机名不进证据。
+- 路径里的单引号仍属于这一段。见 ADR 0178。

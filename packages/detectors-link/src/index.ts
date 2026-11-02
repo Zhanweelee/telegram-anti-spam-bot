@@ -55,9 +55,10 @@ export const defaultShorteners = [
 ] as const;
 
 /**
- * A URL token ends at whitespace, quotes, characters Android's path
- * cannot include, a `%` that is not two hex digits, and a code point the
- * path class omits. Punctuation that can sit in a path ends the host when
+ * A URL token ends at whitespace, a double quote, characters Android's
+ * path cannot include, a `%` that is not two hex digits, and a code point
+ * the path class omits. An apostrophe inside a path stays with this URL.
+ * Punctuation that can sit in a path ends the host when
  * the path has not started, so the next URL is its own match. A scheme
  * stuck to an ASCII word character is not a match, and the host after
  * `://` is not read again. A bare domain and a `www.` host end at the last
@@ -75,7 +76,7 @@ export const defaultShorteners = [
  * inside a `tg://` link stays with that link. `tg:` without slashes does
  * not hide the URL Android opens after it.
  */
-const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
+const URL_BREAK = '\\s<>"[\\\\\\]^`{|}\\u0000-\\u001F\\u007F';
 const URL_OMIT =
   "\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF";
 const URL_PAIR =
