@@ -1630,5 +1630,30 @@
     "id": "label-space-join",
     "text": "http://bit\u1680.ly/offer146",
     "label": "spam"
+  },
+  {
+    "id": "label-tail-comma",
+    "text": "http://bit.ly，广告",
+    "label": "ham"
+  },
+  {
+    "id": "label-tail-zwsp",
+    "text": "http://bit.ly\u200Bfoo",
+    "label": "ham"
+  },
+  {
+    "id": "label-tail-han",
+    "text": "http://bit.ly点击",
+    "label": "ham"
+  },
+  {
+    "id": "label-tail-join",
+    "text": "http://bit\u200B.ly/offer147",
+    "label": "spam"
+  },
+  {
+    "id": "label-tail-slash",
+    "text": "http://bit.ly\u2215@example.com/offer147",
+    "label": "spam"
   }
 ]

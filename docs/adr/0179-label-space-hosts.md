@@ -30,3 +30,4 @@ Android 的标签类收进 U+1680、U+205F 和 U+FEFF。它们出现在路径、
 - `example.com` 加 U+1680 再接 `http://bit.ly/…` 仍按短链删除。
 - `http://example.com/` 加 U+00A0 再接 `http://bit.ly/…` 仍按短链删除。
 - `http://bit` 加 U+1680 再接 `.ly/…` 仍按短链删除。证据只有 `bit.ly`。路径不进证据。
+- Android 留在标签上的其它字符仍属于这一段主机名。见 ADR 0180。

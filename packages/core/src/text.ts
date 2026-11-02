@@ -366,14 +366,41 @@ function androidLabelChar(char: string): boolean {
   return code === 0x1680 || code === 0x205f || code === 0xfeff;
 }
 
+/** A label unit Android can keep, including letters outside ASCII. */
+function androidLabelUnit(char: string): boolean {
+  return androidLabelChar(char) || androidLabelCode(char.charCodeAt(0));
+}
+
+/** Java `\b` or the end of the text. A label cannot finish without one. */
+function labelBoundary(raw: string, index: number): boolean {
+  if (index <= 0 || index >= raw.length) {
+    return true;
+  }
+  const last = ANDROID_LABEL_WORD.test(raw.charAt(index - 1));
+  const next = ANDROID_LABEL_WORD.test(raw.charAt(index));
+  return last !== next;
+}
+
+function acceptableLabelEnd(
+  raw: string,
+  index: number,
+  start: number,
+): boolean {
+  if (index <= start || !labelBoundary(raw, index)) {
+    return false;
+  }
+  const last = raw.charAt(index - 1);
+  return last !== "-" && last !== "_";
+}
+
 function readAndroidLabel(raw: string, index: number): number | null {
-  if (!androidLabelChar(raw.charAt(index))) {
+  if (!androidLabelUnit(raw.charAt(index))) {
     return null;
   }
   const start = index;
   let next = index + 1;
   while (next < raw.length && next - start < ANDROID_LABEL_MAX) {
-    if (androidLabelChar(raw.charAt(next))) {
+    if (androidLabelUnit(raw.charAt(next))) {
       next += 1;
       continue;
     }
@@ -390,18 +417,18 @@ function readAndroidLabel(raw: string, index: number): number | null {
     }
     if (
       look >= raw.length ||
-      !androidLabelChar(raw.charAt(look)) ||
+      !androidLabelUnit(raw.charAt(look)) ||
       look - start >= ANDROID_LABEL_MAX
     ) {
       break;
     }
     next = look + 1;
   }
-  if (next >= raw.length || !ANDROID_LABEL_WORD.test(raw.charAt(next))) {
+  if (acceptableLabelEnd(raw, next, start)) {
     return next;
   }
   for (let end = next - 1; end > start; end -= 1) {
-    if (raw.charAt(end) === "-" && androidLabelChar(raw.charAt(end - 1))) {
+    if (acceptableLabelEnd(raw, end, start)) {
       return end;
     }
   }
@@ -412,7 +439,8 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
  * A label cannot end on a hyphen, and it cannot be longer than 63 characters.
- * U+1680, U+205F, and U+FEFF stay inside the label.
+ * U+1680, U+205F, U+FEFF, and other Android label characters stay inside the label.
+ * The label still ends where the next character has no word boundary.
  * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.
  * A port is one to five digits and cannot end in the middle of a longer number.
