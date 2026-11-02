@@ -30,3 +30,4 @@ Android 没有协议时，标签中间可以有下划线，开头和结尾不行
 - `foo_bar.com/http://bit.ly/…` 和 `www.foo_bar.com/http://bit.ly/…` 留着。
 - `foo_.com/http://bit.ly/…`、`_foo.com/http://bit.ly/…` 和 `foo-.com/http://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `example.com_http://bit.ly/…` 留着。`点击bit.ly` 仍按短链删除。
+- 下划线或连字符把不同字母接在同一个裸标签里时，这一段仍留着。标记在开头或结尾时，后面的网址仍单独打开。见 ADR 0184。

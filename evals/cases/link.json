@@ -1745,5 +1745,35 @@
     "id": "underscore-label-glued",
     "text": "example.com_http://bit.ly/offer150",
     "label": "ham"
+  },
+  {
+    "id": "bridged-label-under",
+    "text": "例_foo.com/http://bit.ly/offer151",
+    "label": "ham"
+  },
+  {
+    "id": "bridged-label-hyphen",
+    "text": "foo-例.com/http://bit.ly/offer151",
+    "label": "ham"
+  },
+  {
+    "id": "bridged-label-www",
+    "text": "www.例_foo.com/http://bit.ly/offer151",
+    "label": "ham"
+  },
+  {
+    "id": "bridged-label-space",
+    "text": "见 例_foo.com/http://bit.ly/offer151",
+    "label": "spam"
+  },
+  {
+    "id": "bridged-label-tail",
+    "text": "例_.com/http://bit.ly/offer151",
+    "label": "spam"
+  },
+  {
+    "id": "bridged-label-glued",
+    "text": "点击_bit.ly/offer151",
+    "label": "ham"
   }
 ]
