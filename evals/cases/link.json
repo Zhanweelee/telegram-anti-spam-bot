@@ -3275,5 +3275,40 @@
     "id": "ideo-script-suffix",
     "text": "http://bit.ly\u3002\u03B1.bit.ly/offer193",
     "label": "spam"
+  },
+  {
+    "id": "gap-script-path",
+    "text": "http://bit.ly\u200B\u03B1/offer194",
+    "label": "ham"
+  },
+  {
+    "id": "gap-script-query",
+    "text": "https://t.co\u200B\u0442?offer194",
+    "label": "ham"
+  },
+  {
+    "id": "gap-script-address",
+    "text": "http://203.0.113.10\u200B\u0561/offer194",
+    "label": "ham"
+  },
+  {
+    "id": "gap-script-selector",
+    "text": "http://bit.ly\uFE0F\u03B1/offer194",
+    "label": "ham"
+  },
+  {
+    "id": "gap-script-bare",
+    "text": "bit.ly\u200B\u03B1/offer194",
+    "label": "spam"
+  },
+  {
+    "id": "gap-script-hash",
+    "text": "http://bit.ly\u200B\u03B1#offer194",
+    "label": "spam"
+  },
+  {
+    "id": "gap-script-suffix",
+    "text": "http://bit.ly\u200B\u03B1.bit.ly/offer194",
+    "label": "spam"
   }
 ]
