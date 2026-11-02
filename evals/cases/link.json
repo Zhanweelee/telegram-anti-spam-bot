@@ -2240,5 +2240,60 @@
     "id": "encoded-hyphen-host-www",
     "text": "%2Dwww.bit.ly/offer166",
     "label": "spam"
+  },
+  {
+    "id": "encoded-host-body",
+    "text": "%2Bb%69t.ly/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-dot",
+    "text": "%2Bbit%2Ely/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-ip",
+    "text": "%2B203%2E0%2E113%2E167/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-slash",
+    "text": "%2Fb%69t.ly/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-hyphen",
+    "text": "%2Db%69t.ly/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-double",
+    "text": "%252Db%69t.ly/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-break",
+    "text": "example.com%2B\nb%69t.ly/offer167",
+    "label": "ham"
+  },
+  {
+    "id": "encoded-host-body-plain",
+    "text": "b%69t.ly/offer167",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-host-body-literal",
+    "text": "example.com%2B\nbit.ly/offer167",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-host-body-tail",
+    "text": "%2Bbit%2Ely/http://t.co/offer167",
+    "label": "spam"
+  },
+  {
+    "id": "encoded-host-body-suffix",
+    "text": "%2B2b%77ww.bit.ly/offer167",
+    "label": "spam"
   }
 ]

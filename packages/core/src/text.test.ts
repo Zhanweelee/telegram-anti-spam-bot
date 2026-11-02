@@ -179,6 +179,30 @@ describe("foldHostScan", () => {
     expect(foldHostScan("t.me%2F+CODE")).toBe("t.me/+CODE");
     expect(foldHostScan("%252Fbit.ly")).toBe("%252Fbit.ly");
     expect(foldEncodedSeparators("%2Fbit.ly")).toBe("/bit.ly");
+    expect(foldHostScan("%2Bb%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%2Bbit%2Ely")).toBe("!");
+    expect(foldHostScan("%2Bb%69t%2Ely")).toBe("!");
+    expect(foldHostScan("%2Bb%2569t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%2B203%2E0%2E113%2E10")).toBe("!");
+    expect(foldHostScan("%2Bbit%252Ely")).toBe("+bit%252Ely");
+    expect(foldHostScan("example.com%2B\nb%69t.ly")).toBe(
+      "example.com!bit.arpa",
+    );
+    expect(foldHostScan("%2Bb%69t.ly/http://t.co")).toBe(
+      "!bit.arpa/http://t.co",
+    );
+    expect(foldHostScan("%2Bbit%2Ely/http://t.co")).toBe("!/http://t.co");
+    expect(foldHostScan("%2Fb%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%2Fbit%2Ely")).toBe("!");
+    expect(foldHostScan("%2F\nb%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%2Db%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%252Db%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("%2Dbit%2Ely")).toBe("!");
+    expect(foldHostScan("%2D\nb%69t.ly")).toBe("!bit.arpa");
+    expect(foldHostScan("b%69t.ly")).toBe("bit.ly");
+    expect(foldHostScan("bit%2Ely")).toBe("bit.ly");
+    expect(foldEncodedSeparators("%2Bbit%2Ely")).toBe("+bit.ly");
+    expect(foldEncodedAlphabet("%2Bb%69t.ly")).toBe("%2Bbit.ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

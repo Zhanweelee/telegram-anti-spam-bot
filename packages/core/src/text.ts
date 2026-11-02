@@ -89,8 +89,9 @@ function foldHostShape(text: string): string {
 }
 
 function foldHostTail(text: string): string {
+  const marked = foldGluedEncodedHyphen(foldGluedEncodedPlus(text, true), true);
   return foldBracketDots(
-    foldEncodedAlphabet(foldEncodedSeparators(foldEncodedScheme(text))),
+    foldEncodedAlphabet(foldEncodedSeparators(foldEncodedScheme(marked))),
   );
 }
 
@@ -242,17 +243,23 @@ function foldGluedEncodedDot(text: string): string {
  * A line break between them still is. Rewrite the glued form before line
  * breaks disappear: `!` lets the host in front end, and `x` keeps `http`
  * from starting. A bare host keeps its path, with the last label replaced
- * so the shortener suffix cannot match. `t.me/%2B…` is a path, so it still
- * folds. `%2F%2B` is that same path before the slash is decoded.
+ * so the shortener suffix cannot match. A percent-encoded host is included.
+ * When its last dot is `%2E`, the span becomes `!` so a later URL still
+ * opens. After gaps disappear, only that encoded host is rewritten.
+ * `t.me/%2B…` is a path, so it still folds. `%2F%2B` is that same path
+ * before the slash is decoded.
  */
-function foldGluedEncodedPlus(text: string): string {
-  const scheme = text.replace(/%2B(?=https?:\/\/)/gi, "!x");
+function foldGluedEncodedPlus(text: string, encodedOnly = false): string {
+  const scheme = encodedOnly
+    ? text
+    : text.replace(/%2B(?=https?:\/\/)/gi, "!x");
   let out = "";
   let index = 0;
   while (index < scheme.length) {
     const taken = gluedPlusHostLength(scheme, index);
-    if (taken > 0) {
-      out += neutralizeGluedHost(scheme.slice(index + 3, index + taken));
+    const host = taken > 0 ? scheme.slice(index + 3, index + taken) : "";
+    if (taken > 0 && (!encodedOnly || host.includes("%"))) {
+      out += neutralizeGluedHost(host);
       index += taken;
       continue;
     }
@@ -281,14 +288,150 @@ function encodedMarkSitsInPath(text: string, index: number): boolean {
 }
 
 function gluedHostBodyLength(text: string, index: number): number {
-  const rest = text.slice(index);
-  const ip = /^(?:\d{1,3}\.){3}\d{1,3}/.exec(rest);
-  if (ip?.[0] && quadIsAddress(ip[0], text.charAt(index + ip[0].length))) {
-    return ip[0].length;
+  const ip = gluedIpLength(text, index);
+  if (ip > 0) {
+    return ip;
   }
-  const host =
-    /^(?:[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?\.){1,8}[a-z]{2,63}/i.exec(rest);
-  return host?.[0].length ?? 0;
+  return gluedNameLength(text, index);
+}
+
+function gluedIpLength(text: string, index: number): number {
+  let cursor = index;
+  const parts: string[] = [];
+  for (let part = 0; part < 4; part += 1) {
+    const octet = consumeOctet(text, cursor);
+    if (octet.length === 0) {
+      return 0;
+    }
+    parts.push(octet);
+    cursor += octet.length;
+    if (part < 3) {
+      const dot = consumeHostDot(text, cursor);
+      if (dot === 0) {
+        return 0;
+      }
+      cursor += dot;
+    }
+  }
+  const next = consumeHostDot(text, cursor) > 0 ? "." : text.charAt(cursor);
+  if (!quadIsAddress(parts.join("."), next)) {
+    return 0;
+  }
+  return cursor - index;
+}
+
+function consumeOctet(text: string, index: number): string {
+  let digits = "";
+  for (let offset = 0; offset < 3; offset += 1) {
+    const char = text.charAt(index + offset);
+    if (char < "0" || char > "9") {
+      break;
+    }
+    digits += char;
+  }
+  return digits;
+}
+
+function gluedNameLength(text: string, index: number): number {
+  let cursor = index;
+  let labels = 0;
+  for (let label = 0; label < 8; label += 1) {
+    const taken = consumeHostLabel(text, cursor);
+    if (taken === 0) {
+      break;
+    }
+    const dot = consumeHostDot(text, cursor + taken);
+    if (dot === 0) {
+      break;
+    }
+    cursor += taken + dot;
+    labels += 1;
+  }
+  if (labels === 0) {
+    return 0;
+  }
+  const tld = consumeHostTld(text, cursor);
+  if (tld === 0) {
+    return 0;
+  }
+  return cursor + tld - index;
+}
+
+const LABEL_ALNUM = /[A-Za-z0-9]/;
+const LABEL_MARK = /[_-]/;
+
+function consumeHostLabel(text: string, index: number): number {
+  const pieces: Array<{ length: number; alnum: boolean }> = [];
+  let cursor = index;
+  while (pieces.length < 63) {
+    const unit = consumeLabelUnit(text, cursor);
+    if (unit === null) {
+      break;
+    }
+    pieces.push({ length: unit.length, alnum: LABEL_ALNUM.test(unit.char) });
+    cursor += unit.length;
+  }
+  while (pieces.length > 0 && !pieces[pieces.length - 1]?.alnum) {
+    const last = pieces.pop();
+    if (last !== undefined) {
+      cursor -= last.length;
+    }
+  }
+  if (pieces.length === 0 || !pieces[0]?.alnum) {
+    return 0;
+  }
+  return cursor - index;
+}
+
+function consumeLabelUnit(
+  text: string,
+  index: number,
+): { length: number; char: string } | null {
+  const current = text.charAt(index);
+  if (LABEL_ALNUM.test(current) || LABEL_MARK.test(current)) {
+    return { length: 1, char: current };
+  }
+  for (const marker of ["%25", "%"] as const) {
+    if (text.slice(index, index + marker.length).toLowerCase() !== marker) {
+      continue;
+    }
+    const hex = text.slice(index + marker.length, index + marker.length + 2);
+    if (!/^[0-9a-fA-F]{2}$/.test(hex)) {
+      continue;
+    }
+    const char = String.fromCharCode(Number.parseInt(hex, 16));
+    if (LABEL_ALNUM.test(char) || LABEL_MARK.test(char)) {
+      return { length: marker.length + 2, char };
+    }
+  }
+  return null;
+}
+
+function consumeHostDot(text: string, index: number): number {
+  if (text.charAt(index) === ".") {
+    return 1;
+  }
+  if (text.slice(index, index + 3).toLowerCase() === "%2e") {
+    return 3;
+  }
+  return 0;
+}
+
+function consumeHostTld(text: string, index: number): number {
+  let cursor = index;
+  let count = 0;
+  while (count < 63) {
+    const unit = consumeLabelUnit(text, cursor);
+    if (unit === null || !/[A-Za-z]/.test(unit.char)) {
+      break;
+    }
+    cursor += unit.length;
+    count += 1;
+  }
+  if (count < 2) {
+    return 0;
+  }
+  return cursor - index;
 }
 
 function quadIsAddress(quad: string, next: string): boolean {
@@ -302,11 +445,15 @@ function quadIsAddress(quad: string, next: string): boolean {
 }
 
 function neutralizeGluedHost(host: string): string {
+  const literal = host.lastIndexOf(".");
+  const encoded = host.toLowerCase().lastIndexOf("%2e");
+  if (literal < 0 || encoded > literal) {
+    return "!";
+  }
   if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host)) {
     return "!0.arpa";
   }
-  const dot = host.lastIndexOf(".");
-  return `!${host.slice(0, dot)}.arpa`;
+  return `!${host.slice(0, literal)}.arpa`;
 }
 
 /**
@@ -315,23 +462,27 @@ function neutralizeGluedHost(host: string): string {
  * Rewrite the glued form before line breaks disappear: `!` lets the host in
  * front end, and `x` keeps `http` from starting. A bare host keeps its path,
  * with the last label replaced so the shortener suffix cannot match.
- * `bit%2Dly` is not glued to a host.
+ * A host that is itself percent-encoded is included. After gaps disappear,
+ * only that encoded host is rewritten. `bit%2Dly` is not glued to a host.
  */
-function foldGluedEncodedHyphen(text: string): string {
-  const scheme = text.replace(/%(?:25)?2D(?=https?:\/\/)/gi, "!x");
+function foldGluedEncodedHyphen(text: string, encodedOnly = false): string {
+  const scheme = encodedOnly
+    ? text
+    : text.replace(/%(?:25)?2D(?=https?:\/\/)/gi, "!x");
   let out = "";
   let index = 0;
   while (index < scheme.length) {
     const marker = gluedHyphenMarkerLength(scheme, index);
-    if (marker > 0 && !encodedMarkSitsInPath(scheme, index)) {
-      const body = gluedHostBodyLength(scheme, index + marker);
-      if (body > 0) {
-        out += neutralizeGluedHost(
-          scheme.slice(index + marker, index + marker + body),
-        );
-        index += marker + body;
-        continue;
-      }
+    const body =
+      marker > 0 && !encodedMarkSitsInPath(scheme, index)
+        ? gluedHostBodyLength(scheme, index + marker)
+        : 0;
+    const host =
+      body > 0 ? scheme.slice(index + marker, index + marker + body) : "";
+    if (body > 0 && (!encodedOnly || host.includes("%"))) {
+      out += neutralizeGluedHost(host);
+      index += marker + body;
+      continue;
     }
     out += scheme.charAt(index);
     index += 1;
@@ -358,6 +509,7 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `%2E`, `%2B`, or `%2D` glued to a scheme stays out of that scheme.
  * `%2B` glued to a bare host stays out of that host.
  * `%2D` glued to a bare host stays out of that host.
+ * The same marks glued to a percent-encoded host stay out of that host.
  * A percent-encoded letter that spells the scheme stays out of that scheme.
  * `%2F` that spells `://`, or sits immediately before the scheme, stays out.
  * `%2F` glued to a bare host stays out of that host.
