@@ -618,22 +618,28 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * `bit%5B.%5Dly` and a literal closing bracket still become `.`.
  * A run of Android label characters sitting between ASCII letters or digits
  * becomes `x`, so one host is not read as the shortener inside it.
- * A run before `http://` or `https://` stays. `。` stays. A label character
+ * A run before `http://` or `https://` stays. A label character
  * with no ASCII letter before it stays.
+ * A run of `。` after a finished host becomes one `.` when another
+ * domain continues. `。` before a path, or used as the only dot, stays.
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
-  return foldHostTail(
-    foldHostEncodedGaps(
-      foldGluedLabelRuns(
-        foldGraphemeJoiner(
-          foldMatchText(
-            foldGluedEncodedHyphen(
-              foldGluedEncodedPlus(
-                foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+  return foldIdeographicHostDot(
+    foldHostTail(
+      foldHostEncodedGaps(
+        foldGluedLabelRuns(
+          foldGraphemeJoiner(
+            foldMatchText(
+              foldGluedEncodedHyphen(
+                foldGluedEncodedPlus(
+                  foldGluedEncodedDot(
+                    foldGluedBracketDots(foldHostShape(text)),
+                  ),
+                ),
               ),
             ),
           ),
@@ -661,12 +667,16 @@ export function foldHostScanKeepingGaps(text: string): string {
  * A grapheme joiner between ASCII letters, or before a dot, drops.
  * Dot lookalikes stay, so a bare host written with them does
  * not swallow the next URL. The joined scan still folds those letters.
+ * A run of `。` after a finished host still becomes one `.` when another
+ * domain continues, so the stopped scan does not open the shortener again.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldGluedLabelRuns(
-    foldGraphemeJoiner(
-      foldHostInterruptersAndroidKeeps(
-        foldAndroidLetterUnlessScheme(foldMappedLatin(text)),
+  return foldIdeographicHostDot(
+    foldGluedLabelRuns(
+      foldGraphemeJoiner(
+        foldHostInterruptersAndroidKeeps(
+          foldAndroidLetterUnlessScheme(foldMappedLatin(text)),
+        ),
       ),
     ),
   );
@@ -913,6 +923,32 @@ function domainContinues(rest: string): boolean {
   return /^[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,63}(?![A-Za-z0-9-])/.test(
     rest,
   );
+}
+
+/**
+ * A run of ideographic full stops after a finished host is one ASCII dot
+ * when another domain continues. Android and the URL parser keep that as
+ * one host. A stop before a path, or used as the only dot, stays.
+ */
+function foldIdeographicHostDot(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (text.charCodeAt(index) === 0x3002 && endsWithFinishedHost(out)) {
+      let end = index;
+      while (text.charCodeAt(end) === 0x3002) {
+        end += 1;
+      }
+      if (domainContinues(text.slice(end))) {
+        out += ".";
+        index = end;
+        continue;
+      }
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
 }
 
 /**

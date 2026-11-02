@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-183
+
+- 写完的主机名和后面的域名之间的句号收成一个点。见 ADR 0216。
+- `bit.ly。evil.com/…` 留着。`example.com。bit.ly/…` 仍按短链删除。`bit.ly。/…` 仍按短链删除。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### 工具
 
 - GitHub Actions 升到 `actions/checkout@v7`、`actions/setup-node@v7`、`pnpm/action-setup@v6` 和 `actions/github-script@v9`。`cache: pnpm` 仍显式打开。健康报告脚本仍用注入的 `github.rest`。

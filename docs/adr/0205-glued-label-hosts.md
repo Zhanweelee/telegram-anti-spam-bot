@@ -36,6 +36,7 @@ Android 的裸主机名把汉字、谚文、假名、希伯来文、阿拉伯文
 - `example.com点bit.ly/…`、`bit.ly点evil.com/…`、`example.com가bit.ly/…` 和 `203.0.113.10点bit.ly/…` 留着。
 - `点击bit.ly/…`、`example.com点http://bit.ly/…` 和换行、空格、斜杠后面的网址仍按短链删除。
 - `example.com。bit.ly/…` 仍按短链删除。私用区和 U+10140 后面的短链仍删除。
+- 写完的主机名和后面的域名之间的句号收成一个点。见 ADR 0216。
 - `example.com点www.bit.ly/…` 仍按短链删除。证据是 `example.comxwww.bit.ly`。
 - `bтit.ly` 和 `bit·ly` 仍按短链删除。路径不进证据。
 - IDNA 映射恰好是一个 ASCII 字母的字收成这个字母。见 ADR 0206。

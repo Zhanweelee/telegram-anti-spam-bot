@@ -7232,7 +7232,6 @@ describe("link fixtures", () => {
       `example.com\u70B9\nbit.ly/${path}`,
       `example.com\n\u70B9bit.ly/${path}`,
       `example.com\u70B9 bit.ly/${path}`,
-      `example.com\u3002bit.ly/${path}`,
       `example.com\uE000bit.ly/${path}`,
       `example.com\u{10140}bit.ly/${path}`,
       `b\u0442it.ly/${path}`,
@@ -7279,6 +7278,61 @@ describe("link fixtures", () => {
     expect(dotted?.reasons).toEqual(["short_link"]);
     expect(dotted?.evidence[0]?.summary).toBe("short_link:xn--3px.bit.ly");
     expect(JSON.stringify(dotted)).not.toContain(path);
+  });
+
+  it("joins an ideographic stop when another domain continues", async () => {
+    const detector = createLinkDetector();
+    const path = "offer183";
+    const kept = [
+      `bit.ly\u3002evil.com/${path}`,
+      `www.bit.ly\u3002evil.com/${path}`,
+      `bit.ly\u3002\u3002evil.com/${path}`,
+      `203.0.113.10\u3002evil.com/${path}`,
+      `bit\u3002ly/${path}`,
+      `http://bit.ly\u3002evil.com/${path}`,
+      `http://www.bit.ly\u3002evil.com/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const joined = await detector.detect({
+      event: eventFor(`example.com\u3002bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["short_link"]);
+    expect(joined?.evidence[0]?.summary).toBe("short_link:example.com.bit.ly");
+    expect(JSON.stringify(joined)).not.toContain(path);
+
+    const addressed = await detector.detect({
+      event: eventFor(`203.0.113.10\u3002bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(addressed?.reasons).toEqual(["short_link"]);
+    expect(addressed?.evidence[0]?.summary).toBe(
+      "short_link:203.0.113.10.bit.ly",
+    );
+    expect(JSON.stringify(addressed)).not.toContain("ip_host:203.0.113.10");
+    expect(JSON.stringify(addressed)).not.toContain(path);
+
+    const stopped = await detector.detect({
+      event: eventFor(`bit.ly\u3002/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stopped?.reasons).toEqual(["short_link"]);
+    expect(stopped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(stopped)).not.toContain(path);
   });
 
   it("maps an idna letter Android opens as that host", async () => {

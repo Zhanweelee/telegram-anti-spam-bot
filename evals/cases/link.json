@@ -2870,5 +2870,35 @@
     "id": "mapped-tail-ip",
     "text": "203.0.113.10\u00AA/offer182",
     "label": "spam"
+  },
+  {
+    "id": "ideographic-join-tail",
+    "text": "bit.ly\u3002evil.com/offer183",
+    "label": "ham"
+  },
+  {
+    "id": "ideographic-join-www",
+    "text": "www.bit.ly\u3002evil.com/offer183",
+    "label": "ham"
+  },
+  {
+    "id": "ideographic-join-address",
+    "text": "203.0.113.10\u3002evil.com/offer183",
+    "label": "ham"
+  },
+  {
+    "id": "ideographic-join-double",
+    "text": "bit.ly\u3002\u3002evil.com/offer183",
+    "label": "ham"
+  },
+  {
+    "id": "ideographic-join-ip",
+    "text": "203.0.113.10\u3002bit.ly/offer183",
+    "label": "spam"
+  },
+  {
+    "id": "ideographic-join-path",
+    "text": "bit.ly\u3002/offer183",
+    "label": "spam"
   }
 ]
