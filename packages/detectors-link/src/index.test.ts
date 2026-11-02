@@ -4315,4 +4315,122 @@ describe("link fixtures", () => {
     expect(stuck).toBeNull();
     expect(JSON.stringify(stuck)).not.toContain("CODE141");
   });
+
+  it("keeps the bare IPv4 Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer142";
+    const address = "203.0.113.142";
+    const alone = await detector.detect({
+      event: eventFor(`${address}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(alone?.reasons).toEqual(["ip_host"]);
+    expect(alone?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(alone)).not.toContain(path);
+
+    const released = await detector.detect({
+      event: eventFor(`http://${"a".repeat(60)}-${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(released?.reasons).toEqual(["ip_host"]);
+    expect(released?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(released)).not.toContain("a".repeat(60));
+
+    const marked = await detector.detect({
+      event: eventFor(`http://example.com!${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(marked?.reasons).toEqual(["ip_host"]);
+    expect(marked?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+
+    const version = await detector.detect({
+      event: eventFor("1.2.3.4"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(version?.reasons).toEqual(["ip_host"]);
+    expect(version?.evidence[0]?.summary).toBe("ip_host:1.2.3.4");
+
+    const leading = await detector.detect({
+      event: eventFor("010.0.0.1"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(leading?.reasons).toEqual(["ip_host"]);
+    expect(leading?.evidence[0]?.summary).toBe("ip_host:8.0.0.1");
+    expect(JSON.stringify(leading)).not.toContain("010");
+
+    const schemed = await detector.detect({
+      event: eventFor(`http://${address}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(schemed?.reasons).toEqual(["ip_host"]);
+    expect(schemed?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(schemed)).not.toContain(path);
+
+    const fitted = await detector.detect({
+      event: eventFor(`http://${"a".repeat(50)}-${address}/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(fitted).toBeNull();
+
+    const domain = await detector.detect({
+      event: eventFor(`${address}.example.com`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(domain).toBeNull();
+
+    const zero = await detector.detect({
+      event: eventFor("0.0.0.0"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(zero).toBeNull();
+
+    const padded = await detector.detect({
+      event: eventFor("1.2.3.00"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(padded).toBeNull();
+
+    const glued = await detector.detect({
+      event: eventFor(`v${address}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+
+    const inPath = await detector.detect({
+      event: eventFor(`http://example.com/${address}/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(inPath).toBeNull();
+    expect(JSON.stringify(inPath)).not.toContain(path);
+
+    const buried = await detector.detect({
+      event: eventFor(
+        "tg://msg?text=https%3A%2F%2Fexample.com%2Fok142&to=198.51.100.20",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(buried).toBeNull();
+    expect(JSON.stringify(buried)).not.toContain("198.51.100.20");
+
+    const invite = await detector.detect({
+      event: eventFor("https://t.me/+CODE142"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(JSON.stringify(invite)).not.toContain("CODE142");
+  });
 });

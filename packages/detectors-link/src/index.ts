@@ -68,7 +68,9 @@ export const defaultShorteners = [
  * info only when the next character can finish it. User info is at most
  * 64 characters, and the password is at most 25. A label is at most 63
  * characters and cannot end in the middle of an ASCII word. A hyphen stays
- * inside the label only when the finished label still fits.
+ * inside the label only when the finished label still fits. A dotted IPv4
+ * with no scheme is its own match when Android opens it. An address inside
+ * a `tg:` link stays with that link.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -89,9 +91,13 @@ const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
 const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
 const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;
 const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
+const URL_IP_HEAD = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])";
+const URL_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
+const URL_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
+const URL_IP = `${URL_IP_HEAD}\\.${URL_IP_MID}\\.${URL_IP_MID}\\.${URL_IP_LAST}`;
 const URL_END = "(?![A-Za-z0-9_])";
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?${URL_END}`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b(?:${URL_BARE}|${URL_IP})(?:\\/(?:${URL_BODY})+)?${URL_END}`,
   "gi",
 );
 
@@ -447,6 +453,15 @@ function isTelegramPhonePath(host: string, path: string): boolean {
   return /^\+\d{1,128}$/.test(segment);
 }
 
+function deepCovers(text: string): (start: number, end: number) => boolean {
+  const spans: Array<[number, number]> = [];
+  for (const match of text.matchAll(new RegExp(deepLink.source, "gi"))) {
+    const from = match.index ?? 0;
+    spans.push([from, from + match[0].length]);
+  }
+  return (start, end) => spans.some(([from, to]) => start >= from && end <= to);
+}
+
 export function extractHosts(text: string): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
@@ -457,10 +472,12 @@ export function extractHosts(text: string): string[] {
     seen.add(host);
     found.push(host);
   };
+  const covered = deepCovers(text);
   token.lastIndex = 0;
   for (const match of text.matchAll(token)) {
+    const start = match.index ?? 0;
     const raw = match[0]?.replace(/[),.;!?]+$/g, "");
-    if (!raw) {
+    if (!raw || covered(start, start + (match[0]?.length ?? 0))) {
       continue;
     }
     pushLinkHost(raw, push);

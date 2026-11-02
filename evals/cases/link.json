@@ -1435,5 +1435,45 @@
     "id": "label-fit-stuck-invite",
     "text": "https://t.me-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/+CODE141",
     "label": "ham"
+  },
+  {
+    "id": "bare-ip",
+    "text": "203.0.113.142/offer142",
+    "label": "spam"
+  },
+  {
+    "id": "bare-ip-released",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-203.0.113.142/x",
+    "label": "spam"
+  },
+  {
+    "id": "bare-ip-version",
+    "text": "1.2.3.4",
+    "label": "spam"
+  },
+  {
+    "id": "bare-ip-domain",
+    "text": "203.0.113.142.example.com",
+    "label": "ham"
+  },
+  {
+    "id": "bare-ip-zero",
+    "text": "0.0.0.0",
+    "label": "ham"
+  },
+  {
+    "id": "bare-ip-fitted",
+    "text": "http://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-203.0.113.142/x",
+    "label": "ham"
+  },
+  {
+    "id": "bare-ip-buried",
+    "text": "tg://msg?text=https%3A%2F%2Fexample.com%2Fok142&to=198.51.100.20",
+    "label": "ham"
+  },
+  {
+    "id": "bare-ip-path",
+    "text": "http://example.com/203.0.113.142/offer142",
+    "label": "ham"
   }
 ]

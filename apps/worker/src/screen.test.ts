@@ -5776,4 +5776,73 @@ describe("screenTelegramEvent", () => {
     expect(allowed.decision.action).toBe("allow");
     expect(JSON.stringify(allowed.decision.evidence)).not.toContain("bit.ly");
   });
+
+  it("deletes a bare IPv4 Android opens", async () => {
+    const path = "offer142";
+    const address = "203.0.113.142";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2201,
+        message: {
+          message_id: 2201,
+          date: 1761955200,
+          chat: { id: -1008159, type: "supergroup", title: "机密群名" },
+          from: { id: 142, first_name: "https://tinyurl.com/from142" },
+          text: `${address}/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1008159", messageId: "2201" },
+    ]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      `ip_host:${address}`,
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("from142");
+    expect(dumped).not.toContain("机密群名");
+
+    const plain = await normalizeUpdate({
+      update: {
+        update_id: 2202,
+        message: {
+          message_id: 2202,
+          date: 1761955200,
+          chat: { id: -1008160, type: "supergroup" },
+          from: { id: 142 },
+          text: `${address}.example.com/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(plain.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(JSON.stringify(allowed.decision.evidence)).not.toContain(address);
+  });
 });
