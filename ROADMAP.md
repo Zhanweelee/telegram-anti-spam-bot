@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-112 Passport 的 callback_url 只留主机名 — done
+
+验收：`t.me/telegrampassport`、`telegram.me/telegrampassport`、`telegram.dog/telegrampassport`、一层 `www.`、`telegrampassport.t.me`、`tg://passport` 和 `tg://resolve?domain=telegrampassport` 的 `callback_url` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。参数名不区分大小写。`domain` 和第一段必须正好是小写 `telegrampassport`。桌面端用户名正则允许的一段、`s/live` 和两段数字同样读。不要求 `bot_id`。`text`、`nonce`、公钥和路径不进证据。`example.com`、大小写不对的域名、对不上的多段路径、`telegram.me` 上的同名子域、`www.telegrampassport.t.me` 和 `tg://secureid` 留着。再套一层仍放行。`callback_url` 里的关键词不命中。默认名单仍是 ADR 0026。
+
 ### P3-111 百分号编码空格开头的邀请 — done
 
 验收：`t.me`、`telegram.me`、`telegram.dog` 以及一层 `www.` 上，路径开头的 `%20` 加一段邀请码记成邀请并删除。证据是 `invite:` 加这条链接自己的主机名，不含邀请码。查询可以跟在邀请码后面。末尾斜杠、紧挨着的 `#`、子域、带点的邀请码和其它网站留着。全数字仍是邀请，不读 `text`。公开的 `t.me/名字` 仍保留。默认名单仍是 ADR 0026。
@@ -1551,4 +1555,10 @@
 
 - 做了什么：`t.me/%20邀请码` 记成邀请。选择写在 ADR 0144。
 - 学到什么：桌面端同一条 `join` 正则把字面量 `%20` 和 `+`、`joinchat/` 放在一起。判断用原始字符串。去掉末尾斜杠后再看，会把 `t.me/%20邀请码/` 误判成邀请。全数字走邀请，不走电话号码。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-112
+
+- 做了什么：Passport 的 `callback_url` 只留主机名。选择写在 ADR 0145。
+- 学到什么：桌面端关掉 Passport 窗口就会打开 `callback_url`，不要求 `bot_id`。`domain` 的值必须正好是小写 `telegrampassport`。`text` 仍不进输入框。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。

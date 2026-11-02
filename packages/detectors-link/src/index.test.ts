@@ -743,6 +743,177 @@ describe("link fixtures", () => {
     expect(dotted).toBeNull();
   });
 
+  it("reads a passport callback url and keeps the secrets out", async () => {
+    const address = "203.0.113.112";
+    const path = "hidden112";
+    const nonce = "NONCE112";
+    const code = "CODE112";
+    const nested = "203.0.113.113";
+    const callback = encodeURIComponent(`http://${address}/${path}`);
+    const detector = createLinkDetector();
+    const hit = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport?callback_url=${callback}&nonce=${nonce}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["ip_host"]);
+    expect(hit?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(hit)).not.toContain(path);
+    expect(JSON.stringify(hit)).not.toContain(nonce);
+    const command = await detector.detect({
+      event: eventFor(`tg://Passport?CALLBACK_URL=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(command?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const plain = await detector.detect({
+      event: eventFor(`tg:passport?callback_url=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plain?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const resolve = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=telegrampassport&callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(resolve?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/telegrampassport?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const sub = await detector.detect({
+      event: eventFor(`https://telegrampassport.T.ME?callback_url=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const post = await detector.detect({
+      event: eventFor(
+        `https://telegrampassport.t.me/123?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const app = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/app?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const story = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/s/live?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(story?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const thread = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/1/2?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(thread?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport?callback_url=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+    const other = await detector.detect({
+      event: eventFor(
+        `https://example.com/telegrampassport?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other).toBeNull();
+    const mixed = await detector.detect({
+      event: eventFor(`https://t.me/TelegramPassport?callback_url=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(mixed).toBeNull();
+    const mixedDomain = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=TelegramPassport&callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(mixedDomain).toBeNull();
+    const otherHost = await detector.detect({
+      event: eventFor(
+        `https://telegrampassport.telegram.me?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(otherHost).toBeNull();
+    const junk = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport/a/b/c?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(junk).toBeNull();
+    const wwwSub = await detector.detect({
+      event: eventFor(
+        `https://www.telegrampassport.t.me?callback_url=${callback}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wwwSub).toBeNull();
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/durov?callback_url=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user).toBeNull();
+    const secure = await detector.detect({
+      event: eventFor(`tg://secureid?callback_url=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(secure).toBeNull();
+    const inner = encodeURIComponent(
+      `https://t.me/telegrampassport?callback_url=${encodeURIComponent(`http://${nested}/x`)}`,
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/telegrampassport?callback_url=${inner}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+    expect(JSON.stringify(wrapped)).not.toContain(nested);
+    const textOnly = await detector.detect({
+      event: eventFor(`tg://resolve?domain=telegrampassport&text=${callback}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(textOnly).toBeNull();
+  });
+
   it("treats a tg deep link as an invite and keeps the code out", async () => {
     const code = "DEEPJOIN69";
     const detector = createLinkDetector();

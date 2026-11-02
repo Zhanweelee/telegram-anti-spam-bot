@@ -1147,6 +1147,49 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp111");
   });
 
+  it("keeps a hostname from a passport callback and leaves the secrets out", async () => {
+    const address = "203.0.113.112";
+    const path = "hidden112";
+    const nonce = "NONCE112";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 78029,
+        message: {
+          message_id: 78029,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp112" },
+          from: { id: 112, first_name: "https://tinyurl.com/from112" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/telegrampassport?callback_url=${encodeURIComponent(`http://${address}/${path}`)}&nonce=${nonce}`,
+            },
+          ],
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_78029",
+      kind: "message",
+      message: {
+        id: "78029",
+        text: "点这里",
+        hosts: ["t.me", address],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(nonce);
+    expect(dumped).not.toContain("from112");
+    expect(dumped).not.toContain("grp112");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

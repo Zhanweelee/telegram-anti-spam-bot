@@ -944,6 +944,92 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(slash.event)).not.toContain(code);
   });
 
+  it("keeps a hostname from a passport callback and leaves the secrets out", async () => {
+    const address = "203.0.113.112";
+    const path = "hidden112";
+    const nonce = "NONCE112";
+    const code = "CODE112";
+    const callback = encodeURIComponent(`http://${address}/${path}`);
+    const outcome = await normalize({
+      update_id: 78025,
+      message: {
+        message_id: 78025,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 112 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/telegrampassport?callback_url=${callback}&nonce=${nonce}&public_key=PUB112`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(nonce);
+    expect(dumped).not.toContain("PUB112");
+    const invite = await normalize({
+      update_id: 78026,
+      message: {
+        message_id: 78026,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 112 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://passport?callback_url=${encodeURIComponent(`https://t.me/+${code}`)}`,
+          },
+        ],
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+    const mixed = await normalize({
+      update_id: 78027,
+      message: {
+        message_id: 78027,
+        date: 1761955200,
+        chat: { id: -100590, type: "supergroup" },
+        from: { id: 112 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/TelegramPassport?callback_url=${callback}`,
+          },
+        ],
+      },
+    });
+    expect(mixed.status).toBe("event");
+    if (mixed.status !== "event") {
+      return;
+    }
+    expect(mixed.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(mixed.event)).not.toContain(address);
+    expect(JSON.stringify(mixed.event)).not.toContain(path);
+  });
+
   it("keeps a shared contact as a flag and drops the phone", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

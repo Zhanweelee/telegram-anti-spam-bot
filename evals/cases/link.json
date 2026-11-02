@@ -730,5 +730,45 @@
     "id": "tg-space-invite-dot",
     "text": "https://t.me/%20ab.cd",
     "label": "ham"
+  },
+  {
+    "id": "tg-passport-callback",
+    "text": "https://t.me/telegrampassport?callback_url=http%3A%2F%2F203.0.113.112%2Fhidden112",
+    "label": "spam"
+  },
+  {
+    "id": "tg-passport-command",
+    "text": "tg://passport?callback_url=http%3A%2F%2F203.0.113.112%2Fhidden112",
+    "label": "spam"
+  },
+  {
+    "id": "tg-passport-subdomain",
+    "text": "https://telegrampassport.t.me?callback_url=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "spam"
+  },
+  {
+    "id": "tg-passport-invite",
+    "text": "https://t.me/telegrampassport?callback_url=https%3A%2F%2Ft.me%2F%2BCODE112",
+    "label": "spam"
+  },
+  {
+    "id": "tg-passport-other-site",
+    "text": "https://example.com/telegrampassport?callback_url=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-passport-mixed-domain",
+    "text": "tg://resolve?domain=TelegramPassport&callback_url=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-passport-junk-path",
+    "text": "https://t.me/telegrampassport/a/b/c?callback_url=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "ham"
+  },
+  {
+    "id": "tg-passport-text",
+    "text": "tg://resolve?domain=telegrampassport&text=http%3A%2F%2F203.0.113.112%2Fx",
+    "label": "ham"
   }
 ]

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-112
+
+- Passport 的 `callback_url` 只留主机名。见 ADR 0145。
+- 裸 IP、短链或邀请按现有链接规则删除。`text`、`nonce`、公钥和路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-111
 
 - `t.me/%20`、`telegram.me/%20` 和 `telegram.dog/%20` 记成邀请。见 ADR 0144。

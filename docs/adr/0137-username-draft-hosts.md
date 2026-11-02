@@ -37,3 +37,4 @@ Android 在打开用户对话时把这个 `text` 放进 `start_text`。桌面端
 - `https://t.me/+` 后全是数字的写法后来由 ADR 0138 改成同一条电话预填。带字母的加号路径仍不读 `text`。
 - 一段数字的 `t.me/用户名/123` 和 `用户名.t.me` 后来由 ADR 0139 读取 `text`。讨论串、小程序路径和 Passport 仍不读。
 - `domain` 和 `phone` 后来由 ADR 0140 不区分大小写，取第一次出现的值。Passport 仍不读 `text`。
+- Passport 的 `callback_url` 后来由 ADR 0145 只留主机名。`nonce`、公钥和路径仍不进证据。

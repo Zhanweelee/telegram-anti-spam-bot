@@ -36,3 +36,4 @@ ADR 0137 认为 `t.me/用户名/123?text=` 不会把 `text` 放进输入框。
 - 频道帖子如果带了同样的 `text`，也会被删。客户端对频道不写这段草稿。
 - `example.com` 留着。`t.me/用户名/12/34`、`t.me/用户名/app` 和 `proxy.t.me` 仍放行。
 - 再套一层预填链接仍放行。正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
+- Passport 的 `callback_url` 后来由 ADR 0145 只留主机名。这里的 `text` 仍不读。

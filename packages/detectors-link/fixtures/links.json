@@ -266,6 +266,17 @@
     "expect": "miss"
   },
   {
+    "name": "passport-callback",
+    "text": "https://t.me/telegrampassport?callback_url=http%3A%2F%2F203.0.113.112%2Fhidden112",
+    "expect": "hit",
+    "reason": "ip_host"
+  },
+  {
+    "name": "passport-callback-other-site",
+    "text": "https://example.com/telegrampassport?callback_url=http%3A%2F%2F203.0.113.112%2Fx",
+    "expect": "miss"
+  },
+  {
     "name": "tg-resolve",
     "text": "tg://resolve?domain=durov",
     "expect": "miss"

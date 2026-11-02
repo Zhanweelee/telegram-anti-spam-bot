@@ -828,6 +828,7 @@ function hostFromUrl(
         ...wrappedExtras(folded, url),
         ...msgTextExtras(folded, url),
         ...usernameDraftExtras(folded, url),
+        ...passportExtras(folded, url),
       ]
     : [];
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -952,6 +953,111 @@ function msgTextExtras(
     }
   }
   return found;
+}
+
+function passportExtras(
+  folded: string,
+  url: URL,
+): { host: string; invite: boolean }[] {
+  const callback = passportCallback(folded, url);
+  if (callback === null) {
+    return [];
+  }
+  const inner = hostFromUrl(callback, false);
+  if (!inner) {
+    return [];
+  }
+  return [{ host: inner.host, invite: inner.invite }, ...(inner.extras ?? [])];
+}
+
+/** 桌面端取消 Passport 时打开 `callback_url`。只留主机名。 */
+function passportCallback(raw: string, url: URL): string | null {
+  if (!isTelegramPassport(raw, url)) {
+    return null;
+  }
+  const callback = queryValue(raw, "callback_url");
+  if (
+    callback === null ||
+    callback.length === 0 ||
+    callback.length > MAX_LINK
+  ) {
+    return null;
+  }
+  return callback;
+}
+
+function isTelegramPassport(raw: string, url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    if (command === "passport") {
+      return host.length === 0 || path.length === 0;
+    }
+    if (command !== "resolve") {
+      return false;
+    }
+    return searchParam(url, "domain") === "telegrampassport";
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  if (isPassportSubdomain(raw, url)) {
+    return true;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  if (!isExactDraftHost(host)) {
+    return false;
+  }
+  const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  return isPassportPath(parts);
+}
+
+function isPassportSubdomain(raw: string, url: URL): boolean {
+  const shown = /^(?:https?:\/\/)?([^/?#]+)/i.exec(raw)?.[1];
+  if (shown === undefined || shown.includes(":") || shown.includes("@")) {
+    return false;
+  }
+  const suffix = ".t.me";
+  if (!shown.toLowerCase().endsWith(suffix)) {
+    return false;
+  }
+  const label = shown.slice(0, shown.length - suffix.length);
+  if (label !== "telegrampassport") {
+    return false;
+  }
+  const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  if (parts.length === 0) {
+    return true;
+  }
+  const only = parts[0];
+  return parts.length === 1 && only !== undefined && /^\d{1,16}$/.test(only);
+}
+
+function isPassportPath(parts: readonly string[]): boolean {
+  if (parts[0] !== "telegrampassport") {
+    return false;
+  }
+  if (parts.length === 1) {
+    return true;
+  }
+  if (parts.length === 2) {
+    return /^[A-Za-z0-9._-]{1,128}$/.test(parts[1] ?? "");
+  }
+  if (parts.length === 3) {
+    const mid = (parts[1] ?? "").toLowerCase();
+    const last = (parts[2] ?? "").toLowerCase();
+    if (mid === "s" && (/^\d{1,16}$/.test(last) || last === "live")) {
+      return true;
+    }
+    if ((mid === "a" || mid === "c") && /^\d{1,16}$/.test(last)) {
+      return true;
+    }
+    return (
+      /^\d{1,16}$/.test(parts[1] ?? "") && /^\d{1,16}$/.test(parts[2] ?? "")
+    );
+  }
+  return false;
 }
 
 function usernameDraftExtras(
