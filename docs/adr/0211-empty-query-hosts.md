@@ -32,3 +32,4 @@
 - `http://?t.me/+…` 不记成邀请。`https://t.me/+…` 仍按邀请删除。邀请码不进证据。
 - `http:///bit.ly/…`、`http:////bit.ly/…`、`http://bit.ly?…` 和 `http://#bit.ly/…` 仍删除。
 - `http://example.com?bit.ly/…` 留着。空格后面的 `http://t.co/…` 仍删除。路径不进证据。
+- 没有主机名的一到五位端口仍留在这一条里。见 ADR 0212。

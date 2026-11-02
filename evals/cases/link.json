@@ -2740,5 +2740,35 @@
     "id": "empty-query-host",
     "text": "http://bit.ly?offer178",
     "label": "spam"
+  },
+  {
+    "id": "empty-port-path",
+    "text": "http://:80/bit.ly/offer179",
+    "label": "ham"
+  },
+  {
+    "id": "empty-port-query",
+    "text": "https://:443?bit.ly/offer179",
+    "label": "ham"
+  },
+  {
+    "id": "empty-port-ip",
+    "text": "http://:80/203.0.113.10/offer179",
+    "label": "ham"
+  },
+  {
+    "id": "empty-port-long",
+    "text": "http://:999999/bit.ly/offer179",
+    "label": "spam"
+  },
+  {
+    "id": "empty-port-gap",
+    "text": "http://:80 /bit.ly/offer179",
+    "label": "spam"
+  },
+  {
+    "id": "empty-port-real",
+    "text": "http://bit.ly:80/offer179",
+    "label": "spam"
   }
 ]

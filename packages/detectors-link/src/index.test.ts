@@ -7581,4 +7581,52 @@ describe("link fixtures", () => {
       expect(JSON.stringify(hit), text).not.toContain(path);
     }
   });
+
+  it("keeps a hostless port with the scheme Android opens", async () => {
+    const detector = createLinkDetector();
+    const path = "offer179";
+    const closed = [
+      `http://:80/bit.ly/${path}`,
+      `https://:443?bit.ly/${path}`,
+      `http://:8/bit.ly/${path}`,
+      `http://:080/bit.ly/${path}`,
+      `http://:80/http://t.co/${path}`,
+      `http://:80/203.0.113.10/${path}`,
+      `http://:80/t.me/+${path}`,
+      `http://example.com:80/bit.ly/${path}`,
+      `http://:80bit.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113");
+      expect(JSON.stringify(hit), text).not.toContain("t.me");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `http://:999999/bit.ly/${path}`,
+      `http://:/bit.ly/${path}`,
+      `http://:80 /bit.ly/${path}`,
+      `http://bit.ly:80/${path}`,
+      `http://@bit.ly/${path}`,
+      `http://:@bit.ly/${path}`,
+      `https://t.me/+${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).not.toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+  });
 });
