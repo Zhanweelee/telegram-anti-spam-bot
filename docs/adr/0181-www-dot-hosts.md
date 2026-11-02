@@ -30,3 +30,4 @@ Android 没有协议时，`www.` 走严格域名。点号不属于这一段主�
 - `www.example.com?http://bit.ly/…` 和 `http://www.example.com./http://bit.ly/…` 留着。
 - `www.bit.ly./…` 仍按短链删除。路径不进证据。
 - `www.t.me./+…` 不记成邀请。`www.t.me/+…` 和 `https://t.me./+…` 仍按邀请删除。
+- 不是 Android 严格顶级域的后缀，后面的网址仍单独打开。见 ADR 0182。

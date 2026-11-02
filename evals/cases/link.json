@@ -1680,5 +1680,45 @@
     "id": "www-dot-schemed",
     "text": "http://www.example.com./http://bit.ly/offer148",
     "label": "ham"
+  },
+  {
+    "id": "strict-tld-example",
+    "text": "foo.example/http://bit.ly/offer149",
+    "label": "spam"
+  },
+  {
+    "id": "strict-tld-www",
+    "text": "www.foo.example/http://bit.ly/offer149",
+    "label": "spam"
+  },
+  {
+    "id": "strict-tld-bar",
+    "text": "foo.bar.example/http://bit.ly/offer149",
+    "label": "spam"
+  },
+  {
+    "id": "strict-tld-com",
+    "text": "example.com/http://bit.ly/offer149",
+    "label": "ham"
+  },
+  {
+    "id": "strict-tld-puny",
+    "text": "example.xn--p1ai/http://bit.ly/offer149",
+    "label": "ham"
+  },
+  {
+    "id": "strict-tld-han",
+    "text": "例子.中国/http://bit.ly/offer149",
+    "label": "ham"
+  },
+  {
+    "id": "strict-tld-space",
+    "text": "见 例子.中国/http://bit.ly/offer149",
+    "label": "spam"
+  },
+  {
+    "id": "strict-tld-schemed",
+    "text": "http://foo.example/http://bit.ly/offer149",
+    "label": "ham"
   }
 ]

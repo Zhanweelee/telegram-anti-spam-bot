@@ -8,6 +8,7 @@ import {
   withTimeout,
 } from "@tasb/core";
 import { z } from "zod";
+import { androidStrictTld } from "./android-tlds.js";
 
 const hostSchema = z.string().min(1).max(253);
 
@@ -64,8 +65,9 @@ export const defaultShorteners = [
  * the path has not started, so the next URL is its own match. A scheme
  * stuck to an ASCII word character is not a match, and the host after
  * `://` is not read again. A bare domain and a `www.` host end at the last
- * label, so the next URL is its own match. A label cannot start with a
- * hyphen, and `http://` is not itself a label. A dot in a schemed host
+ * label Android accepts as a top-level domain, so the next URL is its own
+ * match. A label cannot start with a hyphen, and `http://` is not itself a
+ * label. A dot in a schemed host
  * starts another label only when a label character follows. A dot before
  * a port, a slash, or a question mark stays with this URL. `@` is user
  * info only when the next character can finish it. User info is at most
@@ -98,16 +100,16 @@ const URL_BARE_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^${URL_STOP}\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR}){1,63}`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
-const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
+const URL_TLD = androidStrictTld;
 const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_BARE_TAIL}`;
-const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
+const URL_BARE = `(?:${URL_NAME}\\.)+${URL_TLD}`;
 const URL_IP_HEAD = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])";
 const URL_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
 const URL_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const URL_IP = `${URL_IP_HEAD}\\.${URL_IP_MID}\\.${URL_IP_MID}\\.${URL_IP_LAST}`;
 const URL_END = "(?![A-Za-z0-9_])";
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)\\b(?:${URL_BARE}|${URL_IP})${URL_BARE_TAIL}${URL_END}`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})${URL_END}|(?<!:\\/\\/)(?:^|\\b)(?:${URL_BARE}|${URL_IP})${URL_BARE_TAIL}${URL_END}`,
   "gi",
 );
 

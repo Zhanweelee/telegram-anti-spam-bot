@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-149 没有协议的主机名只用 Android 认的顶级域 — done
+
+验收：`foo.example/http://bit.ly/…`、`foo.example?http://bit.ly/…`、`www.foo.example/http://bit.ly/…` 和 `foo.bar.example/http://bit.ly/…` 删除这条消息。证据只有后面的主机名。路径不进证据。`example.com/http://bit.ly/…`、`www.example.com/http://bit.ly/…`、`example.xn--p1ai/http://bit.ly/…`、`例子.中国/http://bit.ly/…` 和 `http://foo.example/http://bit.ly/…` 留着。空格后面的 `例子.中国/http://bit.ly/…` 删除后面的短链。`foo.example/https://t.me/+…` 按邀请删除。`https://t.me/+…` 仍按邀请删除。默认名单仍是 ADR 0026。
+
 ### P3-148 没有协议的 www. 在点号处结束 — done
 
 验收：`www.example.com./http://bit.ly/…`、`www.example.com.?http://bit.ly/…` 和 `www.example.com.:80/http://bit.ly/…` 删除这条消息。证据只有后面的主机名。路径不进证据。`www.example.com?http://bit.ly/…` 和 `http://www.example.com./http://bit.ly/…` 留着。`www.bit.ly./http://t.co/…` 仍按短链删除。`www.t.me./+…` 不记成邀请。`www.t.me/+…` 和 `https://t.me./+…` 仍按邀请删除。默认名单仍是 ADR 0026。
@@ -1921,4 +1925,10 @@
 
 - 做了什么：没有协议的 `www.` 使用和裸域名一样的尾巴，点号不再带走后面的路径。选择写在 ADR 0181。
 - 学到什么：Android 的严格域名不把点号收进主机名。`www.example.com./http://bit.ly` 会先停在 `www.example.com`，再打开后面的短链。带协议时这个点仍留在同一段。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-149
+
+- 做了什么：没有协议的主机名和 `www.` 改用 Android `LinkifyPort` 的严格顶级域，并保留 `xn--` 这种 punycode 后缀。选择写在 ADR 0182。
+- 学到什么：`example`、`test` 这类后缀不是这份名单里的顶级域，后面的短链会再打开。`com`、`中国` 和 `xn--` 仍把路径留在同一段。空格和汉字之间没有单词边界，空格后面的国际域名不会挡住后面的短链。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
