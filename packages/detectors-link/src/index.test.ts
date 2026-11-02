@@ -1164,7 +1164,10 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(post).toBeNull();
+    expect(post?.reasons).toEqual(["short_link"]);
+    expect(post?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(post)).not.toContain("name106");
+    expect(JSON.stringify(post)).not.toContain("durov");
 
     const proxy = await detector.detect({
       event: eventFor(
@@ -1196,6 +1199,106 @@ describe("link fixtures", () => {
 
     const nested = encodeURIComponent(
       "https://t.me/durov?text=https%3A%2F%2Fbit.ly%2Fname106",
+    );
+    const wrapped = await detector.detect({
+      event: eventFor(`https://t.me/spam?text=${nested}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(wrapped).toBeNull();
+  });
+
+  it("reads the draft on a user post path and a t.me subdomain", async () => {
+    const detector = createLinkDetector();
+    const subdomain = await detector.detect({
+      event: eventFor(
+        "https://durov.t.me/?text=http%3A%2F%2F203.0.113.8%2Fpath108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(subdomain?.reasons).toEqual(["ip_host"]);
+    expect(subdomain?.evidence[0]?.summary).toBe("ip_host:203.0.113.8");
+    expect(JSON.stringify(subdomain)).not.toContain("path108");
+
+    const shortened = await detector.detect({
+      event: eventFor(
+        "https://www.telegram.dog/durov/9?text=https%3A%2F%2Fcutt.ly%2Fname108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:cutt.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name108");
+    expect(JSON.stringify(shortened)).not.toContain("durov");
+
+    const code = "code108";
+    const invite = await detector.detect({
+      event: eventFor(
+        `https://durov.t.me?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain(code);
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        "https://durov.t.me/15?text=https%3A%2F%2Fexample.com%2Fok108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+
+    const thread = await detector.detect({
+      event: eventFor(
+        "https://t.me/durov/12/34?text=https%3A%2F%2Fbit.ly%2Fname108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(thread).toBeNull();
+
+    const app = await detector.detect({
+      event: eventFor(
+        "https://t.me/durov/app?text=https%3A%2F%2Fbit.ly%2Fname108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app).toBeNull();
+
+    const reserved = await detector.detect({
+      event: eventFor(
+        "https://proxy.t.me/?text=https%3A%2F%2Fbit.ly%2Fname108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(reserved).toBeNull();
+
+    const single = await detector.detect({
+      event: eventFor("https://a.t.me/?text=https%3A%2F%2Fbit.ly%2Fname108"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(single).toBeNull();
+
+    const foreign = await detector.detect({
+      event: eventFor(
+        "https://durov.example.com/?text=https%3A%2F%2Fbit.ly%2Fname108",
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(foreign).toBeNull();
+
+    const nested = encodeURIComponent(
+      "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Fname108",
     );
     const wrapped = await detector.detect({
       event: eventFor(`https://t.me/spam?text=${nested}`),

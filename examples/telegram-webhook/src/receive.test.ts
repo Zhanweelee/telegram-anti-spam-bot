@@ -901,6 +901,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp107");
   });
 
+  it("keeps a hostname from a t.me subdomain draft and leaves the path out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 25,
+        message: {
+          message_id: 250,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp108" },
+          from: { id: 108, first_name: "https://tinyurl.com/from108" },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "主页",
+                  url: "https://durov.t.me/?text=https%3A%2F%2F203.0.113.8%2Fpath108",
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_25",
+      kind: "message",
+      message: {
+        id: "250",
+        text: "今天站会",
+        hosts: ["durov.t.me", "203.0.113.8"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("path108");
+    expect(dumped).not.toContain("from108");
+    expect(dumped).not.toContain("grp108");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

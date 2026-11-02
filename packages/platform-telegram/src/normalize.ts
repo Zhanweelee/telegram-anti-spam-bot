@@ -1002,17 +1002,63 @@ function isUsernameDraft(url: URL): boolean {
     return false;
   }
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
+    return true;
+  }
   const first = parts[0];
   if (parts.length === 1 && first !== undefined) {
     return isPublicUsername(first) || isTelegramPhoneSegment(host, first);
   }
   const preview = parts[0]?.toLowerCase();
   const name = parts[1];
-  return (
+  if (
     parts.length === 2 &&
     preview === "s" &&
     name !== undefined &&
     isPublicUsername(name)
+  ) {
+    return true;
+  }
+  return isUserPostPath(host, parts);
+}
+
+function isExactDraftHost(host: string): boolean {
+  const bare = host.startsWith("www.") ? host.slice(4) : host;
+  return bare === "t.me" || bare === "telegram.me" || bare === "telegram.dog";
+}
+
+function isUserSubdomain(host: string): boolean {
+  if (!host.endsWith(".t.me")) {
+    return false;
+  }
+  const name = host.slice(0, -".t.me".length);
+  return (
+    name !== "www" &&
+    !name.includes(".") &&
+    name.length >= 2 &&
+    isPublicUsername(name)
+  );
+}
+
+function isUserSubdomainPath(parts: readonly string[]): boolean {
+  if (parts.length === 0) {
+    return true;
+  }
+  const only = parts[0];
+  return parts.length === 1 && only !== undefined && /^\d{1,16}$/.test(only);
+}
+
+function isUserPostPath(host: string, parts: readonly string[]): boolean {
+  if (!isExactDraftHost(host) || parts.length !== 2) {
+    return false;
+  }
+  const name = parts[0];
+  const post = parts[1];
+  return (
+    name !== undefined &&
+    post !== undefined &&
+    isPublicUsername(name) &&
+    /^\d{1,16}$/.test(post)
   );
 }
 

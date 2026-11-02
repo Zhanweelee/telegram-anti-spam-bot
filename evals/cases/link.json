@@ -494,6 +494,31 @@
   {
     "id": "tg-username-post-text",
     "text": "https://t.me/durov/123?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "spam"
+  },
+  {
+    "id": "tg-user-subdomain-text",
+    "text": "https://durov.t.me/?text=https%3A%2F%2F203.0.113.8%2Fpath",
+    "label": "spam"
+  },
+  {
+    "id": "tg-user-subdomain-ordinary",
+    "text": "https://durov.t.me/?text=https%3A%2F%2Fexample.com%2Fdocs",
+    "label": "ham"
+  },
+  {
+    "id": "tg-user-thread-text",
+    "text": "https://t.me/durov/12/34?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "ham"
+  },
+  {
+    "id": "tg-user-app-text",
+    "text": "https://t.me/durov/app?text=https%3A%2F%2Fbit.ly%2Foffer",
+    "label": "ham"
+  },
+  {
+    "id": "tg-reserved-subdomain-text",
+    "text": "https://proxy.t.me/?text=https%3A%2F%2Fbit.ly%2Foffer",
     "label": "ham"
   },
   {

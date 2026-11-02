@@ -5757,10 +5757,80 @@ describe("normalizeUpdate", () => {
     if (post.status !== "event") {
       return;
     }
-    expect(post.event.message?.hosts).toEqual(["t.me"]);
+    expect(post.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(post.event.message?.invites).toBeUndefined();
     const postDump = JSON.stringify(post.event);
-    expect(postDump).not.toContain("bit.ly");
     expect(postDump).not.toContain("name106");
+    expect(postDump).not.toContain("durov");
+  });
+
+  it("keeps a hostname from a user post path and a t.me subdomain", async () => {
+    const phrase = "请免费领取礼品";
+    const subdomain = await normalize({
+      update_id: 7710,
+      message: {
+        message_id: 550,
+        date: 1761955200,
+        chat: { id: -101320, type: "supergroup", title: "keep-title" },
+        from: { id: 108, first_name: "from108" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "主页",
+                url: `https://durov.t.me/?text=${encodeURIComponent(`${phrase} https://bit.ly/name108`)}`,
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(subdomain.status).toBe("event");
+    if (subdomain.status !== "event") {
+      return;
+    }
+    expect(subdomain.event.message?.text).toBe("今天站会");
+    expect(subdomain.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(subdomain.event.message?.hosts).toEqual(["durov.t.me", "bit.ly"]);
+    expect(subdomain.event.message?.invites).toBeUndefined();
+    const subdomainDump = JSON.stringify(subdomain.event);
+    expect(subdomainDump).not.toContain("name108");
+    expect(subdomainDump).not.toContain(phrase);
+    expect(subdomainDump).not.toContain("from108");
+    expect(subdomainDump).not.toContain("keep-title");
+
+    const thread = await normalize({
+      update_id: 7711,
+      message: {
+        message_id: 551,
+        date: 1761955200,
+        chat: { id: -101321, type: "supergroup" },
+        from: { id: 108 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "讨论",
+                url: "https://t.me/durov/12/34?text=https%3A%2F%2Fbit.ly%2Fname108",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(thread.status).toBe("event");
+    if (thread.status !== "event") {
+      return;
+    }
+    expect(thread.event.message?.hosts).toEqual(["t.me"]);
+    const threadDump = JSON.stringify(thread.event);
+    expect(threadDump).not.toContain("bit.ly");
+    expect(threadDump).not.toContain("name108");
+    expect(threadDump).not.toContain("durov");
   });
 
   it("keeps a hostname from a phone draft and leaves the number out", async () => {

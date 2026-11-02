@@ -3641,13 +3641,97 @@ describe("screenTelegramEvent", () => {
     if (ordinary.status !== "event") {
       return;
     }
-    const allowed = await screenTelegramEvent(ordinary.event, {
+    const deleted = await screenTelegramEvent(ordinary.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toContain("short_link");
+    expect(ordinary.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(ordinary.event)).not.toContain("name106");
+    expect(JSON.stringify(ordinary.event)).not.toContain("durov");
+  });
+
+  it("deletes a t.me subdomain whose draft text is an address", async () => {
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 7710,
+        message: {
+          message_id: 7710,
+          date: 1761955200,
+          chat: {
+            id: -100820,
+            type: "supergroup",
+            title: "https://cutt.ly/grp108",
+          },
+          from: { id: 108, first_name: "https://tinyurl.com/from108" },
+          text: "https://durov.t.me/?text=https%3A%2F%2F203.0.113.8%2Fpath108",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("ip_host");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100820", messageId: "7710" },
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain("path108");
+    expect(JSON.stringify(logger.entries)).not.toContain("from108");
+    expect(JSON.stringify(logger.entries)).not.toContain("grp108");
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "ip_host:203.0.113.8",
+    );
+
+    const thread = await normalizeUpdate({
+      update: {
+        update_id: 7711,
+        message: {
+          message_id: 7711,
+          date: 1761955200,
+          chat: { id: -100821, type: "supergroup" },
+          from: { id: 108 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "讨论",
+                  url: "https://t.me/durov/12/34?text=https%3A%2F%2Fbit.ly%2Fname108",
+                },
+              ],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(thread.status).toBe("event");
+    if (thread.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(thread.event, {
       logger: createMemoryLogger(),
       moderator: createMemoryModerator(),
     });
     expect(allowed.decision.action).toBe("allow");
-    expect(ordinary.event.message?.hosts).toEqual(["t.me"]);
-    expect(JSON.stringify(ordinary.event)).not.toContain("name106");
+    expect(thread.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(thread.event)).not.toContain("name108");
+    expect(JSON.stringify(thread.event)).not.toContain("bit.ly");
   });
 
   it("deletes a phone link whose draft text is an address", async () => {
