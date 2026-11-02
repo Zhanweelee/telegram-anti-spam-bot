@@ -2964,4 +2964,87 @@ describe("link fixtures", () => {
     });
     expect(plain).toBeNull();
   });
+
+  it("keeps the host Android stops on before a trailing hyphen", async () => {
+    const detector = createLinkDetector();
+    const path = "offer125";
+    const short = await detector.detect({
+      event: eventFor(`http://bit.ly-/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(short?.reasons).toEqual(["short_link"]);
+    expect(short?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(short)).not.toContain(path);
+
+    const doubled = await detector.detect({
+      event: eventFor("http://bit.ly--/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(doubled?.reasons).toEqual(["short_link"]);
+    expect(doubled?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const dotted = await detector.detect({
+      event: eventFor("http://bit.ly-.com/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.reasons).toEqual(["short_link"]);
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const address = "203.0.113.125";
+    const ip = await detector.detect({
+      event: eventFor(`http://${address}-/x`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(ip)).not.toContain("/x");
+
+    const joined = await detector.detect({
+      event: eventFor("http://bit.ly-foo/keep"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined).toBeNull();
+
+    const continued = await detector.detect({
+      event: eventFor("http://203.0.113.9-1/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(continued).toBeNull();
+
+    const userinfo = await detector.detect({
+      event: eventFor("http://bit.ly-@example.com/ok125"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(userinfo).toBeNull();
+
+    const password = await detector.detect({
+      event: eventFor("http://bit.ly:x-@example.com/ok125"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(password).toBeNull();
+
+    const authority = await detector.detect({
+      event: eventFor("http://example.com-@bit.ly/p"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(authority?.reasons).toEqual(["short_link"]);
+    expect(authority?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const invite = await detector.detect({
+      event: eventFor("https://t.me-/+CODE125"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    expect(JSON.stringify(invite)).not.toContain("CODE125");
+  });
 });

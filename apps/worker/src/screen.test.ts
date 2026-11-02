@@ -4598,4 +4598,72 @@ describe("screenTelegramEvent", () => {
     expect(bare.event.message?.invites).toBeUndefined();
     expect(JSON.stringify(bare.event)).not.toContain("79990001107");
   });
+
+  it("deletes a short link Android stops on before a trailing hyphen", async () => {
+    const path = "offer125";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2167,
+        message: {
+          message_id: 2167,
+          date: 1761955200,
+          chat: { id: -1008125, type: "supergroup", title: "机密群名" },
+          from: { id: 125, first_name: "https://tinyurl.com/from125" },
+          text: `http://bit.ly-/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(result.decision.ruleIds).toContain("links");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1008125", messageId: "2167" },
+    ]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("from125");
+    expect(dumped).not.toContain("机密群名");
+
+    const ham = await normalizeUpdate({
+      update: {
+        update_id: 2168,
+        message: {
+          message_id: 2168,
+          date: 1761955200,
+          chat: { id: -1008126, type: "supergroup" },
+          from: { id: 125 },
+          text: "http://bit.ly-@example.com/ok125",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(ham.status).toBe("event");
+    if (ham.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(ham.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(JSON.stringify(allowed.decision.evidence)).not.toContain("bit.ly");
+  });
 });

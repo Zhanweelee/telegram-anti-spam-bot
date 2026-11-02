@@ -33,3 +33,4 @@ Android 用 `LinkifyPort.WEB_URL` 给正文加链接。协议后面先认用户�
 - `http://example.com∕@bit.ly` 仍因整段里的 `bit.ly` 删除。
 - `http://bit.ly@example.com` 和 `https://example.com/docs` 留着。
 - 再套一层仍放行。路径不进证据。
+- 标签不能以 `-` 结束。`http://bit.ly-/…` 按高亮段删除。用户信息里的 `-` 仍打开 `@` 后面的主机。见 ADR 0158。

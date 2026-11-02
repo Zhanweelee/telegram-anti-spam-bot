@@ -277,12 +277,15 @@ function alphabetChar(hex: string): string | null {
 
 const ANDROID_SCHEME = /^(https?:\/\/)/i;
 const ANDROID_USERINFO =
-  /^(?:[A-Za-z0-9$_.+!*'(),;?&=]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=]|%[0-9A-Fa-f]{2}){1,25})?@/;
+  /^(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,64}(?::(?:[A-Za-z0-9$_.+!*'(),;?&=-]|%[0-9A-Fa-f]{2}){1,25})?@/;
 const ANDROID_SLASH = /\u2215|\u2044|%E2%88%95|%E2%81%84/g;
+const ANDROID_HOST_CHAR = /[A-Za-z0-9.]/;
+const ANDROID_LABEL_CHAR = /[A-Za-z0-9]/;
 
 /**
  * URL Android highlights, when that span is shorter or replaces a slash.
  * The matcher stops unless the next character continues a path.
+ * A label cannot end on a hyphen. A hyphen inside user info stays with `@`.
  * A division slash or fraction slash inside the span becomes `/`.
  * The same string comes back as null.
  */
@@ -297,8 +300,23 @@ export function androidUrlSpan(raw: string): string | null {
     index += user[0].length;
   }
   const hostStart = index;
-  while (index < raw.length && /[A-Za-z0-9.-]/.test(raw.charAt(index))) {
-    index += 1;
+  while (index < raw.length) {
+    const char = raw.charAt(index);
+    if (ANDROID_HOST_CHAR.test(char)) {
+      index += 1;
+      continue;
+    }
+    if (char !== "-") {
+      break;
+    }
+    let look = index;
+    while (look < raw.length && raw.charAt(look) === "-") {
+      look += 1;
+    }
+    if (look >= raw.length || !ANDROID_LABEL_CHAR.test(raw.charAt(look))) {
+      break;
+    }
+    index = look + 1;
   }
   if (index === hostStart) {
     return null;

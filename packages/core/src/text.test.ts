@@ -278,4 +278,18 @@ describe("androidUrlSpan", () => {
     );
     expect(androidUrlSpan("http://example.com/a%e2%88%95b")).toBeNull();
   });
+
+  it("stops before a hyphen that does not finish a label", () => {
+    expect(androidUrlSpan("http://bit.ly-/offer")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly--/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://bit.ly-.com/x")).toBe("http://bit.ly");
+    expect(androidUrlSpan("http://203.0.113.9-/x")).toBe("http://203.0.113.9");
+    expect(androidUrlSpan("http://bit.ly-foo/offer")).toBeNull();
+    expect(androidUrlSpan("http://203.0.113.9-1/x")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly-@example.com/p")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly:x-@example.com/p")).toBeNull();
+    expect(androidUrlSpan("http://user:pass-word@bit.ly/p")).toBeNull();
+    expect(androidUrlSpan("http://example.com-@bit.ly/p")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly:80/x")).toBeNull();
+  });
 });
