@@ -1,6 +1,6 @@
 # Cloudflare 免费额度与设计约束
 
-查证日期：2026-11-01。数字来自当天检索到的官方文档，不是记忆。额度会变。每周健康检查要人工对照下面的链接，再改这份文件。
+查证日期：2026-11-03。数字来自当天检索到的官方文档，不是记忆。额度会变。每周健康检查要人工对照下面的链接，再改这份文件。
 
 免费额度按账号、在 **00:00 UTC（北京时间 08:00）** 重置的，按日计；文档写明按月的，另注。
 
@@ -31,16 +31,17 @@
 
 ## D1
 
-来源：[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)（页面标注更新于 2026-10-30）、[2026-09-01 免费额度强制执行](https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/)、[D1 limits](https://developers.cloudflare.com/d1/platform/limits/)。
+来源：[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)（页面标注更新于 2026-10-30）、[2026-09-01 免费额度强制执行](https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/)、[D1 limits](https://developers.cloudflare.com/d1/platform/limits/)（页面标注更新于 2026-10-30）。
 
 | 项目 | Workers Free |
 | --- | --- |
 | 行读 | 5,000,000 / 天 |
 | 行写 | 100,000 / 天 |
-| 存储 | 5 GB（账号合计） |
+| 存储 | 账号合计 5 GB。单个数据库 500 MB |
 | 数据库个数 | 10 |
-| 单条 SQL | 最大语句长度 100 KB（limits 页对 batch 的说明） |
-| 查询结果 | 50 MB。changelog 写明 2026-11-04 起超限失败 |
+| 单条 SQL | 最大语句长度 100 KB。`db.batch()` 里每条语句仍受这个限制 |
+| 每次 invocation | 50 次查询。`db.batch()` 整批只算一次 |
+| 查询结果 | 50 MB。limits 页写明 2026-11-04 起超限失败 |
 
 从 2026-09-01 起，超出当日行读或行写后，查询直接失败，数据还在，要等到次日 UTC 零点。索引列会额外算一行写入。
 
@@ -49,8 +50,8 @@
 - 每条消息最多写一行审计，并且 allow / dry-run 不写。
 - 配了 `DB` 时，入群验证每个挑战一行，通过、超时或回滚再删一行。不建二级索引。没配 `DB` 时挑战仍在 isolate 内存。见 ADR 0051。
 - 少建索引。行写预算比行读紧两个数量级。
-- 批量用 `db.batch()`。文档说明整批只算一次「每次 invocation 的 query 次数」，单条语句限制仍然适用。不要在文档没写明具体次数时假设那个次数。
-- 导出按 100 行一页读。删除一个租户或一个群用一条 `DELETE`。这两步不在消息热路径上。
+- 免费计划每次 invocation 最多 50 次查询。`db.batch()` 整批只算一次，单条语句仍受 100 KB 限制。
+- 单个数据库先写满 500 MB，到不了账号合计的 5 GB。导出按 100 行一页读。删除一个租户或一个群用一条 `DELETE`。这两步不在消息热路径上。
 - D1 失败必须 fail-open：处罚决策可以已经做出，但存储失败不能把 Worker 打成 500 给 Telegram 造成重试风暴。
 
 ## Workers KV
