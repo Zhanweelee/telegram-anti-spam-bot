@@ -375,6 +375,30 @@ describe("foldHostScan", () => {
       "example.com\u3002http://bit.ly",
     );
     expect(foldHostScan("%E3%80%82bit.ly")).toBe("%E3%80%82bit.ly");
+    expect(foldHostScanKeepingStops("bit.ly\u00B7evil.com")).toBe(
+      "bit.ly.evil.com",
+    );
+    expect(foldHostScan("bit.ly\u00B7\u00B7evil.com")).toBe("bit.ly.evil.com");
+    expect(foldHostScanKeepingStops("bit.ly\u00B7\u00B7evil.com")).toBe(
+      "bit.ly.evil.com",
+    );
+    expect(foldHostScanKeepingStops("bit.ly\uFF0Eevil.com")).toBe(
+      "bit.ly.evil.com",
+    );
+    expect(foldHostScanKeepingStops("203.0.113.10\u00B7evil.com")).toBe(
+      "203.0.113.10.evil.com",
+    );
+    expect(foldHostScanKeepingStops("bit.ly\u00B7/z")).toBe("bit.ly\u00B7/z");
+    expect(foldHostScanKeepingStops("bit\u00B7ly")).toBe("bit\u00B7ly");
+    expect(foldHostScanKeepingStops("bit.ly\u00B7evil\u00B7com")).toBe(
+      "bit.ly\u00B7evil\u00B7com",
+    );
+    expect(foldHostScanKeepingStops("example.com.\u00B7http://bit.ly")).toBe(
+      "example.com.\u00B7http://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("bit\uFF0Ely\uFF0Ecom/http://t.co/z")).toBe(
+      "bit\uFF0Ely\uFF0Ecom/http://t.co/z",
+    );
     expect(foldHostScan("example.com\uE000bit.ly")).toBe(
       "example.com\uE000bit.ly",
     );

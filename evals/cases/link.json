@@ -2900,5 +2900,40 @@
     "id": "ideographic-join-path",
     "text": "bit.ly\u3002/offer183",
     "label": "spam"
+  },
+  {
+    "id": "lookalike-join-tail",
+    "text": "bit.ly\u00B7evil.com/offer184",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-join-www",
+    "text": "www.bit.ly\uFF0Eevil.com/offer184",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-join-address",
+    "text": "203.0.113.10\u00B7evil.com/offer184",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-join-double",
+    "text": "bit.ly\u00B7\u00B7evil.com/offer184",
+    "label": "ham"
+  },
+  {
+    "id": "lookalike-join-ip",
+    "text": "203.0.113.10\u00B7bit.ly/offer184",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-join-path",
+    "text": "bit.ly\u00B7/offer184",
+    "label": "spam"
+  },
+  {
+    "id": "lookalike-join-split",
+    "text": "bit.ly\u00B7evil\u00B7com/offer184",
+    "label": "spam"
   }
 ]

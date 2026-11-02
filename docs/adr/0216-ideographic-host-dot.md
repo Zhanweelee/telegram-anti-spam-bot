@@ -37,3 +37,4 @@ Android 把句号 `。` 算进标签，不把它当成 ASCII 点。`bit.ly。evi
 - `203.0.113.10。bit.ly/…` 按短链删除。证据是 `203.0.113.10.bit.ly`，不是那条裸 IP。
 - `bit.ly。/…` 和 `http://bit.ly。/…` 仍按 `bit.ly` 删除。`bit。ly/…` 留着。
 - 带协议的 `http://bit.ly。evil.com/…` 仍留着。路径不进证据。
+- 点状间隔号也在写完的主机名和后面的 ASCII 域名之间收成一个点。见 ADR 0217。

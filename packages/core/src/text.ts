@@ -620,15 +620,16 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * becomes `x`, so one host is not read as the shortener inside it.
  * A run before `http://` or `https://` stays. A label character
  * with no ASCII letter before it stays.
- * A run of `。` after a finished host becomes one `.` when another
- * domain continues. `。` before a path, or used as the only dot, stays.
+ * A run of `。` or a dot lookalike after a finished host becomes one `.`
+ * when another ASCII domain continues. The same mark before a path, or
+ * used as the only dot, stays.
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
-  return foldIdeographicHostDot(
+  return foldJoiningHostDots(
     foldHostTail(
       foldHostEncodedGaps(
         foldGluedLabelRuns(
@@ -667,11 +668,12 @@ export function foldHostScanKeepingGaps(text: string): string {
  * A grapheme joiner between ASCII letters, or before a dot, drops.
  * Dot lookalikes stay, so a bare host written with them does
  * not swallow the next URL. The joined scan still folds those letters.
- * A run of `。` after a finished host still becomes one `.` when another
- * domain continues, so the stopped scan does not open the shortener again.
+ * A run of `。` or a dot lookalike after a finished host still becomes
+ * one `.` when another ASCII domain continues, so the stopped scan does
+ * not open the shortener again. A lookalike that is the only dot stays.
  */
 export function foldHostScanKeepingStops(text: string): string {
-  return foldIdeographicHostDot(
+  return foldJoiningHostDots(
     foldGluedLabelRuns(
       foldGraphemeJoiner(
         foldHostInterruptersAndroidKeeps(
@@ -926,29 +928,51 @@ function domainContinues(rest: string): boolean {
 }
 
 /**
- * A run of ideographic full stops after a finished host is one ASCII dot
- * when another domain continues. Android and the URL parser keep that as
- * one host. A stop before a path, or used as the only dot, stays.
+ * A run of ideographic stops or dot lookalikes after a finished host is
+ * one ASCII dot when another ASCII domain continues. A mark before a path,
+ * or used as the only dot, stays. A lookalike already folded into a trailing
+ * dot is part of that same run.
  */
-function foldIdeographicHostDot(text: string): string {
+function foldJoiningHostDots(text: string): string {
   let out = "";
   let index = 0;
   while (index < text.length) {
-    if (text.charCodeAt(index) === 0x3002 && endsWithFinishedHost(out)) {
-      let end = index;
-      while (text.charCodeAt(end) === 0x3002) {
-        end += 1;
+    if (isJoinDot(text.charCodeAt(index))) {
+      let base = out;
+      if (base.endsWith(".") && endsWithFinishedHost(base.slice(0, -1))) {
+        base = base.slice(0, -1);
       }
-      if (domainContinues(text.slice(end))) {
-        out += ".";
-        index = end;
-        continue;
+      if (endsWithFinishedHost(base)) {
+        let end = index;
+        while (isJoinDot(text.charCodeAt(end))) {
+          end += 1;
+        }
+        if (domainContinues(text.slice(end))) {
+          out = `${base}.`;
+          index = end;
+          continue;
+        }
       }
     }
     out += text.charAt(index);
     index += 1;
   }
   return out;
+}
+
+function isJoinDot(code: number): boolean {
+  return (
+    code === 0x00b7 ||
+    code === 0x2022 ||
+    code === 0x2027 ||
+    code === 0x2219 ||
+    code === 0x22c5 ||
+    code === 0x3002 ||
+    code === 0x30fb ||
+    code === 0xff0e ||
+    code === 0xfe52 ||
+    code === 0xff61
+  );
 }
 
 /**
