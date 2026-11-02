@@ -38,3 +38,4 @@ Android 把信息源符号 `ℹ`、圈号 `ⓘ`、罗马数字 `Ⅰ` 和同类�
 - `example.comℹhttp://bit.ly/…` 和 `example.comⓘhttp://t.co/…` 仍按短链删除。
 - `example.comℹbit.ly/…` 和 `bit.lyℹevil.com/…` 留着。
 - `bтit.ly` 和 `点击bit.ly` 仍按短链删除。路径不进证据。
+- 字素连接符 U+034F 夹在 ASCII 字母中间，或写在点号前面时，从主机名里去掉。见 ADR 0207。

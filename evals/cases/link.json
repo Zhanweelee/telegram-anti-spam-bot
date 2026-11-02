@@ -2595,5 +2595,30 @@
     "id": "mapped-latin-tco",
     "text": "http://t.\u1D9Co/offer173",
     "label": "spam"
+  },
+  {
+    "id": "grapheme-joiner-middle",
+    "text": "bi\u034Ft.ly/offer174",
+    "label": "spam"
+  },
+  {
+    "id": "grapheme-joiner-dot",
+    "text": "bit\u034F.ly/offer174",
+    "label": "spam"
+  },
+  {
+    "id": "grapheme-joiner-tco",
+    "text": "t\u034F.co/offer174",
+    "label": "spam"
+  },
+  {
+    "id": "grapheme-joiner-after-dot",
+    "text": "bit.\u034Fly/offer174",
+    "label": "ham"
+  },
+  {
+    "id": "grapheme-joiner-scheme",
+    "text": "example.com\u034Fhttp://bit.ly/offer174",
+    "label": "ham"
   }
 ]

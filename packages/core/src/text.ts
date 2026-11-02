@@ -622,15 +622,18 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * with no ASCII letter before it stays.
  * A character whose IDNA mapping is one ASCII letter becomes that letter.
  * The same character before `http://` or `https://` stays.
+ * U+034F between ASCII letters, or before a dot, drops out of the host.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
     foldHostEncodedGaps(
       foldGluedLabelRuns(
-        foldMatchText(
-          foldGluedEncodedHyphen(
-            foldGluedEncodedPlus(
-              foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+        foldGraphemeJoiner(
+          foldMatchText(
+            foldGluedEncodedHyphen(
+              foldGluedEncodedPlus(
+                foldGluedEncodedDot(foldGluedBracketDots(foldHostShape(text))),
+              ),
             ),
           ),
         ),
@@ -654,15 +657,46 @@ export function foldHostScanKeepingGaps(text: string): string {
  * can match. A Cyrillic lookalike or fullwidth letter stays when `http://`
  * or `https://` follows it, so a bare host can end. Other lookalike letters
  * still fold. An IDNA letter still maps, unless that scheme follows it.
+ * A grapheme joiner between ASCII letters, or before a dot, drops.
  * Dot lookalikes stay, so a bare host written with them does
  * not swallow the next URL. The joined scan still folds those letters.
  */
 export function foldHostScanKeepingStops(text: string): string {
   return foldGluedLabelRuns(
-    foldHostInterruptersAndroidKeeps(
-      foldAndroidLetterUnlessScheme(foldMappedLatin(text)),
+    foldGraphemeJoiner(
+      foldHostInterruptersAndroidKeeps(
+        foldAndroidLetterUnlessScheme(foldMappedLatin(text)),
+      ),
     ),
   );
+}
+
+/**
+ * Drop U+034F when Android keeps it inside one host and IDNA ignores it.
+ * A joiner after a dot stays, so a bare `bit.ly` with that mark is not a link.
+ * A joiner with no ASCII letter before it stays.
+ */
+function foldGraphemeJoiner(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (
+      text.charCodeAt(index) === 0x034f &&
+      asciiHostLetter(out, out.length - 1)
+    ) {
+      let end = index;
+      while (text.charCodeAt(end) === 0x034f) {
+        end += 1;
+      }
+      if (asciiHostLetter(text, end) || text.charAt(end) === ".") {
+        index = end;
+        continue;
+      }
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
 }
 
 /**

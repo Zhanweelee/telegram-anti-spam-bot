@@ -7344,4 +7344,64 @@ describe("link fixtures", () => {
     expect(circled?.evidence[0]?.summary).toBe("short_link:t.co");
     expect(JSON.stringify(circled)).not.toContain(path);
   });
+
+  it("drops a grapheme joiner Android keeps inside a host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer174";
+    const closed = [
+      `bit.\u034Fly/${path}`,
+      `example.com\u034Fhttp://bit.ly/${path}`,
+    ];
+    for (const text of closed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `bi\u034Ft.ly/${path}`,
+      `b\u034Fit.ly/${path}`,
+      `bit\u034F.ly/${path}`,
+      `bi\u034F\u034Ft.ly/${path}`,
+      `http://bi\u034Ft.ly/${path}`,
+      `http://bit\u034F.ly/${path}`,
+      `\u034Fbit.ly/${path}`,
+      `http://bit.\u034Fly/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toContain("short_link:bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const twitter = await detector.detect({
+      event: eventFor(`t\u034F.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(twitter?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(twitter)).not.toContain(path);
+
+    const invite = await detector.detect({
+      event: eventFor(`t\u034F.me/+CODE174`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite?.reasons).toEqual(["invite"]);
+    expect(invite?.evidence[0]?.summary).toBe("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("CODE174");
+  });
 });

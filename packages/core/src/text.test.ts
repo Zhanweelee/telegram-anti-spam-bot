@@ -409,6 +409,22 @@ describe("foldHostScan", () => {
     expect(foldHostInterrupters("b\u2139t.ly")).toBe("b\u2139t.ly");
     expect(foldFullwidthLatin("b\u2139t.ly")).toBe("b\u2139t.ly");
     expect(foldCyrillicLookalikes("b\u0442it.ly")).toBe("b\u0442it.ly");
+    expect(foldHostScan("bi\u034Ft.ly")).toBe("bit.ly");
+    expect(foldHostScan("b\u034Fit.ly")).toBe("bit.ly");
+    expect(foldHostScan("bit\u034F.ly")).toBe("bit.ly");
+    expect(foldHostScan("bi\u034F\u034Ft.ly")).toBe("bit.ly");
+    expect(foldHostScan("t\u034F.co")).toBe("t.co");
+    expect(foldHostScan("http://bi\u034Ft.ly")).toBe("http://bit.ly");
+    expect(foldHostScan("http://bit\u034F.ly")).toBe("http://bit.ly");
+    expect(foldHostScanKeepingStops("bi\u034Ft.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("bit\u034F.ly")).toBe("bit.ly");
+    expect(foldHostScan("bit.\u034Fly")).toBe("bit.\u034Fly");
+    expect(foldHostScan("example.com\u034Fhttp://bit.ly")).toBe(
+      "example.comhttp://bit.ly",
+    );
+    expect(foldHostScan("\u034Fbit.ly")).toBe("\u034Fbit.ly");
+    expect(foldHostInterrupters("bi\u034Ft.ly")).toBe("bi\u034Ft.ly");
+    expect(foldMatchText("bi\u034Ft")).toBe("bi\u034Ft");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {
