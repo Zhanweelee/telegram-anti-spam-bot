@@ -851,6 +851,81 @@ describe("link fixtures", () => {
     expect(foreign).toBeNull();
   });
 
+  it("reads the host alias when a web proxy server is empty and leaves the secret out", async () => {
+    const detector = createLinkDetector();
+    const secret = "SECRET105";
+    const ip = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=&host=203.0.113.9&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ip?.reasons).toEqual(["ip_host"]);
+    expect(ip?.evidence[0]?.summary).toBe("ip_host:203.0.113.9");
+    expect(JSON.stringify(ip)).not.toContain(secret);
+
+    const shortened = await detector.detect({
+      event: eventFor(
+        `tg://webproxy?server=&host=bit.ly%2Fname105&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shortened?.reasons).toEqual(["short_link"]);
+    expect(shortened?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(shortened)).not.toContain("name105");
+    expect(JSON.stringify(shortened)).not.toContain(secret);
+
+    const bare = await detector.detect({
+      event: eventFor(
+        `tg:webproxy?server=&host=198.51.100.24&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["ip_host"]);
+    expect(bare?.evidence[0]?.summary).toBe("ip_host:198.51.100.24");
+    expect(JSON.stringify(bare)).not.toContain(secret);
+
+    const serverWins = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=example.com&host=203.0.113.9&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(serverWins).toBeNull();
+
+    const socks = await detector.detect({
+      event: eventFor(
+        `https://t.me/socks?server=&host=203.0.113.9&port=1080&user=user105&pass=pass105`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(socks).toBeNull();
+
+    const spaced = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=%20&host=203.0.113.9&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(spaced).toBeNull();
+
+    const ordinary = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=&host=proxy.example.com&secret=${secret}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(ordinary).toBeNull();
+    expect(JSON.stringify(ordinary)).not.toContain(secret);
+  });
+
   it("reads the url inside a telegram share link and leaves the path out", async () => {
     const detector = createLinkDetector();
     const shared = await detector.detect({

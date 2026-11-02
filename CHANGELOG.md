@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-103
+
+- 网页代理的 `server` 为空时，`host` 按裸 IP 或短链删除这条消息。见 ADR 0136。
+- SOCKS、MTProto 和只含空白的 `server` 不改读。`secret` 和路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-102
 
 - 代理链接没有 `server` 时，`host` 按裸 IP 或短链删除这条消息。见 ADR 0135。

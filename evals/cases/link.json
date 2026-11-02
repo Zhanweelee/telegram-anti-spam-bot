@@ -450,5 +450,30 @@
     "id": "tg-proxy-query-name",
     "text": "https://t.me/proxy?proxy=203.0.113.9&port=443&secret=secret",
     "label": "ham"
+  },
+  {
+    "id": "tg-webproxy-empty-server",
+    "text": "https://t.me/webproxy?server=&host=203.0.113.9&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-webproxy-empty-server-short",
+    "text": "tg://webproxy?server=&host=bit.ly%2Foffer&secret=secret",
+    "label": "spam"
+  },
+  {
+    "id": "tg-webproxy-empty-server-ordinary",
+    "text": "https://t.me/webproxy?server=&host=proxy.example.com&secret=secret",
+    "label": "ham"
+  },
+  {
+    "id": "tg-socks-empty-server",
+    "text": "https://t.me/socks?server=&host=203.0.113.9&port=1080",
+    "label": "ham"
+  },
+  {
+    "id": "tg-webproxy-blank-server",
+    "text": "https://t.me/webproxy?server=%20&host=203.0.113.9&secret=secret",
+    "label": "ham"
   }
 ]

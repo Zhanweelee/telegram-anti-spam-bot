@@ -3470,4 +3470,102 @@ describe("screenTelegramEvent", () => {
       "SECRET104",
     );
   });
+
+  it("deletes a web proxy link whose empty server falls back to host", async () => {
+    const screenHost = async (
+      updateId: number,
+      chatId: number,
+      text: string,
+      url?: string,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "https://cutt.ly/grp105",
+            },
+            from: { id: 105, first_name: "https://tinyurl.com/from105" },
+            text,
+            ...(url === undefined
+              ? {}
+              : {
+                  reply_markup: {
+                    inline_keyboard: [[{ text: "网页代理", url }]],
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenHost(
+      7410,
+      -100790,
+      "https://t.me/webproxy?server=&host=203.0.113.9&secret=SECRET105",
+    );
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("ip_host");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100790", messageId: "7410" },
+    ]);
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("SECRET105");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from105");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("grp105");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "SECRET105",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+
+    const shortened = await screenHost(
+      7411,
+      -100791,
+      "今天站会",
+      "tg://webproxy?server=&host=bit.ly%2Fname105&secret=SECRET105",
+    );
+    expect(shortened.result.decision.action).toBe("delete");
+    expect(shortened.result.decision.reasons).toContain("short_link");
+    expect(shortened.event.message?.text).toBe("今天站会");
+    expect(shortened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(shortened.event)).not.toContain("name105");
+    expect(JSON.stringify(shortened.event)).not.toContain("SECRET105");
+    expect(JSON.stringify(shortened.logger.entries)).not.toContain("from105");
+    expect(JSON.stringify(shortened.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const socks = await screenHost(
+      7412,
+      -100792,
+      "今天站会",
+      "https://t.me/socks?server=&host=203.0.113.9&port=1080&user=user105&pass=pass105",
+    );
+    expect(socks.result.decision.action).toBe("allow");
+    expect(socks.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(socks.event)).not.toContain("203.0.113.9");
+    expect(JSON.stringify(socks.logger.entries)).not.toContain("user105");
+    expect(JSON.stringify(socks.logger.entries)).not.toContain("pass105");
+    expect(JSON.stringify(socks.logger.entries)).not.toContain("grp105");
+  });
 });

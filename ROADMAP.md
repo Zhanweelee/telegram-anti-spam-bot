@@ -627,7 +627,11 @@
 
 ### P3-102 代理链接的 host 只留主机名 — done
 
-验收：`t.me/proxy`、`t.me/socks`、`t.me/webproxy` 和对应 `tg:` 命令没有 `server` 时，`host` 是裸 IP 或 `bit.ly` 就删除这条消息。证据只有主机名。`secret`、端口、用户名、密码和路径不进证据。已有 `server` 时不读 `host`，空的 `server` 也不改读。`proxy.example.com` 保留。名叫 `proxy` 的查询参数、`t.me/web?host=` 和其它网站的 `host` 不读。默认名单仍是 ADR 0026。
+验收：`t.me/proxy`、`t.me/socks`、`t.me/webproxy` 和对应 `tg:` 命令没有 `server` 时，`host` 是裸 IP 或 `bit.ly` 就删除这条消息。证据只有主机名。`secret`、端口、用户名、密码和路径不进证据。已有 `server` 时不读 `host`。网页代理上长度为 0 的 `server` 后来由 P3-103 改读。其它代理的空 `server` 不改读。`proxy.example.com` 保留。名叫 `proxy` 的查询参数、`t.me/web?host=` 和其它网站的 `host` 不读。默认名单仍是 ADR 0026。
+
+### P3-103 网页代理空的 server 改读 host — done
+
+验收：`t.me/webproxy`、`tg://webproxy` 和 `tg:webproxy` 的 `server` 为空、`host` 是裸 IP 或 `bit.ly` 时删除这条消息。证据只有主机名。`secret` 和路径不进证据。已有非空 `server` 时不读 `host`。SOCKS 和 MTProto 的空 `server` 不改读。只含空白的 `server` 不改读。`proxy.example.com` 保留。默认名单仍是 ADR 0026。
 
 ## 自升级
 
@@ -1461,4 +1465,10 @@
 
 - 做了什么：代理链接没有 `server` 时，从 `host` 只留主机名，裸 IP 或短链仍走现有链接规则。选择写在 ADR 0135。
 - 学到什么：Android 在 `server` 缺省时改读 `host`。参数存在但为空时不改读。名叫 `proxy` 的查询参数不是这个地址。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-02 P3-103
+
+- 做了什么：网页代理的 `server` 为空时改读 `host`，只留主机名。裸 IP 或短链仍走现有链接规则。选择写在 ADR 0136。
+- 学到什么：桌面端只对 WEB 代理把长度为 0 的 `server` 当成没有。SOCKS 和 MTProto 不读 `host`。只含空白的 `server` 不算空。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。

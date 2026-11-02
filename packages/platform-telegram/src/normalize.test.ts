@@ -5162,6 +5162,99 @@ describe("normalizeUpdate", () => {
     expect(emptyDump).not.toContain("SECRET104");
   });
 
+  it("keeps a hostname when a web proxy server is empty and leaves the secret out", async () => {
+    const empty = await normalize({
+      update_id: 7410,
+      message: {
+        message_id: 520,
+        date: 1761955200,
+        chat: { id: -101290, type: "supergroup", title: "keep-title" },
+        from: { id: 105, first_name: "from105" },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "网页代理",
+                url: "https://t.me/webproxy?server=&host=203.0.113.9&secret=SECRET105",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.hosts).toEqual(["t.me", "203.0.113.9"]);
+    expect(empty.event.message?.invites).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("SECRET105");
+    expect(emptyDump).not.toContain("from105");
+    expect(emptyDump).not.toContain("keep-title");
+
+    const shortened = await normalize({
+      update_id: 7411,
+      message: {
+        message_id: 521,
+        date: 1761955200,
+        chat: { id: -101291, type: "supergroup" },
+        from: { id: 105 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "网页代理",
+                url: "tg://webproxy?server=&host=bit.ly%2Fname105&secret=SECRET105",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(shortened.status).toBe("event");
+    if (shortened.status !== "event") {
+      return;
+    }
+    expect(shortened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(shortened.event.message?.invites).toBeUndefined();
+    const shortenedDump = JSON.stringify(shortened.event);
+    expect(shortenedDump).not.toContain("name105");
+    expect(shortenedDump).not.toContain("SECRET105");
+
+    const socks = await normalize({
+      update_id: 7412,
+      message: {
+        message_id: 522,
+        date: 1761955200,
+        chat: { id: -101292, type: "supergroup" },
+        from: { id: 105 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "代理",
+                url: "https://t.me/socks?server=&host=203.0.113.9&port=1080&user=user105&pass=pass105",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(socks.status).toBe("event");
+    if (socks.status !== "event") {
+      return;
+    }
+    expect(socks.event.message?.hosts).toEqual(["t.me"]);
+    const socksDump = JSON.stringify(socks.event);
+    expect(socksDump).not.toContain("203.0.113.9");
+    expect(socksDump).not.toContain("user105");
+    expect(socksDump).not.toContain("pass105");
+  });
+
   it("keeps a hostname from a telegram share link and leaves the path out", async () => {
     const shared = await normalize({
       update_id: 6810,

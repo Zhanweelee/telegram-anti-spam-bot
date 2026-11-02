@@ -777,6 +777,47 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp104");
   });
 
+  it("keeps a hostname when a web proxy server is empty and leaves the secret out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 22,
+        message: {
+          message_id: 220,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp105" },
+          from: { id: 105, first_name: "https://tinyurl.com/from105" },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "网页代理",
+                  url: "https://t.me/webproxy?server=&host=203.0.113.9&secret=SECRET105",
+                },
+              ],
+            ],
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_22",
+      kind: "message",
+      message: {
+        id: "220",
+        text: "今天站会",
+        hosts: ["t.me", "203.0.113.9"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("SECRET105");
+    expect(dumped).not.toContain("from105");
+    expect(dumped).not.toContain("grp105");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

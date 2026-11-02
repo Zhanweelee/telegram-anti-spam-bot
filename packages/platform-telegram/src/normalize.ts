@@ -1002,7 +1002,7 @@ function proxyServerHost(url: URL): string | null {
   if (!isTelegramProxy(url)) {
     return null;
   }
-  const server = url.searchParams.get("server") ?? url.searchParams.get("host");
+  const server = proxyAddress(url);
   if (server === null || server.length === 0 || server.length > MAX_LINK) {
     return null;
   }
@@ -1027,6 +1027,25 @@ function proxyServerHost(url: URL): string | null {
     return null;
   }
   return host;
+}
+
+function proxyAddress(url: URL): string | null {
+  const server = url.searchParams.get("server");
+  if (server === null || (server.length === 0 && isWebProxy(url))) {
+    return url.searchParams.get("host");
+  }
+  return server;
+}
+
+function isWebProxy(url: URL): boolean {
+  if (url.protocol === "tg:") {
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
+    const command = host.length > 0 ? host : path;
+    return command === "webproxy";
+  }
+  const path = (url.pathname.replace(/\/+$/, "") || "/").toLowerCase();
+  return path === "/webproxy";
 }
 
 function isTelegramProxy(url: URL): boolean {
