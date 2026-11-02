@@ -5105,6 +5105,155 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(foreign.event)).not.toContain("path100");
   });
 
+  it("keeps a hostname from a giveaway chat title and leaves the name out", async () => {
+    const linked = await normalize({
+      update_id: 7010,
+      message: {
+        message_id: 490,
+        date: 1761955200,
+        chat: {
+          id: -101240,
+          type: "supergroup",
+          title: "https://cutt.ly/grp101",
+        },
+        from: { id: 101, first_name: "https://tinyurl.com/from101" },
+        text: "今天站会",
+        giveaway: {
+          chats: [
+            {
+              id: -100101,
+              type: "channel",
+              title: "https://bit.ly/name101",
+              username: "news101",
+            },
+          ],
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+        },
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.text).toBe("今天站会");
+    expect(linked.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(linked.event.message?.hosts).toEqual(["bit.ly"]);
+    const linkedDump = JSON.stringify(linked.event);
+    expect(linkedDump).not.toContain("name101");
+    expect(linkedDump).not.toContain("news101");
+    expect(linkedDump).not.toContain("from101");
+    expect(linkedDump).not.toContain("grp101");
+    expect(linkedDump).not.toContain("-100101");
+
+    const winners = await normalize({
+      update_id: 7011,
+      message: {
+        message_id: 491,
+        date: 1761955200,
+        chat: { id: -101241, type: "supergroup", title: "keep-title" },
+        from: { id: 101, first_name: "from101" },
+        text: "今天站会",
+        giveaway_winners: {
+          chat: {
+            id: -100102,
+            type: "channel",
+            title: "http://203.0.113.9/path101",
+          },
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+          winners: [
+            {
+              id: 10101,
+              is_bot: false,
+              first_name: "https://tinyurl.com/win101",
+            },
+          ],
+        },
+      },
+    });
+    expect(winners.status).toBe("event");
+    if (winners.status !== "event") {
+      return;
+    }
+    expect(winners.event.message?.text).toBe("今天站会");
+    expect(winners.event.message?.hosts).toEqual(["203.0.113.9"]);
+    const winnersDump = JSON.stringify(winners.event);
+    expect(winnersDump).not.toContain("path101");
+    expect(winnersDump).not.toContain("win101");
+    expect(winnersDump).not.toContain("from101");
+    expect(winnersDump).not.toContain("keep-title");
+    expect(winnersDump).not.toContain("10101");
+
+    const ordinary = await normalize({
+      update_id: 7012,
+      message: {
+        message_id: 492,
+        date: 1761955200,
+        chat: {
+          id: -101242,
+          type: "supergroup",
+          title: "https://bit.ly/grp101",
+        },
+        from: { id: 101 },
+        text: "今天站会",
+        giveaway: {
+          chats: [
+            {
+              id: -100103,
+              type: "channel",
+              title: "https://example.com/ok101",
+              username: "bit.ly",
+            },
+            { id: -100104, type: "channel", title: "请免费领取礼品" },
+          ],
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok101");
+    expect(ordinaryDump).not.toContain("bit.ly");
+    expect(ordinaryDump).not.toContain("grp101");
+    expect(ordinaryDump).not.toContain("免费领取");
+
+    const code = "code101";
+    const invite = await normalize({
+      update_id: 7013,
+      message: {
+        message_id: 493,
+        date: 1761955200,
+        chat: { id: -101243, type: "supergroup" },
+        from: { id: 101 },
+        text: "今天站会",
+        giveaway: {
+          chats: [
+            {
+              id: -100105,
+              type: "channel",
+              title: `https://t.me/+${code}`,
+            },
+          ],
+          winners_selection_date: 1762000000,
+          winner_count: 1,
+        },
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

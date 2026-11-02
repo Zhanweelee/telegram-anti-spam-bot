@@ -529,8 +529,19 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   for (const field of ["giveaway", "giveaway_winners"]) {
     const value = message[field];
-    if (isRecord(value)) {
-      pushPlainUrls(value.prize_description, urls);
+    if (!isRecord(value)) {
+      continue;
+    }
+    pushPlainUrls(value.prize_description, urls);
+    if (field === "giveaway" && Array.isArray(value.chats)) {
+      for (const chat of value.chats) {
+        if (isRecord(chat)) {
+          pushPlainUrls(chat.title, urls);
+        }
+      }
+    }
+    if (field === "giveaway_winners" && isRecord(value.chat)) {
+      pushPlainUrls(value.chat.title, urls);
     }
   }
   const checklist = message.checklist;

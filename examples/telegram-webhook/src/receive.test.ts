@@ -610,6 +610,50 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain("grp100");
   });
 
+  it("keeps a hostname from a giveaway chat title and leaves the name out", async () => {
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 18,
+        message: {
+          message_id: 180,
+          date: 1761955200,
+          chat: { id: -100, title: "https://cutt.ly/grp101" },
+          from: { id: 101, first_name: "https://tinyurl.com/from101" },
+          text: "今天站会",
+          giveaway: {
+            chats: [
+              {
+                id: -100101,
+                type: "channel",
+                title: "https://bit.ly/name101",
+                username: "news101",
+              },
+            ],
+            winners_selection_date: 1762000000,
+            winner_count: 1,
+          },
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events[0]).toMatchObject({
+      id: "tg_18",
+      kind: "message",
+      message: {
+        id: "180",
+        text: "今天站会",
+        hosts: ["bit.ly"],
+      },
+    });
+    const dumped = JSON.stringify(result.events[0]);
+    expect(dumped).not.toContain("name101");
+    expect(dumped).not.toContain("news101");
+    expect(dumped).not.toContain("from101");
+    expect(dumped).not.toContain("grp101");
+  });
+
   it("returns an internal event for a valid secret", async () => {
     const result = await receiveUpdate({
       secret: "dev-secret",

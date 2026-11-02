@@ -3014,4 +3014,131 @@ describe("screenTelegramEvent", () => {
     expect(ordinary.moderator.deleted).toEqual([]);
     expect(JSON.stringify(ordinary.logger.entries)).not.toContain("from100");
   });
+
+  it("deletes a giveaway whose required chat title carries a short link", async () => {
+    const screenGiveaway = async (
+      updateId: number,
+      chatId: number,
+      message: Record<string, unknown>,
+    ) => {
+      const outcome = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "https://cutt.ly/grp101",
+            },
+            from: { id: 101, first_name: "https://tinyurl.com/from101" },
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        throw new Error("expected event");
+      }
+      const logger = createMemoryLogger();
+      const moderator = createMemoryModerator();
+      const result = await screenTelegramEvent(outcome.event, {
+        logger,
+        moderator,
+      });
+      return { logger, moderator, result, event: outcome.event };
+    };
+
+    const linked = await screenGiveaway(7010, -100750, {
+      text: "今天站会",
+      giveaway: {
+        chats: [
+          { id: -100101, type: "channel", title: "https://bit.ly/name101" },
+        ],
+        winners_selection_date: 1762000000,
+        winner_count: 1,
+      },
+    });
+    expect(linked.result.decision.action).toBe("delete");
+    expect(linked.result.decision.reasons).toContain("short_link");
+    expect(linked.result.decision.ruleIds).toContain("links");
+    expect(linked.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100750", messageId: "7010" },
+    ]);
+    expect(linked.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("name101");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("from101");
+    expect(JSON.stringify(linked.logger.entries)).not.toContain("grp101");
+    expect(JSON.stringify(linked.result.decision.evidence)).not.toContain(
+      "name101",
+    );
+    expect(JSON.stringify(linked.result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const winners = await screenGiveaway(7011, -100751, {
+      text: "今天站会",
+      giveaway_winners: {
+        chat: {
+          id: -100102,
+          type: "channel",
+          title: "http://203.0.113.9/path101",
+        },
+        winners_selection_date: 1762000000,
+        winner_count: 1,
+        winners: [
+          {
+            id: 10101,
+            is_bot: false,
+            first_name: "https://tinyurl.com/win101",
+          },
+        ],
+      },
+    });
+    expect(winners.result.decision.action).toBe("delete");
+    expect(winners.result.decision.reasons).toContain("ip_host");
+    expect(winners.event.message?.text).toBe("今天站会");
+    expect(winners.event.message?.hosts).toEqual(["203.0.113.9"]);
+    expect(JSON.stringify(winners.event)).not.toContain("path101");
+    expect(JSON.stringify(winners.event)).not.toContain("win101");
+    expect(JSON.stringify(winners.logger.entries)).not.toContain("from101");
+
+    const keyword = await screenGiveaway(7012, -100752, {
+      text: "今天站会",
+      giveaway: {
+        chats: [{ id: -100103, type: "channel", title: "请免费领取礼品" }],
+        winners_selection_date: 1762000000,
+        winner_count: 1,
+      },
+    });
+    expect(keyword.result.decision.action).toBe("allow");
+    expect(keyword.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(keyword.event)).not.toContain("免费领取");
+    expect(JSON.stringify(keyword.logger.entries)).not.toContain("from101");
+
+    const ordinary = await screenGiveaway(7013, -100753, {
+      text: "今天站会",
+      giveaway: {
+        chats: [
+          {
+            id: -100104,
+            type: "channel",
+            title: "https://example.com/ok101",
+            username: "bit.ly",
+          },
+        ],
+        winners_selection_date: 1762000000,
+        winner_count: 1,
+      },
+    });
+    expect(ordinary.result.decision.action).toBe("allow");
+    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(JSON.stringify(ordinary.event)).not.toContain("ok101");
+    expect(JSON.stringify(ordinary.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(ordinary.logger.entries)).not.toContain("grp101");
+  });
 });
