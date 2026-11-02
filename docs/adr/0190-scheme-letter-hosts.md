@@ -31,3 +31,4 @@ Android 扫描如果先把这个字母收成 ASCII，`example.comAhttp://bit.ly`
 - `example.comАhttp://bit.ly/…`、`example.comＡhttp://bit.ly/…`、`www.example.comＡhttp://bit.ly/…`、`bАhttp://bit.ly/…` 和 `203.0.113.157Аhttp://bit.ly/…` 按后面的短链删除。证据仍只有主机名。
 - `example.comАhttps://t.me/+…` 按邀请删除。路径不进证据。
 - `http://example.comАhttp://bit.ly/…` 和 `http://example.com/Ａhttp://bit.ly/…` 留着。`bАbit.ly` 留着。`bіt.ly` 和全角的 `ｂｉｔ.ly` 仍按短链删除。
+- 组合附加符号紧挨在裸主机名和网址之间时，不再单独打开后面的短链。见 ADR 0191。

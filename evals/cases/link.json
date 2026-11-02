@@ -1935,5 +1935,35 @@
     "id": "scheme-letter-invite",
     "text": "example.comАhttps://t.me/+CODE157",
     "label": "spam"
+  },
+  {
+    "id": "mark-host-glued",
+    "text": "example.com\u0300http://bit.ly/offer158",
+    "label": "ham"
+  },
+  {
+    "id": "mark-host-www",
+    "text": "www.example.com\u0300http://bit.ly/offer158",
+    "label": "ham"
+  },
+  {
+    "id": "mark-host-slash",
+    "text": "example.com\u0300/http://bit.ly/offer158",
+    "label": "spam"
+  },
+  {
+    "id": "mark-host-lead",
+    "text": "\u0300http://bit.ly/offer158",
+    "label": "spam"
+  },
+  {
+    "id": "mark-host-invite",
+    "text": "example.com\u0300https://t.me/+CODE158",
+    "label": "ham"
+  },
+  {
+    "id": "mark-host-iota",
+    "text": "example.comΙhttp://bit.ly/offer158",
+    "label": "spam"
   }
 ]
