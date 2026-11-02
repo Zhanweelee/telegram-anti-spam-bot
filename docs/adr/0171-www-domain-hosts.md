@@ -35,3 +35,4 @@ Android `LinkifyPort.WEB_URL` 里，没有协议的域名和 `www.` 开头的域
 - `www.example.com/!http://bit.ly/…` 和 `www.example.com?http://bit.ly/…` 留着。`www.bit.ly/…` 仍按短链删除。
 - `http://example.com` 后接 U+00A1 再接 `http://bit.ly/…` 留着。
 - `www.t.me.evil.example/+…` 不记成邀请。`www.example.com-https://t.me/+…` 按邀请删除。路径不进证据。
+- 带协议的主机名里，点号后面接不上标签时，Android 另外打开的主机名也留下。见 ADR 0172。

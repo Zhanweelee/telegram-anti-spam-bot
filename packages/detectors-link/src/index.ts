@@ -62,7 +62,10 @@ export const defaultShorteners = [
  * stuck to an ASCII word character is not a match, and the host after
  * `://` is not read again. A bare domain and a `www.` host end at the last
  * label, so the next URL is its own match. A label cannot start with a
- * hyphen, and `http://` is not itself a label.
+ * hyphen, and `http://` is not itself a label. A dot in a schemed host
+ * starts another label only when a label character follows. A dot before
+ * a port, a slash, or a question mark stays with this URL. `@` is user
+ * info only when the next character can finish it.
  */
 const URL_BREAK = "\\s<>\"'[\\\\\\]^`{|}\\u0000-\\u001F\\u007F";
 const URL_OMIT =
@@ -70,10 +73,13 @@ const URL_OMIT =
 const URL_PAIR =
   "(?:[\\uD840-\\uD87F]|[\\uD880-\\uD8BF]|[\\uD8C0-\\uD8FF]|[\\uD900-\\uD93F]|[\\uD940-\\uD97F]|[\\uD980-\\uD9BF]|[\\uD9C0-\\uD9FF]|[\\uDA00-\\uDA3F]|[\\uDA40-\\uDA7F]|[\\uDA80-\\uDABF]|[\\uDAC0-\\uDAFF]|[\\uDB00-\\uDB3F]|[\\uDB44-\\uDB7F])[\\uDC00-\\uDFFD]";
 const URL_BODY = `(?:[^${URL_BREAK}%${URL_OMIT}]|${URL_PAIR}|%[0-9A-Fa-f]{2})`;
-const URL_HOST_CHAR = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9._-]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_ATOM = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL_MORE = `(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9_-]|[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})`;
+const URL_LABEL = `(?:${URL_LABEL_ATOM}${URL_LABEL_MORE}*)`;
+const URL_HOST = `(?:${URL_LABEL}(?:\\.${URL_LABEL})*)`;
 const URL_USER = "(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-])";
-const URL_USERINFO = `(?:${URL_USER})+(?::(?:${URL_USER})+)?@`;
-const URL_TAIL = `(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
+const URL_USERINFO = `(?:${URL_USER})+(?::(?:${URL_USER})+)?@(?=$|[/?_]|[A-Za-z0-9]|:\\d{1,5}(?!\\d)(?![A-Za-z0-9_]))`;
+const URL_TAIL = `(?:\\.(?=[:/?]))?(?::\\d{1,5}(?!\\d))?(?:[/?](?:${URL_BODY})*)?`;
 const URL_ASCII_LABEL = "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?";
 const URL_UNI_LABEL = `(?:[^\\s\\u0000-\\u007F${URL_OMIT}]|${URL_PAIR})+`;
 const URL_NAME = `(?:${URL_ASCII_LABEL}|${URL_UNI_LABEL})`;
@@ -81,7 +87,7 @@ const URL_TLD = "(?!https?:\\/\\/)[a-z]{2,}";
 const URL_WWW = `www\\.(?:${URL_NAME}\\.)+${URL_TLD}${URL_TAIL}`;
 const URL_BARE = `(?:${URL_ASCII_LABEL}\\.)+${URL_TLD}`;
 const token = new RegExp(
-  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST_CHAR})*${URL_TAIL}|(?:${URL_HOST_CHAR})+${URL_TAIL})|${URL_WWW})|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?`,
+  `(?<![A-Za-z0-9_])(?:https?:\\/\\/(?:${URL_USERINFO}(?:${URL_HOST})?${URL_TAIL}|(?:${URL_HOST})${URL_TAIL})|${URL_WWW})|(?<!:\\/\\/)\\b${URL_BARE}(?:\\/(?:${URL_BODY})+)?`,
   "gi",
 );
 

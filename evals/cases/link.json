@@ -1310,5 +1310,55 @@
     "id": "www-domain-glued-invite",
     "text": "www.t.me.evil.example/+CODE138",
     "label": "ham"
+  },
+  {
+    "id": "extra-dot-dots",
+    "text": "http://example.com..http://bit.ly/offer139",
+    "label": "spam"
+  },
+  {
+    "id": "extra-dot-hyphen",
+    "text": "http://example.com.-http://bit.ly/offer139",
+    "label": "spam"
+  },
+  {
+    "id": "extra-dot-bare",
+    "text": "http://example.com.-bit.ly/offer139",
+    "label": "spam"
+  },
+  {
+    "id": "extra-dot-ip",
+    "text": "http://news.example..http://203.0.113.139/x",
+    "label": "spam"
+  },
+  {
+    "id": "extra-dot-joined",
+    "text": "http://example.com.http://bit.ly/offer139",
+    "label": "ham"
+  },
+  {
+    "id": "extra-dot-slash",
+    "text": "http://example.com./http://bit.ly/offer139",
+    "label": "ham"
+  },
+  {
+    "id": "extra-dot-query",
+    "text": "http://example.com.?http://bit.ly/offer139",
+    "label": "ham"
+  },
+  {
+    "id": "extra-dot-interior",
+    "text": "http://example.com-http://bit.ly/offer139",
+    "label": "ham"
+  },
+  {
+    "id": "extra-dot-underscore",
+    "text": "http://example.com._http://bit.ly/offer139",
+    "label": "ham"
+  },
+  {
+    "id": "extra-dot-glued-invite",
+    "text": "https://t.me../+CODE139",
+    "label": "ham"
   }
 ]
