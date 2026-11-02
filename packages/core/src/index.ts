@@ -269,6 +269,7 @@ export {
   foldHostScanKeepingGaps,
   foldHostScanKeepingStops,
   foldInterpuncts,
+  foldMappedLatin,
   foldMatchText,
 } from "./text.js";
 export { withTimeout } from "./timeout.js";

@@ -281,6 +281,54 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("evil.example");
   });
 
+  it("maps an idna letter inside a button url", async () => {
+    const path = "offer173";
+    const opened = await normalize({
+      update_id: 2263,
+      message: {
+        message_id: 2263,
+        date: 1761955200,
+        chat: { id: -1008221, type: "supergroup" },
+        from: { id: 173 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: `http://b\u1D35t.ly/${path}` }],
+          ],
+        },
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+
+    const changed = await normalize({
+      update_id: 2264,
+      message: {
+        message_id: 2264,
+        date: 1761955200,
+        chat: { id: -1008222, type: "supergroup" },
+        from: { id: 173 },
+        text: "点下面",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: `http://b\u017Fit.ly/${path}` }],
+          ],
+        },
+      },
+    });
+    expect(changed.status).toBe("event");
+    if (changed.status !== "event") {
+      return;
+    }
+    expect(changed.event.message?.hosts).toEqual(["bsit.ly"]);
+    expect(JSON.stringify(changed.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(changed.event)).not.toContain(path);
+  });
+
   it("keeps only the hostname when copy_text is one url", async () => {
     const phrase = "请免费领取礼品";
     const code = "INVITECOPY99";

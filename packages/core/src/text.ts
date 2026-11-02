@@ -137,7 +137,9 @@ function bracketSitsInPath(text: string, index: number): boolean {
 function foldHostShape(text: string): string {
   return foldHostDots(
     foldHostEncodedMiddleDot(
-      foldHostInterrupters(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+      foldHostInterrupters(
+        foldMappedLatin(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+      ),
     ),
   );
 }
@@ -618,6 +620,8 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * becomes `x`, so one host is not read as the shortener inside it.
  * A run before `http://` or `https://` stays. `。` stays. A label character
  * with no ASCII letter before it stays.
+ * A character whose IDNA mapping is one ASCII letter becomes that letter.
+ * The same character before `http://` or `https://` stays.
  */
 export function foldHostScan(text: string): string {
   return foldHostTail(
@@ -649,12 +653,15 @@ export function foldHostScanKeepingGaps(text: string): string {
  * host stay. A letter between two ASCII letters still drops, so `bαit.ly`
  * can match. A Cyrillic lookalike or fullwidth letter stays when `http://`
  * or `https://` follows it, so a bare host can end. Other lookalike letters
- * still fold. Dot lookalikes stay, so a bare host written with them does
+ * still fold. An IDNA letter still maps, unless that scheme follows it.
+ * Dot lookalikes stay, so a bare host written with them does
  * not swallow the next URL. The joined scan still folds those letters.
  */
 export function foldHostScanKeepingStops(text: string): string {
   return foldGluedLabelRuns(
-    foldHostInterruptersAndroidKeeps(foldAndroidLetterUnlessScheme(text)),
+    foldHostInterruptersAndroidKeeps(
+      foldAndroidLetterUnlessScheme(foldMappedLatin(text)),
+    ),
   );
 }
 
@@ -804,6 +811,58 @@ function asciiHostLetter(text: string, index: number): boolean {
 function startsWithScheme(text: string, index: number): boolean {
   const rest = text.slice(index, index + "https://".length).toLowerCase();
   return rest.startsWith("https://") || rest.startsWith("http://");
+}
+
+/**
+ * Characters whose IDNA mapping is exactly one ASCII letter.
+ * Fullwidth Latin stays with `foldFullwidthLatin`. Each entry is four hex
+ * digits and that letter.
+ */
+const MAPPED_LATIN_PACK = [
+  "00AAa1D2Ca1D43a2090a24B6a24D0a1D2Eb1D47b212Cb24B7b24D1b1D9Cc2102c212Dc21",
+  "6Dc217Dc24B8c24D2cA7F2c1D30d1D48d2145d2146d216Ed217Ed24B9d24D3d1D31e1D49",
+  "e2091e212Fe2130e2147e24BAe24D4e1DA0f2131f24BBf24D5fA7F3f1D33g1D4Dg210Ag2",
+  "4BCg24D6g02B0h1D34h2095h210Bh210Ch210Dh210Eh24BDh24D7h1D35i1D62i2071i211",
+  "0i2111i2139i2148i2160i2170i24BEi24D8i02B2j1D36j2149j24BFj24D9j2C7Cj1D37k",
+  "1D4Fk2096k212Ak24C0k24DAk02E1l1D38l2097l2112l2113l216Cl217Cl24C1l24DBl1D",
+  "39m1D50m2098m2133m216Fm217Fm24C2m24DCm1D3An207Fn2099n2115n24C3n24DDn00BA",
+  "o1D3Co1D52o2092o2134o24C4o24DEo1D3Ep1D56p209Ap2119p24C5p24DFp211Aq24C6q2",
+  "4E0qA7F4q02B3r1D3Fr1D63r211Br211Cr211Dr24C7r24E1r017Fs02E2s209Bs24C8s24E",
+  "2s1D40t1D57t209Ct24C9t24E3t1D41u1D58u1D64u24CAu24E4u1D5Bv1D65v2164v2174v",
+  "24CBv24E5v2C7Dv02B7w1D42w24CCw24E6w02E3x2093x2169x2179x24CDx24E7x02B8y24",
+  "CEy24E8y1DBBz2124z2128z24CFz24E9z",
+].join("");
+
+const MAPPED_LATIN: Record<number, string> = {};
+for (let index = 0; index < MAPPED_LATIN_PACK.length; index += 5) {
+  const code = Number.parseInt(MAPPED_LATIN_PACK.slice(index, index + 4), 16);
+  MAPPED_LATIN[code] = MAPPED_LATIN_PACK.charAt(index + 4);
+}
+
+/**
+ * Map a character whose IDNA mapping is one ASCII letter.
+ * A following `http://` or `https://` stays, so that URL still opens.
+ * Fullwidth letters and Cyrillic т stay on their own folds.
+ */
+export function foldMappedLatin(text: string): string {
+  let out = "";
+  for (let index = 0; index < text.length; ) {
+    const code = text.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    const next = index + char.length;
+    const mapped = MAPPED_LATIN[code];
+    if (mapped !== undefined && !startsWithScheme(text, next)) {
+      out += mapped;
+      index = next;
+      continue;
+    }
+    out += char;
+    index = next;
+  }
+  return out;
 }
 
 /**

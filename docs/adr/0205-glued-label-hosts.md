@@ -38,3 +38,4 @@ Android 的裸主机名把汉字、谚文、假名、希伯来文、阿拉伯文
 - `example.com。bit.ly/…` 仍按短链删除。私用区和 U+10140 后面的短链仍删除。
 - `example.com点www.bit.ly/…` 仍按短链删除。证据是 `example.comxwww.bit.ly`。
 - `bтit.ly` 和 `bit·ly` 仍按短链删除。路径不进证据。
+- IDNA 映射恰好是一个 ASCII 字母的字收成这个字母。见 ADR 0206。

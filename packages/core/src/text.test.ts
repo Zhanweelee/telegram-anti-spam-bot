@@ -379,6 +379,36 @@ describe("foldHostScan", () => {
     expect(foldHostInterrupters("example.com\u70B9bit.ly")).toBe(
       "example.com\u70B9bit.ly",
     );
+    expect(foldHostScan("b\u2139t.ly")).toBe("bit.ly");
+    expect(foldHostScan("http://b\u2139t.ly")).toBe("http://bit.ly");
+    expect(foldHostScan("http://b\u24D8t.ly")).toBe("http://bit.ly");
+    expect(foldHostScan("http://b\u2160t.ly")).toBe("http://bit.ly");
+    expect(foldHostScan("b\u1D35t.ly")).toBe("bit.ly");
+    expect(foldHostScan("bi\u1D40.ly")).toBe("bit.ly");
+    expect(foldHostScan("http://t.\u1D9Co")).toBe("http://t.co");
+    expect(foldHostScan("\u2139bit.ly")).toBe("ibit.ly");
+    expect(foldHostScan("b\u017Fit.ly")).toBe("bsit.ly");
+    expect(foldHostScan("b\u212Ait.ly")).toBe("bkit.ly");
+    expect(foldHostScan("bit.ly\u2139evil.com")).toBe("bit.lyievil.com");
+    expect(foldHostScan("example.com\u2139bit.ly")).toBe("example.comibit.ly");
+    expect(foldHostScan("example.com\u2139http://bit.ly")).toBe(
+      "example.com\u2139http://bit.ly",
+    );
+    expect(foldHostScan("example.com\u2139http://bit.ly")).not.toContain(
+      "ihttp://",
+    );
+    expect(foldHostScan("example.com\u24D8https://t.co")).toBe(
+      "example.com\u24D8https://t.co",
+    );
+    expect(foldHostScanKeepingStops("b\u2139t.ly")).toBe("bit.ly");
+    expect(foldHostScanKeepingStops("\u2139bit.ly")).toBe("ibit.ly");
+    expect(foldHostScanKeepingStops("example.com\u2139http://bit.ly")).toBe(
+      "example.com\u2139http://bit.ly",
+    );
+    expect(foldHostScanKeepingStops("b\u017Fit.ly")).toBe("bsit.ly");
+    expect(foldHostInterrupters("b\u2139t.ly")).toBe("b\u2139t.ly");
+    expect(foldFullwidthLatin("b\u2139t.ly")).toBe("b\u2139t.ly");
+    expect(foldCyrillicLookalikes("b\u0442it.ly")).toBe("b\u0442it.ly");
   });
 
   it("keeps a supplementary letter Android leaves out of a label", () => {

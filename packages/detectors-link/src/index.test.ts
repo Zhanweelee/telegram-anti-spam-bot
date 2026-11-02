@@ -7280,4 +7280,68 @@ describe("link fixtures", () => {
     expect(dotted?.evidence[0]?.summary).toBe("short_link:xn--3px.bit.ly");
     expect(JSON.stringify(dotted)).not.toContain(path);
   });
+
+  it("maps an idna letter Android opens as that host", async () => {
+    const detector = createLinkDetector();
+    const path = "offer173";
+    const changed = [
+      `\u2139bit.ly/${path}`,
+      `b\u017Fit.ly/${path}`,
+      `http://b\u017Fit.ly/${path}`,
+      `b\u212Ait.ly/${path}`,
+      `bit.ly\u2139evil.com/${path}`,
+      `example.com\u2139bit.ly/${path}`,
+      `http://bit.ly\u2139evil.com/${path}`,
+      `203.0.113.10\u2139bit.ly/${path}`,
+    ];
+    for (const text of changed) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("bit.ly");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      `b\u2139t.ly/${path}`,
+      `http://b\u2139t.ly/${path}`,
+      `http://b\u24D8t.ly/${path}`,
+      `http://b\u2160t.ly/${path}`,
+      `b\u1D35t.ly/${path}`,
+      `bi\u1D40.ly/${path}`,
+      `http://bit.l\u02B8/${path}`,
+      `b\u0442it.ly/${path}`,
+      `\u70B9\u51FBbit.ly/${path}`,
+      `example.com\u2139http://bit.ly/${path}`,
+      `example.com\u1D35http://bit.ly/${path}`,
+      `example.com\u24D8http://t.co/${path}`,
+    ];
+    for (const text of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit?.reasons, text).toContain("short_link");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+    const twitter = await detector.detect({
+      event: eventFor(`http://t.\u1D9Co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(twitter?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(twitter)).not.toContain(path);
+    const circled = await detector.detect({
+      event: eventFor(`example.com\u24D8http://t.co/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(circled?.evidence[0]?.summary).toBe("short_link:t.co");
+    expect(JSON.stringify(circled)).not.toContain(path);
+  });
 });

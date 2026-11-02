@@ -2555,5 +2555,45 @@
     "id": "label-glue-slash",
     "text": "example.com\u70B9/bit.ly/offer172",
     "label": "spam"
+  },
+  {
+    "id": "mapped-latin-info",
+    "text": "b\u2139t.ly/offer173",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-latin-circled",
+    "text": "http://b\u24D8t.ly/offer173",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-latin-roman",
+    "text": "http://b\u2160t.ly/offer173",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-latin-prefix",
+    "text": "\u2139bit.ly/offer173",
+    "label": "ham"
+  },
+  {
+    "id": "mapped-latin-long-s",
+    "text": "b\u017Fit.ly/offer173",
+    "label": "ham"
+  },
+  {
+    "id": "mapped-latin-join",
+    "text": "example.com\u2139bit.ly/offer173",
+    "label": "ham"
+  },
+  {
+    "id": "mapped-latin-scheme",
+    "text": "example.com\u2139http://bit.ly/offer173",
+    "label": "spam"
+  },
+  {
+    "id": "mapped-latin-tco",
+    "text": "http://t.\u1D9Co/offer173",
+    "label": "spam"
   }
 ]

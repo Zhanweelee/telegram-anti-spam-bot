@@ -12,6 +12,7 @@ import {
   foldFullwidthLatin,
   foldHostInterrupters,
   foldHostScan,
+  foldMappedLatin,
   foldMatchText,
   type MediaKind,
   parseEvent,
@@ -936,8 +937,10 @@ function hostFromUrl(
           foldDotLookalikes(
             foldEncodedMiddleDot(
               foldHostInterrupters(
-                foldFullwidthLatin(
-                  foldCyrillicLookalikes(foldEncodedGaps(value)),
+                foldMappedLatin(
+                  foldFullwidthLatin(
+                    foldCyrillicLookalikes(foldEncodedGaps(value)),
+                  ),
                 ),
               ),
             ),
