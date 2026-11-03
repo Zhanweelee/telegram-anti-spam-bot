@@ -37,3 +37,4 @@ Android 没有协议时，裸域名和点分 IPv4 可以接一到五位端口，
 - 分享 `url` 里的 `bit.ly?http://t.co/…` 同样只留 `bit.ly`。
 - `example.com:80!http://bit.ly/…`、`example.com:123456-http://bit.ly/…` 和 `example.com./http://bit.ly/…` 仍删除后面的短链。
 - `t.me/+…?http://bit.ly/…` 仍按邀请删除。邀请码和问号里的主机名不进证据。
+- 没有两个斜杠的 `tg:` 后面的短链后来同样留下。见 ADR 0277。

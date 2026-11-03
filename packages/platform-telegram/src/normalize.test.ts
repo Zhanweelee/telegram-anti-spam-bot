@@ -5185,6 +5185,122 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(embedded.event)).not.toContain(path);
   });
 
+  it("keeps a short link after tg: without slashes", async () => {
+    const path = "offer244";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 244 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const plain = await draft(78207, -1008439, `tg:http://bit.ly/${path}`);
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+
+    const seen = await draft(78208, -1008440, `see%20tg:http://t.co/${path}`);
+    expect(seen.status).toBe("event");
+    if (seen.status !== "event") {
+      return;
+    }
+    expect(seen.event.message?.hosts).toContain("t.co");
+    expect(JSON.stringify(seen.event)).not.toContain(path);
+
+    const address = "203.0.113.244";
+    const ip = await draft(78209, -1008441, `tg:${address}/x`);
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toContain(address);
+
+    const slashed = await draft(78210, -1008442, `tg://http://bit.ly/${path}`);
+    expect(slashed.status).toBe("event");
+    if (slashed.status !== "event") {
+      return;
+    }
+    expect(slashed.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(slashed.event)).not.toContain(path);
+
+    const slashedIp = await draft(78211, -1008443, `tg://${address}/x`);
+    expect(slashedIp.status).toBe("event");
+    if (slashedIp.status !== "event") {
+      return;
+    }
+    expect(slashedIp.event.message?.hosts ?? []).not.toContain(address);
+
+    const buried = "198.51.100.20";
+    const msg = await draft(
+      78212,
+      -1008444,
+      `tg://msg?text=hello%26to=${buried}`,
+    );
+    expect(msg.status).toBe("event");
+    if (msg.status !== "event") {
+      return;
+    }
+    expect(msg.event.message?.hosts ?? []).not.toContain(buried);
+
+    const code = "CODE244";
+    const join = await draft(78213, -1008445, `tg:join?invite=${code}`);
+    expect(join.status).toBe("event");
+    if (join.status !== "event") {
+      return;
+    }
+    expect(join.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(join.event)).not.toContain(code);
+
+    const linked = await draft(78214, -1008446, `tg:https://t.me/%2B${code}`);
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(linked.event)).not.toContain(code);
+
+    const embedded = await normalize({
+      update_id: 78215,
+      message: {
+        message_id: 78215,
+        date: 1761955200,
+        chat: { id: -1008447, type: "supergroup" },
+        from: { id: 244 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=tg:http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

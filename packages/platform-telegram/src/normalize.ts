@@ -521,9 +521,53 @@ const DRAFT_STOP_CHAR = new RegExp(
 function openedDraftUrls(text: string): string[] {
   const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
-    openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
+    openPlainTg(
+      openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
+    ),
     source,
   );
+}
+
+/** 没有两个斜杠的 `tg:` 不盖住后面的网址。`tg://` 仍是一条。 */
+function openPlainTg(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (!plainTgAt(text, index)) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const rest = text.slice(index + 3);
+    if (rest.startsWith("//")) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    if (schemeAt(text, index + 3) > 0 || bareIpAt(rest)) {
+      out += " ";
+      index += 3;
+      continue;
+    }
+    const end = text.slice(index).search(/\s/);
+    const next = end === -1 ? text.length : index + end;
+    out += text.slice(index, next);
+    index = next;
+  }
+  return out;
+}
+
+function plainTgAt(text: string, index: number): boolean {
+  if (index > 0 && /[A-Za-z0-9_]/.test(text.charAt(index - 1))) {
+    return false;
+  }
+  return text.slice(index, index + 3).toLowerCase() === "tg:";
+}
+
+function bareIpAt(rest: string): boolean {
+  return new RegExp(`^(?:${DRAFT_IP})(?![A-Za-z0-9_])`, "i").test(rest);
 }
 
 /** 用户名超过 64 或密码超过 25 时，Android 从 `@` 后面另开网址。放得下的仍是一条。 */
@@ -1662,7 +1706,7 @@ function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
-  const opened = openBareEnd(openLongLabel(openLongUserinfo(raw)));
+  const opened = openPlainTg(openBareEnd(openLongLabel(openLongUserinfo(raw))));
   if (opened !== raw) {
     for (const part of queryUrls(opened)) {
       pushClosedUrl(part, found);
