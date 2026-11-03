@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-225
+
+- `t.me/confirmphone/短名` 仍按用户名读取。大写命令在一边仍写草稿，所以也读 `text`。见 ADR 0258。
+- `t.me/confirmphone/slug225?text=`、`t.me/ConfirmPhone?text=` 和 `tg://resolve?domain=confirmphone&text=` 里的短链删除。没有短名的小写命令仍不读 `text`。再多一段路径和 `confirmphone.t.me/短名` 留着。电话号码和校验值不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-224
 
 - `t.me/iv` 仍按用户名读取。应用名和数字路径两边都写草稿，所以也读 `text`。见 ADR 0257。

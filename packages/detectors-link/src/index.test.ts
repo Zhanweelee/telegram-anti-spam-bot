@@ -3839,6 +3839,111 @@ describe("link fixtures", () => {
     expect(JSON.stringify(named)).not.toContain(hidden);
   });
 
+  it("reads a confirmphone username draft and leaves the phone check", async () => {
+    const hidden = "offer225";
+    const dotted = "slug.225";
+    const code = "slug225";
+    const phone = "15551232225";
+    const address = "203.0.113.225";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const app = await detector.detect({
+      event: eventFor(`https://t.me/confirmphone/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain(code);
+    expect(JSON.stringify(app)).not.toContain(hidden);
+    const user = await detector.detect({
+      event: eventFor(
+        `https://t.me/confirmphone?phone=${phone}&hash=abc&text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user).toBeNull();
+    expect(JSON.stringify(user)).not.toContain(phone);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/confirmphone/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash).toBeNull();
+    const prefixed = await detector.detect({
+      event: eventFor(`https://confirmphone.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed).toBeNull();
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=confirmphone&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/ConfirmPhone?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.reasons).toEqual(["short_link"]);
+    const capitalApp = await detector.detect({
+      event: eventFor(`https://t.me/ConfirmPhone/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capitalApp?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(capitalApp)).not.toContain(dotted);
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/confirmphone/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.reasons).toEqual(["short_link"]);
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/ConfirmPhone/${dotted}?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/ConfirmPhone/${dotted}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.225");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const numeric = await detector.detect({
+      event: eventFor(`https://confirmphone.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const extra = await detector.detect({
+      event: eventFor(
+        `https://t.me/confirmphone/${dotted}/extra?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://confirmphone.t.me/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+    expect(JSON.stringify(named)).not.toContain(phone);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

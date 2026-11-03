@@ -3002,6 +3002,91 @@ describe("normalizeUpdate", () => {
     expect(namedDump).not.toContain(dotted);
   });
 
+  it("keeps a confirmphone username draft and leaves the phone check", async () => {
+    const hidden = "offer225";
+    const dotted = "slug.225";
+    const code = "slug225";
+    const phone = "15551232225";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78100,
+      message: {
+        message_id: 78100,
+        date: 1761955200,
+        chat: { id: -1008331, type: "supergroup" },
+        from: { id: 225 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/confirmphone/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const dumped = JSON.stringify(user.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(code);
+    const app = await normalize({
+      update_id: 78101,
+      message: {
+        message_id: 78101,
+        date: 1761955200,
+        chat: { id: -1008332, type: "supergroup" },
+        from: { id: 225 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/ConfirmPhone/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(app.event)).not.toContain(dotted);
+    const phoneLink = await normalize({
+      update_id: 78102,
+      message: {
+        message_id: 78102,
+        date: 1761955200,
+        chat: { id: -1008333, type: "supergroup" },
+        from: { id: 225 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/confirmphone?phone=${phone}&hash=abc&text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(phoneLink.status).toBe("event");
+    if (phoneLink.status !== "event") {
+      return;
+    }
+    expect(phoneLink.event.message?.hosts).toEqual(["t.me"]);
+    const phoneDump = JSON.stringify(phoneLink.event);
+    expect(phoneDump).not.toContain(hidden);
+    expect(phoneDump).not.toContain(phone);
+    expect(phoneDump).not.toContain("bit.ly");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

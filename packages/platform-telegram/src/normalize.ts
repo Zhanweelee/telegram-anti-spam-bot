@@ -1331,6 +1331,9 @@ function isUsernameDraft(url: URL): boolean {
   if (privatePostDropsDraft(host, parts)) {
     return false;
   }
+  if (confirmPhoneDropsDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1786,6 +1789,20 @@ function privatePostDropsDraft(
   return parts.length === 2 && channel(parts[1]);
 }
 
+/** 小写 `confirmphone` 没有下一段时确认电话。后面的短名和大写命令仍写草稿。 */
+function confirmPhoneDropsDraft(
+  host: string,
+  parts: readonly string[],
+): boolean {
+  if (host === "confirmphone.t.me") {
+    return parts.length === 0;
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "confirmphone") {
+    return false;
+  }
+  return parts.length === 1;
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1863,7 +1880,6 @@ function isPublicUsername(value: string): boolean {
 }
 
 const reservedUsernames = new Set([
-  "confirmphone",
   "getpremium",
   "proxy",
   "s",

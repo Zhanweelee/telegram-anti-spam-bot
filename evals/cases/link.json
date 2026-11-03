@@ -4655,5 +4655,60 @@
     "id": "iv-subdomain-name",
     "text": "https://iv.t.me/slug.224?text=https%3A%2F%2Fbit.ly%2Foffer224",
     "label": "ham"
+  },
+  {
+    "id": "confirmphone-app",
+    "text": "https://t.me/confirmphone/slug225?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-resolve",
+    "text": "tg://resolve?domain=confirmphone&text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-bare",
+    "text": "https://t.me/confirmphone?phone=15551232225&hash=abc&text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
+  },
+  {
+    "id": "confirmphone-slash",
+    "text": "https://t.me/confirmphone/?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
+  },
+  {
+    "id": "confirmphone-prefix",
+    "text": "https://confirmphone.t.me?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
+  },
+  {
+    "id": "confirmphone-capital",
+    "text": "https://t.me/ConfirmPhone?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-capital-dot",
+    "text": "https://t.me/ConfirmPhone/slug.225?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-post",
+    "text": "https://t.me/confirmphone/5?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-prefix-post",
+    "text": "https://confirmphone.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "spam"
+  },
+  {
+    "id": "confirmphone-extra",
+    "text": "https://t.me/confirmphone/slug.225/extra?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
+  },
+  {
+    "id": "confirmphone-subdomain-name",
+    "text": "https://confirmphone.t.me/slug.225?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
   }
 ]
