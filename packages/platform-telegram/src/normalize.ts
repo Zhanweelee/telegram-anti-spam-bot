@@ -1930,6 +1930,13 @@ function openBareEnd(text: string): string {
       index = domain + letter;
       continue;
     }
+    const unicodeTail = unicodeLabelRewrite(rest);
+    if (unicodeTail !== null) {
+      out += text.slice(index, domain);
+      out += unicodeTail.replacement;
+      index = domain + unicodeTail.length;
+      continue;
+    }
     const label = bareLabelSkip(rest);
     if (label > 0) {
       out += `${text.slice(index, domain)} `;
@@ -2207,26 +2214,129 @@ function strictLabelTail(rest: string): boolean {
   return labels.every((label) => label.length > 0 && label.length <= 63);
 }
 
-/** 点号后面是 ASCII 标签加严格顶级域时，前面的标签字留给主机名扫描收成 x。 */
+/** 点号后面含 Android 标签字时，先收成 x 再写成 ASCII，避免后面的短链被单独打开。 */
+function unicodeLabelRewrite(
+  rest: string,
+): { replacement: string; length: number } | null {
+  const run = labelRunLength(rest);
+  if (run === 0) {
+    return null;
+  }
+  const tail = rest.slice(run);
+  if (!tail.startsWith(".") || !dottedStrictTail(tail)) {
+    return null;
+  }
+  const head = /^[^/?#\s]+/.exec(tail)?.[0] ?? "";
+  if (!hasDraftNonAscii(head)) {
+    return null;
+  }
+  const encoded = head
+    .split(".")
+    .map((label) =>
+      label.length === 0 || !hasDraftNonAscii(label)
+        ? label
+        : punycodeLabel(label),
+    )
+    .join(".");
+  return { replacement: `x${encoded}`, length: run + head.length };
+}
+
+function hasDraftNonAscii(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    if (text.charCodeAt(index) > 0x7f) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function punycodeLabel(label: string): string {
+  const host = new URL(`http://${label}.com`).hostname;
+  const encoded = host.endsWith(".com") ? host.slice(0, -4) : host;
+  return encoded.length > 0 ? encoded : label;
+}
+
+/** 点号后面是严格域名时，前面的标签字留给主机名扫描收成 x。标签可以是 Android 标签字。 */
 function dottedStrictTail(rest: string): boolean {
   if (!rest.startsWith(".")) {
     return false;
   }
   const head = /^[^/?#\s]+/.exec(rest)?.[0] ?? "";
-  const labels = head.split(".");
-  if (labels.length < 2 || labels[0] !== "") {
-    return false;
+  return unicodeDotTail(head);
+}
+
+/** 点号后面的域名。ASCII 顶级域紧贴非 ASCII 时结束，两边都不是 ASCII 词字符时不拆开。 */
+function unicodeDotTail(rest: string): boolean {
+  let index = 1;
+  let labelStart = 1;
+  let last = 0x2e;
+  let units = 0;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    if (code === 0x2e) {
+      if (index === labelStart || units > 63) {
+        return false;
+      }
+      if (isStrictTld(rest.slice(labelStart, index))) {
+        return true;
+      }
+      index += 1;
+      labelStart = index;
+      last = 0x2e;
+      units = 0;
+      continue;
+    }
+    if (!draftDomainLabelCode(code)) {
+      break;
+    }
+    units += 1;
+    if (units > 63) {
+      return false;
+    }
+    if (
+      index > labelStart &&
+      draftWordBoundary(last, code) &&
+      isStrictTld(rest.slice(labelStart, index))
+    ) {
+      return true;
+    }
+    last = code;
+    index += String.fromCodePoint(code).length;
   }
-  const body = labels.slice(1);
-  if (body.some((label) => label.length === 0 || label.length > 63)) {
-    return false;
+  return units > 0 && units <= 63 && isStrictTld(rest.slice(labelStart, index));
+}
+
+function draftDomainLabelCode(code: number): boolean {
+  if (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x2d
+  ) {
+    return true;
   }
-  const tld = body[body.length - 1] ?? "";
-  const middle = body.slice(0, -1);
-  if (!middle.every((label) => /^[A-Za-z0-9-]+$/.test(label))) {
-    return false;
-  }
-  return isStrictTld(tld);
+  return (
+    code > 0x7f &&
+    code !== 0x3002 &&
+    !DRAFT_DOT_LOOKALIKE.has(code) &&
+    draftLabelCode(code)
+  );
+}
+
+function draftWordBoundary(prev: number, next: number): boolean {
+  return draftAsciiWord(prev) !== draftAsciiWord(next);
+}
+
+function draftAsciiWord(code: number): boolean {
+  return (
+    (code >= 0x30 && code <= 0x39) ||
+    (code >= 0x41 && code <= 0x5a) ||
+    (code >= 0x61 && code <= 0x7a) ||
+    code === 0x5f
+  );
 }
 
 /** 一段句号或点状间隔号后面是 ASCII 域名时留下。否则在这里结束主机名。 */

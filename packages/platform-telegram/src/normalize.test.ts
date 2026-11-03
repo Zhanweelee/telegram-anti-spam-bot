@@ -9509,7 +9509,6 @@ describe("normalizeUpdate", () => {
       [78786, -1009018, `bit.ly${mark}.notarealtld/${path}`, "bit.ly"],
       [78787, -1009019, `see bit.ly${mark}.notarealtld/${path}`, "bit.ly"],
       [78788, -1009020, `\u70B9\u65E5\u672C.bit.ly/${path}`, "bit.ly"],
-      [78789, -1009021, `bit.ly\u70B9.\u65E5\u672C.com/${path}`, "bit.ly"],
     ] as const;
     for (const [updateId, chatId, text, name] of opened) {
       const hit = await draft(updateId, chatId, text);
@@ -9544,6 +9543,126 @@ describe("normalizeUpdate", () => {
         "bit.lyx.bit.ly",
       ]);
       expect(JSON.stringify(nested.event)).not.toContain(path);
+    }
+  });
+
+  it("keeps a unicode label on a dotted draft host", async () => {
+    const path = "offer277";
+    const mark = "\u70B9";
+    const japan = "\u65E5\u672C";
+    const china = "\u4E2D\u56FD";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 277 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78792, -1009024, `bit.ly${mark}.${japan}.com/${path}`],
+      [78793, -1009025, `www.bit.ly${mark}.${japan}.com/${path}`],
+      [78794, -1009026, `t.co${mark}.${japan}.com/${path}`],
+      [78795, -1009027, `203.0.113.10${mark}.${japan}.com/${path}`],
+      [78796, -1009028, `bit.ly${mark}\u65E5.\u672C.com/${path}`],
+      [78797, -1009029, `bit.ly\uAC00.\uAC00.com/${path}`],
+      [78798, -1009030, `see bit.ly${mark}.${japan}.com/${path}`],
+      [78799, -1009031, `bit.ly${mark}.${japan}.${china}/${path}`],
+      [78800, -1009032, `bit.ly${mark}.${china}/${path}`],
+      [78801, -1009033, `bit.ly${mark}.${china}.com/${path}`],
+      [78802, -1009034, `bit.ly${mark}.${china}com/${path}`],
+      [78803, -1009035, `bit.ly${mark}.com${japan}/${path}`],
+      [78804, -1009036, `bit.ly${mark}.${japan}.com.notarealtld/${path}`],
+      [78805, -1009037, `http://bit.ly${mark}.${japan}.com/${path}`],
+      [78806, -1009038, `http://203.0.113.10${mark}.${japan}.com/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, "bit.ly"),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const opened = [
+      [78807, -1009039, `bit.ly${mark}.${japan}.notarealtld/${path}`, "bit.ly"],
+      [78808, -1009040, `bit.ly${mark}.${japan}com/${path}`, "bit.ly"],
+      [78809, -1009041, `bit.ly${mark}.${china}${japan}/${path}`, "bit.ly"],
+      [78810, -1009042, `bit.ly${mark}..com/${path}`, "bit.ly"],
+      [78811, -1009043, `bit.ly${mark}.${japan}..com/${path}`, "bit.ly"],
+      [78812, -1009044, `bit.ly${mark}..${japan}.com/${path}`, "bit.ly"],
+      [78813, -1009045, `see bit.ly${mark}.${japan}com/${path}`, "bit.ly"],
+    ] as const;
+    for (const [updateId, chatId, text, name] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, name),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([name]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const joined = await draft(
+      78814,
+      -1009046,
+      `example.com${mark}.${japan}.bit.ly/${path}`,
+    );
+    expect(joined.status).toBe("event");
+    if (joined.status === "event") {
+      expect(named(joined.event.message?.hosts, "bit.ly")).toEqual([
+        "example.comx.xn--wgv71a.bit.ly",
+      ]);
+      expect(JSON.stringify(joined.event)).not.toContain(path);
+    }
+
+    const nested = await draft(
+      78815,
+      -1009047,
+      `bit.ly${mark}.${japan}.bit.ly/${path}`,
+    );
+    expect(nested.status).toBe("event");
+    if (nested.status === "event") {
+      expect(named(nested.event.message?.hosts, "bit.ly")).toEqual([
+        "bit.lyx.xn--wgv71a.bit.ly",
+      ]);
+      expect(JSON.stringify(nested.event)).not.toContain(path);
+    }
+
+    const bare = await draft(
+      78816,
+      -1009048,
+      `${mark}.${japan}.bit.ly/${path}`,
+    );
+    expect(bare.status).toBe("event");
+    if (bare.status === "event") {
+      expect(named(bare.event.message?.hosts, "bit.ly")).toEqual(["bit.ly"]);
+      expect(JSON.stringify(bare.event)).not.toContain(path);
     }
   });
 

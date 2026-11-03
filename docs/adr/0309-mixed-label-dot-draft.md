@@ -35,3 +35,4 @@ Android 在写完的主机名和点号后面的严格域名之间，把标签字
 - `example.com点.bit.ly/…` 按短链删除。证据是 `example.comx.bit.ly`。`bit.ly点日本.bit.ly/…` 按短链删除。证据是 `bit.lyx.bit.ly`。
 - `点日本.bit.ly/…` 仍按短链删除。证据是 `bit.ly`。
 - 点号后面的标签可以是 Android 标签字。`bit.ly点.日本.com` 仍按短链删除。见 ADR 0221。
+- 写完的主机名和点号后面的标签字仍可能把前面的短链单独打开。`bit.ly点.日本.com` 留着。见 ADR 0310。
