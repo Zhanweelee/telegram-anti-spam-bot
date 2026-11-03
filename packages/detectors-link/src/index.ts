@@ -889,7 +889,7 @@ function usernameDraftText(raw: string): string | null {
 }
 
 function isUsernameDraft(url: URL): boolean {
-  if (profileReplacesDraft(url)) {
+  if (profileReplacesDraft(url) || resolveMediaReplacesDraft(url)) {
     return false;
   }
   if (url.protocol === "tg:") {
@@ -990,6 +990,40 @@ function androidDraftRest(
 /** 查询名正好是 `profile` 且值不是 `0` 或 `false` 时打开资料页。会改掉资料页的参数仍写草稿。 */
 function profileReplacesDraft(url: URL): boolean {
   return androidOpensProfile(url) && !desktopOverridesProfile(url);
+}
+
+/** `tg://resolve` 上的非零动态、相册或礼物收集打开媒体，不写草稿。网页上的同名查询仍写。 */
+function resolveMediaReplacesDraft(url: URL): boolean {
+  if (url.protocol !== "tg:") {
+    return false;
+  }
+  return (
+    nonzeroClientInt(firstExactParam(url, "story")) ||
+    nonzeroClientInt(firstExactParam(url, "album")) ||
+    nonzeroClientInt(firstExactParam(url, "collection"))
+  );
+}
+
+function firstExactParam(url: URL, name: string): string | null {
+  for (const [key, value] of url.searchParams) {
+    if (key === name) {
+      return value;
+    }
+  }
+  return null;
+}
+
+function nonzeroClientInt(value: string | null): boolean {
+  if (value === null || !/^-?\d+$/.test(value)) {
+    return false;
+  }
+  const parsed = Number(value);
+  return (
+    Number.isInteger(parsed) &&
+    parsed !== 0 &&
+    parsed >= -2147483648 &&
+    parsed <= 2147483647
+  );
 }
 
 function androidOpensProfile(url: URL): boolean {

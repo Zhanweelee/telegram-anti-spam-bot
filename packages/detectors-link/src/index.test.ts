@@ -1287,6 +1287,74 @@ describe("link fixtures", () => {
     expect(JSON.stringify(app)).not.toContain("durov");
   });
 
+  it("skips a resolve story and still reads a web story query", async () => {
+    const hidden = "offer200";
+    const address = "203.0.113.200";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const story = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&story=5&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(story).toBeNull();
+    expect(JSON.stringify(story)).not.toContain(hidden);
+    const album = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&album=3&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(album).toBeNull();
+    const collection = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&collection=2&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(collection).toBeNull();
+    const phone = await detector.detect({
+      event: eventFor(
+        `tg://resolve?phone=79990001199&story=4&text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(phone).toBeNull();
+    expect(JSON.stringify(phone)).not.toContain(address);
+    const bare = await detector.detect({
+      event: eventFor(`tg:resolve?domain=durov&story=9&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare).toBeNull();
+    const web = await detector.detect({
+      event: eventFor(`https://t.me/durov?story=5&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(web?.reasons).toEqual(["short_link"]);
+    expect(web?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(web)).not.toContain(hidden);
+    const zero = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&story=0&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(zero?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const live = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&story=live&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(live?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const capital = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&Story=5&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(capital)).not.toContain("durov");
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

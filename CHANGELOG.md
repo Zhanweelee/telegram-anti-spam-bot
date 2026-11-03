@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-200
+
+- `tg://resolve` 上的非零 `story`、`album` 和 `collection` 打开媒体，不读 `text`。见 ADR 0233。
+- `https://t.me/用户名?story=` 仍只留主机名。`story=0`、`story=live` 和 `Story` 也仍读。用户名和编号不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-199
 
 - 查询名正好是 `profile`、值不是 `0` 或 `false` 时打开资料页，不读 `text`。见 ADR 0232。

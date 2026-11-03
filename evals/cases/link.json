@@ -3450,5 +3450,30 @@
     "id": "profile-start",
     "text": "https://t.me/durov?profile=1&start=hi&text=https%3A%2F%2Fbit.ly%2Foffer199",
     "label": "spam"
+  },
+  {
+    "id": "resolve-story",
+    "text": "tg://resolve?domain=durov&story=5&text=https%3A%2F%2Fbit.ly%2Foffer200",
+    "label": "ham"
+  },
+  {
+    "id": "resolve-album",
+    "text": "tg://resolve?domain=durov&album=3&text=https%3A%2F%2Fbit.ly%2Foffer200",
+    "label": "ham"
+  },
+  {
+    "id": "resolve-collection",
+    "text": "tg://resolve?domain=durov&collection=2&text=https%3A%2F%2Fbit.ly%2Foffer200",
+    "label": "ham"
+  },
+  {
+    "id": "web-story-query",
+    "text": "https://t.me/durov?story=5&text=https%3A%2F%2Fbit.ly%2Foffer200",
+    "label": "spam"
+  },
+  {
+    "id": "resolve-story-zero",
+    "text": "tg://resolve?domain=durov&story=0&text=https%3A%2F%2Fbit.ly%2Foffer200",
+    "label": "spam"
   }
 ]

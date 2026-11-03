@@ -1369,6 +1369,64 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("durov");
   });
 
+  it("keeps a web story query and leaves a resolve story", async () => {
+    const hidden = "offer200";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const web = await normalize({
+      update_id: 78044,
+      message: {
+        message_id: 78044,
+        date: 1761955200,
+        chat: { id: -1008275, type: "supergroup" },
+        from: { id: 200 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?story=5&text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(web.status).toBe("event");
+    if (web.status !== "event") {
+      return;
+    }
+    expect(web.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(web.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(web.event)).not.toContain(hidden);
+    const story = await normalize({
+      update_id: 78045,
+      message: {
+        message_id: 78045,
+        date: 1761955200,
+        chat: { id: -1008276, type: "supergroup" },
+        from: { id: 200 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://resolve?domain=durov&story=5&text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(story.status).toBe("event");
+    if (story.status !== "event") {
+      return;
+    }
+    expect(story.event.message?.hosts).toBeUndefined();
+    expect(story.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(story.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

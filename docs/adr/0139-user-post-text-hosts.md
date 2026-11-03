@@ -40,3 +40,4 @@ ADR 0137 认为 `t.me/用户名/123?text=` 不会把 `text` 放进输入框。
 - `t.me/用户名/app` 后来由 ADR 0146 只留 `text` 里的主机名。子域上的应用名和讨论串仍不读。
 - 帖子数字后来由 ADR 0147 不再停在 16 位。`用户名.t.me/` 后更长的数字同样只留 `text` 里的主机名。
 - 查询名正好是 `profile`、值不是 `0` 或 `false` 时，后来由 ADR 0232 不读 `text`。`profile=0` 和 `Profile` 仍读。
+- `tg://resolve` 上的非零 `story`、`album` 和 `collection` 后来由 ADR 0233 不读 `text`。网页上的 `story` 查询仍读。
