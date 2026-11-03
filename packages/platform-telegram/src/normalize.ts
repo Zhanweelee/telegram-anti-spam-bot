@@ -85,6 +85,7 @@ function callbackEvent(
     return { status: "ignored" };
   }
   const admins = new Set(input.adminUserIds);
+  const clickedId = promptMessageId(message?.message_id);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -92,8 +93,19 @@ function callbackEvent(
     kind: "challenge" as const,
     occurredAt: occurredAt(message?.date, input.nowIso),
     actor: { id: actor, isAdmin: admins.has(actor) },
-    challenge: { nonce },
+    challenge: {
+      nonce,
+      ...(clickedId ? { messageId: clickedId } : {}),
+    },
   });
+}
+
+function promptMessageId(value: unknown): string | undefined {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+    return undefined;
+  }
+  const text = String(value);
+  return /^[1-9][0-9]{0,15}$/.test(text) ? text : undefined;
 }
 
 async function messageEvent(

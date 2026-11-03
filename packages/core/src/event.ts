@@ -106,7 +106,13 @@ export const eventSchema = z.strictObject({
   bot: botStateSchema.optional(),
   /** Button answer. The nonce is not message text. */
   challenge: z
-    .strictObject({ nonce: z.string().regex(/^[a-f0-9]{16}$/) })
+    .strictObject({
+      nonce: z.string().regex(/^[a-f0-9]{16}$/),
+      messageId: z
+        .string()
+        .regex(/^[1-9][0-9]{0,15}$/)
+        .optional(),
+    })
     .optional(),
   message: messageSchema.optional(),
   /** Visible join name. Request memory only; audits keep the hash. */

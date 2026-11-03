@@ -480,6 +480,109 @@ describe("captcha flow", () => {
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
   });
 
+  it("deletes the clicked button and the stored button after a pass", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "43"),
+        ports,
+      }),
+    ).toBe("passed");
+    expect(removed).toEqual(["42", "43"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toHaveLength(1);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+    expect(JSON.stringify(kit.records)).not.toContain("43");
+  });
+
+  it("deletes a stale button when the nonce does not match", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await resolveChallenge({
+        event: answerEvent("cd".repeat(8), "43"),
+        ports,
+      }),
+    ).toBe("ignored");
+    expect(removed).toEqual(["43"]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("cd".repeat(8));
+  });
+
+  it("deletes a clicked button when the challenge is already gone", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "43"),
+        ports,
+      }),
+    ).toBe("ignored");
+    expect(removed).toEqual(["43"]);
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+  });
+
+  it("passes when the clicked button cannot be deleted", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "43"),
+        ports: kit.ports,
+      }),
+    ).toBe("passed");
+    expect(kit.released).toHaveLength(1);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.records[0]?.reasons).toEqual(["captcha_passed"]);
+  });
+
   it("deletes the prompt after a pass and after an expiry", async () => {
     const kit = harness();
     const removed: string[] = [];
@@ -847,7 +950,7 @@ function leaveEvent(id = "evt_leave", actorId = "77") {
   });
 }
 
-function answerEvent(nonce: string) {
+function answerEvent(nonce: string, messageId?: string) {
   return parseEvent({
     id: "evt_answer",
     tenantId: "local",
@@ -855,7 +958,7 @@ function answerEvent(nonce: string) {
     kind: "challenge",
     occurredAt: "2026-11-01T00:01:00.000Z",
     actor: { id: "77", isAdmin: false },
-    challenge: { nonce },
+    challenge: messageId ? { nonce, messageId } : { nonce },
   });
 }
 
