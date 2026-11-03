@@ -15,7 +15,7 @@
     "test:coverage": "vitest run --coverage --project core",
     "eval": "vitest run --project evals",
     "boundaries": "node scripts/check-boundaries.mjs",
-    "check": "pnpm boundaries && pnpm typecheck && pnpm lint && pnpm test && pnpm test:coverage",
+    "check": "pnpm boundaries && node scripts/check-readme.mjs && pnpm typecheck && pnpm lint && pnpm test && pnpm test:coverage",
     "smoke": "node scripts/smoke-webhook.mjs"
   },
   "pnpm": {
