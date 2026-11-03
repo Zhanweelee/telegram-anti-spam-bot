@@ -4235,5 +4235,60 @@
     "id": "msg-subdomain-name",
     "text": "https://msg.t.me/slug217?text=https%3A%2F%2Fbit.ly%2Foffer217",
     "label": "ham"
+  },
+  {
+    "id": "share-username",
+    "text": "https://t.me/share?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-resolve",
+    "text": "tg://resolve?domain=share&text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-prefix",
+    "text": "https://share.t.me?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-capital",
+    "text": "https://t.me/Share/slug218?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-slash",
+    "text": "https://t.me/share/?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-app",
+    "text": "https://t.me/share/slug218?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-post",
+    "text": "https://t.me/share/5?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-subdomain-post",
+    "text": "https://share.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "spam"
+  },
+  {
+    "id": "share-extra",
+    "text": "https://t.me/share/slug218/extra?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "ham"
+  },
+  {
+    "id": "share-subdomain-name",
+    "text": "https://share.t.me/slug218?text=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "ham"
+  },
+  {
+    "id": "share-app-url",
+    "text": "https://t.me/share/slug218?url=https%3A%2F%2Fbit.ly%2Foffer218",
+    "label": "ham"
   }
 ]

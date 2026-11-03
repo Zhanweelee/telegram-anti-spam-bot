@@ -30,6 +30,7 @@ ADR 0130 读了 `t.me/share/url`、`t.me/iv` 和 `tg://msg_url` 的 `url`。Tele
 - 这些写法的 `url` 是裸 IP、默认短链或邀请时，现有链接规则删除这条消息。证据仍只有主机名。
 - `example.com` 留着。`t.me/msg?url=`、`t.me/share/other` 和其它网站的 `url` 仍按外层主机名判断。
 - `t.me/msg?text=` 后来由 ADR 0250 按用户名读取。`url` 仍不读。
+- `t.me/share/短名?text=` 后来由 ADR 0251 按用户名读取。`url` 仍不读。`share.t.me/短名` 仍不读。
 - 附带句子里的关键词留着。正文就是这条链接时，链接原文仍在 `message.text`。
 - 再套一层分享链接仍停在外层。`rhash` 和收件人用户名不进证据。
 - 网页代理链接的 `server` 后来由 ADR 0134 只留下主机名。`secret` 和路径仍不进证据。

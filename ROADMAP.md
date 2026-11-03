@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-218 share 用户名仍读 text — done
+
+验收：`t.me/share?text=`、`t.me/share/?text=`、`share.t.me?text=`、`tg://resolve?domain=share&text=`、`t.me/Share/短名?text=`、`t.me/share/slug218?text=`、`t.me/share/5?text=` 和 `share.t.me/数字?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/share/短名?url=` 仍不读 `url`。`t.me/share/url` 仍是分享链接。`t.me/share/短名/再一段` 和 `share.t.me/短名` 留着。用户名和应用名不进证据。默认名单仍是 ADR 0026。
+
 ### P3-217 msg 用户名仍读 text — done
 
 验收：`t.me/msg?text=`、`t.me/msg/?text=`、`msg.t.me?text=`、`tg://resolve?domain=msg&text=`、`t.me/Msg/短名?text=`、`t.me/msg/slug217?text=`、`t.me/msg/5?text=` 和 `msg.t.me/数字?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/msg?url=` 仍不读 `url`。`t.me/msg/url` 仍是分享链接。`t.me/msg/短名/再一段` 和 `msg.t.me/短名` 留着。用户名和应用名不进证据。默认名单仍是 ADR 0026。
@@ -2497,6 +2501,12 @@
 
 - 做了什么：带协议的主机名里，非间距标记写在标签末尾且后面还能接上点、路径、查询或端口时，这个标记留在标签里。后面的希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 Android 仍算进这条链接时留下。选择写在 ADR 0229。
 - 学到什么：`http://bit͏.lyα/…` 在 Android 上是一条主机名，地址解析器给出的名字不是 `bit.ly`。非间距标记不能当词边界，原先会在点号前面把标签截断。`http://bit.lỳ/…` 的组合附加符号也留在标签里，点开的主机名不是短链。没有协议的 `bit͏.lyα/…` 仍只打开短链。`#`、`@` 和空格也会退回短链。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-03 P3-218
+
+- 做了什么：`t.me/share` 从 `text` 抽主机名。应用名、数字和末尾斜杠同样读。再多一段路径和子域上的短名不读。应用名上的 `url` 仍不读。选择写在 ADR 0251。
+- 学到什么：桌面端只把 `share/url?` 收成分享。其它 `share/短名` 仍写成用户名草稿。Android 只在小写 `share/` 后面打开分享，并把 `text` 放进分享内容。裸的 `share` 两边都按用户名读取 `text`。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
 
 ### 2026-11-03 P3-217

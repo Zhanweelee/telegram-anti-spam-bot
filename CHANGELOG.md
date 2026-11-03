@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-218
+
+- `t.me/share` 仍按用户名读取。应用名和数字路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0251。
+- `t.me/share?text=`、`t.me/share/slug218?text=` 和 `t.me/share/5?text=` 里的短链删除。再多一段路径和 `share.t.me/短名` 留着。`t.me/share/短名?url=` 仍不读 `url`。`t.me/share/url` 仍是分享链接。用户名和应用名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-217
 
 - `t.me/msg` 仍按用户名读取。应用名和数字路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0250。
