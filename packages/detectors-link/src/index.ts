@@ -967,6 +967,9 @@ function isUsernameDraft(url: URL): boolean {
   if (folderInviteDropsDraft(host, parts)) {
     return false;
   }
+  if (addListReplacesDraft(host, url.pathname, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1355,6 +1358,23 @@ function folderInviteDropsDraft(
   return parts.length === 2 && code(parts[1]);
 }
 
+/** 小写 `addlist` 后面没有末尾斜杠时打开聊天列表。末尾斜杠和大写命令仍写草稿。 */
+function addListReplacesDraft(
+  host: string,
+  pathname: string,
+  parts: readonly string[],
+): boolean {
+  const slug = (value: string | undefined) =>
+    value !== undefined && /^[A-Za-z0-9._-]+$/.test(value);
+  if (host === "addlist.t.me") {
+    return parts.length === 1 && slug(parts[0]);
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "addlist") {
+    return false;
+  }
+  return parts.length === 2 && slug(parts[1]) && !pathname.endsWith("/");
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1432,7 +1452,6 @@ function isPublicUsername(value: string): boolean {
 }
 
 const reservedUsernames = new Set([
-  "addlist",
   "c",
   "confirmphone",
   "getpremium",

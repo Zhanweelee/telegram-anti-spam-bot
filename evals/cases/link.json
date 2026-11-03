@@ -4340,5 +4340,65 @@
     "id": "folder-subdomain-name",
     "text": "https://folder.t.me/slug.219?text=https%3A%2F%2Fbit.ly%2Foffer219",
     "label": "ham"
+  },
+  {
+    "id": "addlist-username",
+    "text": "https://t.me/addlist?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-resolve",
+    "text": "tg://resolve?domain=addlist&text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-prefix",
+    "text": "https://addlist.t.me?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-slash",
+    "text": "https://t.me/addlist/?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-capital-dot",
+    "text": "https://t.me/AddList/slug.220?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-trail",
+    "text": "https://t.me/addlist/slug220/?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-invite-text",
+    "text": "https://t.me/addlist/slug220?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-prefix-post",
+    "text": "https://addlist.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "spam"
+  },
+  {
+    "id": "addlist-dotted",
+    "text": "https://t.me/addlist/slug.220?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "ham"
+  },
+  {
+    "id": "addlist-long",
+    "text": "https://t.me/addlist/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "ham"
+  },
+  {
+    "id": "addlist-extra",
+    "text": "https://t.me/addlist/slug.220/extra?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "ham"
+  },
+  {
+    "id": "addlist-subdomain-name",
+    "text": "https://addlist.t.me/slug.220?text=https%3A%2F%2Fbit.ly%2Foffer220",
+    "label": "ham"
   }
 ]
