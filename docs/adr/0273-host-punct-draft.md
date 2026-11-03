@@ -35,3 +35,4 @@ Android 读完主机名和一到五位数字的端口之后，路径才从 `/` �
 - 分享 `url` 里的同样写法同样删除。
 - `example.com/!http://bit.ly` 和 `example.com/?http://bit.ly` 留着。`user:pass@bit.ly` 仍按短链删除。
 - `https://t.me!/+…` 不改记成邀请。`example.com!https://t.me/+…` 按邀请删除。路径不进证据。
+- 裸域名和 `www.` 在最后一个标签结束时，后面的短链后来同样留下。见 ADR 0274。

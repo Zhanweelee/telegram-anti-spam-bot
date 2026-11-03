@@ -518,7 +518,7 @@ const DRAFT_STOP_CHAR = new RegExp(
 function openedDraftUrls(text: string): string[] {
   const source = `${COPY_URL.source}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
-    openLongLabel(openLongUserinfo(openDraftStops(text))),
+    openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
     source,
   );
 }
@@ -642,6 +642,18 @@ function openLongLabel(text: string): string {
         index += scheme + host + 1;
         continue;
       }
+      const port = /^:\d{1,5}(?!\d)/.exec(rest);
+      if (port?.[0]) {
+        const after = rest.slice(port[0].length);
+        if (
+          after.startsWith("-") ||
+          (after.startsWith(".") && schemeAt(after, 1) > 0)
+        ) {
+          out += `${text.slice(index, index + scheme + host + port[0].length)} `;
+          index += scheme + host + port[0].length + 1;
+          continue;
+        }
+      }
     }
     const end = text.slice(index).search(/\s/);
     const next = end === -1 ? text.length : index + end;
@@ -717,6 +729,123 @@ function skipUnfinishedAt(text: string, index: number): number {
     index += 1;
   }
   return index;
+}
+
+/** 裸域名和 `www.` 停在最后一个标签。连字符、点号或标签字符后面的网址另开一条。 */
+function openBareEnd(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (schemeAt(text, index) > 0) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    const domain = bareDomainEnd(text, index);
+    if (domain === null) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const rest = text.slice(domain);
+    const port = /^:\d{1,5}(?!\d)/.exec(rest);
+    if (port?.[0]) {
+      const after = rest.slice(port[0].length);
+      if (
+        after.startsWith("-") ||
+        (after.startsWith(".") && schemeAt(after, 1) > 0)
+      ) {
+        out += `${text.slice(index, domain + port[0].length)} `;
+        index = domain + port[0].length + 1;
+        continue;
+      }
+    }
+    if (
+      rest.startsWith("/") ||
+      rest.startsWith("?") ||
+      port?.[0] ||
+      !bareTailSplit(rest)
+    ) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    out += `${text.slice(index, domain)} `;
+    index = domain + 1;
+  }
+  return out;
+}
+
+function bareDomainEnd(text: string, index: number): number | null {
+  if (index > 0 && /[A-Za-z0-9_]/.test(text.charAt(index - 1))) {
+    return null;
+  }
+  let cursor = index;
+  const www = text.slice(cursor, cursor + 4).toLowerCase() === "www.";
+  if (www) {
+    cursor += 4;
+  }
+  const first = readDraftLabel(text, cursor);
+  if (first === 0) {
+    return null;
+  }
+  let labels = 1;
+  cursor += first;
+  while (text.charAt(cursor) === ".") {
+    if (schemeAt(text, cursor + 1) > 0) {
+      break;
+    }
+    const next = readDraftLabel(text, cursor + 1);
+    if (next === 0) {
+      break;
+    }
+    cursor += 1 + next;
+    labels += 1;
+  }
+  if (www ? labels < 1 : labels < 2) {
+    return null;
+  }
+  return cursor;
+}
+
+function readDraftLabel(text: string, index: number): number {
+  if (!/[A-Za-z0-9]/.test(text.charAt(index))) {
+    return 0;
+  }
+  let cursor = index + 1;
+  const limit = Math.min(text.length, index + 63);
+  while (cursor < limit) {
+    const current = text.charAt(cursor);
+    if (!/[A-Za-z0-9_-]/.test(current)) {
+      break;
+    }
+    if (
+      (current === "-" || current === "_") &&
+      schemeAt(text, cursor + 1) > 0
+    ) {
+      break;
+    }
+    cursor += 1;
+  }
+  while (cursor > index && /[-_]/.test(text.charAt(cursor - 1))) {
+    cursor -= 1;
+  }
+  return cursor === index ? 0 : cursor - index;
+}
+
+function bareTailSplit(rest: string): boolean {
+  if (rest.startsWith("-") || rest.startsWith(".")) {
+    return schemeAt(rest, 1) > 0;
+  }
+  return (
+    rest.length > 0 &&
+    schemeAt(rest, 1) > 0 &&
+    !/[A-Za-z0-9./?#:]/.test(rest.charAt(0))
+  );
 }
 
 function schemeAfterHostRun(authority: string): number | null {
@@ -1508,7 +1637,7 @@ function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
-  const opened = openLongLabel(openLongUserinfo(raw));
+  const opened = openBareEnd(openLongLabel(openLongUserinfo(raw)));
   if (opened !== raw) {
     for (const part of queryUrls(opened)) {
       pushClosedUrl(part, found);
