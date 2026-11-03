@@ -4600,5 +4600,60 @@
     "id": "c-prefix-post",
     "text": "https://c.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer223",
     "label": "ham"
+  },
+  {
+    "id": "iv-username",
+    "text": "https://t.me/iv?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-resolve",
+    "text": "tg://resolve?domain=iv&text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-prefix",
+    "text": "https://iv.t.me?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-slash",
+    "text": "https://t.me/iv/?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-capital-dot",
+    "text": "https://t.me/Iv/slug.224?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-app",
+    "text": "https://t.me/iv/slug224?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-post",
+    "text": "https://t.me/iv/5?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-prefix-post",
+    "text": "https://iv.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "spam"
+  },
+  {
+    "id": "iv-app-url",
+    "text": "https://t.me/iv/slug224?url=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "ham"
+  },
+  {
+    "id": "iv-extra",
+    "text": "https://t.me/iv/slug.224/extra?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "ham"
+  },
+  {
+    "id": "iv-subdomain-name",
+    "text": "https://iv.t.me/slug.224?text=https%3A%2F%2Fbit.ly%2Foffer224",
+    "label": "ham"
   }
 ]

@@ -1513,7 +1513,6 @@ function isPublicUsername(value: string): boolean {
 const reservedUsernames = new Set([
   "confirmphone",
   "getpremium",
-  "iv",
   "proxy",
   "s",
   "socks",

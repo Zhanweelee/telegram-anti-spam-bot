@@ -34,3 +34,4 @@
 - `example.com` 留着。`t.me/durov?url=` 和其它网站的 `url` 参数仍按外层主机名判断。
 - 按钮上的 `text` 里的关键词留着。正文就是这条链接时，链接原文仍在 `message.text`。
 - 私聊预填 `tg://msg` 的 `text` 后来由 ADR 0131 按普通链接处理。路径和收件人用户名仍不进证据。
+- `t.me/iv/短名?text=` 后来由 ADR 0257 按用户名读取。`t.me/iv?url=` 仍从 `url` 抽主机名。

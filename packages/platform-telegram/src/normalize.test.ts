@@ -2917,6 +2917,91 @@ describe("normalizeUpdate", () => {
     expect(channelDump).not.toContain("bit.ly");
   });
 
+  it("keeps an iv username draft including an app name", async () => {
+    const hidden = "offer224";
+    const dotted = "slug.224";
+    const code = "slug224";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78097,
+      message: {
+        message_id: 78097,
+        date: 1761955200,
+        chat: { id: -1008328, type: "supergroup" },
+        from: { id: 224 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/iv/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(user.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(code);
+    const app = await normalize({
+      update_id: 78098,
+      message: {
+        message_id: 78098,
+        date: 1761955200,
+        chat: { id: -1008329, type: "supergroup" },
+        from: { id: 224 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Iv/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(app.event)).not.toContain(dotted);
+    const named = await normalize({
+      update_id: 78099,
+      message: {
+        message_id: 78099,
+        date: 1761955200,
+        chat: { id: -1008330, type: "supergroup" },
+        from: { id: 224 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://iv.t.me/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.hosts).toEqual(["iv.t.me"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(hidden);
+    expect(namedDump).not.toContain("bit.ly");
+    expect(namedDump).not.toContain(dotted);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
