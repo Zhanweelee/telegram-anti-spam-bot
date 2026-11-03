@@ -85,6 +85,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/clearreact <chatId> <actorId>` 调用 `clearReactions`。配了 token 时使用 `deleteAllMessageReactions`。正数 id 走 `user_id`，负数 id 走 `actor_chat_id`。一次最多清最近一万条。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经清除。不删消息，也不改黑名单、封禁或禁言。见 ADR 0376。
 
+`/revoke <chatId> <inviteLink>` 调用 `revokeInvite`。配了 token 时使用 `revokeChatInviteLink`。只接受 `t.me`、`telegram.me`、`telegram.dog` 上的 `+` 或 `joinchat` 邀请。回复不带链接。别人创建的链接撤不掉。主链接被撤后，新的主链接也不在回复里。没有 token、链接不像邀请，或调用失败时回复「参数无效」，不把内存记录当成已经撤销。内存记录不保存链接。不改黑名单、封禁或禁言。见 ADR 0377。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

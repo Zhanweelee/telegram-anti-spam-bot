@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-345
+
+- 私聊 `/revoke` 用 `revokeChatInviteLink` 撤销一条机器人自己创建的邀请链接。
+- 回复和日志都不带链接。没有 token、链接不像邀请，或调用失败时回复「参数无效」。见 ADR 0377。
+- 30 天保留期没有改。
+
 ### P3-344
 
 - 私聊 `/clearreact` 用 `deleteAllMessageReactions` 清除一个用户或频道的最近反应。

@@ -165,6 +165,7 @@ function harness(options?: { failStorage?: boolean }) {
       throw new Error("perms_unavailable");
     },
     async clearReactions() {},
+    async revokeInvite() {},
   };
   return {
     records,

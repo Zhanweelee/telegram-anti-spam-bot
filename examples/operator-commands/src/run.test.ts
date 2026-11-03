@@ -31,6 +31,17 @@ describe("operator command example", () => {
     expect(help).toContain("/unlock");
     expect(help).toContain("/perms");
     expect(help).toContain("/clearreact");
+    expect(help).toContain("/revoke");
+    const code = "AbCdEfGhIjKlMnOp";
+    const revoked = await runPrivateCommand({
+      text: `/revoke -100 https://t.me/+${code}`,
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(revoked).toBe(
+      "已请求撤销 -100 里机器人自己发的邀请链接。别人发的撤不掉，新的主链接也不在这里",
+    );
+    expect(revoked).not.toContain(code);
     const reactionReply = await runPrivateCommand({
       text: "/clearreact -100 77",
       actorId: "42",

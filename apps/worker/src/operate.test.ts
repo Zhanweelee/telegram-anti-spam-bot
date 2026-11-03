@@ -585,6 +585,83 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("revokes one bot invite link without echoing it", async () => {
+    const kit = deps();
+    const code = "AbCdEfGhIjKlMnOp";
+    const link = `https://t.me/+${code}`;
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: `/revoke -100 ${link}`, direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                invite_link: `https://t.me/+${code}NEW`,
+                name: phrase,
+                creator: { id: 1, is_bot: false, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求撤销 -100 里机器人自己发的邀请链接。别人发的撤不掉，新的主链接也不在这里",
+    ]);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(code);
+    expect(calls.map((call) => call.method)).toEqual(["revokeChatInviteLink"]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      invite_link?: string;
+      user_id?: number;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.invite_link).toBe(link);
+    expect(body.user_id).toBeUndefined();
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(code);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/revoke -100 ${link}`, direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(offline.reply.sent)).not.toContain(code);
+    expect(JSON.stringify(offline.logger.entries)).not.toContain(code);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/revoke -100 ${link}`, direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.reply.sent)).not.toContain(code);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(code);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];
