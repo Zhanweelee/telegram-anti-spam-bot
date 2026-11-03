@@ -1253,6 +1253,170 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("mutes a member for the default hour", async () => {
+    const deps = kit();
+    const muted: {
+      chatId: string;
+      actorId: string;
+      durationSeconds: number;
+    }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/mute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          muted.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已禁言 -100 77 3600 秒" });
+    expect(muted).toEqual([
+      { chatId: "-100", actorId: "77", durationSeconds: 3600 },
+    ]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/mute <chatId> <actorId> [seconds]");
+    }
+
+    const custom = await runOperatorCommand({
+      event: event({ text: "/mute -100 77 120", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          muted.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(custom).toMatchObject({ text: "已禁言 -100 77 120 秒" });
+    expect(muted[1]).toEqual({
+      chatId: "-100",
+      actorId: "77",
+      durationSeconds: 120,
+    });
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/mute -100 77 30", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async muteActor() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Muted 77 in -100 for 30 seconds",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/mute -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/mute -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/mute <chatId> <actorId> [seconds]",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/mute -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const rejectedSeconds: number[] = [];
+    const short = await runOperatorCommand({
+      event: event({ text: "/mute -100 77 29", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          rejectedSeconds.push(target.durationSeconds);
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "参数无效" });
+
+    const long = await runOperatorCommand({
+      event: event({ text: "/mute -100 77 31622401", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          rejectedSeconds.push(target.durationSeconds);
+        },
+      },
+      ...kit(),
+    });
+    expect(long).toMatchObject({ text: "参数无效" });
+    expect(rejectedSeconds).toEqual([]);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/mute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/mute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/mute -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async muteActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("bans a member in a managed chat", async () => {
     const deps = kit();
     const banned: { chatId: string; actorId: string }[] = [];

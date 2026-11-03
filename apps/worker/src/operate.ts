@@ -52,6 +52,9 @@ function commandModerator(
     async banActor() {
       throw new Error("ban_unavailable");
     },
+    async muteActor() {
+      throw new Error("mute_unavailable");
+    },
   };
 }
 
