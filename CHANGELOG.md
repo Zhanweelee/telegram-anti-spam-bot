@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-320
+
+- 验证通过的 `restrictChatMember` 把当前全部 `ChatPermissions` 设为 true，且不带 `until_date`。
+- 验证限制和禁言把这些字段，包括 `can_react_to_messages` 和 `can_edit_tag`，设为 false。不增加管理员或故事权限。见 ADR 0353。
+- 30 天保留期没有改。
+
 ### P3-319
 
 - 人从 `restricted` 变成 `member` 时带 `membership: "unrestrict"`。挑战还没到期就删掉验证按钮和挑战。
