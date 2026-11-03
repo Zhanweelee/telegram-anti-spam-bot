@@ -35,3 +35,4 @@ Android 的路径在 `/` 或 `?` 开始之后可以包含单引号。`http://exa
 - `http://example.com'http://bit.ly/…`、`example.com'bit.ly/…` 和 `http://example.com/"http://bit.ly/…` 仍删除后面的短链。
 - 分享 `url` 里的同一组写法同样处理。
 - `https://t.me/+…'http://bit.ly/…` 留着。邀请码和路径不进证据。
+- 标签里的 U+1680、U+205F 和 U+FEFF 后来同样留在这一段。见 ADR 0279。

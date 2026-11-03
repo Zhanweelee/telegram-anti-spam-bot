@@ -546,12 +546,23 @@ function openedDraftUrls(text: string): string[] {
   return scanUrls(
     openPathQuote(
       openPlainTg(
-        openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
+        openBareEnd(
+          openLongLabel(
+            openLongUserinfo(openDraftStops(openStoppingSpace(text))),
+          ),
+        ),
       ),
     ),
     source,
     true,
   );
+}
+
+/** 这些空白会结束网址。U+1680、U+205F 和 U+FEFF 仍留在标签里。 */
+const DRAFT_STOP_SPACE = /[\u00A0\u2000-\u200A\u2028\u2029\u202F\u3000]/g;
+
+function openStoppingSpace(text: string): string {
+  return text.replace(DRAFT_STOP_SPACE, " ");
 }
 
 /** 路径还没开始的单引号，以及双引号，仍结束这一段。路径里的单引号留下。 */
@@ -1763,8 +1774,12 @@ function usernameDraftExtras(
   return found;
 }
 
+const DRAFT_URL_GAP = new RegExp(
+  `[ \\t\\n\\r${String.fromCharCode(0x0b)}${String.fromCharCode(0x0c)}\u00A0\u2000-\u200A\u2028\u2029\u202F\u3000]+`,
+);
+
 function queryUrls(value: string): string[] {
-  return value.split(/\s+/).filter((part) => part.length > 0);
+  return value.split(DRAFT_URL_GAP).filter((part) => part.length > 0);
 }
 
 function closedIpUrl(raw: string): string {
@@ -1786,7 +1801,9 @@ function pushClosedUrl(
   found: { host: string; invite: boolean }[],
 ): void {
   const opened = openPathQuote(
-    openPlainTg(openBareEnd(openLongLabel(openLongUserinfo(raw)))),
+    openPlainTg(
+      openBareEnd(openLongLabel(openLongUserinfo(openStoppingSpace(raw)))),
+    ),
   );
   if (opened !== raw) {
     for (const part of queryUrls(opened)) {
