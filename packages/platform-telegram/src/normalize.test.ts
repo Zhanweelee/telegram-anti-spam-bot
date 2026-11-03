@@ -4443,6 +4443,161 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(ip.event)).not.toContain(path);
   });
 
+  it("keeps the host before an @ that cannot finish user info", async () => {
+    const path = "offer239";
+    const tail = "tail239.example";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 239 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const marked = await draft(
+      78157,
+      -1008389,
+      `http://bit.ly@.${tail}/${path}`,
+    );
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(marked.event)).not.toContain(path);
+    expect(JSON.stringify(marked.event)).not.toContain(tail);
+
+    const address = "203.0.113.239";
+    const ip = await draft(78158, -1008390, `http://${address}@.${tail}/x`);
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toContain(address);
+    expect(JSON.stringify(ip.event)).not.toContain(tail);
+
+    const real = await draft(
+      78159,
+      -1008391,
+      `http://bit.ly@example.com/${path}`,
+    );
+    expect(real.status).toBe("event");
+    if (real.status !== "event") {
+      return;
+    }
+    expect(real.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(real.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(real.event)).not.toContain(path);
+
+    const rooted = await draft(78160, -1008392, `http://bit.ly@/${path}`);
+    expect(rooted.status).toBe("event");
+    if (rooted.status !== "event") {
+      return;
+    }
+    expect(rooted.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(rooted.event)).not.toContain(path);
+
+    const port = await draft(78161, -1008393, `http://bit.ly@:80/${path}`);
+    expect(port.status).toBe("event");
+    if (port.status !== "event") {
+      return;
+    }
+    expect(port.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(port.event)).not.toContain(path);
+
+    const ended = await draft(78162, -1008394, "http://bit.ly@");
+    expect(ended.status).toBe("event");
+    if (ended.status !== "event") {
+      return;
+    }
+    expect(ended.event.message?.hosts ?? []).not.toContain("bit.ly");
+
+    const underscored = await draft(78163, -1008395, "http://bit.ly@_tail");
+    expect(underscored.status).toBe("event");
+    if (underscored.status !== "event") {
+      return;
+    }
+    expect(underscored.event.message?.hosts ?? []).not.toContain("bit.ly");
+
+    const plain = await draft(
+      78164,
+      -1008396,
+      `http://example.com@.${tail}/ok`,
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(plain.event)).not.toContain(tail);
+
+    const code = "CODE239";
+    const invite = await draft(
+      78165,
+      -1008397,
+      `https://t.me@.evil.example/%2B${code}`,
+    );
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+
+    const bang = await draft(78166, -1008398, "http://bit.ly@!");
+    expect(bang.status).toBe("event");
+    if (bang.status !== "event") {
+      return;
+    }
+    expect(bang.event.message?.hosts).toContain("bit.ly");
+
+    const account = await draft(78167, -1008399, `http://user@bit.ly/${path}`);
+    expect(account.status).toBe("event");
+    if (account.status !== "event") {
+      return;
+    }
+    expect(account.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(account.event)).not.toContain(path);
+
+    const embedded = await normalize({
+      update_id: 78168,
+      message: {
+        message_id: 78168,
+        date: 1761955200,
+        chat: { id: -1008400, type: "supergroup" },
+        from: { id: 239 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://bit.ly@.${tail}/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+    expect(JSON.stringify(embedded.event)).not.toContain(tail);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

@@ -632,6 +632,11 @@ function openLongLabel(text: string): string {
       }
     } else {
       const rest = authority.slice(host);
+      if (rest.startsWith("@") && !atCanFinish(rest)) {
+        out += `${text.slice(index, index + scheme + host)} `;
+        index = skipUnfinishedAt(text, index + scheme + host + 1);
+        continue;
+      }
       if (labelEndsUrl(rest)) {
         out += `${text.slice(index, index + scheme + host)} `;
         index += scheme + host + 1;
@@ -656,6 +661,36 @@ function labelEndsUrl(rest: string): boolean {
     return true;
   }
   return rest.startsWith(".") && !/^[:/?]/.test(rest.charAt(1));
+}
+
+/** `@` 后面能接上主机名、路径、端口或 `_` 时，用户信息才成立。 */
+function atCanFinish(rest: string): boolean {
+  const next = rest.charAt(1);
+  if (next === "" || next === "/" || next === "?" || next === "_") {
+    return true;
+  }
+  if (/[A-Za-z0-9]/.test(next) || next.charCodeAt(0) > 0x7f) {
+    return true;
+  }
+  if (next !== ":") {
+    return false;
+  }
+  const port = /^:\d{1,5}(?!\d)/.exec(rest.slice(1));
+  if (!port?.[0]) {
+    return false;
+  }
+  const after = rest.charAt(1 + port[0].length);
+  return after === "" || !/[A-Za-z0-9_]/.test(after);
+}
+
+function skipUnfinishedAt(text: string, index: number): number {
+  while (index < text.length && !/\s/.test(text.charAt(index))) {
+    if (schemeAt(text, index) > 0) {
+      return index;
+    }
+    index += 1;
+  }
+  return index;
 }
 
 function schemeAfterHostRun(authority: string): number | null {

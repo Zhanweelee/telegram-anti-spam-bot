@@ -12993,4 +12993,123 @@ describe("screenTelegramEvent", () => {
     expect(inviteDump).not.toContain(code);
     expect(inviteDump).not.toContain("机密群名");
   });
+
+  it("reads the host before an @ that cannot finish user info", async () => {
+    const path = "offer239";
+    const tail = "tail239.example";
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2398,
+        message: {
+          message_id: 2398,
+          date: 1761955200,
+          chat: { id: -1008389, type: "supergroup", title: "机密群名" },
+          from: { id: 239, first_name: "Ada" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=http://bit.ly@.${tail}/${path}`,
+            },
+          ],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator: createMemoryModerator(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(tail);
+    expect(dumped).not.toContain("机密群名");
+
+    const real = await normalizeUpdate({
+      update: {
+        update_id: 2399,
+        message: {
+          message_id: 2399,
+          date: 1761955200,
+          chat: { id: -1008391, type: "supergroup", title: "机密群名" },
+          from: { id: 239, first_name: "Ada" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=http://bit.ly@example.com/${path}`,
+            },
+          ],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(real.status).toBe("event");
+    if (real.status !== "event") {
+      return;
+    }
+    const kept = await screenTelegramEvent(real.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(JSON.stringify(kept.decision)).not.toContain("bit.ly");
+    expect(JSON.stringify(kept.decision)).not.toContain(path);
+
+    const bang = await normalizeUpdate({
+      update: {
+        update_id: 2400,
+        message: {
+          message_id: 2400,
+          date: 1761955200,
+          chat: { id: -1008398, type: "supergroup", title: "机密群名" },
+          from: { id: 239, first_name: "Ada" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: "https://t.me/share/url?text=http://bit.ly@!",
+            },
+          ],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bang.status).toBe("event");
+    if (bang.status !== "event") {
+      return;
+    }
+    const marked = await screenTelegramEvent(bang.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(marked.decision.action).toBe("delete");
+    expect(marked.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(marked.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(marked.decision)).not.toContain("机密群名");
+  });
 });
