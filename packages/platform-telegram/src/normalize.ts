@@ -938,6 +938,12 @@ function openBareEnd(text: string): string {
       index = domain + dotted;
       continue;
     }
+    const letter = bareLetterSkip(rest);
+    if (letter > 0) {
+      out += `${text.slice(index, domain)} `;
+      index = domain + letter;
+      continue;
+    }
     if (
       rest.startsWith("/") ||
       rest.startsWith("?") ||
@@ -1116,6 +1122,34 @@ function bareDotSkip(rest: string): number {
     }
   }
   return skip;
+}
+
+/** 已结束的裸主机名不把后面的非 ASCII 字母留在这一段。字母后面的网址另开。 */
+function bareLetterSkip(rest: string): number {
+  let index = 0;
+  while (rest.charAt(index) === "_") {
+    index += 1;
+  }
+  const code = rest.codePointAt(index);
+  if (code === undefined || code <= 0x7f) {
+    return 0;
+  }
+  const after = rest.slice(index + String.fromCodePoint(code).length);
+  if (schemeAt(after, 0) > 0) {
+    return rest.length - after.length;
+  }
+  if (!after.startsWith("/") && !after.startsWith("?")) {
+    return 0;
+  }
+  const body = after.slice(1);
+  if (
+    schemeAt(body, 0) > 0 ||
+    strictBareEnd(body, 0) !== null ||
+    bareIpAt(body)
+  ) {
+    return rest.length - body.length;
+  }
+  return 0;
 }
 
 function schemeAfterHostRun(authority: string): number | null {
