@@ -172,6 +172,7 @@ function harness(options?: { failStorage?: boolean }) {
     async unpinChat() {},
     async unpinTopic() {},
     async closeTopic() {},
+    async openTopic() {},
   };
   return {
     records,

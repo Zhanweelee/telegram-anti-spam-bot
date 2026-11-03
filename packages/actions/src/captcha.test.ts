@@ -108,6 +108,7 @@ function moderator(
     async unpinChat() {},
     async unpinTopic() {},
     async closeTopic() {},
+    async openTopic() {},
   };
 }
 

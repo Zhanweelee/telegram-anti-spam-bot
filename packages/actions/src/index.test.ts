@@ -96,6 +96,7 @@ describe("delete action", () => {
           async unpinChat() {},
           async unpinTopic() {},
           async closeTopic() {},
+          async openTopic() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -170,6 +171,7 @@ describe("delete action", () => {
         async unpinChat() {},
         async unpinTopic() {},
         async closeTopic() {},
+        async openTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -246,6 +248,7 @@ describe("delete action", () => {
         async unpinChat() {},
         async unpinTopic() {},
         async closeTopic() {},
+        async openTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -324,6 +327,7 @@ function ports(): ModerationPort & {
     async unpinChat() {},
     async unpinTopic() {},
     async closeTopic() {},
+    async openTopic() {},
   };
 }
 

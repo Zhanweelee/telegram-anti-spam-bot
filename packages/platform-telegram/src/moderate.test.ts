@@ -756,6 +756,60 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reopens the General topic or one forum topic", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.openTopic({ tenantId: "local", chatId: "-100" });
+    await moderator.openTopic({
+      tenantId: "local",
+      chatId: "-100",
+      threadId: "1",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/reopenGeneralForumTopic`,
+      `https://api.telegram.org/bot${token}/reopenForumTopic`,
+    ]);
+    const general = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      message_thread_id?: number;
+      message_id?: number;
+    };
+    const topic = JSON.parse(calls[1]?.body ?? "{}") as {
+      chat_id?: number;
+      message_thread_id?: number;
+      message_id?: number;
+    };
+    expect(general.chat_id).toBe(-100);
+    expect(general.message_thread_id).toBeUndefined();
+    expect(general.message_id).toBeUndefined();
+    expect(topic.chat_id).toBe(-100);
+    expect(topic.message_thread_id).toBe(1);
+    expect(topic.message_id).toBeUndefined();
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).openTopic({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("opentopic_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

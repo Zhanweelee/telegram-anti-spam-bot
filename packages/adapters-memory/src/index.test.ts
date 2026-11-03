@@ -202,4 +202,14 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", threadId: "1" },
     ]);
   });
+
+  it("records a reopened topic with the thread id only when one was given", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.openTopic({ tenantId: "t", chatId: "c" });
+    await moderator.openTopic({ tenantId: "t", chatId: "c", threadId: "1" });
+    expect(moderator.topicsOpened).toEqual([
+      { tenantId: "t", chatId: "c" },
+      { tenantId: "t", chatId: "c", threadId: "1" },
+    ]);
+  });
 });
