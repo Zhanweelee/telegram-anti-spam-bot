@@ -2250,6 +2250,65 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a boost username draft and leaves a boosted channel", async () => {
+    const hidden = "offer215";
+    const slug = "name215";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78074,
+      message: {
+        message_id: 78074,
+        date: 1761955200,
+        chat: { id: -1008305, type: "supergroup" },
+        from: { id: 215 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/boost?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const channel = await normalize({
+      update_id: 78075,
+      message: {
+        message_id: 78075,
+        date: 1761955200,
+        chat: { id: -1008306, type: "supergroup" },
+        from: { id: 215 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/boost/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.hosts).toEqual(["t.me"]);
+    expect(channel.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(channel.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

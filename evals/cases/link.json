@@ -4075,5 +4075,60 @@
     "id": "auction-slug-subdomain-name",
     "text": "https://stargift_auction.t.me/slug214?text=https%3A%2F%2Fbit.ly%2Foffer214",
     "label": "ham"
+  },
+  {
+    "id": "boost-username",
+    "text": "https://t.me/boost?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-resolve",
+    "text": "tg://resolve?domain=boost&text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-prefix",
+    "text": "https://boost.t.me?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-slash",
+    "text": "https://t.me/boost/?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-capital",
+    "text": "https://t.me/Boost/name215?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-hyphen",
+    "text": "https://t.me/boost/name-now?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "spam"
+  },
+  {
+    "id": "boost-channel",
+    "text": "https://t.me/boost/name215?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "ham"
+  },
+  {
+    "id": "boost-trailing-slash",
+    "text": "https://t.me/boost/name215/?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "ham"
+  },
+  {
+    "id": "boost-post",
+    "text": "https://t.me/boost/5?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "ham"
+  },
+  {
+    "id": "boost-subdomain-post",
+    "text": "https://boost.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "ham"
+  },
+  {
+    "id": "boost-channel-id",
+    "text": "https://t.me/boost?c=215&text=https%3A%2F%2Fbit.ly%2Foffer215",
+    "label": "ham"
   }
 ]

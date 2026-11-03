@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-215
+
+- `t.me/boost` 仍按用户名读取。后面是频道用户名时打开助推，不读 `text`。见 ADR 0248。
+- `t.me/boost?text=` 和 `t.me/boost/name-now?text=` 里的短链仍删除。`t.me/boost/name215?text=`、`t.me/boost?c=215&text=` 和 `boost.t.me/数字?text=` 留着。用户名和频道 id 不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-214
 
 - `t.me/stargift_auction` 仍按用户名读取。拍卖短名和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0247。

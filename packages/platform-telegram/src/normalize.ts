@@ -1313,6 +1313,9 @@ function isUsernameDraft(url: URL): boolean {
   if (newBotReplacesDraft(host, parts)) {
     return false;
   }
+  if (boostReplacesDraft(host, url, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1665,6 +1668,26 @@ function newBotReplacesDraft(host: string, parts: readonly string[]): boolean {
   return parts.slice(1).every((part) => slug(part));
 }
 
+/** 小写 `boost` 后面是频道用户名时打开助推。连字符和没有这段时仍写草稿。 */
+function boostReplacesDraft(
+  host: string,
+  url: URL,
+  parts: readonly string[],
+): boolean {
+  const channel = (value: string | undefined) =>
+    value !== undefined && /^[A-Za-z0-9._]+$/.test(value);
+  if (host === "boost.t.me") {
+    return parts.length === 1 && /^\d+$/.test(parts[0] ?? "");
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "boost") {
+    return false;
+  }
+  if (searchParam(url, "c") !== null) {
+    return true;
+  }
+  return parts.length === 2 && channel(parts[1]);
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1743,7 +1766,6 @@ function isPublicUsername(value: string): boolean {
 
 const reservedUsernames = new Set([
   "addlist",
-  "boost",
   "c",
   "confirmphone",
   "folder",

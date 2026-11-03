@@ -2706,6 +2706,125 @@ describe("link fixtures", () => {
     expect(JSON.stringify(named)).not.toContain(hidden);
   });
 
+  it("reads a boost username draft and leaves a boosted channel", async () => {
+    const hidden = "offer215";
+    const slug = "name215";
+    const address = "203.0.113.215";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/boost?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/boost/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://boost.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=boost&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("boost");
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/Boost/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const hyphenated = await detector.detect({
+      event: eventFor(`https://t.me/boost/name-now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenated?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/boost?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/boost/name-now?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.215");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const channel = await detector.detect({
+      event: eventFor(`https://t.me/boost/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(channel).toBeNull();
+    expect(JSON.stringify(channel)).not.toContain(hidden);
+    expect(JSON.stringify(channel)).not.toContain(slug);
+    const dotted = await detector.detect({
+      event: eventFor(`https://t.me/boost/name.now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted).toBeNull();
+    const trailed = await detector.detect({
+      event: eventFor(`https://t.me/boost/${slug}/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailed).toBeNull();
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/boost/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post).toBeNull();
+    const numeric = await detector.detect({
+      event: eventFor(`https://boost.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    const coded = await detector.detect({
+      event: eventFor(`https://t.me/boost?c=215&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(coded).toBeNull();
+    const hyphenCoded = await detector.detect({
+      event: eventFor(`https://t.me/boost/name-now?c=215&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenCoded).toBeNull();
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/boost/${slug}/extra?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://boost.t.me/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-215 助推频道不读 text — done
+
+验收：`t.me/boost?text=`、`t.me/boost/?text=`、`boost.t.me?text=`、`tg://resolve?domain=boost&text=`、`t.me/Boost/短名?text=` 和 `t.me/boost/name-now?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/boost/name215`、`boost/5`、`boost?c=215` 和 `boost.t.me/数字` 留着。用户名和频道 id 不进证据。默认名单仍是 ADR 0026。
+
 ### P3-214 礼物拍卖用户名仍读 text — done
 
 验收：`t.me/stargift_auction?text=`、`t.me/stargift_auction/?text=`、`stargift_auction.t.me?text=`、`tg://resolve?domain=stargift_auction&text=`、`t.me/StarGift_Auction/短名?text=`、`t.me/stargift_auction/slug214?text=`、`t.me/stargift_auction/5?text=` 和 `stargift_auction.t.me/数字?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/stargift_auction/短名/再一段` 和 `stargift_auction.t.me/短名` 留着。用户名和拍卖短名不进证据。默认名单仍是 ADR 0026。
@@ -2485,6 +2489,12 @@
 
 - 做了什么：带协议的主机名里，非间距标记写在标签末尾且后面还能接上点、路径、查询或端口时，这个标记留在标签里。后面的希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 Android 仍算进这条链接时留下。选择写在 ADR 0229。
 - 学到什么：`http://bit͏.lyα/…` 在 Android 上是一条主机名，地址解析器给出的名字不是 `bit.ly`。非间距标记不能当词边界，原先会在点号前面把标签截断。`http://bit.lỳ/…` 的组合附加符号也留在标签里，点开的主机名不是短链。没有协议的 `bit͏.lyα/…` 仍只打开短链。`#`、`@` 和空格也会退回短链。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-03 P3-215
+
+- 做了什么：`t.me/boost` 仍从 `text` 抽主机名。小写 `boost` 后面一段符合 `[A-Za-z0-9._]+`，或查询里有 `c` 时不读。连字符仍读。选择写在 ADR 0248。
+- 学到什么：Android 把 `boost` 和 `boost/` 当成助推，不读 `text`。没有频道时它不打开会话，桌面端仍写成用户名草稿。桌面端只在第一段正好是小写 `boost` 时丢掉 `text`。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
 
 ### 2026-11-03 P3-214
