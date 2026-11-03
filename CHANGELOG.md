@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-332
+
+- 私聊 `/ban` 调用 `banChatMember`，`revoke_messages` 为 false，不带 `until_date`。
+- 没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经封禁。见 ADR 0364。
+- 30 天保留期没有改。
+
 ### P3-331
 
 - 私聊 `/unmute` 先看成员状态。只有 `restricted` 才把每一项权限打开。

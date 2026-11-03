@@ -68,6 +68,7 @@ const COMMAND_NAMES = [
   "chats",
   "unban",
   "unmute",
+  "ban",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -94,7 +95,7 @@ export interface OperatorCommandInput {
   readonly quota?: QuotaReader;
   readonly chats?: ChatDirectory;
   readonly moderator?: Partial<
-    Pick<ModerationPort, "unbanActor" | "unmuteActor">
+    Pick<ModerationPort, "banActor" | "unbanActor" | "unmuteActor">
   >;
   readonly scope?: CommandScope;
 }
@@ -201,6 +202,8 @@ async function dispatch(
       return unbanMember(input, args);
     case "unmute":
       return unmuteMember(input, args);
+    case "ban":
+      return banMember(input, args);
   }
 }
 
@@ -550,6 +553,53 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function banMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.ban.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const ban = input.moderator?.banActor;
+  if (!ban) {
+    rejectBan(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await ban({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+  } catch {
+    rejectBan(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.ban.done", { chatId, actorId });
+}
+
+function rejectBan(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "ban",
   });
 }
 

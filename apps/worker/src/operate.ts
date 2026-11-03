@@ -38,6 +38,23 @@ export interface OperateDeps extends ScreenDeps {
   readonly chats?: ChatDirectory;
 }
 
+function commandModerator(
+  moderator: ReturnType<typeof moderatorFor>,
+  deps: OperateDeps,
+): NonNullable<Parameters<typeof runOperatorCommand>[0]["moderator"]> {
+  const token = deps.botToken?.trim() ?? "";
+  if (deps.moderator !== undefined || token.length > 0) {
+    return moderator;
+  }
+  return {
+    unbanActor: (target) => moderator.unbanActor(target),
+    unmuteActor: (target) => moderator.unmuteActor(target),
+    async banActor() {
+      throw new Error("ban_unavailable");
+    },
+  };
+}
+
 export async function handleIncomingEvent(
   event: Event,
   deps: OperateDeps = {},
@@ -211,7 +228,7 @@ export async function handleIncomingEvent(
         }
       : {}),
     ...(chats ? { chats } : {}),
-    moderator,
+    moderator: commandModerator(moderator, deps),
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
