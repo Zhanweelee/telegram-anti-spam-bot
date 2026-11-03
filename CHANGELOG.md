@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-228
+
+- `t.me/webproxy` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0261。
+- `t.me/webproxy/slug228?text=`、`t.me/webproxy?text=` 和 `tg://resolve?domain=webproxy&text=` 里的短链删除。网页代理仍只读 `server`。空的 `server` 仍改读 `host`。短名路径上的 `server` 不读。再多一段路径和 `webproxy.t.me/短名` 留着。用户名和 `secret` 不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-227
 
 - `t.me/socks` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0260。

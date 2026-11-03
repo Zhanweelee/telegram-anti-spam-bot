@@ -44,3 +44,4 @@ ADR 0137 认为 `t.me/用户名/123?text=` 不会把 `text` 放进输入框。
 - `t.me/c?text=` 后来由 ADR 0256 按用户名读取。小写 `c/数字` 仍不读 `text`。
 - 空的 `proxy.t.me` 后来由 ADR 0259 按用户名读取 `text`。`proxy.t.me/短名` 仍不读。
 - 空的 `socks.t.me` 后来由 ADR 0260 按用户名读取 `text`。`socks.t.me/短名` 仍不读。
+- 空的 `webproxy.t.me` 后来由 ADR 0261 按用户名读取 `text`。`webproxy.t.me/短名` 仍不读。

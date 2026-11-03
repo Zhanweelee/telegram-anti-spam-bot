@@ -4834,6 +4834,66 @@
   {
     "id": "webproxy-app",
     "text": "https://t.me/webproxy/slug227?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-bare",
+    "text": "https://t.me/webproxy?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-slash",
+    "text": "https://t.me/webproxy/?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-resolve",
+    "text": "tg://resolve?domain=webproxy&text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-capital",
+    "text": "https://t.me/WebProxy/slug.228?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-post",
+    "text": "https://t.me/webproxy/5?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-prefix",
+    "text": "https://webproxy.t.me?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-prefix-post",
+    "text": "https://webproxy.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "spam"
+  },
+  {
+    "id": "webproxy-app-server",
+    "text": "https://t.me/webproxy/slug228?server=https%3A%2F%2Fbit.ly%2Foffer228&secret=SECRET228",
+    "label": "ham"
+  },
+  {
+    "id": "webproxy-local",
+    "text": "tg://webproxy?server=example.com&text=https%3A%2F%2Fbit.ly%2Foffer228&secret=SECRET228",
+    "label": "ham"
+  },
+  {
+    "id": "webproxy-extra",
+    "text": "https://t.me/webproxy/slug.228/extra?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "ham"
+  },
+  {
+    "id": "webproxy-subdomain-name",
+    "text": "https://webproxy.t.me/slug.228?text=https%3A%2F%2Fbit.ly%2Foffer228",
+    "label": "ham"
+  },
+  {
+    "id": "getpremium-app",
+    "text": "https://t.me/getpremium/slug228?text=https%3A%2F%2Fbit.ly%2Foffer228",
     "label": "ham"
   }
 ]

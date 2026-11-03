@@ -32,3 +32,4 @@ Telegram Desktop 的网页代理用 `https://t.me/webproxy` 和 `tg://webproxy` 
 - `t.me/web?text=` 后来由 ADR 0249 按用户名读取。`server` 仍不是网页代理。
 - 正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
 - 没有 `server` 时的 `host` 后来由 ADR 0135 只留下主机名。长度为 0 的 `server` 后来由 ADR 0136 改读 `host`。
+- `t.me/webproxy/短名` 后来由 ADR 0261 按用户名读取 `text`。没有短名时也读。路径正好是 `/webproxy` 时仍只读 `server`。空的 `server` 仍改读 `host`。短名路径上的 `server` 不读。`tg://webproxy` 的 `text` 仍不读。

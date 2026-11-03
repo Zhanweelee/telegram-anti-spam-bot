@@ -4173,7 +4173,9 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(webproxy).toBeNull();
+    expect(webproxy?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(webproxy)).not.toContain(code);
+    expect(JSON.stringify(webproxy)).not.toContain(hidden);
     const local = await detector.detect({
       event: eventFor(
         `tg://socks?server=example.com&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}&user=USER227&pass=PASS227`,
@@ -4192,6 +4194,143 @@ describe("link fixtures", () => {
     expect(extra).toBeNull();
     const named = await detector.detect({
       event: eventFor(`https://socks.t.me/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+  });
+
+  it("reads a webproxy username draft and keeps the server check", async () => {
+    const hidden = "offer228";
+    const dotted = "slug.228";
+    const code = "slug228";
+    const address = "203.0.113.228";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const app = await detector.detect({
+      event: eventFor(`https://t.me/webproxy/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain(code);
+    expect(JSON.stringify(app)).not.toContain(hidden);
+    const bare = await detector.detect({
+      event: eventFor(`https://t.me/webproxy?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/webproxy/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.reasons).toEqual(["short_link"]);
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=webproxy&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/WebProxy/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(capital)).not.toContain(dotted);
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/webproxy/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.reasons).toEqual(["short_link"]);
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/WebProxy/${dotted}?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/WebProxy/${dotted}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.228");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const prefixed = await detector.detect({
+      event: eventFor(`https://webproxy.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const numeric = await detector.detect({
+      event: eventFor(`https://webproxy.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const command = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&secret=SECRET228`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(command?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(command)).not.toContain("SECRET228");
+    expect(JSON.stringify(command)).not.toContain(hidden);
+    const emptyServer = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy?server=&host=${address}&secret=SECRET228`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(emptyServer?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(emptyServer)).not.toContain("SECRET228");
+    const serverOnly = await detector.detect({
+      event: eventFor(
+        `https://t.me/webproxy/${code}?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&secret=SECRET228`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(serverOnly).toBeNull();
+    expect(JSON.stringify(serverOnly)).not.toContain(hidden);
+    expect(JSON.stringify(serverOnly)).not.toContain("SECRET228");
+    const premium = await detector.detect({
+      event: eventFor(`https://t.me/getpremium/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(premium).toBeNull();
+    const local = await detector.detect({
+      event: eventFor(
+        `tg://webproxy?server=example.com&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}&secret=SECRET228`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(local).toBeNull();
+    expect(JSON.stringify(local)).not.toContain(hidden);
+    expect(JSON.stringify(local)).not.toContain("SECRET228");
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/webproxy/${dotted}/extra?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://webproxy.t.me/${dotted}?text=${draft}`),
       logger: createMemoryLogger(),
       signal,
     });

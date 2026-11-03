@@ -42,4 +42,4 @@ Android 没有单独的 `socks/` 路径。裸的 `t.me/socks`、末尾斜杠、�
 - `t.me/socks?server=` 仍按 socks 命令删除。用户名和密码不进证据。`t.me/socks/短名?server=` 不读 `server`。
 - `tg://socks` 的 `text` 仍不读。
 - `t.me/socks/短名/再一段` 和 `socks.t.me/短名` 留着。
-- `t.me/webproxy/短名` 仍不读 `text`。
+- `t.me/webproxy/短名` 后来由 ADR 0261 按用户名读取 `text`。没有短名时也读。`getpremium` 仍不读 `text`。

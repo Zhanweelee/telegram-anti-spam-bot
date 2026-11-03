@@ -1527,12 +1527,7 @@ function isPublicUsername(value: string): boolean {
   );
 }
 
-const reservedUsernames = new Set([
-  "getpremium",
-  "s",
-  "telegrampassport",
-  "webproxy",
-]);
+const reservedUsernames = new Set(["getpremium", "s", "telegrampassport"]);
 
 function telegramMsgText(raw: string): string | null {
   if (!isTelegramMsgRaw(raw)) {

@@ -1879,12 +1879,7 @@ function isPublicUsername(value: string): boolean {
   );
 }
 
-const reservedUsernames = new Set([
-  "getpremium",
-  "s",
-  "telegrampassport",
-  "webproxy",
-]);
+const reservedUsernames = new Set(["getpremium", "s", "telegrampassport"]);
 
 function isTelegramMsg(url: URL): boolean {
   if (url.protocol !== "tg:") {
