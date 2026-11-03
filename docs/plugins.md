@@ -35,11 +35,11 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 }
 ```
 
-动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。
+动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。不足 30 秒或超过 366 天的限制先收到这个区间，避免被当成永久限制。见 ADR 0354。
 
 `log` 只写标识、分数和 reason。`report` 把同一份通知交给 `Notifier`。没有通知端口时返回 `report_unavailable`。见 ADR 0021。
 
-`captcha` 只处理 `kind: "chat_member"` 且 `membership: "join"` 的事件。它调用 `beginChallenge`：先写入挑战，再 `restrictActor`。限制失败就删掉挑战并返回 `failed` / `captcha_unavailable`。结果里不要放 nonce。按钮文案和 `restrictChatMember` 留在 `platform-telegram`。没配 `DB` 时挑战留在内存，配了写入 D1。同一份 nonce 只有第一次取走时解除限制并写入 `captcha_passed`。到期清理也只取走这份 nonce。同一条入群再投递时，挑战还在就再发一次按钮；这次发送失败不解除限制。记下按钮的 message id 后，通过、到期、再发一颗或再次入群换掉挑战时删掉旧提示。成员离群或被移出时删掉还在的按钮；被限制时不删。入群改成封禁、禁言或删除时，也删掉上一颗。记不上 id 就删掉刚发出的按钮。点到另一颗也删。别人点了不删。别人的活按钮也不删。被升为管理员时删掉还在的按钮，不解除限制。提前解除且还没到期时也删。通过时把每一项权限都打开。限制时把反应和标签也关上。见 ADR 0009、ADR 0051、ADR 0340、ADR 0341、ADR 0342、ADR 0343、ADR 0344、ADR 0345、ADR 0346、ADR 0347、ADR 0348、ADR 0349、ADR 0350、ADR 0351、ADR 0352 和 ADR 0353。
+`captcha` 只处理 `kind: "chat_member"` 且 `membership: "join"` 的事件。它调用 `beginChallenge`：先写入挑战，再 `restrictActor`。限制失败就删掉挑战并返回 `failed` / `captcha_unavailable`。结果里不要放 nonce。按钮文案和 `restrictChatMember` 留在 `platform-telegram`。没配 `DB` 时挑战留在内存，配了写入 D1。同一份 nonce 只有第一次取走时解除限制并写入 `captcha_passed`。到期清理也只取走这份 nonce。同一条入群再投递时，挑战还在就再发一次按钮；这次发送失败不解除限制。记下按钮的 message id 后，通过、到期、再发一颗或再次入群换掉挑战时删掉旧提示。成员离群或被移出时删掉还在的按钮；被限制时不删。入群改成封禁、禁言或删除时，也删掉上一颗。记不上 id 就删掉刚发出的按钮。点到另一颗也删。别人点了不删。别人的活按钮也不删。被升为管理员时删掉还在的按钮，不解除限制。提前解除且还没到期时也删。通过时把每一项权限都打开。限制时把反应和标签也关上。不足 30 秒或超过 366 天时先收到这个区间。见 ADR 0009、ADR 0051、ADR 0340、ADR 0341、ADR 0342、ADR 0343、ADR 0344、ADR 0345、ADR 0346、ADR 0347、ADR 0348、ADR 0349、ADR 0350、ADR 0351、ADR 0352、ADR 0353 和 ADR 0354。
 
 入群检测器在 `packages/detectors-join`，`membership !== "join"` 时返回 null，并带 fixtures。`decline` 只处理 `kind: "join_request"`，调用 `declineChatJoinRequest`。没有命中时申请仍留给管理员。见 ADR 0116。默认规则 `join_link` 用现有链接检测器看入群昵称。短链或邀请就封禁，普通网址仍只验证。见 ADR 0117。
 

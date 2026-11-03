@@ -231,6 +231,23 @@ async function postTelegram(input: {
   }
 }
 
+const minimumRestrictionSeconds = 30;
+const maximumRestrictionSeconds = 366 * 24 * 60 * 60;
+
+function restrictionSeconds(durationSeconds: number): number {
+  if (!Number.isFinite(durationSeconds)) {
+    return minimumRestrictionSeconds;
+  }
+  const seconds = Math.floor(durationSeconds);
+  if (seconds < minimumRestrictionSeconds) {
+    return minimumRestrictionSeconds;
+  }
+  if (seconds > maximumRestrictionSeconds) {
+    return maximumRestrictionSeconds;
+  }
+  return seconds;
+}
+
 function silencedUntil(
   target: MuteTarget,
   nowSeconds: () => number,
@@ -245,7 +262,7 @@ function silencedUntil(
     chat_id: telegramId(target.chatId),
     user_id: telegramId(target.actorId),
     permissions: silenced,
-    until_date: nowSeconds() + target.durationSeconds,
+    until_date: nowSeconds() + restrictionSeconds(target.durationSeconds),
     use_independent_chat_permissions: true,
   };
 }
