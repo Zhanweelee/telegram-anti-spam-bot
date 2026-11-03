@@ -1246,28 +1246,30 @@ function schemeEndingAt(text: string, index: number): number {
 function openedDraftUrls(text: string): string[] {
   const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
-    openSchemedLookalike(
-      openPathQuote(
-        openPlainTg(
-          openBareEnd(
-            openSchemeLetter(
-              openLookalikeHost(
-                openLongLabel(
-                  openLongUserinfo(
-                    openHostlessPort(
-                      openEmptyHash(
-                        openDraftStops(
-                          openEncodedBracketHost(
-                            openStoppingSpace(
-                              openFinishedEncodedDot(
-                                openSchemedPercentHost(
-                                  openEncodedSlashBoundary(
-                                    openEncodedSlashHost(
-                                      openEncodedHyphenHost(
-                                        openEncodedPlusHost(
-                                          openEncodedHostBody(
-                                            openEncodedGapHost(
-                                              foldBoundaryMark(text),
+    openSchemedScript(
+      openSchemedLookalike(
+        openPathQuote(
+          openPlainTg(
+            openBareEnd(
+              openSchemeLetter(
+                openLookalikeHost(
+                  openLongLabel(
+                    openLongUserinfo(
+                      openHostlessPort(
+                        openEmptyHash(
+                          openDraftStops(
+                            openEncodedBracketHost(
+                              openStoppingSpace(
+                                openFinishedEncodedDot(
+                                  openSchemedPercentHost(
+                                    openEncodedSlashBoundary(
+                                      openEncodedSlashHost(
+                                        openEncodedHyphenHost(
+                                          openEncodedPlusHost(
+                                            openEncodedHostBody(
+                                              openEncodedGapHost(
+                                                foldBoundaryMark(text),
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -1291,6 +1293,62 @@ function openedDraftUrls(text: string): string[] {
     ),
     source,
     true,
+  );
+}
+
+/**
+ * 带协议的主机名后面，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 `@` 前会被收掉。
+ * 收掉之后 `@` 会变成用户信息。这里先换成空格，前面的短链仍单独打开。
+ */
+function openSchemedScript(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const scheme = schemeAt(text, index);
+    if (scheme === 0) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const hostStart = schemedUserinfoEnd(text, index + scheme);
+    const hostEnd = schemedStrictHostEnd(text, hostStart);
+    const runEnd =
+      hostEnd === null ? hostStart : draftScriptRunEnd(text, hostEnd);
+    if (hostEnd === null || runEnd === hostEnd || text.charAt(runEnd) !== "@") {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    out += `${text.slice(index, hostEnd)} `;
+    index = runEnd;
+  }
+  return out;
+}
+
+function draftScriptRunEnd(text: string, index: number): number {
+  let end = index;
+  while (end < text.length) {
+    const code = text.codePointAt(end);
+    if (code === undefined || !draftScriptLetter(code)) {
+      break;
+    }
+    end += String.fromCodePoint(code).length;
+  }
+  return end;
+}
+
+function draftScriptLetter(code: number): boolean {
+  if (code <= 0x7f) {
+    return false;
+  }
+  const char = String.fromCodePoint(code);
+  return (
+    /^\p{L}$/u.test(char) &&
+    /^(?:\p{Script=Greek}|\p{Script=Cyrillic}|\p{Script=Armenian}|\p{Script=Latin})$/u.test(
+      char,
+    )
   );
 }
 

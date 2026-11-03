@@ -40,3 +40,4 @@ Android 把带协议主机名后面的点状间隔号留在标签里。路径、
 - `http://bit.ly·@evil.com/…`、`http://bit.ly·#…`、`http://bit.ly。/…`、`bit.ly·.notarealtld/…` 和 `http://bit.ly· evil.com/…` 仍按短链删除。
 - `example.com·.bit.ly/…` 仍按短链删除。证据是 `example.comx.bit.ly`。
 - 带协议的主机名里，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母留在标签里。见 ADR 0224。
+- 带协议的文字字母在隐藏草稿里也留在标签里。`http://bit.lyα@evil.com/…` 仍按短链删除。见 ADR 0313。
