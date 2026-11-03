@@ -172,17 +172,31 @@ export async function runPipeline(
   }
 
   const decision = buildDecision(fired, hitsById);
-  const actionResults = await executeActions({
-    planned: plannedActionIds(fired.map((item) => item.rule)),
-    actions: input.actions,
+  const planned = plannedActionIds(fired.map((item) => item.rule));
+  const duplicate = await findDuplicateAudit({
     event,
     decision,
     dryRun,
-    moderator: input.moderator,
+    storage: input.storage,
     logger,
   });
+  const actionResults = duplicate
+    ? planned.map((actionId) => ({
+        actionId,
+        status: "skipped" as const,
+        detail: "duplicate",
+      }))
+    : await executeActions({
+        planned,
+        actions: input.actions,
+        event,
+        decision,
+        dryRun,
+        moderator: input.moderator,
+        logger,
+      });
 
-  if (!dryRun && decision.action !== "allow") {
+  if (!duplicate && !dryRun && decision.action !== "allow") {
     await persistAudit({
       event,
       decision,
@@ -200,6 +214,7 @@ export async function runPipeline(
     action: decision.action,
     score: decision.score,
     dryRun,
+    ...(duplicate ? { duplicate: true } : {}),
   });
 
   return {
@@ -404,6 +419,42 @@ function buildDecision(
 
 function plannedActionIds(rules: readonly Rule[]): string[] {
   return uniqueIds(rules.flatMap((rule) => [...rule.actions]));
+}
+
+async function findDuplicateAudit(input: {
+  event: Event;
+  decision: Decision;
+  dryRun: boolean;
+  storage: Storage;
+  logger: Logger;
+}): Promise<boolean> {
+  if (input.dryRun || input.decision.action === "allow") {
+    return false;
+  }
+  try {
+    const existing = await input.storage.getAudit(
+      input.event.tenantId,
+      input.event.chatId,
+      input.event.id,
+    );
+    if (!existing) {
+      return false;
+    }
+    input.logger.info("audit_duplicate", {
+      eventId: input.event.id,
+      tenantId: input.event.tenantId,
+      chatId: input.event.chatId,
+    });
+    return true;
+  } catch {
+    input.logger.error("audit_lookup_failed", {
+      eventId: input.event.id,
+      tenantId: input.event.tenantId,
+      chatId: input.event.chatId,
+      code: "storage_failed",
+    });
+    return false;
+  }
 }
 
 async function executeActions(input: {

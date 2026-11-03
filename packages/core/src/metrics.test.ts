@@ -100,6 +100,35 @@ describe("aggregateMetrics", () => {
     });
   });
 
+  it("ignores a duplicate completion and counts a failed audit lookup", () => {
+    const report = aggregateMetrics([
+      entry("pipeline_completed", {
+        tenantId: "tenant_a",
+        chatId: "-100",
+        action: "delete",
+        dryRun: false,
+      }),
+      entry("pipeline_completed", {
+        tenantId: "tenant_a",
+        chatId: "-100",
+        action: "delete",
+        dryRun: false,
+        duplicate: true,
+      }),
+      entry("audit_lookup_failed", {
+        tenantId: "tenant_a",
+        chatId: "-100",
+        code: "storage_failed",
+      }),
+    ]);
+    expect(report.totals).toMatchObject({
+      screened: 1,
+      intercepted: 1,
+      storageFailures: 1,
+      actions: { delete: 1 },
+    });
+  });
+
   it("drops message text and nicknames from labels", () => {
     const report = aggregateMetrics([
       entry("pipeline_completed", {

@@ -101,8 +101,15 @@ function harness(options?: { failStorage?: boolean }) {
       return null;
     },
     async putRuleSet() {},
-    async getAudit() {
-      return null;
+    async getAudit(tenantId, chatId, eventId) {
+      return (
+        records.find(
+          (record) =>
+            record.tenantId === tenantId &&
+            record.chatId === chatId &&
+            record.eventId === eventId,
+        ) ?? null
+      );
     },
     async exportAudits() {
       return records.slice();
@@ -229,6 +236,117 @@ describe("runPipeline", () => {
       { actionId: "delete", status: "skipped", detail: "dry_run" },
     ]);
     expect(called).toBe(false);
+    expect(kit.records).toHaveLength(0);
+  });
+
+  it("skips actions when this event already has an audit", async () => {
+    const kit = harness();
+    let called = 0;
+    const input = {
+      event: event(),
+      rules: rules(),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [detector("keyword", async () => hit("keyword"))],
+      actions: [
+        action("delete", async () => {
+          called += 1;
+          return { actionId: "delete", status: "executed" as const };
+        }),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    };
+    const first = await runPipeline(input);
+    const second = await runPipeline(input);
+    expect(first.actionResults).toEqual([
+      { actionId: "delete", status: "executed" },
+    ]);
+    expect(second.decision.action).toBe("delete");
+    expect(second.actionResults).toEqual([
+      { actionId: "delete", status: "skipped", detail: "duplicate" },
+    ]);
+    expect(called).toBe(1);
+    expect(kit.records).toHaveLength(1);
+    expect(
+      kit.logger.entries.some((entry) => entry.message === "audit_duplicate"),
+    ).toBe(true);
+    expect(
+      kit.logger.entries.some(
+        (entry) =>
+          entry.message === "pipeline_completed" &&
+          entry.fields.duplicate === true,
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("点击免费领取");
+  });
+
+  it("still punishes when the audit lookup fails", async () => {
+    const kit = harness();
+    const phrase = "请免费领取礼品";
+    let called = 0;
+    const result = await runPipeline({
+      event: event(),
+      rules: rules(),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [detector("keyword", async () => hit("keyword"))],
+      actions: [
+        action("delete", async () => {
+          called += 1;
+          return { actionId: "delete", status: "executed" as const };
+        }),
+      ],
+      storage: {
+        ...kit.storage,
+        async getAudit() {
+          throw new Error(phrase);
+        },
+      },
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.actionResults).toEqual([
+      { actionId: "delete", status: "executed" },
+    ]);
+    expect(called).toBe(1);
+    expect(kit.records).toHaveLength(1);
+    expect(
+      kit.logger.entries.some(
+        (entry) =>
+          entry.message === "audit_lookup_failed" &&
+          entry.fields.code === "storage_failed",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("does not look up an audit for an allow decision", async () => {
+    const kit = harness();
+    let lookups = 0;
+    await runPipeline({
+      event: event(),
+      rules: rules(),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [detector("keyword", async () => null)],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: {
+        ...kit.storage,
+        async getAudit(tenantId, chatId, eventId) {
+          lookups += 1;
+          return kit.storage.getAudit(tenantId, chatId, eventId);
+        },
+      },
+      moderator: kit.moderator,
+      logger: kit.logger,
+    });
+    expect(lookups).toBe(0);
     expect(kit.records).toHaveLength(0);
   });
 
