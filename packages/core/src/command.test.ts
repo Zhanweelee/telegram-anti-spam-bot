@@ -1253,6 +1253,124 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("declines a pending join without a query id", async () => {
+    const deps = kit();
+    const declined: {
+      chatId: string;
+      actorId: string;
+      queryId?: string;
+    }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/decline -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declineJoin(target) {
+          declined.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            ...(target.queryId === undefined
+              ? {}
+              : { queryId: target.queryId }),
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已拒绝 -100 77" });
+    expect(declined).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/decline <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/decline -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async declineJoin() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "Declined 77 in -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/decline -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declineJoin() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/decline -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/decline <chatId> <actorId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/decline -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declineJoin() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/decline -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/decline -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declineJoin() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"decline"',
+    );
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/decline -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async declineJoin() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("deletes one message in a managed chat", async () => {
     const deps = kit();
     const deleted: {

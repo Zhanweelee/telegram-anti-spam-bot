@@ -73,6 +73,7 @@ const COMMAND_NAMES = [
   "mute",
   "member",
   "delete",
+  "decline",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -105,6 +106,7 @@ export interface OperatorCommandInput {
     Pick<
       ModerationPort,
       | "banActor"
+      | "declineJoin"
       | "deleteMessage"
       | "muteActor"
       | "readMember"
@@ -225,6 +227,8 @@ async function dispatch(
       return showMember(input, args);
     case "delete":
       return deleteOne(input, args);
+    case "decline":
+      return declineRequest(input, args);
   }
 }
 
@@ -574,6 +578,53 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function declineRequest(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.decline.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const decline = input.moderator?.declineJoin;
+  if (!decline) {
+    rejectDecline(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await decline({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+  } catch {
+    rejectDecline(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.decline.done", { chatId, actorId });
+}
+
+function rejectDecline(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "decline",
   });
 }
 
