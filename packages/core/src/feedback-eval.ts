@@ -31,6 +31,7 @@ export type FeedbackCase = z.output<typeof feedbackCaseSchema>;
 export const feedbackEvalDocumentSchema = z.strictObject({
   tenantId: idSchema,
   chatId: idSchema.optional(),
+  omitted: z.number().int().positive().max(256).optional(),
   cases: z.array(feedbackCaseSchema).max(256),
 });
 
@@ -68,14 +69,46 @@ export function buildFeedbackCase(sample: ReviewSample): FeedbackCase {
 export function feedbackEvalDocument(
   scope: AuditScope,
   samples: readonly ReviewSample[],
+  omitted?: number,
 ): string {
   const parsedScope = parseAuditScope(scope);
   const document = {
     tenantId: parsedScope.tenantId,
     ...(parsedScope.chatId === undefined ? {} : { chatId: parsedScope.chatId }),
+    ...(omitted === undefined || omitted <= 0 ? {} : { omitted }),
     cases: samples.map((sample) => buildFeedbackCase(sample)),
   };
   const parsed = feedbackEvalDocumentSchema.parse(document);
   assertNoRawContent(parsed);
   return JSON.stringify(parsed);
+}
+
+/** Newest cases whose JSON fits in `limit`. `null` when one case is already longer. */
+export function fitFeedbackEvalDocument(
+  scope: AuditScope,
+  samples: readonly ReviewSample[],
+  limit: number,
+): string | null {
+  const full = feedbackEvalDocument(scope, samples);
+  if (full.length <= limit) {
+    return full;
+  }
+  let best: string | null = null;
+  let low = 1;
+  let high = samples.length - 1;
+  while (low <= high) {
+    const count = Math.floor((low + high) / 2);
+    const json = feedbackEvalDocument(
+      scope,
+      samples.slice(samples.length - count),
+      samples.length - count,
+    );
+    if (json.length <= limit) {
+      best = json;
+      low = count + 1;
+    } else {
+      high = count - 1;
+    }
+  }
+  return best;
 }

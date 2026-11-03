@@ -6,7 +6,7 @@ import {
 import type { Cache } from "./cache.js";
 import type { ChatDirectory } from "./chats.js";
 import type { Event } from "./event.js";
-import { feedbackEvalDocument } from "./feedback-eval.js";
+import { fitFeedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
 import type { Locale } from "./messages.js";
 import { translate } from "./messages.js";
@@ -480,8 +480,8 @@ async function exportEvals(
   }
   try {
     const samples = await queue.list(scope);
-    const json = feedbackEvalDocument(scope, samples);
-    if (json.length > EXPORT_REPLY_LIMIT) {
+    const json = fitFeedbackEvalDocument(scope, samples, EXPORT_REPLY_LIMIT);
+    if (json === null) {
       return say(input, "command.evals.too_long", { count: samples.length });
     }
     return json;

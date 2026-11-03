@@ -3,7 +3,9 @@ import {
   buildFeedbackCase,
   feedbackCaseSchema,
   feedbackEvalDocument,
+  feedbackEvalDocumentSchema,
   feedbackLabelFromReview,
+  fitFeedbackEvalDocument,
 } from "./feedback-eval.js";
 import type { ReviewSample } from "./review.js";
 
@@ -125,5 +127,57 @@ describe("feedbackEvalDocument", () => {
     expect(() =>
       feedbackEvalDocument({ tenantId: "local" }, samples),
     ).toThrow();
+  });
+
+  it("leaves a fitting document unchanged", () => {
+    const scope = { tenantId: "local" };
+    const samples = [sample()];
+    expect(fitFeedbackEvalDocument(scope, samples, 3500)).toBe(
+      feedbackEvalDocument(scope, samples),
+    );
+    expect(fitFeedbackEvalDocument(scope, [], 3500)).toBe(
+      feedbackEvalDocument(scope, []),
+    );
+    expect(JSON.parse(feedbackEvalDocument(scope, [], 0))).toEqual({
+      tenantId: "local",
+      cases: [],
+    });
+    expect(() =>
+      feedbackEvalDocumentSchema.parse({
+        tenantId: "local",
+        omitted: 0,
+        cases: [],
+      }),
+    ).toThrow();
+  });
+
+  it("returns the newest cases that fit and counts the rest", () => {
+    const scope = { tenantId: "local", chatId: "-100" };
+    const samples = Array.from({ length: 40 }, (_, index) =>
+      sample({
+        eventId: `evt_${index}`,
+        createdAt: `2026-11-01T00:00:00.${String(index).padStart(3, "0")}Z`,
+      }),
+    );
+    const json = fitFeedbackEvalDocument(scope, samples, 3500);
+    expect(json).not.toBeNull();
+    if (json === null) {
+      return;
+    }
+    expect(json.length).toBeLessThanOrEqual(3500);
+    const doc = JSON.parse(json) as {
+      omitted: number;
+      cases: { id: string }[];
+    };
+    expect(doc.cases.at(-1)?.id).toBe("evt_39");
+    expect(doc.cases[0]?.id).not.toBe("evt_0");
+    expect(doc.omitted + doc.cases.length).toBe(40);
+    const larger = feedbackEvalDocument(
+      scope,
+      samples.slice(samples.length - (doc.cases.length + 1)),
+      doc.omitted - 1,
+    );
+    expect(larger.length).toBeGreaterThan(3500);
+    expect(fitFeedbackEvalDocument(scope, [sample()], 8)).toBeNull();
   });
 });
