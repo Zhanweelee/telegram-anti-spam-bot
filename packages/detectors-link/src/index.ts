@@ -1404,7 +1404,6 @@ const reservedUsernames = new Set([
   "s",
   "share",
   "socks",
-  "stargift_auction",
   "telegrampassport",
   "web",
   "webproxy",

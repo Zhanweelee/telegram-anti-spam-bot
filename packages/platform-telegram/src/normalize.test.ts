@@ -2192,6 +2192,64 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a gift auction username draft including an auction slug", async () => {
+    const hidden = "offer214";
+    const slug = "slug214";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78072,
+      message: {
+        message_id: 78072,
+        date: 1761955200,
+        chat: { id: -1008303, type: "supergroup" },
+        from: { id: 214 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/stargift_auction?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const auction = await normalize({
+      update_id: 78073,
+      message: {
+        message_id: 78073,
+        date: 1761955200,
+        chat: { id: -1008304, type: "supergroup" },
+        from: { id: 214 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/stargift_auction/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(auction.status).toBe("event");
+    if (auction.status !== "event") {
+      return;
+    }
+    expect(auction.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(auction.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(auction.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

@@ -11030,4 +11030,78 @@ describe("screenTelegramEvent", () => {
     expect(previewDump).not.toContain("from213");
     expect(previewDump).not.toContain("机密群名");
   });
+
+  it("reads a gift auction username draft including an auction slug", async () => {
+    const path = "offer214";
+    const slug = "slug214";
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2345,
+        message: {
+          message_id: 2345,
+          date: 1761955200,
+          chat: { id: -1008303, type: "supergroup", title: "机密群名" },
+          from: { id: 214, first_name: "Ada" },
+          text: `https://t.me/stargift_auction?text=https://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const auctioned = await normalizeUpdate({
+      update: {
+        update_id: 2346,
+        message: {
+          message_id: 2346,
+          date: 1761955200,
+          chat: { id: -1008304, type: "supergroup", title: "机密群名" },
+          from: { id: 214, first_name: "https://tinyurl.com/from214" },
+          text: `https://t.me/stargift_auction/${slug}?text=https://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(auctioned.status).toBe("event");
+    if (auctioned.status !== "event") {
+      return;
+    }
+    const auctionLogger = createMemoryLogger();
+    const auctionModerator = createMemoryModerator();
+    const deleted = await screenTelegramEvent(auctioned.event, {
+      logger: auctionLogger,
+      moderator: auctionModerator,
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toEqual(["short_link"]);
+    const auctionDump = JSON.stringify({
+      result: deleted,
+      logs: auctionLogger.entries,
+    });
+    expect(auctionDump).not.toContain(path);
+    expect(auctionDump).not.toContain(slug);
+    expect(auctionDump).not.toContain("from214");
+    expect(auctionDump).not.toContain("机密群名");
+  });
 });

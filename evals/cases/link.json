@@ -4025,5 +4025,55 @@
     "id": "preview-subdomain-name",
     "text": "https://stargift_preview.t.me/slug213?text=https%3A%2F%2Fbit.ly%2Foffer213",
     "label": "ham"
+  },
+  {
+    "id": "auction-slug-username",
+    "text": "https://t.me/stargift_auction?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-resolve",
+    "text": "tg://resolve?domain=stargift_auction&text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-prefix",
+    "text": "https://stargift_auction.t.me?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-capital",
+    "text": "https://t.me/StarGift_Auction/slug214?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-slash",
+    "text": "https://t.me/stargift_auction/?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-path",
+    "text": "https://t.me/stargift_auction/slug214?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-post",
+    "text": "https://t.me/stargift_auction/5?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-subdomain-post",
+    "text": "https://stargift_auction.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug-extra",
+    "text": "https://t.me/stargift_auction/slug214/extra?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "ham"
+  },
+  {
+    "id": "auction-slug-subdomain-name",
+    "text": "https://stargift_auction.t.me/slug214?text=https%3A%2F%2Fbit.ly%2Foffer214",
+    "label": "ham"
   }
 ]

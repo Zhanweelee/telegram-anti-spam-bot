@@ -35,3 +35,4 @@ Android `LaunchActivity` 在路径以小写 `auction/` 开头时打开拍卖，�
 - `t.me/auction`、`t.me/auction/`、`auction.t.me`、`tg://resolve?domain=auction`、`t.me/Auction/短名` 和 `t.me/auction/短名/` 的 `text` 是裸 IP、默认短链或邀请时删除。证据仍只有主机名。
 - `t.me/auction/lot208`、`auction/lot-now`、`auction/lot.now` 和 `auction.t.me/数字` 留着。
 - 用户名和短名不进证据。
+- `t.me/stargift_auction` 后来由 ADR 0247 仍读 `text`。这次决定只处理 `auction`。

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-214
+
+- `t.me/stargift_auction` 仍按用户名读取。拍卖短名和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0247。
+- `t.me/stargift_auction?text=`、`t.me/stargift_auction/slug214?text=` 和 `t.me/stargift_auction/5?text=` 里的短链删除。再多一段路径和 `stargift_auction.t.me/短名` 留着。用户名和拍卖短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-213
 
 - `t.me/stargift_preview` 仍按用户名读取。预览短名和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0246。
