@@ -3370,5 +3370,35 @@
     "id": "mark-label-suffix",
     "text": "http://bit\u034F.ly\u03B1.bit.ly/offer196",
     "label": "spam"
+  },
+  {
+    "id": "hyphen-label-letter",
+    "text": "http://bit.ly-\u03B1/offer197",
+    "label": "ham"
+  },
+  {
+    "id": "hyphen-label-www",
+    "text": "http://www.bit.ly-\u03B1/offer197",
+    "label": "ham"
+  },
+  {
+    "id": "hyphen-label-address",
+    "text": "http://203.0.113.10-\u0561/offer197",
+    "label": "ham"
+  },
+  {
+    "id": "hyphen-label-bare",
+    "text": "bit.ly-\u03B1/offer197",
+    "label": "spam"
+  },
+  {
+    "id": "hyphen-label-hash",
+    "text": "http://bit.ly-\u03B1#offer197",
+    "label": "spam"
+  },
+  {
+    "id": "hyphen-label-suffix",
+    "text": "http://bit.ly-\u03B1.bit.ly/offer197",
+    "label": "spam"
   }
 ]

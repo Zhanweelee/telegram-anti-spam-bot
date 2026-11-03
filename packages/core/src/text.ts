@@ -721,8 +721,9 @@ function gluedHyphenMarkerLength(text: string, index: number): number {
  * U+034F between ASCII letters, or before a dot, drops out of the host.
  * A Greek, Cyrillic, Armenian, or non-ASCII Latin letter stays when
  * Android still includes it in a schemed host, including a label after a
- * dot, an ideographic dot, or an ignored mark anywhere in that host.
- * The same letter before `#`, `@`, a space, or an empty label still drops.
+ * dot, an ideographic dot, an ignored mark anywhere in that host, or a
+ * trailing hyphen. The same letter before `#`, `@`, a space, or an empty
+ * label still drops.
  * Punctuation and symbols of Armenian, Cyrillic, Greek, and Latin stay.
  */
 export function foldHostScan(text: string): string {
@@ -936,7 +937,8 @@ function isHostInterrupter(char: string, code: number): boolean {
  * in a schemed host stays, including a label after a dot, an ideographic
  * dot, or an ignored mark anywhere in that host, so that host is not read
  * as the shortener in front. A non-spacing mark before the next label
- * stays in that host. A run before `#`, `@`, or a space still drops.
+ * stays in that host. A hyphen at the end of that host stays in the label.
+ * A run before `#`, `@`, or a space still drops.
  * An empty label still drops. These letters are removed, not mapped.
  */
 function lastSchemeIndex(out: string): number {
@@ -959,6 +961,18 @@ function trailingSchemedDot(out: string): boolean {
   const dot =
     code === 0x2e || code === 0x3002 || code === 0xff0e || code === 0xff61;
   return dot && finishedHostIsSchemed(out.slice(0, -1));
+}
+
+/**
+ * A trailing hyphen still belongs to the schemed label when a letter follows.
+ * The host parser drops that hyphen once the letter is gone.
+ */
+function trailingSchemedHyphen(out: string): boolean {
+  let end = out.length;
+  while (end > 0 && out.charCodeAt(end - 1) === 0x2d) {
+    end -= 1;
+  }
+  return end < out.length && finishedHostIsSchemed(out.slice(0, end));
 }
 
 /**
@@ -990,13 +1004,18 @@ function stripIgnoredMarks(text: string): string {
  * The letter run is still inside the schemed host Android highlights.
  * A dot after that host can start another label. An ideographic, fullwidth,
  * or halfwidth dot stays in the label. An ignored mark anywhere in that
- * host stays transparent. Dropping the run would open the shortener or
- * address in front. An empty label does not.
+ * host stays transparent. A hyphen at the end of that host stays in the
+ * label. Dropping the run would open the shortener or address in front.
+ * An empty label does not.
  */
 function schemedLetterStays(out: string, run: string, rest: string): boolean {
   const base = stripIgnoredMarks(out);
   const dotted = trailingSchemedDot(base);
-  if ((!finishedHostIsSchemed(base) && !dotted) || run.length === 0) {
+  const hyphen = trailingSchemedHyphen(base);
+  if (
+    (!finishedHostIsSchemed(base) && !dotted && !hyphen) ||
+    run.length === 0
+  ) {
     return false;
   }
   const start = lastSchemeIndex(out);
