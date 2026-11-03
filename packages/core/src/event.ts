@@ -65,6 +65,8 @@ export const messageSchema = z
     contact: z.literal(true).optional(),
     /** Sent through an inline bot. The bot username stays out. */
     via: z.literal(true).optional(),
+    /** Paid post that must stay. Star counts stay out. */
+    paid: z.literal(true).optional(),
     /** File class. File ids, names, and set titles stay out. */
     media: mediaKindSchema.optional(),
     /** Digest of the file class and file_unique_id. The id stays out. */

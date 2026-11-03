@@ -10745,6 +10745,47 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("keeps a paid post and drops the star count", async () => {
+    const stars = "777001";
+    const phrase = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 2059,
+      message: {
+        message_id: 14,
+        date: 1761955200,
+        chat: { id: -100594, type: "channel", title: "机密频道" },
+        sender_chat: { id: -100594, type: "channel", title: "机密频道" },
+        text: phrase,
+        is_paid_post: true,
+        paid_star_count: 777001,
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.paid).toBe(true);
+    expect(outcome.event.message?.text).toBe(phrase);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(stars);
+    expect(dumped).not.toContain("机密频道");
+    const ordinary = await normalize({
+      update_id: 2060,
+      message: {
+        message_id: 15,
+        date: 1761955200,
+        chat: { id: -100594, type: "supergroup" },
+        from: { id: 92 },
+        text: "今天站会",
+        is_paid_post: false,
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status === "event") {
+      expect(ordinary.event.message?.paid).toBeUndefined();
+    }
+  });
+
   it("keeps only the hostname from a contact vCard URL", async () => {
     const phone = "13800138118";
     const name = "名片姓名118";

@@ -133,6 +133,55 @@ describe("delete action", () => {
       },
     ]);
   });
+
+  it("skips a paid post and does not call delete", async () => {
+    const action = createDeleteAction();
+    const deleted: DeleteTarget[] = [];
+    const event = parseEvent({
+      id: "evt_paid",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_paid",
+        text: "请免费领取礼品",
+        textSha256: "c".repeat(64),
+        paid: true,
+      },
+    });
+    const result = await action.execute({
+      event,
+      decision: {
+        action: "delete",
+        ruleIds: ["links"],
+        score: 1,
+        reasons: [],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: {
+        async deleteMessage(target) {
+          deleted.push(target);
+        },
+        async muteActor() {},
+        async banActor() {},
+        async declineJoin() {},
+        async restrictActor() {},
+        async releaseActor() {},
+      },
+      logger: { info() {}, warn() {}, error() {} },
+      signal: new AbortController().signal,
+    });
+    expect(result).toEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(deleted).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain("请免费领取礼品");
+  });
 });
 
 const muteFixtures = JSON.parse(
