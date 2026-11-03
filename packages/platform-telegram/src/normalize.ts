@@ -1307,6 +1307,9 @@ function isUsernameDraft(url: URL): boolean {
   if (wallPaperReplacesDraft(host, url.pathname, parts)) {
     return false;
   }
+  if (contactTokenReplacesDraft(host, url.pathname, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1624,6 +1627,21 @@ function wallPaperReplacesDraft(
   );
 }
 
+/** 路径里带了联系人令牌。命令大小写不同时仍写草稿。没有这段时 `contact` 仍是用户名。 */
+function contactTokenReplacesDraft(
+  host: string,
+  pathname: string,
+  parts: readonly string[],
+): boolean {
+  if (host === "contact.t.me") {
+    return parts.length > 0;
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "contact") {
+    return false;
+  }
+  return parts.length > 1 || pathname.endsWith("/");
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1705,7 +1723,6 @@ const reservedUsernames = new Set([
   "boost",
   "c",
   "confirmphone",
-  "contact",
   "folder",
   "getpremium",
   "iv",

@@ -1958,6 +1958,65 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a contact username draft and leaves a contact token", async () => {
+    const hidden = "offer210";
+    const slug = "token210";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78064,
+      message: {
+        message_id: 78064,
+        date: 1761955200,
+        chat: { id: -1008295, type: "supergroup" },
+        from: { id: 210 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/contact?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const token = await normalize({
+      update_id: 78065,
+      message: {
+        message_id: 78065,
+        date: 1761955200,
+        chat: { id: -1008296, type: "supergroup" },
+        from: { id: 210 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/contact/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(token.status).toBe("event");
+    if (token.status !== "event") {
+      return;
+    }
+    expect(token.event.message?.hosts).toEqual(["t.me"]);
+    expect(token.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(token.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

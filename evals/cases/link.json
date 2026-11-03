@@ -3830,5 +3830,50 @@
     "id": "bg-subdomain-post",
     "text": "https://bg.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer209",
     "label": "ham"
+  },
+  {
+    "id": "contact-username",
+    "text": "https://t.me/contact?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "spam"
+  },
+  {
+    "id": "contact-resolve",
+    "text": "tg://resolve?domain=contact&text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "spam"
+  },
+  {
+    "id": "contact-prefix",
+    "text": "https://contact.t.me?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "spam"
+  },
+  {
+    "id": "contact-capital",
+    "text": "https://t.me/Contact/token210?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "spam"
+  },
+  {
+    "id": "contact-slash",
+    "text": "https://t.me/contact/?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "ham"
+  },
+  {
+    "id": "contact-token",
+    "text": "https://t.me/contact/token210?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "ham"
+  },
+  {
+    "id": "contact-trailing-slash",
+    "text": "https://t.me/contact/token210/?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "ham"
+  },
+  {
+    "id": "contact-extra",
+    "text": "https://t.me/contact/token210/extra?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "ham"
+  },
+  {
+    "id": "contact-subdomain-post",
+    "text": "https://contact.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer210",
+    "label": "ham"
   }
 ]

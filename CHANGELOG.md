@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-210
+
+- `t.me/contact` 仍按用户名读取。后面是联系人令牌时打开联系人，不读 `text`。见 ADR 0243。
+- `t.me/contact?text=` 和 `t.me/Contact/令牌?text=` 里的短链仍删除。`t.me/contact/?text=`、`t.me/contact/令牌?text=` 和 `contact.t.me/数字?text=` 留着。用户名和令牌不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-209
 
 - `t.me/bg` 仍按用户名读取。后面是壁纸短名时打开壁纸，不读 `text`。见 ADR 0242。
