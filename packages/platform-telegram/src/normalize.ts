@@ -2150,7 +2150,7 @@ function bareLookalikeDotSkip(rest: string): number {
   return 0;
 }
 
-/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。句号和点状间隔号在后面是域名时留给主机名扫描。 */
+/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面是严格域名时，标签字、句号和点状间隔号留给主机名扫描。 */
 function bareLabelSkip(rest: string): number {
   const code = rest.codePointAt(0);
   if (code === undefined || !draftLabelCode(code) || boundaryMark(code)) {
@@ -2158,6 +2158,10 @@ function bareLabelSkip(rest: string): number {
   }
   if (code === 0x3002 || DRAFT_DOT_LOOKALIKE.has(code)) {
     return joiningDotSkip(rest);
+  }
+  const run = labelRunLength(rest);
+  if (strictLabelTail(rest.slice(run))) {
+    return 0;
   }
   const after = rest.slice(String.fromCodePoint(code).length);
   if (
@@ -2167,6 +2171,39 @@ function bareLabelSkip(rest: string): number {
     return 0;
   }
   return String.fromCodePoint(code).length;
+}
+
+/** 连续的标签字。句号和点状间隔号另外判断。 */
+function labelRunLength(rest: string): number {
+  let index = 0;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (
+      code === undefined ||
+      code === 0x3002 ||
+      DRAFT_DOT_LOOKALIKE.has(code) ||
+      !draftLabelCode(code) ||
+      boundaryMark(code)
+    ) {
+      break;
+    }
+    index += String.fromCodePoint(code).length;
+  }
+  return index;
+}
+
+/** 标签字后面是 Android 认的域名时，这一段留给主机名扫描收成 x。 */
+function strictLabelTail(rest: string): boolean {
+  const head = /^[^/?#\s]+/.exec(rest)?.[0] ?? "";
+  const labels = head.split(".");
+  if (labels.length < 2) {
+    return false;
+  }
+  const tld = labels[labels.length - 1] ?? "";
+  if (!isStrictTld(tld)) {
+    return false;
+  }
+  return labels.every((label) => label.length > 0 && label.length <= 63);
 }
 
 /** 一段句号或点状间隔号后面是 ASCII 域名时留下。否则在这里结束主机名。 */

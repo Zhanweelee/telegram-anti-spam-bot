@@ -36,3 +36,4 @@ Android 把中间点、项目符号、全角句点和同类点状间隔号算进
 - `bit.ly·/…` 和 `bit.ly·evil·com/…` 按短链删除。证据是 `bit.ly`。`bit·ly/…` 仍按短链删除。
 - `example.com.·http://bit.ly/…` 按短链删除。证据是 `bit.ly`。
 - 裸 IP 前面的单字母仍可能粘上去。见 ADR 0218。
+- 写完的主机名后面接不上严格域名时，标签字仍可能把前面的短链收成 x。`bit.ly点free` 仍按短链删除。`bit.ly点evil.com` 留着。见 ADR 0308。

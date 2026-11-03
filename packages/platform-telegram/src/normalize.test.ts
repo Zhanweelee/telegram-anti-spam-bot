@@ -9342,6 +9342,117 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("opens a finished draft host when the label tail is not a domain", async () => {
+    const path = "offer275";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 275 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const mark = "\u70B9";
+    const opened = [
+      [78763, -1008995, `bit.ly${mark}free/${path}`, "bit.ly"],
+      [78764, -1008996, `bit.ly\uAC00free/${path}`, "bit.ly"],
+      [78765, -1008997, `bit.ly${mark}free.notarealtld/${path}`, "bit.ly"],
+      [78766, -1008998, `t.co${mark}hello/${path}`, "t.co"],
+      [78767, -1008999, `see bit.ly${mark}\u51FBfree/${path}`, "bit.ly"],
+    ] as const;
+    for (const [updateId, chatId, text, name] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, name),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([name]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const both = await draft(
+      78768,
+      -1009000,
+      `bit.ly${mark}203.0.113.10/${path}`,
+    );
+    expect(both.status).toBe("event");
+    if (both.status === "event") {
+      expect(named(both.event.message?.hosts, "bit.ly")).toEqual(["bit.ly"]);
+      expect(named(both.event.message?.hosts, "203.0.113.10")).toEqual([
+        "203.0.113.10",
+      ]);
+      expect(JSON.stringify(both.event)).not.toContain(path);
+    }
+
+    const address = await draft(
+      78769,
+      -1009001,
+      `example.com${mark}203.0.113.10/${path}`,
+    );
+    expect(address.status).toBe("event");
+    if (address.status === "event") {
+      expect(named(address.event.message?.hosts, "bit.ly")).toEqual([]);
+      expect(named(address.event.message?.hosts, "203.0.113.10")).toEqual([
+        "203.0.113.10",
+      ]);
+      expect(JSON.stringify(address.event)).not.toContain(path);
+    }
+
+    const pair = await draft(
+      78770,
+      -1009002,
+      `203.0.113.10${mark}203.0.113.11/${path}`,
+    );
+    expect(pair.status).toBe("event");
+    if (pair.status === "event") {
+      expect(named(pair.event.message?.hosts, "203.0.113.10")).toEqual([
+        "203.0.113.10",
+      ]);
+      expect(JSON.stringify(pair.event)).not.toContain(path);
+    }
+
+    const closed = [
+      [78771, -1009003, `bit.ly${mark}evil.com/${path}`],
+      [78772, -1009004, `bit.ly${mark}free.com/${path}`],
+      [78773, -1009005, `bit.ly${mark}free.\u4E2D\u56FD/${path}`],
+      [78774, -1009006, `http://bit.ly${mark}free/${path}`],
+      [78775, -1009007, `http://bit.ly${mark}203.0.113.10/${path}`],
+      [78776, -1009008, `203.0.113.10${mark}bit.ly/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, "bit.ly"),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
