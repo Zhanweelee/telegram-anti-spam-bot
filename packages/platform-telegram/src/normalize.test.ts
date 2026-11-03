@@ -17619,7 +17619,11 @@ describe("normalizeUpdate", () => {
       chat_member: {
         chat: { id: -100588, type: "supergroup" },
         from: { id: 1 },
-        old_chat_member: { user: { id: 77 }, status: "member" },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "member",
+          tag,
+        },
         new_chat_member: {
           user: { id: 77, first_name: name },
           status: "restricted",
@@ -17652,6 +17656,98 @@ describe("normalizeUpdate", () => {
       expect(bot.event.actor.bot).toBe(true);
       expect(bot.event.profile).toBeUndefined();
       expect(JSON.stringify(bot.event)).not.toContain(tag);
+    }
+  });
+
+  it("screens a member tag when it changes inside the chat", async () => {
+    const name = "广告员";
+    const tag = "请免费领取礼品";
+    const changed = await normalize({
+      update_id: 2074,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup", title: name },
+        from: { id: 77, first_name: name },
+        old_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+          tag: "旧标签",
+        },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+          tag: `  ${tag}  `,
+        },
+      },
+    });
+    expect(changed.status).toBe("event");
+    if (changed.status === "event") {
+      expect(changed.event.membership).toBeUndefined();
+      expect(changed.event.profile?.text).toBe(tag);
+      expect(JSON.stringify(changed.event)).not.toContain(name);
+      expect(JSON.stringify(changed.event)).not.toContain("旧标签");
+    }
+    const appeared = await normalize({
+      update_id: 2075,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "restricted" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+          is_member: true,
+          tag: "https://bit.ly/tag86",
+        },
+      },
+    });
+    expect(appeared.status).toBe("event");
+    if (appeared.status === "event") {
+      expect(appeared.event.membership).toBeUndefined();
+      expect(appeared.event.profile?.text).toBe("https://bit.ly/tag86");
+      expect(JSON.stringify(appeared.event)).not.toContain(name);
+    }
+    const cleared = await normalize({
+      update_id: 2076,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "member",
+          tag,
+        },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+          tag: "   ",
+        },
+      },
+    });
+    expect(cleared.status).toBe("event");
+    if (cleared.status === "event") {
+      expect(cleared.event.profile).toBeUndefined();
+      expect(JSON.stringify(cleared.event)).not.toContain(tag);
+      expect(JSON.stringify(cleared.event)).not.toContain(name);
+    }
+    const left = await normalize({
+      update_id: 2077,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "member", tag: "旧标签" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "left",
+          tag,
+        },
+      },
+    });
+    expect(left.status).toBe("event");
+    if (left.status === "event") {
+      expect(left.event.membership).toBe("leave");
+      expect(left.event.profile).toBeUndefined();
+      expect(JSON.stringify(left.event)).not.toContain(tag);
+      expect(JSON.stringify(left.event)).not.toContain(name);
     }
   });
 

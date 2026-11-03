@@ -220,7 +220,7 @@ async function chatMemberEvent(
   const profile =
     membership === "join" && isRecord(value.new_chat_member.user)
       ? await joinProfile(value.new_chat_member.user, value.new_chat_member.tag)
-      : undefined;
+      : await changedMemberTag(value);
   const configured = admins.has(actor);
   return finish({
     id: `tg_${updateId}`,
@@ -297,17 +297,47 @@ async function joinProfile(
       parts.push(trimmed);
     }
   }
-  if (typeof tag === "string") {
-    const trimmed = tag.trim();
-    if (trimmed.length > 0) {
-      parts.push(trimmed);
-    }
+  const trimmed = trimmedTag(tag);
+  if (trimmed !== undefined) {
+    parts.push(trimmed);
   }
   if (parts.length === 0) {
     return undefined;
   }
   const text = parts.join(" ").slice(0, 256);
   return { text, textSha256: await sha256Hex(text) };
+}
+
+async function changedMemberTag(
+  value: Record<string, unknown>,
+): Promise<{ readonly text: string; readonly textSha256: string } | undefined> {
+  if (!isRecord(value.new_chat_member) || !stillInside(value.new_chat_member)) {
+    return undefined;
+  }
+  const user = value.new_chat_member.user;
+  if (isRecord(user) && user.is_bot === true) {
+    return undefined;
+  }
+  const next = trimmedTag(value.new_chat_member.tag);
+  if (next === undefined) {
+    return undefined;
+  }
+  const previous = isRecord(value.old_chat_member)
+    ? trimmedTag(value.old_chat_member.tag)
+    : undefined;
+  if (previous === next) {
+    return undefined;
+  }
+  const text = next.slice(0, 256);
+  return { text, textSha256: await sha256Hex(text) };
+}
+
+function trimmedTag(tag: unknown): string | undefined {
+  if (typeof tag !== "string") {
+    return undefined;
+  }
+  const trimmed = tag.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function botMembershipEvent(

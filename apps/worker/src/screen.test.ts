@@ -257,6 +257,68 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(audit)).not.toContain(name);
   });
 
+  it("bans a member who changes a tag to a keyword", async () => {
+    const name = "广告员";
+    const tag = "请免费领取礼品";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2074,
+        chat_member: {
+          chat: { id: -100689, type: "supergroup", title: "机密群名" },
+          from: { id: 79, first_name: name },
+          date: 1761955200,
+          old_chat_member: {
+            user: { id: 79, first_name: name },
+            status: "member",
+            tag: "旧标签",
+          },
+          new_chat_member: {
+            user: { id: 79, first_name: name },
+            status: "member",
+            tag,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      captchaStore,
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(result.decision.action).toBe("ban");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("join_name");
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100689", actorId: "79" },
+    ]);
+    expect(moderator.restricted).toEqual([]);
+    expect(await captchaStore.get("local", "-100689", "79")).toBeNull();
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(name);
+    expect(logged).not.toContain(tag);
+    expect(logged).not.toContain("机密群名");
+    expect(JSON.stringify(result.decision.evidence)).not.toContain(tag);
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-100689",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(outcome.event.profile?.textSha256);
+    expect(JSON.stringify(audit)).not.toContain(name);
+    expect(JSON.stringify(audit)).not.toContain(tag);
+  });
+
   it("bans a join whose visible name carries a short link", async () => {
     const screenJoin = async (
       updateId: number,
