@@ -154,6 +154,7 @@ function storage(): Storage & {
       );
     },
     async deleteAudits(scope) {
+      let removed = 0;
       for (let index = records.length - 1; index >= 0; index -= 1) {
         const record = records[index];
         if (
@@ -162,8 +163,10 @@ function storage(): Storage & {
           (scope.chatId === undefined || record.chatId === scope.chatId)
         ) {
           records.splice(index, 1);
+          removed += 1;
         }
       }
+      return removed;
     },
     async getRuleSet() {
       return null;
@@ -720,6 +723,42 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(again).toMatchObject({ text: "已删除 0 条" });
+  });
+
+  it("forgets a chat without reading the audit rows", async () => {
+    const deps = kit();
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_1",
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-200",
+      eventId: "evt_2",
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    deps.storage.exportAudits = () => Promise.reject(new Error(phrase));
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "已删除 1 条" });
+    expect(deps.storage.records).toHaveLength(1);
+    expect(deps.storage.records[0]?.chatId).toBe("-200");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
   it("hides storage failures from export and forget", async () => {

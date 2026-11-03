@@ -214,7 +214,9 @@ function harness() {
     async exportAudits() {
       return records;
     },
-    async deleteAudits() {},
+    async deleteAudits() {
+      return 0;
+    },
     async getRuleSet() {
       return null;
     },

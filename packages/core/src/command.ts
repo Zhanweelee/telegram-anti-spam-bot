@@ -495,9 +495,8 @@ async function forgetAudits(
     return scope;
   }
   try {
-    const records = await input.storage.exportAudits(scope);
-    await input.storage.deleteAudits(scope);
-    return say(input, "command.forget.deleted", { count: records.length });
+    const removed = await input.storage.deleteAudits(scope);
+    return say(input, "command.forget.deleted", { count: removed });
   } catch {
     input.logger.warn("operator_rejected", {
       eventId: input.event.id,

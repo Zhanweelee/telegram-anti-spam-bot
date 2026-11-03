@@ -166,6 +166,29 @@ describe("d1 storage", () => {
     expect(left.results?.[0]?.nonce).toBe(phrase);
   });
 
+  it("rejects a delete result that does not report a count", async () => {
+    const db: SqlDatabase = {
+      prepare() {
+        const prepared: SqlPrepared = {
+          bind() {
+            return prepared;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            return {};
+          },
+        };
+        return prepared;
+      },
+    };
+    const storage = createD1Storage(db);
+    await expect(
+      storage.deleteAudits({ tenantId: "tenant_a" }),
+    ).rejects.toThrow("delete_changes_missing");
+  });
+
   it("runs the migration again after it fails", async () => {
     let fail = true;
     const db: SqlDatabase = {
@@ -211,7 +234,10 @@ function openSqlite(): SqlDatabase {
           return { results: results.map(asRow) };
         },
         async run() {
-          statement.run(...bound);
+          const info: unknown = statement.run(...bound);
+          if (typeof info === "object" && info !== null && "changes" in info) {
+            return { meta: { changes: info.changes } };
+          }
           return {};
         },
       };

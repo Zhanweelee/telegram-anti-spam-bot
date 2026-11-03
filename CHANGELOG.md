@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-293
+
+- `/forget` 只调用 `deleteAudits`，用返回的条数回复。不再先把审计读进内存。
+- D1 用这一条 `DELETE` 的 `meta.changes`。没有条数时记固定错误。见 ADR 0326。
+- 规则、白名单和 30 天保留期没有改。
+
 ### S0-03
 
 - README 的「30 秒」只保留入口和默认行为。字段清单在 `docs/message-surface.md`。
