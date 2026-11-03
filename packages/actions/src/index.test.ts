@@ -99,6 +99,7 @@ describe("delete action", () => {
           async openTopic() {},
           async hideGeneral() {},
           async showGeneral() {},
+          async deleteTopic() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -176,6 +177,7 @@ describe("delete action", () => {
         async openTopic() {},
         async hideGeneral() {},
         async showGeneral() {},
+        async deleteTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -255,6 +257,7 @@ describe("delete action", () => {
         async openTopic() {},
         async hideGeneral() {},
         async showGeneral() {},
+        async deleteTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -336,6 +339,7 @@ function ports(): ModerationPort & {
     async openTopic() {},
     async hideGeneral() {},
     async showGeneral() {},
+    async deleteTopic() {},
   };
 }
 

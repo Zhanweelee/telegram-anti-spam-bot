@@ -15,6 +15,7 @@ import {
   MAX_RULE_SWITCHES,
   type ModerationPort,
   type MuteTarget,
+  type NamedForumTopicTarget,
   type PolicyStore,
   parseAuditQuery,
   parseAuditRecord,
@@ -136,6 +137,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly topicsOpened: readonly ForumTopicTarget[];
   readonly generalsHidden: readonly ChatTarget[];
   readonly generalsShown: readonly ChatTarget[];
+  readonly topicsDeleted: readonly NamedForumTopicTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -160,6 +162,7 @@ export function createMemoryModerator(): ModerationPort & {
   const topicsOpened: ForumTopicTarget[] = [];
   const generalsHidden: ChatTarget[] = [];
   const generalsShown: ChatTarget[] = [];
+  const topicsDeleted: NamedForumTopicTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -184,6 +187,7 @@ export function createMemoryModerator(): ModerationPort & {
     topicsOpened,
     generalsHidden,
     generalsShown,
+    topicsDeleted,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -342,6 +346,13 @@ export function createMemoryModerator(): ModerationPort & {
       generalsShown.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
+      });
+    },
+    async deleteTopic(target) {
+      topicsDeleted.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        threadId: target.threadId,
       });
     },
   };

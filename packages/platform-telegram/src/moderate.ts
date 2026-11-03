@@ -438,6 +438,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async deleteTopic(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "deltopic_unavailable",
+        failed: "deltopic_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_thread_id: telegramId(target.threadId),
+        },
+      });
+    },
   };
 }
 

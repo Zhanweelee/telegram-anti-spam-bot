@@ -226,4 +226,12 @@ describe("memory adapter", () => {
     expect(moderator.generalsShown).toEqual([{ tenantId: "t", chatId: "c" }]);
     expect(JSON.stringify(moderator.generalsShown)).not.toContain("thread");
   });
+
+  it("records a deleted topic with its thread id", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.deleteTopic({ tenantId: "t", chatId: "c", threadId: "55" });
+    expect(moderator.topicsDeleted).toEqual([
+      { tenantId: "t", chatId: "c", threadId: "55" },
+    ]);
+  });
 });

@@ -39,6 +39,15 @@ describe("operator command example", () => {
     expect(help).toContain("/opentopic");
     expect(help).toContain("/hidegeneral");
     expect(help).toContain("/showgeneral");
+    expect(help).toContain("/deltopic");
+    const deletedTopic = await runPrivateCommand({
+      text: "/deltopic -100 55",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(deletedTopic).toBe(
+      "已请求删除 -100 话题 55 和里面的消息。其它话题不在这次里",
+    );
     const shownGeneral = await runPrivateCommand({
       text: "/showgeneral -100",
       actorId: "42",

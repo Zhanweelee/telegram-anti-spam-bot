@@ -175,6 +175,7 @@ function harness(options?: { failStorage?: boolean }) {
     async openTopic() {},
     async hideGeneral() {},
     async showGeneral() {},
+    async deleteTopic() {},
   };
   return {
     records,

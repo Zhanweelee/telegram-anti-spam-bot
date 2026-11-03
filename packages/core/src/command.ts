@@ -95,6 +95,7 @@ const COMMAND_NAMES = [
   "opentopic",
   "hidegeneral",
   "showgeneral",
+  "deltopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -135,6 +136,7 @@ export interface OperatorCommandInput {
       | "declineJoin"
       | "deleteMessage"
       | "deleteMessages"
+      | "deleteTopic"
       | "hideGeneral"
       | "lockChat"
       | "muteActor"
@@ -299,6 +301,8 @@ async function dispatch(
       return hideGeneralTopic(input, args);
     case "showgeneral":
       return showGeneralTopic(input, args);
+    case "deltopic":
+      return deleteOneTopic(input, args);
   }
 }
 
@@ -1567,6 +1571,53 @@ function rejectShow(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "showgeneral",
+  });
+}
+
+async function deleteOneTopic(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.deltopic.usage");
+  }
+  const chatId = args[0];
+  const threadId = args[1];
+  if (
+    chatId === undefined ||
+    threadId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(threadId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deleteTopic;
+  if (!remove) {
+    rejectDeleteTopic(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+      threadId,
+    });
+  } catch {
+    rejectDeleteTopic(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.deltopic.done", { chatId, threadId });
+}
+
+function rejectDeleteTopic(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "deltopic",
   });
 }
 

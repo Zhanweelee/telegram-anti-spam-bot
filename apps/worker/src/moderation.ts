@@ -59,5 +59,6 @@ function createOpenModerator(): ModerationPort {
     openTopic: (target) => memory.openTopic(target),
     hideGeneral: (target) => memory.hideGeneral(target),
     showGeneral: (target) => memory.showGeneral(target),
+    deleteTopic: (target) => memory.deleteTopic(target),
   };
 }

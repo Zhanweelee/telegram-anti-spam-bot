@@ -161,6 +161,8 @@ export const messageKeys = [
   "command.hidegeneral.done",
   "command.showgeneral.usage",
   "command.showgeneral.done",
+  "command.deltopic.usage",
+  "command.deltopic.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -216,6 +218,7 @@ const syntax = [
   "/opentopic <chatId> [threadId]",
   "/hidegeneral <chatId>",
   "/showgeneral <chatId>",
+  "/deltopic <chatId> <threadId>",
 ].join("\n");
 
 const zh = {
@@ -397,6 +400,9 @@ const zh = {
   "command.showgeneral.usage": "用法：/showgeneral <chatId>",
   "command.showgeneral.done":
     "已请求显示 {chatId} 的通用话题。原先关着的话仍然关着。消息还在。其它话题不在这次里",
+  "command.deltopic.usage": "用法：/deltopic <chatId> <threadId>",
+  "command.deltopic.done":
+    "已请求删除 {chatId} 话题 {threadId} 和里面的消息。其它话题不在这次里",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -590,6 +596,9 @@ const en = {
   "command.showgeneral.usage": "Usage: /showgeneral <chatId>",
   "command.showgeneral.done":
     "Asked to show the General topic of {chatId}. A closed General topic stays closed. The messages stay. Other topics are not part of this call.",
+  "command.deltopic.usage": "Usage: /deltopic <chatId> <threadId>",
+  "command.deltopic.done":
+    "Asked to delete topic {threadId} of {chatId} and the messages inside it. Other topics are not part of this call.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
