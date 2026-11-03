@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-230
+
+- 查询里的 `+` 在 `text`、分享 `url` 和 `callback_url` 里是空格。`%2B` 仍是加号。见 ADR 0263。
+- `t.me/durov?text=https://example.com/a+http://bit.ly/…`、`tg://msg_url?url=` 和 `callback_url` 里的短链删除。正文路径里的加号留着。`%2B` 编码的草稿留着。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-229
 
 - 大写 `S` 按用户名读取 `text`。小写 `s` 没有下一段时仍不读。见 ADR 0262。

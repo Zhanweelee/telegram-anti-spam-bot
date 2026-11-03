@@ -3337,6 +3337,144 @@ describe("normalizeUpdate", () => {
     expect(commandDump).not.toContain("SECRET228");
   });
 
+  it("keeps a short link after a query plus and a literal plus glued", async () => {
+    const path = "offer230";
+    const opened = await normalize({
+      update_id: 78115,
+      message: {
+        message_id: 78115,
+        date: 1761955200,
+        chat: { id: -1008346, type: "supergroup" },
+        from: { id: 230 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=https://example.com/a+http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+    const shared = await normalize({
+      update_id: 78116,
+      message: {
+        message_id: 78116,
+        date: 1761955200,
+        chat: { id: -1008347, type: "supergroup" },
+        from: { id: 230 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=https://example.com/a+http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(shared.status).toBe("event");
+    if (shared.status !== "event") {
+      return;
+    }
+    expect(shared.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(shared.event)).not.toContain(path);
+    const callback = await normalize({
+      update_id: 78117,
+      message: {
+        message_id: 78117,
+        date: 1761955200,
+        chat: { id: -1008348, type: "supergroup" },
+        from: { id: 230 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/telegrampassport?callback_url=https://example.com/a+http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(callback.status).toBe("event");
+    if (callback.status !== "event") {
+      return;
+    }
+    expect(callback.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(callback.event)).not.toContain(path);
+    const glued = await normalize({
+      update_id: 78118,
+      message: {
+        message_id: 78118,
+        date: 1761955200,
+        chat: { id: -1008349, type: "supergroup" },
+        from: { id: 230 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://example.com/a+http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(glued.status).toBe("event");
+    if (glued.status !== "event") {
+      return;
+    }
+    expect(glued.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(glued.event)).not.toContain(path);
+    expect(JSON.stringify(glued.event)).not.toContain("bit.ly");
+    const encoded = await normalize({
+      update_id: 78119,
+      message: {
+        message_id: 78119,
+        date: 1761955200,
+        chat: { id: -1008350, type: "supergroup" },
+        from: { id: 230 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=${encodeURIComponent(`https://example.com/a+http://bit.ly/${path}`)}`,
+          },
+        ],
+      },
+    });
+    expect(encoded.status).toBe("event");
+    if (encoded.status !== "event") {
+      return;
+    }
+    expect(encoded.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(encoded.event)).not.toContain(path);
+    expect(JSON.stringify(encoded.event)).not.toContain("bit.ly");
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

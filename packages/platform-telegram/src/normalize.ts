@@ -962,10 +962,10 @@ function hostFromUrl(
   const proxy = proxyServerHost(url);
   const wrapped = unwrap
     ? [
-        ...wrappedExtras(folded, url),
-        ...msgTextExtras(folded, url),
-        ...usernameDraftExtras(folded, url),
-        ...passportExtras(folded, url),
+        ...wrappedExtras(folded, url, value),
+        ...msgTextExtras(folded, url, value),
+        ...usernameDraftExtras(folded, url, value),
+        ...passportExtras(folded, url, value),
       ]
     : [];
   if (url.protocol !== "http:" && url.protocol !== "https:") {
@@ -1033,22 +1033,19 @@ function packHost(
 function wrappedExtras(
   folded: string,
   url: URL,
+  source = folded,
 ): { host: string; invite: boolean }[] {
   if (!isTelegramShare(url)) {
     return [];
   }
   const found: { host: string; invite: boolean }[] = [];
-  const embedded = queryValue(folded, "url");
+  const embedded = queryValue(source, "url");
   if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
-    const inner = hostFromUrl(embedded, false);
-    if (inner) {
-      found.push({ host: inner.host, invite: inner.invite });
-      for (const extra of inner.extras ?? []) {
-        found.push(extra);
-      }
+    for (const raw of queryUrls(embedded)) {
+      pushClosedUrl(raw, found);
     }
   }
-  const text = queryValue(folded, "text");
+  const text = queryValue(source, "text");
   if (text !== null && text.length > 0 && text.length <= MAX_TEXT) {
     for (const raw of urlsInText(text)) {
       pushDraftUrl(raw, found, false);
@@ -1060,22 +1057,19 @@ function wrappedExtras(
 function msgTextExtras(
   folded: string,
   url: URL,
+  source = folded,
 ): { host: string; invite: boolean }[] {
   if (!isTelegramMsg(url)) {
     return [];
   }
   const found: { host: string; invite: boolean }[] = [];
-  const embedded = queryValue(folded, "url");
+  const embedded = queryValue(source, "url");
   if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
-    const inner = hostFromUrl(embedded, false);
-    if (inner) {
-      found.push({ host: inner.host, invite: inner.invite });
-      for (const extra of inner.extras ?? []) {
-        found.push(extra);
-      }
+    for (const raw of queryUrls(embedded)) {
+      pushClosedUrl(raw, found);
     }
   }
-  const text = queryValue(folded, "text");
+  const text = queryValue(source, "text");
   if (text === null || text.length === 0 || text.length > MAX_TEXT) {
     return found;
   }
@@ -1088,24 +1082,25 @@ function msgTextExtras(
 function passportExtras(
   folded: string,
   url: URL,
+  source = folded,
 ): { host: string; invite: boolean }[] {
-  const callback = passportCallback(folded, url);
+  const callback = passportCallback(folded, url, source);
   if (callback === null) {
     return [];
   }
-  const inner = hostFromUrl(callback, false);
-  if (!inner) {
-    return [];
+  const found: { host: string; invite: boolean }[] = [];
+  for (const raw of queryUrls(callback)) {
+    pushClosedUrl(raw, found);
   }
-  return [{ host: inner.host, invite: inner.invite }, ...(inner.extras ?? [])];
+  return found;
 }
 
 /** 桌面端取消 Passport 时打开 `callback_url`。只留主机名。 */
-function passportCallback(raw: string, url: URL): string | null {
+function passportCallback(raw: string, url: URL, source = raw): string | null {
   if (!isTelegramPassport(raw, url)) {
     return null;
   }
-  const callback = queryValue(raw, "callback_url");
+  const callback = queryValue(source, "callback_url");
   if (
     callback === null ||
     callback.length === 0 ||
@@ -1191,11 +1186,12 @@ function isPassportPath(parts: readonly string[]): boolean {
 function usernameDraftExtras(
   folded: string,
   url: URL,
+  source = folded,
 ): { host: string; invite: boolean }[] {
   if (!isUsernameDraft(url)) {
     return [];
   }
-  const text = queryValue(folded, "text");
+  const text = queryValue(source, "text");
   if (text === null || text.length === 0 || text.length > MAX_TEXT) {
     return [];
   }
@@ -1204,6 +1200,24 @@ function usernameDraftExtras(
     pushDraftUrl(raw, found, true);
   }
   return found;
+}
+
+function queryUrls(value: string): string[] {
+  return value.split(/\s+/).filter((part) => part.length > 0);
+}
+
+function pushClosedUrl(
+  raw: string,
+  found: { host: string; invite: boolean }[],
+): void {
+  const inner = hostFromUrl(raw, false);
+  if (!inner) {
+    return;
+  }
+  found.push({ host: inner.host, invite: inner.invite });
+  for (const extra of inner.extras ?? []) {
+    found.push(extra);
+  }
 }
 
 function pushDraftUrl(
@@ -1893,7 +1907,7 @@ function isTelegramMsg(url: URL): boolean {
   return command === "msg";
 }
 
-/** 查询名不区分大小写，取第一次出现的值。值保持解析后的样子。 */
+/** 查询名不区分大小写，取第一次出现的值。`+` 是空格。 */
 function searchParam(url: URL, name: string): string | null {
   const wanted = name.toLowerCase();
   for (const [key, value] of url.searchParams) {
@@ -1904,6 +1918,7 @@ function searchParam(url: URL, name: string): string | null {
   return null;
 }
 
+/** 查询里的 `+` 是空格。`%2B` 仍是加号。 */
 function queryValue(raw: string, name: string): string | null {
   const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
   const value = match?.[1];
@@ -1911,7 +1926,7 @@ function queryValue(raw: string, name: string): string | null {
     return null;
   }
   try {
-    return decodeURIComponent(value.replace(/\+/g, "%2B"));
+    return decodeURIComponent(value.replace(/\+/g, " "));
   } catch {
     return null;
   }

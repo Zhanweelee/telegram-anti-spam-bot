@@ -608,8 +608,10 @@ function pushWrappedHosts(
     return;
   }
   if (wrapped.url) {
-    pushLinkHost(wrapped.url, push);
-    push(proxyServerHost(wrapped.url));
+    for (const inner of linkTokens(wrapped.url)) {
+      pushLinkHost(inner, push);
+      push(proxyServerHost(inner));
+    }
   }
   if (!wrapped.text) {
     return;
@@ -630,8 +632,12 @@ function pushWrappedInvites(
     return;
   }
   if (wrapped.url) {
-    push(inviteHost(wrapped.url, names));
-    push(deepInviteHost(wrapped.url, names));
+    for (const inner of linkTokens(wrapped.url)) {
+      push(inviteHost(inner, names));
+    }
+    for (const inner of deepTokens(wrapped.url)) {
+      push(deepInviteHost(inner, names));
+    }
   }
   if (!wrapped.text) {
     return;
@@ -673,8 +679,10 @@ function pushMsgTextHosts(
 ): void {
   const embedded = telegramMsgUrl(raw);
   if (embedded) {
-    pushLinkHost(embedded, push);
-    push(proxyServerHost(embedded));
+    for (const inner of linkTokens(embedded)) {
+      pushLinkHost(inner, push);
+      push(proxyServerHost(inner));
+    }
   }
   const text = telegramMsgText(raw);
   if (!text) {
@@ -693,8 +701,12 @@ function pushMsgTextInvites(
 ): void {
   const embedded = telegramMsgUrl(raw);
   if (embedded) {
-    push(inviteHost(embedded, names));
-    push(deepInviteHost(embedded, names));
+    for (const inner of linkTokens(embedded)) {
+      push(inviteHost(inner, names));
+    }
+    for (const inner of deepTokens(embedded)) {
+      push(deepInviteHost(inner, names));
+    }
   }
   const text = telegramMsgText(raw);
   if (!text) {
@@ -1573,6 +1585,7 @@ function searchParam(url: URL, name: string): string | null {
   return null;
 }
 
+/** 查询里的 `+` 是空格。`%2B` 仍是加号。 */
 function queryValue(raw: string, name: string): string | null {
   const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
   const value = match?.[1];
@@ -1580,7 +1593,7 @@ function queryValue(raw: string, name: string): string | null {
     return null;
   }
   try {
-    return decodeURIComponent(value.replace(/\+/g, "%2B"));
+    return decodeURIComponent(value.replace(/\+/g, " "));
   } catch {
     return null;
   }

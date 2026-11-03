@@ -4930,5 +4930,25 @@
     "id": "capital-s-extra",
     "text": "https://t.me/S/slug.229/extra?text=https%3A%2F%2Fbit.ly%2Foffer229",
     "label": "ham"
+  },
+  {
+    "id": "query-plus-draft",
+    "text": "https://t.me/durov?text=https://example.com/a+http://bit.ly/offer230",
+    "label": "spam"
+  },
+  {
+    "id": "query-plus-share",
+    "text": "tg://msg_url?url=https://example.com/a+http://bit.ly/offer230",
+    "label": "spam"
+  },
+  {
+    "id": "query-plus-glued",
+    "text": "https://example.com/a+http://bit.ly/offer230",
+    "label": "ham"
+  },
+  {
+    "id": "query-plus-encoded",
+    "text": "https://t.me/durov?text=https%3A%2F%2Fexample.com%2Fa%2Bhttp%3A%2F%2Fbit.ly%2Foffer230",
+    "label": "ham"
   }
 ]

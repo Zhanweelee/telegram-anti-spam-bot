@@ -4338,6 +4338,84 @@ describe("link fixtures", () => {
     expect(JSON.stringify(named)).not.toContain(hidden);
   });
 
+  it("reads a short link after a query plus and keeps a literal plus", async () => {
+    const detector = createLinkDetector();
+    const path = "offer230";
+    const opened = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=https://example.com/a+http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(opened?.reasons).toEqual(["short_link"]);
+    expect(opened?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(opened)).not.toContain(path);
+    const glued = await detector.detect({
+      event: eventFor(`https://example.com/a+http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+    expect(JSON.stringify(glued)).not.toContain(path);
+    const encoded = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=${encodeURIComponent(`https://example.com/a+http://bit.ly/${path}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(encoded).toBeNull();
+    expect(JSON.stringify(encoded)).not.toContain(path);
+    const shared = await detector.detect({
+      event: eventFor(
+        `tg://msg_url?url=https://example.com/a+http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shared?.reasons).toEqual(["short_link"]);
+    expect(shared?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(shared)).not.toContain(path);
+    const sharedEncoded = await detector.detect({
+      event: eventFor(
+        `https://t.me/share/url?url=${encodeURIComponent(`https://example.com/a+http://bit.ly/${path}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sharedEncoded).toBeNull();
+    expect(JSON.stringify(sharedEncoded)).not.toContain(path);
+    const messaged = await detector.detect({
+      event: eventFor(
+        `tg://msg?url=https://example.com/a+http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(messaged?.reasons).toEqual(["short_link"]);
+    expect(messaged?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(messaged)).not.toContain(path);
+    const callback = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport?callback_url=https://example.com/a+http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(callback?.reasons).toEqual(["short_link"]);
+    expect(callback?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(callback)).not.toContain(path);
+  });
+
   it("reads a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
