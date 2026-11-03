@@ -3815,6 +3815,64 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(msg.event)).not.toContain(path);
   });
 
+  it("keeps a short link after an emoji in a hidden draft", async () => {
+    const path = "offer235";
+    const emoji = "%F0%9F%98%80";
+    const opened = await normalize({
+      update_id: 78133,
+      message: {
+        message_id: 78133,
+        date: 1761955200,
+        chat: { id: -1008364, type: "supergroup" },
+        from: { id: 235 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://example.com/${emoji}http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+    const kept = await normalize({
+      update_id: 78134,
+      message: {
+        message_id: 78134,
+        date: 1761955200,
+        chat: { id: -1008365, type: "supergroup" },
+        from: { id: 235 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://example.com/%F0%A0%80%80http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(kept.event)).not.toContain(path);
+    expect(JSON.stringify(kept.event)).not.toContain("bit.ly");
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

@@ -500,14 +500,59 @@ function urlsInText(text: string): string[] {
   return found;
 }
 
-/** 草稿里 Android 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
-const DRAFT_STOP = new RegExp(
-  `[${String.fromCharCode(0)}-${String.fromCharCode(0x1f)}${String.fromCharCode(0x7f)}[\\]\\\\^\`{|\\u0080-\\u009F\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF}]|%(?=(?:https?|tg):\\/\\/)`,
-  "gi",
+/** 草稿里 Android 停住、而整段抽取不停的字符。路径里留住的增补字符另外判断。 */
+const DRAFT_STOP_CHAR = new RegExp(
+  `[${String.fromCharCode(0)}-${String.fromCharCode(0x1f)}${String.fromCharCode(0x7f)}[\\]\\\\^\`{|\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF}]`,
 );
 
 function openedDraftUrls(text: string): string[] {
-  return urlsInText(text.replace(DRAFT_STOP, " "));
+  return urlsInText(openDraftStops(text));
+}
+
+/** 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
+function openDraftStops(text: string): string {
+  let out = "";
+  for (let index = 0; index < text.length; index += 1) {
+    if (isPathPair(text, index)) {
+      out += text.charAt(index) + text.charAt(index + 1);
+      index += 1;
+      continue;
+    }
+    const current = text.charAt(index);
+    if (DRAFT_STOP_CHAR.test(current) || isSchemePercent(text, index)) {
+      out += " ";
+      continue;
+    }
+    out += current;
+  }
+  return out;
+}
+
+function isSchemePercent(text: string, index: number): boolean {
+  if (text.charAt(index) !== "%") {
+    return false;
+  }
+  const next = text.slice(index + 1, index + 9).toLowerCase();
+  return (
+    next.startsWith("http://") ||
+    next.startsWith("https://") ||
+    next.startsWith("tg://")
+  );
+}
+
+/** Android 路径类留住的增补字符。高位代理和低位代理成对出现。 */
+function isPathPair(text: string, index: number): boolean {
+  const high = text.charCodeAt(index);
+  const low = text.charCodeAt(index + 1);
+  if (!Number.isInteger(low) || low < 0xdc00 || low > 0xdffd) {
+    return false;
+  }
+  return (
+    (high >= 0xd840 && high <= 0xd87f) ||
+    (high >= 0xd880 && high <= 0xd8ff) ||
+    (high >= 0xd900 && high <= 0xdb3f) ||
+    (high >= 0xdb44 && high <= 0xdb7f)
+  );
 }
 
 function sideUrls(message: Record<string, unknown>): string[] {

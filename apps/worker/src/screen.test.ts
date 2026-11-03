@@ -12632,4 +12632,83 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(kept.decision)).not.toContain(path);
     expect(JSON.stringify(kept.decision)).not.toContain("bit.ly");
   });
+
+  it("reads a short link after an emoji in a hidden draft", async () => {
+    const path = "offer235";
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2389,
+        message: {
+          message_id: 2389,
+          date: 1761955200,
+          chat: { id: -1008364, type: "supergroup", title: "机密群名" },
+          from: { id: 235, first_name: "Ada" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=https://example.com/%F0%9F%98%80http://bit.ly/${path}`,
+            },
+          ],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator: createMemoryModerator(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const kept = await normalizeUpdate({
+      update: {
+        update_id: 2390,
+        message: {
+          message_id: 2390,
+          date: 1761955200,
+          chat: { id: -1008365, type: "supergroup", title: "机密群名" },
+          from: { id: 235, first_name: "Ada" },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=https://example.com/%F0%A0%80%80http://bit.ly/${path}`,
+            },
+          ],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    const allowed = await screenTelegramEvent(kept.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(JSON.stringify(allowed.decision)).not.toContain(path);
+    expect(JSON.stringify(allowed.decision)).not.toContain("bit.ly");
+  });
 });
