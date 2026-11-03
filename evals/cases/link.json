@@ -4460,5 +4460,70 @@
     "id": "joinchat-subdomain-name",
     "text": "https://joinchat.t.me/slug.221?text=https%3A%2F%2Fbit.ly%2Foffer221",
     "label": "ham"
+  },
+  {
+    "id": "m-username",
+    "text": "https://t.me/m?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-resolve",
+    "text": "tg://resolve?domain=m&text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-prefix",
+    "text": "https://m.t.me?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "ham"
+  },
+  {
+    "id": "m-slash",
+    "text": "https://t.me/m/?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-capital-dot",
+    "text": "https://t.me/M/slug.222?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-trail",
+    "text": "https://t.me/m/slug222/?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-invite-text",
+    "text": "https://t.me/m/slug222?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-prefix-post",
+    "text": "https://m.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-dotted",
+    "text": "https://t.me/m/slug.222?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-long",
+    "text": "https://t.me/m/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "ham"
+  },
+  {
+    "id": "m-capital-long",
+    "text": "https://t.me/M/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
+  },
+  {
+    "id": "m-extra",
+    "text": "https://t.me/m/slug.222/extra?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "ham"
+  },
+  {
+    "id": "m-subdomain-name",
+    "text": "https://m.t.me/slug.222?text=https%3A%2F%2Fbit.ly%2Foffer222",
+    "label": "spam"
   }
 ]

@@ -32,4 +32,5 @@ Android 的 `LaunchActivity` 在路径以 `m/` 开头时同样取出短码，调
 
 - `https://t.me/m/…`、`telegram.me/m/…`、`telegram.dog/m/…`、`https://m.t.me/…` 和 `tg://message?slug=` 按现有邀请规则删除。证据仍是 `invite:` 加主机名。
 - `https://t.me/m`、`https://t.me/m/…/`、`https://t.me/m/…/more`、`https://example.com/m/…` 和 `https://m.telegram.me/…` 留着。
+- `t.me/m?text=`、末尾斜杠和大写 `M/短码` 后来由 ADR 0255 读取 `text`。小写 `m/短码` 仍不读 `text`。空的 `m.t.me` 仍不读。
 - 短码不进证据。公开的 `t.me/名字` 仍保留。
