@@ -10373,6 +10373,111 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a script letter after a schemed hyphen in a draft", async () => {
+    const path = "offer284";
+    const greek = "\u03B1";
+    const armenian = "\u0561";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 284 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78979, -1009211, `http://bit.ly-${greek}/${path}`],
+      [78980, -1009212, `http://bit.ly--${greek}/${path}`],
+      [78981, -1009213, `http://www.bit.ly-${greek}/${path}`],
+      [78982, -1009214, `http://203.0.113.10-${armenian}/${path}`],
+      [78983, -1009215, `see http://bit.ly-${greek}/${path}`],
+      [78984, -1009216, `http://bit.ly-${greek}`],
+      [78985, -1009217, `http://bit.ly-${greek}:80/${path}`],
+      [78986, -1009218, `http://bit.ly-${greek}/http://t.co/${path}`],
+      [78987, -1009219, `http://bit.ly-${greek}.evil.com/${path}`],
+      [78988, -1009220, `http://bit.ly-${greek.repeat(60)}/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, "bit.ly"),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const opened = [
+      [78989, -1009221, `bit.ly-${greek}/${path}`, "bit.ly"],
+      [78990, -1009222, `www.bit.ly-${greek}/${path}`, "www.bit.ly"],
+      [78991, -1009223, `http://bit.ly-${greek}%23${path}`, "bit.ly"],
+      [78992, -1009224, `http://bit.ly-${greek}@evil.com/${path}`, "bit.ly"],
+      [78993, -1009225, `http://bit.ly-${greek} ${path}`, "bit.ly"],
+      [78994, -1009226, `http://bit.ly%0A-${greek}/${path}`, "bit.ly"],
+      [78995, -1009227, `http://bit.ly-${greek.repeat(61)}/${path}`, "bit.ly"],
+      [78996, -1009228, `http://bit.ly-/${path}`, "bit.ly"],
+      [78997, -1009229, `http://bit.ly-.${greek}/${path}`, "bit.ly"],
+      [78998, -1009230, `http://b${greek}it.ly/${path}`, "bit.ly"],
+    ] as const;
+    for (const [updateId, chatId, text, name] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, name),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([name]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const later = await draft(
+      78999,
+      -1009231,
+      `http://bit.ly-${greek}/${path} http://t.co/${path}`,
+    );
+    expect(later.status).toBe("event");
+    if (later.status === "event") {
+      expect(named(later.event.message?.hosts, "bit.ly")).toEqual([]);
+      expect(named(later.event.message?.hosts, "t.co")).toEqual(["t.co"]);
+      expect(JSON.stringify(later.event)).not.toContain(path);
+    }
+
+    const suffix = await draft(
+      79000,
+      -1009232,
+      `http://bit.ly-${greek}.bit.ly/${path}`,
+    );
+    expect(suffix.status).toBe("event");
+    if (suffix.status === "event") {
+      expect(named(suffix.event.message?.hosts, "bit.ly")).toEqual([
+        "bit.xn--ly--qxc.bit.ly",
+      ]);
+      expect(JSON.stringify(suffix.event)).not.toContain(path);
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

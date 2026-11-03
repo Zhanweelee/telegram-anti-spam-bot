@@ -1299,7 +1299,8 @@ function openedDraftUrls(text: string): string[] {
 /**
  * 带协议的主机名后面，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 `@` 前会被收掉。
  * 点号后面新起的这类标签也一样。主机名中间被地址解析忽略的标记同样先拿掉。
- * 收掉之后 `@` 会变成用户信息。这里先换成空格，前面的短链仍单独打开。
+ * 连字符贴在主机名末尾时也一样。收掉之后 `@` 会变成用户信息。
+ * 这里先换成空格，前面的短链仍单独打开。
  */
 function openSchemedScript(text: string): string {
   let out = "";
@@ -1369,6 +1370,13 @@ function schemedScriptBreak(text: string, hostEnd: number): number | null {
       return dotted;
     }
   }
+  const hyphen = draftHyphenRunEnd(text, hostEnd);
+  if (hyphen > hostEnd) {
+    const hyphenated = draftScriptRunEnd(text, hyphen);
+    if (hyphenated > hyphen && text.charAt(hyphenated) === "@") {
+      return hyphenated;
+    }
+  }
   const marked = draftIgnoredMarkEnd(text, hostEnd);
   const runEnd = draftScriptRunEnd(text, marked);
   if (runEnd > marked && text.charAt(runEnd) === "@") {
@@ -1430,6 +1438,14 @@ function draftAndroidLabelCode(code: number): boolean {
     return (code & 0xffff) <= 0xfffd;
   }
   return false;
+}
+
+function draftHyphenRunEnd(text: string, index: number): number {
+  let end = index;
+  while (text.charAt(end) === "-") {
+    end += 1;
+  }
+  return end;
 }
 
 function draftScriptRunEnd(text: string, index: number): number {
@@ -2202,6 +2218,12 @@ function openBareEnd(text: string): string {
       index = domain + letter;
       continue;
     }
+    const hyphenScript = bareHyphenScriptSkip(rest);
+    if (hyphenScript > 0) {
+      out += `${text.slice(index, domain)} `;
+      index = domain + hyphenScript;
+      continue;
+    }
     const unicodeTail = unicodeLabelRewrite(rest);
     if (unicodeTail !== null) {
       out += text.slice(index, domain);
@@ -2754,6 +2776,16 @@ function draftMappedTail(code: number): boolean {
     foldCyrillicLookalikes(sample) !== sample ||
     foldFullwidthLatin(sample) !== sample
   );
+}
+
+/** 没有协议时，连字符后面的文字字母不留在标签里。 */
+function bareHyphenScriptSkip(rest: string): number {
+  const hyphen = draftHyphenRunEnd(rest, 0);
+  if (hyphen === 0) {
+    return 0;
+  }
+  const runEnd = draftScriptRunEnd(rest, hyphen);
+  return runEnd > hyphen ? runEnd : 0;
 }
 
 function bareLetterSkip(rest: string): number {
