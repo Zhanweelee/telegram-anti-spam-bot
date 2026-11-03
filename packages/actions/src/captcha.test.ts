@@ -55,11 +55,20 @@ function moderator(
   restrict?: (target: MuteTarget) => Promise<void>,
 ): ModerationPort & {
   restricted: MuteTarget[];
+  deleted: { tenantId: string; chatId: string; messageId: string }[];
 } {
   const restricted: MuteTarget[] = [];
+  const deleted: { tenantId: string; chatId: string; messageId: string }[] = [];
   return {
     restricted,
-    async deleteMessage() {},
+    deleted,
+    async deleteMessage(target) {
+      deleted.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageId: target.messageId,
+      });
+    },
     async muteActor() {},
     async banActor() {},
     async declineJoin() {},
@@ -213,6 +222,43 @@ describe("captcha action", () => {
     expect(saved?.nonce).toBe(nonce);
     expect(JSON.stringify(result)).not.toContain(nonce);
     expect(JSON.stringify(logger.entries)).not.toContain(nonce);
+  });
+
+  it("deletes the previous prompt when a join replaces it", async () => {
+    const challenges = store();
+    const ports = moderator();
+    const logger = createMemoryLogger();
+    await challenges.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "42",
+    });
+    const result = await action(clock, challenges).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "captcha",
+        ruleIds: ["new_member"],
+        score: 1,
+        reasons: [],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: ports,
+      logger,
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({ actionId: "captcha", status: "executed" });
+    expect(ports.deleted).toEqual([
+      { tenantId: "local", chatId: "-100", messageId: "42" },
+    ]);
+    const saved = await challenges.get("local", "-100", "77");
+    expect(saved?.nonce).toBe(nonce);
+    expect(saved?.messageId).toBeUndefined();
+    expect(JSON.stringify(logger.entries)).not.toContain("42");
+    expect(JSON.stringify(result)).not.toContain(nonce);
   });
 
   it("rolls back when restrict fails", async () => {

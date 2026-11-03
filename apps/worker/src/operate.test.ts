@@ -450,6 +450,64 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
   });
 
+  it("deletes the previous captcha button when the member joins again", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let prompts = 0;
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        return Response.json({
+          ok: true,
+          result: { message_id: prompts === 1 ? 42 : 43 },
+        });
+      },
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_rejoin_1",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_rejoin_2",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    expect(prompts).toBe(2);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+      messageId: "43",
+    });
+    expect(moderator.restricted).toHaveLength(2);
+    expect(moderator.released).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
   it("stops reading the shared blocklist as soon as the chat turns it off", async () => {
     const kit = deps();
     const blocklist = createMemoryBlocklistStore();

@@ -159,6 +159,7 @@ export function createCaptchaAction(deps: CaptchaActionDeps): Action {
             release: (target) => ctx.moderator.releaseActor(target),
             clock: deps.clock,
             logger: ctx.logger,
+            removePrompt: (target) => ctx.moderator.deleteMessage(target),
           },
         });
         return { actionId: "captcha", status: "executed" };
