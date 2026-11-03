@@ -1401,14 +1401,14 @@
 
 ### S0-03 部署说明与 README 对齐 — done
 
-验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。`pnpm check` 会卡住这两处再变长或写回旧句子。
+验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
 
 ### 2026-11-03 S0-03
 
-- 做了什么：README 的「30 秒」收回入口表和一段默认行为。字段清单挪到 `docs/message-surface.md`。部署确认步骤改成和 ADR 0020 一样：配了 token 就调用删除、禁言或封禁。`RATE_WINDOW` 的绑定说明留在部署文档里。
-- 学到什么：确认步骤还写着「不会调用删除接口」，和 `createTelegramModerator` 已经发出的 `deleteMessage` 不一致。字段清单继续堆在 README 里，会把 10 分钟路径盖住。
+- 做了什么：README 的「30 秒」收回入口表和一段默认行为。字段清单挪到 `docs/message-surface.md`。部署确认步骤改成和 ADR 0020 一样：配了 token 就调用删除、禁言或封禁。`RATE_WINDOW` 的绑定说明留在部署文档里。webhook 示例、架构说明和插件说明改为指向同一份清单。
+- 学到什么：确认步骤还写着「不会调用删除接口」，和 `createTelegramModerator` 已经发出的 `deleteMessage` 不一致。webhook 示例最后一句也写成处罚不请求 Telegram。字段清单继续堆在 README、架构和插件说明里，会把入口盖住。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
 
 ### 2026-11-01 Round 0
