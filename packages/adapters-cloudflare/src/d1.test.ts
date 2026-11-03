@@ -182,6 +182,9 @@ describe("d1 storage", () => {
         };
         return prepared;
       },
+      batch(statements) {
+        return runEach(statements);
+      },
     };
     await expect(
       createD1Storage(db).countAudits({ tenantId: "tenant_a" }),
@@ -204,11 +207,66 @@ describe("d1 storage", () => {
         };
         return prepared;
       },
+      batch(statements) {
+        return runEach(statements);
+      },
     };
     const storage = createD1Storage(db);
     await expect(
       storage.deleteAudits({ tenantId: "tenant_a" }),
     ).rejects.toThrow("delete_changes_missing");
+  });
+
+  it("writes missing audits and deletes challenges as one batch each", async () => {
+    const batches: number[] = [];
+    const db: SqlDatabase = {
+      prepare() {
+        const prepared: SqlPrepared = {
+          bind() {
+            return prepared;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            return {};
+          },
+        };
+        return prepared;
+      },
+      async batch(statements) {
+        batches.push(statements.length);
+        return statements.map(() => ({}));
+      },
+    };
+    const storage = createD1Storage(db);
+    const audit = {
+      tenantId: "tenant_a",
+      chatId: "chat_1",
+      eventId: "evt_1",
+      action: "log" as const,
+      score: 0,
+      reasons: [],
+      evidence: [],
+      ruleIds: [],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    const challenge = {
+      tenantId: "tenant_a",
+      chatId: "chat_1",
+      actorId: "user_1",
+      nonce: "ab".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+    };
+    await storage.putAuditsIfAbsent([]);
+    await createD1CaptchaStore(db).deleteMany([]);
+    expect(batches).toEqual([]);
+    await storage.putAuditsIfAbsent([audit, { ...audit, eventId: "evt_2" }]);
+    await createD1CaptchaStore(db).deleteMany([
+      challenge,
+      { ...challenge, actorId: "user_2" },
+    ]);
+    expect(batches).toEqual([2, 2]);
   });
 
   it("runs the migration again after it fails", async () => {
@@ -229,6 +287,9 @@ describe("d1 storage", () => {
           },
         };
         return prepared;
+      },
+      batch(statements) {
+        return runEach(statements);
       },
     };
     const storage = createD1Storage(db);
@@ -265,7 +326,16 @@ function openSqlite(): SqlDatabase {
       };
       return prepared;
     },
+    batch(statements) {
+      return runEach(statements);
+    },
   };
+}
+
+function runEach(
+  statements: readonly SqlPrepared[],
+): Promise<readonly unknown[]> {
+  return Promise.all(statements.map((statement) => statement.run()));
 }
 
 function asRow(value: unknown): Record<string, unknown> {

@@ -87,6 +87,7 @@ function harness(options?: { failStorage?: boolean }) {
   const records: AuditRecord[] = [];
   const deleted: DeleteTarget[] = [];
   const storage: Storage = {
+    async putAuditsIfAbsent() {},
     async appendAudit(record) {
       if (options?.failStorage) {
         throw new Error("请免费领取礼品");

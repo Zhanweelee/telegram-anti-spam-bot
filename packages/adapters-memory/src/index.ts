@@ -35,10 +35,20 @@ export function createMemoryStorage(options?: {
     records,
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
-      const cap = options?.maxAudits;
-      if (cap !== undefined && records.length > cap) {
-        records.splice(0, records.length - cap);
+      trimAudits(records, options?.maxAudits);
+    },
+    async putAuditsIfAbsent(input) {
+      const seen = new Set(records.map(auditKey));
+      for (const record of input) {
+        const parsed = parseAuditRecord(record);
+        const id = auditKey(parsed);
+        if (seen.has(id)) {
+          continue;
+        }
+        seen.add(id);
+        records.push(parsed);
       }
+      trimAudits(records, options?.maxAudits);
     },
     async listAudits(query: AuditQuery) {
       const parsed = parseAuditQuery(query);
@@ -143,12 +153,30 @@ export function createMemoryCaptchaStore(): CaptchaStore {
     async delete(tenantId, chatId, actorId) {
       values.delete(captchaKey(tenantId, chatId, actorId));
     },
+    async deleteMany(challenges) {
+      for (const challenge of challenges) {
+        const parsed = parseCaptchaChallenge(challenge);
+        values.delete(
+          captchaKey(parsed.tenantId, parsed.chatId, parsed.actorId),
+        );
+      }
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
       );
     },
   };
+}
+
+function trimAudits(records: AuditRecord[], cap: number | undefined): void {
+  if (cap !== undefined && records.length > cap) {
+    records.splice(0, records.length - cap);
+  }
+}
+
+function auditKey(record: AuditRecord): string {
+  return `${record.tenantId}\n${record.chatId}\n${record.eventId}`;
 }
 
 function captchaKey(tenantId: string, chatId: string, actorId: string): string {

@@ -34,6 +34,7 @@ export interface SqlPrepared {
 
 export interface SqlDatabase {
   prepare(sql: string): SqlPrepared;
+  batch(statements: readonly SqlPrepared[]): Promise<readonly unknown[]>;
 }
 
 export const storageMigrationStatements = [
@@ -84,6 +85,9 @@ const insertAuditSql = `INSERT INTO audits (
   tenant_id, chat_id, event_id, message_id, text_sha256,
   action, score, reasons, evidence, rule_ids, created_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+const insertAuditIfAbsentSql = `${insertAuditSql}
+ON CONFLICT(tenant_id, chat_id, event_id) DO NOTHING`;
 
 const listAuditsSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha256,
   action, score, reasons, evidence, rule_ids, created_at
@@ -221,6 +225,20 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
       await migrationsFor(db);
       await db.prepare(deleteCaptchaSql).bind(tenantId, chatId, actorId).run();
     },
+    async deleteMany(challenges) {
+      if (challenges.length === 0) {
+        return;
+      }
+      await migrationsFor(db);
+      await db.batch(
+        challenges.map((challenge) => {
+          const parsed = parseCaptchaChallenge(challenge);
+          return db
+            .prepare(deleteCaptchaSql)
+            .bind(parsed.tenantId, parsed.chatId, parsed.actorId);
+        }),
+      );
+    },
     async listExpired(nowIso) {
       await migrationsFor(db);
       const stamp = Date.parse(nowIso);
@@ -273,6 +291,20 @@ export function createD1Storage(db: SqlDatabase): Storage {
         .prepare(insertAuditSql)
         .bind(...auditValues(parsed))
         .run();
+    },
+    async putAuditsIfAbsent(records) {
+      if (records.length === 0) {
+        return;
+      }
+      await migrationsFor(db);
+      await db.batch(
+        records.map((record) => {
+          const parsed = parseAuditRecord(record);
+          return db
+            .prepare(insertAuditIfAbsentSql)
+            .bind(...auditValues(parsed));
+        }),
+      );
     },
     async listAudits(query) {
       await migrationsFor(db);

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-295
+
+- Cron 清理到期挑战时先 `putAuditsIfAbsent`，再 `deleteMany`。一次仍最多 64 条。
+- D1 把写入和删除各打成一个 `batch()`。删除失败时挑战还在，下一次会重试。见 ADR 0328。
+- 不解除 Telegram 限制，也不改额度和 30 天保留期。
+
 ### P3-294
 
 - `/export` 先调用 `countAudits`。最短 JSON 也超过私聊长度时，用这个条数回复，不再把审计读进内存。

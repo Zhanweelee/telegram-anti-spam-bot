@@ -115,16 +115,21 @@ export function resolveStores(
   };
 }
 
+const nativeStatements = new WeakMap<SqlPrepared, D1PreparedStatement>();
+
 export function adaptD1(db: D1Database): SqlDatabase {
   return {
     prepare(sql) {
       return wrapStatement(db.prepare(sql));
     },
+    batch(statements) {
+      return db.batch(statements.map(nativeStatement));
+    },
   };
 }
 
 function wrapStatement(statement: D1PreparedStatement): SqlPrepared {
-  return {
+  const prepared: SqlPrepared = {
     bind(...values) {
       return wrapStatement(statement.bind(...values));
     },
@@ -135,6 +140,16 @@ function wrapStatement(statement: D1PreparedStatement): SqlPrepared {
       return statement.run();
     },
   };
+  nativeStatements.set(prepared, statement);
+  return prepared;
+}
+
+function nativeStatement(statement: SqlPrepared): D1PreparedStatement {
+  const native = nativeStatements.get(statement);
+  if (!native) {
+    throw new Error("d1_batch_statement");
+  }
+  return native;
 }
 
 export function adaptKv(kv: KVNamespace): StringStore {

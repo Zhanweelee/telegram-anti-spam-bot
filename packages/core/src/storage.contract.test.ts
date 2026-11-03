@@ -14,6 +14,20 @@ function createReferenceStorage(): Storage {
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
     },
+    async putAuditsIfAbsent(input) {
+      for (const record of input) {
+        const parsed = parseAuditRecord(record);
+        const exists = records.some(
+          (item) =>
+            item.tenantId === parsed.tenantId &&
+            item.chatId === parsed.chatId &&
+            item.eventId === parsed.eventId,
+        );
+        if (!exists) {
+          records.push(parsed);
+        }
+      }
+    },
     async listAudits(query) {
       const parsed = parseAuditQuery(query);
       return records

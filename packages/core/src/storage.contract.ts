@@ -205,6 +205,21 @@ export function bindStorageContract(create: () => Storage): void {
       ]);
     });
 
+    it("stores a repeated audit once", async () => {
+      const storage = create();
+      await storage.putAuditsIfAbsent([
+        record,
+        { ...record, eventId: "evt_2" },
+      ]);
+      await storage.putAuditsIfAbsent([record, record]);
+      expect(await storage.exportAudits({ tenantId: "tenant_a" })).toEqual([
+        record,
+        { ...record, eventId: "evt_2" },
+      ]);
+      await storage.putAuditsIfAbsent([]);
+      expect(await storage.countAudits({ tenantId: "tenant_a" })).toBe(2);
+    });
+
     it("exports more audits than one list page", async () => {
       const storage = create();
       for (let index = 0; index < 101; index += 1) {
