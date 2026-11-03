@@ -43,4 +43,4 @@ Android 没有单独的 `proxy/` 路径。裸的 `t.me/proxy`、末尾斜杠、�
 - `tg://proxy` 的 `text` 仍不读。
 - `t.me/proxy/短名/再一段` 和 `proxy.t.me/短名` 留着。
 - `s.t.me/proxy` 和 `tg://resolve?domain=s&appname=proxy` 不再因保留名跳过。
-- `t.me/socks/短名` 仍不读 `text`。
+- `t.me/socks/短名` 后来由 ADR 0260 按用户名读取 `text`。没有短名时也读。`webproxy` 仍不读 `text`。

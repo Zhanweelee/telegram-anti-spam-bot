@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-227
+
+- `t.me/socks` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0260。
+- `t.me/socks/slug227?text=`、`t.me/socks?text=` 和 `tg://resolve?domain=socks&text=` 里的短链删除。socks 命令仍只读 `server`。短名路径上的 `server` 不读。再多一段路径和 `socks.t.me/短名` 留着。用户名和密码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-226
 
 - `t.me/proxy` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0259。

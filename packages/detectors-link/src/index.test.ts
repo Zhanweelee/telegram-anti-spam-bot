@@ -4045,7 +4045,9 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(socks).toBeNull();
+    expect(socks?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(socks)).not.toContain(code);
+    expect(JSON.stringify(socks)).not.toContain(hidden);
     const local = await detector.detect({
       event: eventFor(
         `tg://proxy?server=example.com&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
@@ -4063,6 +4065,133 @@ describe("link fixtures", () => {
     expect(extra).toBeNull();
     const named = await detector.detect({
       event: eventFor(`https://proxy.t.me/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+  });
+
+  it("reads a socks username draft and keeps the server check", async () => {
+    const hidden = "offer227";
+    const dotted = "slug.227";
+    const code = "slug227";
+    const address = "203.0.113.227";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const app = await detector.detect({
+      event: eventFor(`https://t.me/socks/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain(code);
+    expect(JSON.stringify(app)).not.toContain(hidden);
+    const bare = await detector.detect({
+      event: eventFor(`https://t.me/socks?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/socks/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.reasons).toEqual(["short_link"]);
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=socks&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/Socks/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(capital)).not.toContain(dotted);
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/socks/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.reasons).toEqual(["short_link"]);
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/Socks/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/Socks/${dotted}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.227");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const prefixed = await detector.detect({
+      event: eventFor(`https://socks.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const numeric = await detector.detect({
+      event: eventFor(`https://socks.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const command = await detector.detect({
+      event: eventFor(
+        `https://t.me/socks?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&user=USER227&pass=PASS227`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(command?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(command)).not.toContain("USER227");
+    expect(JSON.stringify(command)).not.toContain("PASS227");
+    expect(JSON.stringify(command)).not.toContain(hidden);
+    const serverOnly = await detector.detect({
+      event: eventFor(
+        `https://t.me/socks/${code}?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&user=USER227&pass=PASS227`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(serverOnly).toBeNull();
+    expect(JSON.stringify(serverOnly)).not.toContain(hidden);
+    expect(JSON.stringify(serverOnly)).not.toContain("USER227");
+    const webproxy = await detector.detect({
+      event: eventFor(`https://t.me/webproxy/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(webproxy).toBeNull();
+    const local = await detector.detect({
+      event: eventFor(
+        `tg://socks?server=example.com&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}&user=USER227&pass=PASS227`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(local).toBeNull();
+    expect(JSON.stringify(local)).not.toContain(hidden);
+    expect(JSON.stringify(local)).not.toContain("PASS227");
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/socks/${dotted}/extra?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://socks.t.me/${dotted}?text=${draft}`),
       logger: createMemoryLogger(),
       signal,
     });

@@ -40,4 +40,5 @@ Android 在打开用户对话时把这个 `text` 放进 `start_text`。桌面端
 - Passport 的 `callback_url` 后来由 ADR 0145 只留主机名。`nonce`、公钥和路径仍不进证据。
 - `tg://resolve?domain=s&appname=` 后来由 ADR 0148 改写成用户名后再读 `text`。`domain` 必须正好是小写 `s`。
 - 其它子域上的单段路径后来由 ADR 0146 不再读取。精确主机和一层 `www.` 上的单段公开用户名仍读。
-- `proxy` 后来由 ADR 0259 从保留名里拿掉。`t.me/proxy` 和 `t.me/proxy/短名` 的 `text` 会读。`socks` 和 `webproxy` 仍不读 `text`。
+- `proxy` 后来由 ADR 0259 从保留名里拿掉。`t.me/proxy` 和 `t.me/proxy/短名` 的 `text` 会读。`webproxy` 仍不读 `text`。
+- `socks` 后来由 ADR 0260 从保留名里拿掉。`t.me/socks` 和 `t.me/socks/短名` 的 `text` 会读。

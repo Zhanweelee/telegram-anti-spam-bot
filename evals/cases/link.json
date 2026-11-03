@@ -4774,6 +4774,66 @@
   {
     "id": "socks-app",
     "text": "https://t.me/socks/slug226?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "socks-bare",
+    "text": "https://t.me/socks?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-slash",
+    "text": "https://t.me/socks/?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-resolve",
+    "text": "tg://resolve?domain=socks&text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-capital",
+    "text": "https://t.me/Socks/slug.227?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-post",
+    "text": "https://t.me/socks/5?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-prefix",
+    "text": "https://socks.t.me?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-prefix-post",
+    "text": "https://socks.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "spam"
+  },
+  {
+    "id": "socks-app-server",
+    "text": "https://t.me/socks/slug227?server=https%3A%2F%2Fbit.ly%2Foffer227&user=USER227&pass=PASS227",
+    "label": "ham"
+  },
+  {
+    "id": "socks-local",
+    "text": "tg://socks?server=example.com&text=https%3A%2F%2Fbit.ly%2Foffer227&user=USER227&pass=PASS227",
+    "label": "ham"
+  },
+  {
+    "id": "socks-extra",
+    "text": "https://t.me/socks/slug.227/extra?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "ham"
+  },
+  {
+    "id": "socks-subdomain-name",
+    "text": "https://socks.t.me/slug.227?text=https%3A%2F%2Fbit.ly%2Foffer227",
+    "label": "ham"
+  },
+  {
+    "id": "webproxy-app",
+    "text": "https://t.me/webproxy/slug227?text=https%3A%2F%2Fbit.ly%2Foffer227",
     "label": "ham"
   }
 ]

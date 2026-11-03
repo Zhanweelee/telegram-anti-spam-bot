@@ -43,3 +43,4 @@ ADR 0137 认为 `t.me/用户名/123?text=` 不会把 `text` 放进输入框。
 - `tg://resolve` 上的非零 `story`、`album` 和 `collection` 后来由 ADR 0233 不读 `text`。网页上的 `story` 查询仍读。
 - `t.me/c?text=` 后来由 ADR 0256 按用户名读取。小写 `c/数字` 仍不读 `text`。
 - 空的 `proxy.t.me` 后来由 ADR 0259 按用户名读取 `text`。`proxy.t.me/短名` 仍不读。
+- 空的 `socks.t.me` 后来由 ADR 0260 按用户名读取 `text`。`socks.t.me/短名` 仍不读。

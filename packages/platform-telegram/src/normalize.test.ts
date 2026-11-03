@@ -3170,6 +3170,90 @@ describe("normalizeUpdate", () => {
     expect(commandDump).not.toContain("SECRET226");
   });
 
+  it("keeps a socks username draft and the server check", async () => {
+    const hidden = "offer227";
+    const dotted = "slug.227";
+    const code = "slug227";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78106,
+      message: {
+        message_id: 78106,
+        date: 1761955200,
+        chat: { id: -1008337, type: "supergroup" },
+        from: { id: 227 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/socks/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const dumped = JSON.stringify(user.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(code);
+    const app = await normalize({
+      update_id: 78107,
+      message: {
+        message_id: 78107,
+        date: 1761955200,
+        chat: { id: -1008338, type: "supergroup" },
+        from: { id: 227 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Socks/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(app.event)).not.toContain(dotted);
+    const command = await normalize({
+      update_id: 78108,
+      message: {
+        message_id: 78108,
+        date: 1761955200,
+        chat: { id: -1008339, type: "supergroup" },
+        from: { id: 227 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/socks?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&user=USER227&pass=PASS227`,
+          },
+        ],
+      },
+    });
+    expect(command.status).toBe("event");
+    if (command.status !== "event") {
+      return;
+    }
+    expect(command.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const commandDump = JSON.stringify(command.event);
+    expect(commandDump).not.toContain(hidden);
+    expect(commandDump).not.toContain("USER227");
+    expect(commandDump).not.toContain("PASS227");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
