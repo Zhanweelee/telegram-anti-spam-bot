@@ -32,3 +32,4 @@ Android 把 `·`、`•`、`‧`、`∙`、`⋅`、`・`、`．`、`﹒` 和 `�
 - `t.me/share/url?text=http://example.com.．http://bit.ly/…`、斜杠后面的同一段，以及问号前面的间隔号 `·`，都留着。`http://example.com.．/https://t.me/+…` 不记成邀请。
 - `example.com.．http://bit.ly/…` 和 `www.example.com.．http://bit.ly/…` 删除。分享 `url` 同样删除。证据仍只有主机名。
 - `bit．ly`、`example.com．/http://bit.ly/…` 和 `http://example.com..http://bit.ly/…` 仍按短链删除。
+- 点状字符紧挨在 `@` 前面时，后面的网址后来仍不另开。见 ADR 0287。

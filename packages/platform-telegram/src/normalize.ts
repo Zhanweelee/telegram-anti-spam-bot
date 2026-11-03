@@ -775,6 +775,12 @@ function openLongLabel(text: string): string {
       }
     } else {
       const rest = authority.slice(host);
+      const atMark = lookalikeBeforeAt(rest);
+      if (atMark > 0) {
+        out += `${text.slice(index, index + scheme + host)} `;
+        index += scheme + host + atMark;
+        continue;
+      }
       if (rest.startsWith("@") && !atCanFinish(rest)) {
         out += `${text.slice(index, index + scheme + host)} `;
         index = skipUnfinishedAt(text, index + scheme + host + 1);
@@ -822,11 +828,30 @@ const DRAFT_DOT_LOOKALIKE = new Set([
   0x00b7, 0x2022, 0x2027, 0x2219, 0x22c5, 0x30fb, 0xff0e, 0xfe52, 0xff61,
 ]);
 
+/** 点状字符紧挨在 `@` 前面时，带协议的主机名在这里结束。后面的网址另开。 */
+function lookalikeBeforeAt(rest: string): number {
+  let cursor = 0;
+  while (DRAFT_DOT_LOOKALIKE.has(rest.charCodeAt(cursor))) {
+    cursor += 1;
+  }
+  if (cursor === 0 || rest.charAt(cursor) !== "@") {
+    return 0;
+  }
+  if (schemeAt(rest, cursor + 1) === 0) {
+    return 0;
+  }
+  return cursor + 1;
+}
+
 function labelEndsUrl(rest: string): boolean {
   if (rest.startsWith("-")) {
     return true;
   }
-  if (!rest.startsWith(".") || DRAFT_DOT_LOOKALIKE.has(rest.charCodeAt(1))) {
+  if (
+    !rest.startsWith(".") ||
+    rest.charAt(1) === "@" ||
+    DRAFT_DOT_LOOKALIKE.has(rest.charCodeAt(1))
+  ) {
     return false;
   }
   return !/^[:/?_]/.test(rest.charAt(1));
