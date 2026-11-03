@@ -946,6 +946,9 @@ function isUsernameDraft(url: URL): boolean {
   if (languagePackReplacesDraft(host, url.pathname, parts)) {
     return false;
   }
+  if (giftSlugReplacesDraft(host, url.pathname, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1200,6 +1203,27 @@ function languagePackReplacesDraft(
   );
 }
 
+/** 第二段是礼物短名。末尾斜杠或命令大小写不同时仍写草稿。没有这段时 `nft` 仍是用户名。 */
+function giftSlugReplacesDraft(
+  host: string,
+  pathname: string,
+  parts: readonly string[],
+): boolean {
+  if (host === "nft.t.me") {
+    return parts.length === 1 && /^[A-Za-z0-9._-]+$/.test(parts[0] ?? "");
+  }
+  if (!isExactDraftHost(host) || pathname.endsWith("/")) {
+    return false;
+  }
+  const slug = parts[1];
+  return (
+    parts[0] === "nft" &&
+    parts.length === 2 &&
+    slug !== undefined &&
+    /^[A-Za-z0-9._-]+$/.test(slug)
+  );
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1292,7 +1316,6 @@ const reservedUsernames = new Set([
   "m",
   "msg",
   "newbot",
-  "nft",
   "proxy",
   "s",
   "share",

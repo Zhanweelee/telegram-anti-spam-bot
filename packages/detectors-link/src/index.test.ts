@@ -1917,6 +1917,101 @@ describe("link fixtures", () => {
     expect(JSON.stringify(numeric)).not.toContain(hidden);
   });
 
+  it("reads an nft username draft and leaves a gift slug", async () => {
+    const hidden = "offer207";
+    const slug = "gift207";
+    const address = "203.0.113.207";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/nft?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/nft/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://nft.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=nft&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("nft");
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/Nft/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const trailed = await detector.detect({
+      event: eventFor(`https://t.me/nft/${slug}/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const gift = await detector.detect({
+      event: eventFor(`https://t.me/nft/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(gift).toBeNull();
+    expect(JSON.stringify(gift)).not.toContain(hidden);
+    expect(JSON.stringify(gift)).not.toContain(slug);
+    const hyphenated = await detector.detect({
+      event: eventFor(`https://t.me/nft/gift-now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenated).toBeNull();
+    const dotted = await detector.detect({
+      event: eventFor(`https://t.me/nft/gift.now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted).toBeNull();
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/nft/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post).toBeNull();
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/nft/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/nft/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    expect(JSON.stringify(me)).not.toContain(address);
+    const numeric = await detector.detect({
+      event: eventFor(`https://nft.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    expect(JSON.stringify(numeric)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

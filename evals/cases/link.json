@@ -3705,5 +3705,45 @@
     "id": "setlanguage-subdomain-post",
     "text": "https://setlanguage.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer206",
     "label": "ham"
+  },
+  {
+    "id": "nft-username",
+    "text": "https://t.me/nft?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "spam"
+  },
+  {
+    "id": "nft-resolve",
+    "text": "tg://resolve?domain=nft&text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "spam"
+  },
+  {
+    "id": "nft-prefix",
+    "text": "https://nft.t.me?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "spam"
+  },
+  {
+    "id": "nft-capital",
+    "text": "https://t.me/Nft/gift207?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "spam"
+  },
+  {
+    "id": "nft-trailing-slash",
+    "text": "https://t.me/nft/gift207/?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "spam"
+  },
+  {
+    "id": "nft-slug",
+    "text": "https://t.me/nft/gift207?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "ham"
+  },
+  {
+    "id": "nft-hyphen",
+    "text": "https://t.me/nft/gift-now?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "ham"
+  },
+  {
+    "id": "nft-subdomain-post",
+    "text": "https://nft.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer207",
+    "label": "ham"
   }
 ]

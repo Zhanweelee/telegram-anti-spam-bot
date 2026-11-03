@@ -46,6 +46,7 @@ ADR 0139 不读 `t.me/用户名/app` 上的 `text`。当时把这段路径都当
 - `t.me/addstickers/短名` 后来由 ADR 0237 不读 `text`。连字符、末尾斜杠、大小写不同的命令和 `t.me/addstickers` 仍读。
 - `t.me/addtheme/短名` 后来由 ADR 0238 不读 `text`。连字符、末尾斜杠、大小写不同的命令和 `t.me/addtheme` 仍读。
 - `t.me/setlanguage/短名` 后来由 ADR 0239 不读 `text`。末尾斜杠、大小写不同的命令和 `t.me/setlanguage` 仍读。
+- `t.me/nft/短名` 后来由 ADR 0240 不读 `text`。末尾斜杠、大小写不同的命令和 `t.me/nft` 仍读。
 - 应用名路径上的 `profile` 仍读。没有应用名、且资料页没有被其它参数改掉时，后来由 ADR 0232 不读。
 - 再套一层预填链接仍放行。用户名和应用名不进证据。
 - 应用名后来由 ADR 0147 去掉 128 的上限。全数字的第二段仍是帖子，位数也不再停在 16。
