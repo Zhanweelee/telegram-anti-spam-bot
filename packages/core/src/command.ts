@@ -328,7 +328,33 @@ async function showRules(
         : line,
     );
   }
-  return lines.join("\n");
+  return fitRuleLines(input, lines);
+}
+
+function fitRuleLines(
+  input: OperatorCommandInput,
+  lines: readonly string[],
+): string {
+  const full = lines.join("\n");
+  if (full.length <= EXPORT_REPLY_LIMIT) {
+    return full;
+  }
+  const header = lines[0] ?? "";
+  const rules = lines.slice(1);
+  const rest = (omitted: number): string =>
+    say(input, "command.rules.more", { count: omitted });
+  for (let kept = rules.length - 1; kept >= 0; kept -= 1) {
+    const omitted = rules.length - kept;
+    const body =
+      kept === 0
+        ? rest(omitted)
+        : `${rules.slice(0, kept).join("\n")}\n${rest(omitted)}`;
+    const text = `${header}\n${body}`;
+    if (text.length <= EXPORT_REPLY_LIMIT) {
+      return text;
+    }
+  }
+  return `${header}\n${rest(rules.length)}`;
 }
 
 async function editWhitelist(

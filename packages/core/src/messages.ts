@@ -10,6 +10,7 @@ export const messageKeys = [
   "command.rules.pack",
   "command.rules.empty",
   "command.rules.line",
+  "command.rules.more",
   "command.rules.paused",
   "command.rules.until",
   "command.rules.enabled",
@@ -102,6 +103,7 @@ const zh = {
   "command.rules.empty": "none",
   "command.rules.line":
     "{id} {state} {source} threshold {threshold} actions {actions}",
+  "command.rules.more": "还有 {count} 条",
   "command.rules.paused": "paused",
   "command.rules.until": "{status} until {resetsAt}",
   "command.rules.enabled": "enabled",
@@ -170,6 +172,7 @@ const en = {
   "command.rules.empty": "none",
   "command.rules.line":
     "{id} {state} {source} threshold {threshold} actions {actions}",
+  "command.rules.more": "{count} more",
   "command.rules.paused": "paused",
   "command.rules.until": "{status} until {resetsAt}",
   "command.rules.enabled": "enabled",
