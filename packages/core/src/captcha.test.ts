@@ -77,6 +77,18 @@ function createReferenceStore(): CaptchaStore {
       values.set(key(tenantId, chatId, actorId), parsed.data);
       return true;
     },
+    async findByNonce(tenantId, chatId, nonce) {
+      for (const challenge of values.values()) {
+        if (
+          challenge.tenantId === tenantId &&
+          challenge.chatId === chatId &&
+          challenge.nonce === nonce
+        ) {
+          return challenge;
+        }
+      }
+      return null;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
@@ -540,6 +552,126 @@ describe("captcha flow", () => {
     expect(kit.records).toEqual([]);
     expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
     expect(JSON.stringify(kit.logger.entries)).not.toContain("cd".repeat(8));
+  });
+
+  it("deletes the clicker's other button when that nonce is still theirs", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    kit.clock.iso = "2026-11-01T00:06:00.000Z";
+    kit.store.take = async () => null;
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "43"),
+        ports,
+      }),
+    ).toBe("ignored");
+    expect(removed).toEqual(["43"]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("keeps a live button owned by someone else", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    await kit.store.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "88",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "43",
+    });
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "42", "88"),
+        ports,
+      }),
+    ).toBe("ignored");
+    expect(removed).toEqual([]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(await kit.store.get("local", "-100", "88")).toMatchObject({
+      nonce: "cd".repeat(8),
+      messageId: "43",
+    });
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("expires the clicker without deleting someone else's live button", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    await kit.store.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "88",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:00:30.000Z",
+      messageId: "43",
+    });
+    kit.clock.iso = "2026-11-01T00:01:00.000Z";
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8), "42", "88"),
+        ports,
+      }),
+    ).toBe("expired");
+    expect(removed).toEqual(["43"]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(await kit.store.get("local", "-100", "88")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
   });
 
   it("keeps the button when the clicker has no challenge", async () => {

@@ -186,5 +186,51 @@ export function bindCaptchaStoreContract(create: () => CaptchaStore): void {
         await store.take("tenant_a", "chat_1", "user_1", "cd".repeat(8)),
       ).toEqual({ ...challenge, nonce: "cd".repeat(8) });
     });
+
+    it("finds a nonce only in that tenant and chat", async () => {
+      const store = create();
+      const challenge = {
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+        actorId: "user_1",
+        nonce: "ab".repeat(8),
+        expiresAt: "2026-11-01T00:05:00.000Z",
+        messageId: "42",
+      };
+      expect(
+        await store.findByNonce("tenant_a", "chat_1", challenge.nonce),
+      ).toBeNull();
+      await store.put(challenge);
+      await store.put({
+        ...challenge,
+        tenantId: "tenant_b",
+        nonce: "cd".repeat(8),
+      });
+      await store.put({
+        ...challenge,
+        chatId: "chat_2",
+        actorId: "user_2",
+        nonce: "ef".repeat(8),
+      });
+      expect(
+        await store.findByNonce("tenant_a", "chat_1", challenge.nonce),
+      ).toEqual(challenge);
+      expect(
+        await store.findByNonce("tenant_b", "chat_1", challenge.nonce),
+      ).toBeNull();
+      expect(
+        await store.findByNonce("tenant_a", "chat_2", challenge.nonce),
+      ).toBeNull();
+      expect(
+        await store.findByNonce("tenant_a", "chat_1", "cd".repeat(8)),
+      ).toBeNull();
+      await store.put({ ...challenge, nonce: "cd".repeat(8) });
+      expect(
+        await store.findByNonce("tenant_a", "chat_1", "ab".repeat(8)),
+      ).toBeNull();
+      expect(
+        await store.findByNonce("tenant_a", "chat_1", "cd".repeat(8)),
+      ).toMatchObject({ actorId: "user_1", nonce: "cd".repeat(8) });
+    });
   });
 }
