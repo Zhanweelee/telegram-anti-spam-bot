@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-325
+
+- 从群外加入时，`new_chat_member.tag` 接在昵称后面，进入 `profile`。只有空白时丢掉。
+- 已经在群里的变化、离群和 bot 不带这份标签。见 ADR 0358。
+- 30 天保留期没有改。
+
 ### P3-324
 
 - 旧状态是 `restricted` 且 `is_member` 为 false 的 bot，再回到群里时带 `actor.bot: true`。
