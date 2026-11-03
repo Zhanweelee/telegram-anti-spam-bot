@@ -1241,6 +1241,9 @@ function appendParsed(
 }
 
 function isUsernameDraft(url: URL): boolean {
+  if (profileReplacesDraft(url)) {
+    return false;
+  }
   if (url.protocol === "tg:") {
     const host = url.hostname.toLowerCase();
     const path = url.pathname.replace(/^\/+|\/+$/g, "").toLowerCase();
@@ -1334,6 +1337,55 @@ function androidDraftRest(
     return parts.slice(1);
   }
   return null;
+}
+
+/** 查询名正好是 `profile` 且值不是 `0` 或 `false` 时打开资料页。会改掉资料页的参数仍写草稿。 */
+function profileReplacesDraft(url: URL): boolean {
+  return androidOpensProfile(url) && !desktopOverridesProfile(url);
+}
+
+function androidOpensProfile(url: URL): boolean {
+  for (const [key, value] of url.searchParams) {
+    if (key !== "profile") {
+      continue;
+    }
+    const flag = value.toLowerCase();
+    return flag !== "false" && flag !== "0";
+  }
+  return false;
+}
+
+function desktopOverridesProfile(url: URL): boolean {
+  const start = searchParam(url, "start");
+  if (start !== null && start.length > 0) {
+    return true;
+  }
+  if (
+    searchParam(url, "startgroup") !== null ||
+    searchParam(url, "startchannel") !== null ||
+    searchParam(url, "direct") !== null
+  ) {
+    return true;
+  }
+  const boost = searchParam(url, "boost");
+  if (boost !== null && boost.length > 0) {
+    return true;
+  }
+  const game = searchParam(url, "game");
+  if (game !== null && game.length > 0 && /^[A-Za-z0-9._]+$/.test(game)) {
+    return true;
+  }
+  const domain = searchParam(url, "domain");
+  const appname = searchParam(url, "appname");
+  if (appname !== null && appname.length > 0 && domain?.toLowerCase() !== "s") {
+    return true;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
+  const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  return isAppNamePath(host, parts);
 }
 
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-199
+
+- 查询名正好是 `profile`、值不是 `0` 或 `false` 时打开资料页，不读 `text`。见 ADR 0232。
+- `t.me/用户名?profile=1&text=` 留着。`profile=0`、`Profile`、非空 `start` 和应用名路径仍只留主机名。用户名和路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-198
 
 - 小写 `t.me/call/短码` 打开群通话，不读 `text`。没有这道斜杠时，`call` 仍按用户名读取。见 ADR 0231。

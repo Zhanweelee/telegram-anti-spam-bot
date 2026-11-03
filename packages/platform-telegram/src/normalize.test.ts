@@ -1311,6 +1311,64 @@ describe("normalizeUpdate", () => {
     expect(callDump).not.toContain(slug);
   });
 
+  it("keeps an overridden profile draft and leaves a profile page", async () => {
+    const hidden = "offer199";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const opened = await normalize({
+      update_id: 78042,
+      message: {
+        message_id: 78042,
+        date: 1761955200,
+        chat: { id: -1008273, type: "supergroup" },
+        from: { id: 199 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?profile=0&text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(opened.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(opened.event)).not.toContain(hidden);
+    const page = await normalize({
+      update_id: 78043,
+      message: {
+        message_id: 78043,
+        date: 1761955200,
+        chat: { id: -1008274, type: "supergroup" },
+        from: { id: 199 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?profile=1&text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(page.status).toBe("event");
+    if (page.status !== "event") {
+      return;
+    }
+    expect(page.event.message?.hosts).toEqual(["t.me"]);
+    expect(page.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(page.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain("durov");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

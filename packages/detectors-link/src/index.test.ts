@@ -1184,6 +1184,109 @@ describe("link fixtures", () => {
     expect(JSON.stringify(digits)).not.toContain(address);
   });
 
+  it("skips a profile link and still reads an overridden draft", async () => {
+    const hidden = "offer199";
+    const address = "203.0.113.199";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const profile = await detector.detect({
+      event: eventFor(`https://t.me/durov?profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(profile).toBeNull();
+    expect(JSON.stringify(profile)).not.toContain(hidden);
+    const empty = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/durov?profile&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(empty).toBeNull();
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/durov/123?profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post).toBeNull();
+    const sub = await detector.detect({
+      event: eventFor(`https://durov.t.me?profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub).toBeNull();
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=durov&profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep).toBeNull();
+    const preview = await detector.detect({
+      event: eventFor(`https://t.me/s/durov?profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview).toBeNull();
+    const phone = await detector.detect({
+      event: eventFor(
+        `https://t.me/+79990001199?profile=1&text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(phone).toBeNull();
+    expect(JSON.stringify(phone)).not.toContain(address);
+    const zero = await detector.detect({
+      event: eventFor(`https://t.me/durov?profile=0&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(zero?.reasons).toEqual(["short_link"]);
+    expect(zero?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(zero)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/durov?Profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const started = await detector.detect({
+      event: eventFor(`https://t.me/durov?profile=1&start=hi&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(started?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const game = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=durov&profile=1&game=game1&text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(game?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const plainGame = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=durov&profile=1&game=a+b&text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(plainGame).toBeNull();
+    const grouped = await detector.detect({
+      event: eventFor(`https://t.me/durov?profile=1&startgroup=&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(grouped?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const app = await detector.detect({
+      event: eventFor(`https://telegram.me/durov/shop?profile=1&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain("shop");
+    expect(JSON.stringify(app)).not.toContain("durov");
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

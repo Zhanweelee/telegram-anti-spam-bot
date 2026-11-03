@@ -3425,5 +3425,30 @@
     "id": "group-call-prefix",
     "text": "https://call.t.me/room198?text=https%3A%2F%2Fbit.ly%2Foffer198",
     "label": "ham"
+  },
+  {
+    "id": "profile-page",
+    "text": "https://t.me/durov?profile=1&text=https%3A%2F%2Fbit.ly%2Foffer199",
+    "label": "ham"
+  },
+  {
+    "id": "profile-resolve",
+    "text": "tg://resolve?domain=durov&profile=1&text=https%3A%2F%2Fbit.ly%2Foffer199",
+    "label": "ham"
+  },
+  {
+    "id": "profile-post",
+    "text": "https://t.me/durov/123?profile=1&text=https%3A%2F%2Fbit.ly%2Foffer199",
+    "label": "ham"
+  },
+  {
+    "id": "profile-zero",
+    "text": "https://t.me/durov?profile=0&text=https%3A%2F%2Fbit.ly%2Foffer199",
+    "label": "spam"
+  },
+  {
+    "id": "profile-start",
+    "text": "https://t.me/durov?profile=1&start=hi&text=https%3A%2F%2Fbit.ly%2Foffer199",
+    "label": "spam"
   }
 ]
