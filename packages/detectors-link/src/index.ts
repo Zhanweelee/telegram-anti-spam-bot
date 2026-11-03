@@ -662,11 +662,9 @@ function telegramWrapped(
   if (!isTelegramShare(url)) {
     return null;
   }
-  const embedded = openedDraft(queryValue(raw, "url"));
-  const text = queryValue(raw, "text");
   return {
-    url: embedded,
-    text: text !== null && text.length > 0 && text.length <= 4096 ? text : null,
+    url: openedDraft(queryValue(raw, "url")),
+    text: openedDraft(queryValue(raw, "text")),
   };
 }
 
@@ -1536,11 +1534,7 @@ function telegramMsgText(raw: string): string | null {
   if (!isTelegramMsgRaw(raw)) {
     return null;
   }
-  const text = queryValue(raw, "text");
-  if (text === null || text.length === 0 || text.length > 4096) {
-    return null;
-  }
-  return text;
+  return openedDraft(queryValue(raw, "text"));
 }
 
 function isTelegramMsgRaw(raw: string): boolean {

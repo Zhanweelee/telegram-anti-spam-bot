@@ -1064,8 +1064,8 @@ function wrappedExtras(
       pushClosedUrl(raw, found);
     }
   }
-  const text = queryValue(source, "text");
-  if (text !== null && text.length > 0 && text.length <= MAX_TEXT) {
+  const text = openedDraft(queryValue(source, "text"));
+  if (text !== null) {
     for (const raw of urlsInText(text)) {
       pushDraftUrl(raw, found, false);
     }
@@ -1088,8 +1088,8 @@ function msgTextExtras(
       pushClosedUrl(raw, found);
     }
   }
-  const text = queryValue(source, "text");
-  if (text === null || text.length === 0 || text.length > MAX_TEXT) {
+  const text = openedDraft(queryValue(source, "text"));
+  if (text === null) {
     return found;
   }
   for (const raw of urlsInText(text)) {

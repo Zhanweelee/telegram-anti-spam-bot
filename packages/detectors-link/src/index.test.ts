@@ -4520,6 +4520,36 @@ describe("link fixtures", () => {
     expect(JSON.stringify(cut)).not.toContain(path);
   });
 
+  it("reads a short link in a long share text", () => {
+    const path = "offer233";
+    const padding = "a".repeat(4100);
+    const head = extractHosts(
+      `https://t.me/share/url?text=http://bit.ly/${path}%20${padding}`,
+    );
+    expect(head).toContain("bit.ly");
+    expect(JSON.stringify(head)).not.toContain(path);
+    const tail = extractHosts(
+      `https://t.me/share/url?text=${padding}%20http://bit.ly/${path}`,
+    );
+    expect(tail).toContain("bit.ly");
+    expect(JSON.stringify(tail)).not.toContain(path);
+    const msg = extractHosts(
+      `tg://msg?text=http://bit.ly/${path}%20${padding}`,
+    );
+    expect(msg).toContain("bit.ly");
+    expect(JSON.stringify(msg)).not.toContain(path);
+    const user = extractHosts(
+      `https://t.me/durov?text=http://bit.ly/${path}%20${padding}`,
+    );
+    expect(user).not.toContain("bit.ly");
+    expect(JSON.stringify(user)).not.toContain(path);
+    const cut = extractHosts(
+      `https://t.me/share/url?text=${"b".repeat(16384)}%20http://bit.ly/${path}`,
+    );
+    expect(cut).not.toContain("bit.ly");
+    expect(JSON.stringify(cut)).not.toContain(path);
+  });
+
   it("reads a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
