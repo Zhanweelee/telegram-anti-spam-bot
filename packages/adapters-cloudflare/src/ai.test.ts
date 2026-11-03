@@ -65,6 +65,25 @@ describe("workers ai classifier", () => {
     expect(calls).toBe(0);
   });
 
+  it("does not call the paid DeepSeek V4.1 flash model", async () => {
+    const model = "@cf/deepseek-ai/deepseek-v4.1-flash-1017";
+    let calls = 0;
+    const classifier = createWorkersAiClassifier(
+      {
+        async run() {
+          calls += 1;
+          return [{ label: "NEGATIVE", score: 1 }];
+        },
+      },
+      { model },
+    );
+    await expect(classifier.classify(phrase)).rejects.toBeInstanceOf(
+      LlmUnavailableError,
+    );
+    expect(calls).toBe(0);
+    expect(PAID_PLAN_MODELS).toContain(model);
+  });
+
   it("rejects a payload that is not a label list", async () => {
     const classifier = createWorkersAiClassifier({
       async run() {

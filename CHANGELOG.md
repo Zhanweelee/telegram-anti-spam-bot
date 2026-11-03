@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-328
+
+- 免费计划会 403 的 `@cf/deepseek-ai/deepseek-v4.1-flash-1017` 在调用前拒绝。
+- 默认模型仍是 `@cf/huggingface/distilbert-sst-2-int8`。见 ADR 0015。
+- 30 天保留期没有改。
+
 ### P3-327
 
 - 入群申请带上安全的 `query_id` 时记成 `joinQueryId`。命中答复 `decline`，未命中或豁免答复 `queue`。

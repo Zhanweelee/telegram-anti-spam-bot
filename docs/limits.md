@@ -1,6 +1,6 @@
 # Cloudflare 免费额度与设计约束
 
-查证日期：2026-11-03。数字来自当天检索到的官方文档，不是记忆。额度会变。每周健康检查要人工对照下面的链接，再改这份文件。
+查证日期：2026-11-04。数字来自当天检索到的官方文档，不是记忆。额度会变。每周健康检查要人工对照下面的链接，再改这份文件。
 
 免费额度按账号、在 **00:00 UTC（北京时间 08:00）** 重置的，按日计；文档写明按月的，另注。
 
@@ -127,14 +127,14 @@ KV 是最终一致的。
 | --- | --- |
 | 免费 Neurons | 10,000 / 天。用尽返回 HTTP 429，内部码 3036 |
 | 超出后 | 免费计划不能继续付费使用，必须升级 Workers Paid |
-| 部分模型 | `@cf/moonshotai/kimi-k2.6`、`kimi-k2.7-code`、`@cf/zai-org/glm-5.2` 在免费计划上直接 403 |
+| 部分模型 | `@cf/moonshotai/kimi-k2.6`、`kimi-k2.7-code`、`@cf/zai-org/glm-5.2`、`glm-5.3`、`glm-5.3-flash`、DeepSeek V4 Flash、V4.1 Flash 和 V4 Pro 在免费计划上直接 403 |
 
 设计约束：
 
 - LLM 是最后一级，默认关闭。规则和关键词先处理。
 - 调用要有熔断：额度错误或超时则跳过，流水线 fail-open。
 - 2026-11-01 选用仍在免费计划上的 `@cf/huggingface/distilbert-sst-2-int8`。定价页写 2394 neurons / 1,000,000 input tokens。它是情感分类，不是垃圾消息模型。见 ADR 0015。
-- 不要把需要付费计划的模型写进默认配置。已知会在免费计划上 403 的包括 `@cf/moonshotai/kimi-k2.6`、`kimi-k2.7-code`、`@cf/zai-org/glm-5.2`、`glm-5.3`、`glm-5.3-flash`，以及 DeepSeek V4 Flash / Pro。
+- 不要把需要付费计划的模型写进默认配置。已知会在免费计划上 403 的包括 `@cf/moonshotai/kimi-k2.6`、`kimi-k2.7-code`、`@cf/zai-org/glm-5.2`、`glm-5.3`、`glm-5.3-flash`、`@cf/deepseek-ai/deepseek-v4-flash-0731`、`deepseek-v4.1-flash-1017` 和 `deepseek-v4-pro-0813`。2026-11-04 核对时，Workers 限额页标注 2026-10-29，D1 标注 2026-10-30，Workers AI 定价页仍标注 2026-10-20。免费请求、CPU、子请求、D1 查询次数和 Neurons 数字没有变。默认模型仍是 `@cf/huggingface/distilbert-sst-2-int8`。
 
 ## Cron
 

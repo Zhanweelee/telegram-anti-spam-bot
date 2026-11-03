@@ -14,7 +14,7 @@ P2-01 要求一个可插拔的分类器。Workers AI 额度错误或超时时跳
 - core 只放端口 `LlmClassifier`。它返回 `{ label, score }`。core 不发请求。
 - 检测器 `llm` 在 `packages/detectors-llm`。没有分类器时直接返回未命中，不写日志。分类器抛错或超过 `timeoutMs`（默认 800，上限 1000）时记 `llm_failed` 并返回未命中。日志只有 `eventId`、`chatId`、`detectorId`。
 - 默认模型是 `@cf/huggingface/distilbert-sst-2-int8`。定价页写的是 2394 neurons / 1,000,000 input tokens。它做的是情感分类，标签是 `NEGATIVE` 和 `POSITIVE`，不是垃圾消息模型。只有 `NEGATIVE` 且分数不低于 0.9 才记一条 `llm` 命中。证据是 `llm:NEGATIVE`，不含原文。
-- 这些模型在免费计划上会 403（内部码 5035），适配器拒绝调用它们：`@cf/moonshotai/kimi-k2.6`、`@cf/moonshotai/kimi-k2.7-code`、`@cf/zai-org/glm-5.2`、`@cf/zai-org/glm-5.3`、`@cf/zai-org/glm-5.3-flash`、`@cf/deepseek-ai/deepseek-v4-flash-0731`、`@cf/deepseek-ai/deepseek-v4-pro-0813`。名单来自 2026-07-28 之后的 changelog，不是完整目录。
+- 这些模型在免费计划上会 403（内部码 5035），适配器拒绝调用它们：`@cf/moonshotai/kimi-k2.6`、`@cf/moonshotai/kimi-k2.7-code`、`@cf/zai-org/glm-5.2`、`@cf/zai-org/glm-5.3`、`@cf/zai-org/glm-5.3-flash`、`@cf/deepseek-ai/deepseek-v4-flash-0731`、`@cf/deepseek-ai/deepseek-v4.1-flash-1017`、`@cf/deepseek-ai/deepseek-v4-pro-0813`。名单来自定价页标注的付费模型，不是完整目录。2026-11-04 核对时页面仍标注 2026-10-20，付费名单里多了 `deepseek-v4.1-flash-1017`。
 - 默认规则 `llm_hint` 的 `enabled` 是 false。提交的 `wrangler.jsonc` 不绑定 `AI`。两条都打开之后，下一条消息才会调用模型。`chats.json` 整份替换的群不会自动带上这条规则。
 
 ## 备选
@@ -31,3 +31,4 @@ P2-01 要求一个可插拔的分类器。Workers AI 额度错误或超时时跳
 - 打开之后，情感为负的普通抱怨可能被删。这是模型能力的上限，不是垃圾消息专用模型。
 - 额度、超时、坏响应和付费模型都放过这条消息。请求不会变成 500。
 - 发给模型的文本最多 512 字符，不写入审计，也不写入日志。
+- 2026-11-04 起，`@cf/deepseek-ai/deepseek-v4.1-flash-1017` 也在调用前拒绝。默认模型没变。
