@@ -4520,6 +4520,37 @@ describe("link fixtures", () => {
     expect(JSON.stringify(cut)).not.toContain(path);
   });
 
+  it("reads a short link after a draft stop", async () => {
+    const detector = createLinkDetector();
+    const path = "offer234";
+    const piped = await detector.detect({
+      event: eventFor(
+        `https://t.me/share/url?text=https://example.com/%7Chttp://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(piped?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(piped)).not.toContain(path);
+    const broken = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=https://example.com/%FFhttp://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(broken?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(broken)).not.toContain(path);
+    const stuck = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=https://example.com/%2http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stuck).toBeNull();
+  });
+
   it("reads a short link in a long share text", () => {
     const path = "offer233";
     const padding = "a".repeat(4100);

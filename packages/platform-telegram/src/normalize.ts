@@ -500,6 +500,16 @@ function urlsInText(text: string): string[] {
   return found;
 }
 
+/** 草稿里 Android 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
+const DRAFT_STOP = new RegExp(
+  `[${String.fromCharCode(0)}-${String.fromCharCode(0x1f)}${String.fromCharCode(0x7f)}[\\]\\\\^\`{|\\u0080-\\u009F\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF}]|%(?=(?:https?|tg):\\/\\/)`,
+  "gi",
+);
+
+function openedDraftUrls(text: string): string[] {
+  return urlsInText(text.replace(DRAFT_STOP, " "));
+}
+
 function sideUrls(message: Record<string, unknown>): string[] {
   const urls: string[] = [];
   pushContactUrls(message, urls);
@@ -1066,7 +1076,7 @@ function wrappedExtras(
   }
   const text = openedDraft(queryValue(source, "text"));
   if (text !== null) {
-    for (const raw of urlsInText(text)) {
+    for (const raw of openedDraftUrls(text)) {
       pushDraftUrl(raw, found, false);
     }
   }
@@ -1092,7 +1102,7 @@ function msgTextExtras(
   if (text === null) {
     return found;
   }
-  for (const raw of urlsInText(text)) {
+  for (const raw of openedDraftUrls(text)) {
     pushDraftUrl(raw, found, true);
   }
   return found;
@@ -1207,7 +1217,7 @@ function usernameDraftExtras(
     return [];
   }
   const found: { host: string; invite: boolean }[] = [];
-  for (const raw of urlsInText(text)) {
+  for (const raw of openedDraftUrls(text)) {
     pushDraftUrl(raw, found, true);
   }
   return found;

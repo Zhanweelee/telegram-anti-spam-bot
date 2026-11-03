@@ -3706,6 +3706,115 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(user.event)).not.toContain(path);
   });
 
+  it("keeps a short link after a draft stop", async () => {
+    const path = "offer234";
+    const piped = await normalize({
+      update_id: 78129,
+      message: {
+        message_id: 78129,
+        date: 1761955200,
+        chat: { id: -1008360, type: "supergroup" },
+        from: { id: 234 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://example.com/%7Chttp://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(piped.status).toBe("event");
+    if (piped.status !== "event") {
+      return;
+    }
+    expect(piped.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(piped.event)).not.toContain(path);
+    const broken = await normalize({
+      update_id: 78130,
+      message: {
+        message_id: 78130,
+        date: 1761955200,
+        chat: { id: -1008361, type: "supergroup" },
+        from: { id: 234 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=https://example.com/%FFhttp://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(broken.status).toBe("event");
+    if (broken.status !== "event") {
+      return;
+    }
+    expect(broken.event.message?.hosts).toEqual([
+      "t.me",
+      "example.com",
+      "bit.ly",
+    ]);
+    expect(JSON.stringify(broken.event)).not.toContain(path);
+    const stuck = await normalize({
+      update_id: 78131,
+      message: {
+        message_id: 78131,
+        date: 1761955200,
+        chat: { id: -1008362, type: "supergroup" },
+        from: { id: 234 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=https://example.com/%2http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(stuck.status).toBe("event");
+    if (stuck.status !== "event") {
+      return;
+    }
+    expect(stuck.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(stuck.event)).not.toContain(path);
+    expect(JSON.stringify(stuck.event)).not.toContain("bit.ly");
+    const msg = await normalize({
+      update_id: 78132,
+      message: {
+        message_id: 78132,
+        date: 1761955200,
+        chat: { id: -1008363, type: "supergroup" },
+        from: { id: 234 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `tg://msg?text=https://example.com/%7Chttp://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(msg.status).toBe("event");
+    if (msg.status !== "event") {
+      return;
+    }
+    expect(msg.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    expect(JSON.stringify(msg.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
