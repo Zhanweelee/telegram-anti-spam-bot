@@ -4525,5 +4525,80 @@
     "id": "m-subdomain-name",
     "text": "https://m.t.me/slug.222?text=https%3A%2F%2Fbit.ly%2Foffer222",
     "label": "spam"
+  },
+  {
+    "id": "c-username",
+    "text": "https://t.me/c?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-resolve",
+    "text": "tg://resolve?domain=c&text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-prefix",
+    "text": "https://c.t.me?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-slash",
+    "text": "https://t.me/c/?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-capital-dot",
+    "text": "https://t.me/C/slug.223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-capital-post",
+    "text": "https://t.me/C/223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-app",
+    "text": "https://t.me/c/slug.223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-trail",
+    "text": "https://t.me/c/slug223/?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "spam"
+  },
+  {
+    "id": "c-post",
+    "text": "https://t.me/c/223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-negative",
+    "text": "https://t.me/c/-100223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-post-slash",
+    "text": "https://t.me/c/223/?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-thread",
+    "text": "https://t.me/c/223/456?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-extra",
+    "text": "https://t.me/c/slug.223/extra?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-subdomain-name",
+    "text": "https://c.t.me/slug.223?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
+  },
+  {
+    "id": "c-prefix-post",
+    "text": "https://c.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer223",
+    "label": "ham"
   }
 ]

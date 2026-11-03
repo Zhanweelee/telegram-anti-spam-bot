@@ -1328,6 +1328,9 @@ function isUsernameDraft(url: URL): boolean {
   if (businessChatReplacesDraft(host, url.pathname, parts)) {
     return false;
   }
+  if (privatePostDropsDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1767,6 +1770,22 @@ function businessChatReplacesDraft(
   return parts.length === 2 && slug(parts[1]) && !pathname.endsWith("/");
 }
 
+/** 小写 `c` 后面是频道数字时打开私密帖。其它短名和大写命令仍写草稿。 */
+function privatePostDropsDraft(
+  host: string,
+  parts: readonly string[],
+): boolean {
+  const channel = (value: string | undefined) =>
+    value !== undefined && /^-?\d+$/.test(value);
+  if (host === "c.t.me") {
+    return parts.length === 1 && channel(parts[0]);
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "c") {
+    return false;
+  }
+  return parts.length === 2 && channel(parts[1]);
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1844,7 +1863,6 @@ function isPublicUsername(value: string): boolean {
 }
 
 const reservedUsernames = new Set([
-  "c",
   "confirmphone",
   "getpremium",
   "iv",
