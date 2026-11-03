@@ -18230,6 +18230,82 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(both.event)).not.toContain("both79");
   });
 
+  it("keeps hostnames from web app data without storing the payload", async () => {
+    const path = "offer285";
+    const code = "INV285";
+    const phrase = "请免费领取礼品";
+    const labeled = await normalize({
+      update_id: 79001,
+      message: {
+        message_id: 79001,
+        date: 1761955200,
+        chat: { id: -1009233, type: "private" },
+        from: { id: 285 },
+        text: "今天站会",
+        web_app_data: {
+          data: `${phrase} https://bit.ly/${path} https://t.me/+${code}`,
+          button_text: `打开 https://t.co/${path}`,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "t.co"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain("打开");
+
+    const visible = await normalize({
+      update_id: 79002,
+      message: {
+        message_id: 79002,
+        date: 1761955200,
+        chat: { id: -1009234, type: "private" },
+        from: { id: 285 },
+        web_app_data: {
+          data: `https://bit.ly/${path}`,
+          button_text: "打开",
+        },
+      },
+    });
+    expect(visible.status).toBe("event");
+    if (visible.status !== "event") {
+      return;
+    }
+    expect(visible.event.message?.text).toBe("打开");
+    expect(visible.event.message?.textSha256).toBe(await sha256Hex("打开"));
+    expect(visible.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(visible.event)).not.toContain(path);
+
+    const hidden = await normalize({
+      update_id: 79003,
+      message: {
+        message_id: 79003,
+        date: 1761955200,
+        chat: { id: -1009235, type: "private" },
+        from: { id: 285 },
+        web_app_data: {
+          data: `https://example.com/${path}`,
+          button_text: "",
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.text).toBe("");
+    expect(hidden.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(hidden.event)).not.toContain(path);
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";

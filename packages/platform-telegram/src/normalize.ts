@@ -3067,6 +3067,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(message.new_chat_title, urls);
   pushPlainUrls(memberNames(message), urls);
+  const webApp = message.web_app_data;
+  if (isRecord(webApp)) {
+    pushPlainUrls(webApp.data, urls);
+    pushPlainUrls(webApp.button_text, urls);
+  }
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -5065,6 +5070,10 @@ function messageText(
   if (buttons.length > 0) {
     return buttons;
   }
+  const webApp = webAppButtonText(message);
+  if (webApp.length > 0) {
+    return webApp;
+  }
   const quote = message.quote;
   if (
     includeQuote &&
@@ -5152,6 +5161,15 @@ function pushUserLabels(value: unknown, parts: string[]): void {
       }
     }
   }
+}
+
+/** 小程序回传的按钮文字看得见。`data` 只留主机名，不进正文。 */
+function webAppButtonText(message: Record<string, unknown>): string {
+  const webApp = message.web_app_data;
+  if (!isRecord(webApp) || typeof webApp.button_text !== "string") {
+    return "";
+  }
+  return webApp.button_text.slice(0, MAX_TEXT);
 }
 
 function senderTag(message: Record<string, unknown>): string {
