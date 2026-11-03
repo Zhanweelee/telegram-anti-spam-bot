@@ -123,6 +123,105 @@ describe("captcha flow", () => {
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
   });
 
+  it("deletes the previous prompt when a new join replaces the challenge", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "cd".repeat(8),
+      ports,
+    });
+    expect(removed).toEqual(["42"]);
+    const saved = await kit.store.get("local", "-100", "77");
+    expect(saved).toMatchObject({ nonce: "cd".repeat(8) });
+    expect(saved?.messageId).toBeUndefined();
+    expect(kit.restricted).toHaveLength(2);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
+  it("keeps the new challenge when the old prompt cannot be deleted", async () => {
+    const kit = harness();
+    const ports = {
+      ...kit.ports,
+      async removePrompt() {
+        throw new Error(secret);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "cd".repeat(8),
+      ports,
+    });
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "cd".repeat(8),
+    });
+    expect(kit.restricted).toHaveLength(2);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+    expect(
+      kit.logger.entries.some(
+        (entry) => entry.message === "captcha_prompt_delete_failed",
+      ),
+    ).toBe(true);
+  });
+
+  it("deletes the old prompt when the replacement restrict fails", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    let calls = 0;
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+      async restrict(target: MuteTarget) {
+        calls += 1;
+        if (calls > 1) {
+          throw new Error("restrict_failed");
+        }
+        kit.restricted.push(target);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    await expect(
+      beginChallenge({
+        event: joinEvent(),
+        ttlSeconds: 300,
+        nonce: "cd".repeat(8),
+        ports,
+      }),
+    ).rejects.toThrow("restrict_failed");
+    expect(removed).toEqual(["42"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+  });
+
   it("deletes the prompt after a pass and after an expiry", async () => {
     const kit = harness();
     const removed: string[] = [];

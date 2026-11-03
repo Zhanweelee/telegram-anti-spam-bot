@@ -114,7 +114,15 @@ export async function beginChallenge(input: {
     nonce: input.nonce,
     expiresAt: addSeconds(nowIso, input.ttlSeconds),
   });
+  const previous = await input.ports.store.get(
+    challenge.tenantId,
+    challenge.chatId,
+    challenge.actorId,
+  );
   await input.ports.store.put(challenge);
+  if (previous?.messageId && previous.messageId !== challenge.messageId) {
+    await forgetPrompt(previous, input.ports, input.event.id);
+  }
   try {
     await input.ports.restrict({
       tenantId: challenge.tenantId,
