@@ -32,3 +32,4 @@ Android 不把七个西里尔形近字母、乌克兰语 `і` 和全角拉丁字
 - `t.me/share/url?text=bАhttp://bit.ly/…` 删除。分享 `url` 同样删除。证据仍只有主机名。
 - `example.comАhttps://t.me/+…` 按邀请删除。路径和邀请码不进证据。
 - `http://example.comАhttp://bit.ly/…` 和 `http://example.com/Ａhttp://bit.ly/…` 留着。`bАbit.ly` 留着。`bіt.ly` 和全角的 `ｂｉｔ.ly` 仍按短链删除。
+- 组合附加符号紧挨在裸主机名和网址之间时，隐藏草稿仍会单独打开后面的短链。见 ADR 0290。
