@@ -17016,6 +17016,178 @@ describe("normalizeUpdate", () => {
     expect(botLeft.status).toBe("event");
     if (botLeft.status === "event") {
       expect(botLeft.event.membership).toBeUndefined();
+      expect(botLeft.event.actor.bot).toBeUndefined();
+    }
+  });
+
+  it("bans a bot that returns from a restricted absence", async () => {
+    const name = "广告机器人";
+    const returned = await normalize({
+      update_id: 2061,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup", title: name },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "member",
+        },
+      },
+    });
+    expect(returned.status).toBe("event");
+    if (returned.status === "event") {
+      expect(returned.event.actor.bot).toBe(true);
+      expect(returned.event.membership).toBeUndefined();
+      expect(returned.event.actor.isAdmin).toBe(false);
+      expect(JSON.stringify(returned.event)).not.toContain(name);
+    }
+    const madeAdmin = await normalize({
+      update_id: 2062,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "administrator",
+        },
+      },
+    });
+    expect(madeAdmin.status).toBe("event");
+    if (madeAdmin.status === "event") {
+      expect(madeAdmin.event.actor.bot).toBe(true);
+      expect(madeAdmin.event.membership).toBeUndefined();
+      expect(madeAdmin.event.actor.isAdmin).toBe(false);
+      expect(JSON.stringify(madeAdmin.event)).not.toContain(name);
+    }
+    const stillRestricted = await normalize({
+      update_id: 2063,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: true,
+        },
+      },
+    });
+    expect(stillRestricted.status).toBe("event");
+    if (stillRestricted.status === "event") {
+      expect(stillRestricted.event.actor.bot).toBe(true);
+      expect(stillRestricted.event.membership).toBeUndefined();
+    }
+    const alreadyInside = await normalize({
+      update_id: 2064,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: true,
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "member",
+        },
+      },
+    });
+    expect(alreadyInside.status).toBe("event");
+    if (alreadyInside.status === "event") {
+      expect(alreadyInside.event.actor.bot).toBeUndefined();
+    }
+    const omittedMember = await normalize({
+      update_id: 2065,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 88, is_bot: true }, status: "left" },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+        },
+      },
+    });
+    expect(omittedMember.status).toBe("event");
+    if (omittedMember.status === "event") {
+      expect(omittedMember.event.actor.bot).toBe(true);
+    }
+    const stillOutside = await normalize({
+      update_id: 2066,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 88, is_bot: true }, status: "left" },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: false,
+        },
+      },
+    });
+    expect(stillOutside.status).toBe("event");
+    if (stillOutside.status === "event") {
+      expect(stillOutside.event.actor.bot).toBeUndefined();
+    }
+    const stayedOutside = await normalize({
+      update_id: 2067,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true },
+          status: "restricted",
+          is_member: false,
+        },
+      },
+    });
+    expect(stayedOutside.status).toBe("event");
+    if (stayedOutside.status === "event") {
+      expect(stayedOutside.event.actor.bot).toBeUndefined();
+    }
+    const configured = await normalize(
+      {
+        update_id: 2068,
+        chat_member: {
+          chat: { id: -100588, type: "supergroup" },
+          from: { id: 1 },
+          old_chat_member: {
+            user: { id: 88, is_bot: true },
+            status: "restricted",
+            is_member: false,
+          },
+          new_chat_member: {
+            user: { id: 88, is_bot: true },
+            status: "administrator",
+          },
+        },
+      },
+      ["88"],
+    );
+    expect(configured.status).toBe("event");
+    if (configured.status === "event") {
+      expect(configured.event.actor.bot).toBe(true);
+      expect(configured.event.actor.isAdmin).toBe(true);
+      expect(configured.event.membership).toBeUndefined();
     }
   });
 

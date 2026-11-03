@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-324 被限制后离群的 bot 再回来仍封禁 — done
+
+验收：bot 的旧状态是 `restricted` 且 `is_member` 为 false，新状态是 `member`、仍在群里的 `restricted` 或 `administrator` 时，事件带 `actor.bot: true`，不带 `membership`。用户名不进事件。新状态是管理员时，`isAdmin` 仍只看配置里的 id。新状态仍是 `restricted` 且 `is_member` 为 false 时不带 `actor.bot`。已经在群里的 bot 被提升或解除限制时仍不带。日志不含用户名。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-323 付费帖不删除 — done
 
 验收：`is_paid_post` 正好为 true 时，事件消息带 `paid: true`，正文仍可检测。星星数量不进事件。删除动作返回 `skipped` / `paid_post`，不调用 `deleteMessage`。`false` 和缺失不带 `paid`。禁言和封禁仍执行。日志不含星星数量。规则、白名单、额度和 30 天保留期不动。
@@ -1528,6 +1532,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-324
+
+- 做了什么：被限制后离群的 bot 再回群时，仍标成从群外加入并走原来的封禁。
+- 学到什么：`is_member: false` 对 bot 和人是同一种「不在群里」。只认 `left` 和 `kicked` 会放进一个曾经被限制过的 bot。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-323
 

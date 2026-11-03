@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-324
+
+- 旧状态是 `restricted` 且 `is_member` 为 false 的 bot，再回到群里时带 `actor.bot: true`。
+- 新状态仍是这种离群时不带。`is_member` 缺失时仍按 ADR 0031。不写用户名，也不设 `membership`。见 ADR 0357。
+- 30 天保留期没有改。
+
 ### P3-323
 
 - `is_paid_post` 正好为 true 时，消息带 `paid: true`。删除动作返回 `paid_post`，不调用删除。
