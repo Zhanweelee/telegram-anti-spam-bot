@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-338
+
+- 私聊 `/bansender` 按频道号调用 `banChatSenderChat`，不封用户。
+- 直到解除，该频道主人不能再以名下任何频道代发。没有 token 或调用失败时回复「参数无效」。见 ADR 0370。
+- 30 天保留期没有改。
+
 ### P3-337
 
 - 私聊 `/approve` 按成员号调用 `approveChatJoinRequest`，不带查询号。

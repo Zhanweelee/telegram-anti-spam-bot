@@ -118,6 +118,64 @@ describe("handleIncomingEvent", () => {
     ]);
   });
 
+  it("blocks a sender chat without banning a user", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/bansender -100 -1005", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已禁止 -1005 在 -100 代发。频道主人的其它频道也会被挡住，直到解除",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["banChatSenderChat"]);
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).toContain('"sender_chat_id":-1005');
+    expect(calls[0]?.body).not.toContain("user_id");
+    expect(calls[0]?.body).not.toContain("revoke_messages");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/bansender -100 -1005", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/bansender -100 -1005", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("approves a pending join and leaves ban and mute unchanged", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

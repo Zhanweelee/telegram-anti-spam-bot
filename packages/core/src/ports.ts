@@ -80,6 +80,12 @@ export interface BanTarget {
   readonly actorId: string;
 }
 
+export interface SenderChatTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly senderChatId: string;
+}
+
 export type UnmuteResult = "lifted" | "absent";
 
 export type MemberStanding =
@@ -99,6 +105,7 @@ export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
+  banSenderChat(target: SenderChatTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;

@@ -24,6 +24,15 @@ describe("operator command example", () => {
     expect(help).toContain("/delete");
     expect(help).toContain("/decline");
     expect(help).toContain("/approve");
+    expect(help).toContain("/bansender");
+    const sender = await runPrivateCommand({
+      text: "/bansender -100 -1005",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(sender).toBe(
+      "已禁止 -1005 在 -100 代发。频道主人的其它频道也会被挡住，直到解除",
+    );
     const approved = await runPrivateCommand({
       text: "/approve -100 77",
       actorId: "42",
