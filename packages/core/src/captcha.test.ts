@@ -3,6 +3,7 @@ import {
   addSeconds,
   beginChallenge,
   type CaptchaStore,
+  captchaChallengeSchema,
   expireChallenges,
   isExpired,
   parseCaptchaChallenge,
@@ -59,6 +60,21 @@ function createReferenceStore(): CaptchaStore {
       }
       return taken;
     },
+    async attachPrompt(tenantId, chatId, actorId, nonce, messageId) {
+      const current = values.get(key(tenantId, chatId, actorId));
+      if (current === undefined || current.nonce !== nonce) {
+        return false;
+      }
+      const parsed = captchaChallengeSchema.safeParse({
+        ...current,
+        messageId,
+      });
+      if (!parsed.success || parsed.data.messageId === undefined) {
+        return false;
+      }
+      values.set(key(tenantId, chatId, actorId), parsed.data);
+      return true;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
@@ -105,6 +121,76 @@ describe("captcha flow", () => {
     expect(JSON.stringify(kit.records)).not.toContain(secret);
     expect(JSON.stringify(kit.records)).not.toContain('"text"');
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
+  });
+
+  it("deletes the prompt after a pass and after an expiry", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    expect(
+      await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42"),
+    ).toBe(true);
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8)),
+        ports,
+      }),
+    ).toBe("passed");
+    expect(removed).toEqual(["42"]);
+    expect(JSON.stringify(kit.records)).not.toContain("42");
+
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 60,
+      nonce: "cd".repeat(8),
+      ports,
+    });
+    expect(
+      await kit.store.attachPrompt("local", "-100", "77", "cd".repeat(8), "43"),
+    ).toBe(true);
+    kit.clock.iso = "2026-11-01T00:02:00.000Z";
+    expect(await expireChallenges(ports)).toBe(1);
+    expect(removed).toEqual(["42", "43"]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+  });
+
+  it("keeps a pass when deleting the prompt fails", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    const result = await resolveChallenge({
+      event: answerEvent("ab".repeat(8)),
+      ports: {
+        ...kit.ports,
+        async removePrompt() {
+          throw new Error(secret);
+        },
+      },
+    });
+    expect(result).toBe("passed");
+    expect(kit.records[0]?.reasons).toEqual(["captcha_passed"]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+    expect(
+      kit.logger.entries.some(
+        (entry) => entry.message === "captcha_prompt_delete_failed",
+      ),
+    ).toBe(true);
   });
 
   it("lets only the first overlapping answer release the member", async () => {

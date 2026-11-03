@@ -130,11 +130,11 @@ export async function sendCaptchaButton(input: {
   readonly chatId: string;
   readonly nonce: string;
   readonly fetchImpl?: typeof fetch;
-}): Promise<void> {
+}): Promise<string | null> {
   if (!/^[a-f0-9]{16}$/.test(input.nonce)) {
     throw new Error("captcha_prompt_failed");
   }
-  await postTelegram({
+  const body = await postTelegram({
     token: input.token,
     method: "sendMessage",
     fetchImpl: input.fetchImpl,
@@ -151,6 +151,27 @@ export async function sendCaptchaButton(input: {
       },
     },
   });
+  return readTelegramMessageId(body);
+}
+
+function readTelegramMessageId(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    return null;
+  }
+  const result = body.result;
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    !("message_id" in result)
+  ) {
+    return null;
+  }
+  const id = result.message_id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+    return null;
+  }
+  const text = String(id);
+  return /^[1-9][0-9]{0,15}$/.test(text) ? text : null;
 }
 
 export async function answerCallbackQuery(input: {
@@ -175,7 +196,7 @@ async function postTelegram(input: {
   readonly fetchImpl?: typeof fetch | undefined;
   readonly missing: string;
   readonly failed: string;
-}): Promise<void> {
+}): Promise<unknown> {
   const token = input.token?.trim() ?? "";
   if (token.length === 0) {
     throw new Error(input.missing);
@@ -195,6 +216,11 @@ async function postTelegram(input: {
   }
   if (!response.ok) {
     throw new Error(input.failed);
+  }
+  try {
+    return await response.json();
+  } catch {
+    return null;
   }
 }
 

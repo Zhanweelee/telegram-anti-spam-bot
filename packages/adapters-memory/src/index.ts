@@ -5,6 +5,7 @@ import {
   type Cache,
   type CaptchaChallenge,
   type CaptchaStore,
+  captchaChallengeSchema,
   type DeleteTarget,
   isExpired,
   MAX_RULE_SWITCHES,
@@ -194,6 +195,21 @@ export function createMemoryCaptchaStore(): CaptchaStore {
         taken.push(current);
       }
       return taken;
+    },
+    async attachPrompt(tenantId, chatId, actorId, nonce, messageId) {
+      const current = values.get(captchaKey(tenantId, chatId, actorId));
+      if (current === undefined || current.nonce !== nonce) {
+        return false;
+      }
+      const parsed = captchaChallengeSchema.safeParse({
+        ...current,
+        messageId,
+      });
+      if (!parsed.success || parsed.data.messageId === undefined) {
+        return false;
+      }
+      values.set(captchaKey(tenantId, chatId, actorId), parsed.data);
+      return true;
     },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>

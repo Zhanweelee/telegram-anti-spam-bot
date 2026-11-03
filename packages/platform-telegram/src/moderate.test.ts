@@ -149,12 +149,14 @@ describe("telegram captcha transport", () => {
       bodies.push(String(init?.body ?? ""));
       return new Response("ok", { status: 200 });
     };
-    await sendCaptchaButton({
-      token,
-      chatId: "-100",
-      nonce: "0123456789abcdef",
-      fetchImpl,
-    });
+    expect(
+      await sendCaptchaButton({
+        token,
+        chatId: "-100",
+        nonce: "0123456789abcdef",
+        fetchImpl,
+      }),
+    ).toBeNull();
     expect(bodies[0]).toContain(captchaPrompt);
     expect(bodies[0]).toContain("c:0123456789abcdef");
     expect(bodies[0]).toContain("我不是机器人");
@@ -166,6 +168,27 @@ describe("telegram captcha transport", () => {
     });
     expect(bodies[1]).toContain('"can_send_messages":true');
     expect(bodies[1]).not.toContain("until_date");
+  });
+
+  it("reads the captcha button id from the send response", async () => {
+    expect(
+      await sendCaptchaButton({
+        token: "bot-token",
+        chatId: "-100",
+        nonce: "0123456789abcdef",
+        fetchImpl: async () =>
+          Response.json({ ok: true, result: { message_id: 42 } }),
+      }),
+    ).toBe("42");
+    expect(
+      await sendCaptchaButton({
+        token: "bot-token",
+        chatId: "-100",
+        nonce: "0123456789abcdef",
+        fetchImpl: async () =>
+          Response.json({ ok: true, result: { message_id: 0 } }),
+      }),
+    ).toBeNull();
   });
 
   it("declines a join request without sending the bio", async () => {

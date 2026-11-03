@@ -13,6 +13,7 @@ import {
 } from "@tasb/platform-telegram";
 import { Hono } from "hono";
 import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
+import { moderatorFor } from "./moderation.js";
 import { handleIncomingEvent } from "./operate.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { allowUnsignedPlugins } from "./plugins.js";
@@ -186,6 +187,7 @@ const app = createApp();
 export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
   const logger = createWorkerLogger();
   const stores = resolveStores(env);
+  const moderator = moderatorFor({ token: env.TELEGRAM_BOT_TOKEN });
   try {
     await expireChallenges({
       store: stores.captcha,
@@ -194,6 +196,12 @@ export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
       async release() {},
       clock: createSystemClock(),
       logger,
+      removePrompt: (target) =>
+        moderator.deleteMessage({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          messageId: target.messageId,
+        }),
     });
   } catch {
     logger.error("captcha_expire_failed", {});
