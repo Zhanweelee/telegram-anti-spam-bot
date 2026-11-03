@@ -78,7 +78,7 @@ docs/limits.md                免费额度
 
 ```sh
 pnpm install
-pnpm check          # boundaries + typecheck + lint + test + core coverage
+pnpm check          # boundaries + readme + typecheck + lint + test + core coverage
 pnpm test
 pnpm test:coverage  # 只跑 core，门槛 90%
 pnpm eval           # 关键词 precision / recall，低于基线则失败

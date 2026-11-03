@@ -4,6 +4,14 @@
 
 ## Unreleased
 
+### S0-03
+
+- README 的「30 秒」只保留入口和默认行为。字段清单在 `docs/message-surface.md`。
+- `docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 `TELEGRAM_BOT_TOKEN` 就调用删除、禁言或封禁。
+- `pnpm check` 会检查这两处。
+- webhook 示例不再写处罚不请求 Telegram。配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。
+- `docs/architecture.md` 和 `docs/plugins.md` 的字段清单改成指向 `docs/message-surface.md`。
+
 ### P3-292
 
 - 转发故事和回复故事上的名字只留主机名。频道和群用标题，私人用名和姓。见 ADR 0325。
