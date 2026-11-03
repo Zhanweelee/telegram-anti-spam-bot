@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-321
+
+- 发给 Telegram 的限制时长先收到 30 秒到 366 天。正好落在两端的时长保持原值。
+- 验证按钮的到期时间仍按配置。解除限制仍不带 `until_date`。封禁仍不带时长。见 ADR 0354。
+- 30 天保留期没有改。
+
 ### P3-320
 
 - 验证通过的 `restrictChatMember` 把当前全部 `ChatPermissions` 设为 true，且不带 `until_date`。

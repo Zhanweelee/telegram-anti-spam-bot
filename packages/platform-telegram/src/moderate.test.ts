@@ -226,4 +226,35 @@ describe("telegram captcha transport", () => {
     expect(body).not.toContain(phrase);
     expect(body).not.toContain(token);
   });
+
+  it("keeps restrictions inside Telegram's temporary range", async () => {
+    const bodies: string[] = [];
+    const day = 24 * 60 * 60;
+    const now = 1_700_000_000;
+    const moderator = createTelegramModerator({
+      token: "bot-token",
+      nowSeconds: () => now,
+      fetchImpl: async (_input, init) => {
+        bodies.push(String(init?.body ?? ""));
+        return new Response("ok", { status: 200 });
+      },
+    });
+    const target = {
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+    };
+    await moderator.restrictActor({ ...target, durationSeconds: 1 });
+    await moderator.muteActor({
+      ...target,
+      durationSeconds: 366 * day + 1,
+    });
+    await moderator.restrictActor({ ...target, durationSeconds: 30 });
+    await moderator.muteActor({ ...target, durationSeconds: 366 * day });
+    expect(bodies[0]).toContain(`"until_date":${now + 30}`);
+    expect(bodies[1]).toContain(`"until_date":${now + 366 * day}`);
+    expect(bodies[2]).toContain(`"until_date":${now + 30}`);
+    expect(bodies[3]).toContain(`"until_date":${now + 366 * day}`);
+    expect(bodies.join("")).not.toContain("bot-token");
+  });
 });
