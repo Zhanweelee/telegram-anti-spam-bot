@@ -1246,27 +1246,29 @@ function schemeEndingAt(text: string, index: number): number {
 function openedDraftUrls(text: string): string[] {
   const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
-    openPathQuote(
-      openPlainTg(
-        openBareEnd(
-          openSchemeLetter(
-            openLookalikeHost(
-              openLongLabel(
-                openLongUserinfo(
-                  openHostlessPort(
-                    openEmptyHash(
-                      openDraftStops(
-                        openEncodedBracketHost(
-                          openStoppingSpace(
-                            openFinishedEncodedDot(
-                              openSchemedPercentHost(
-                                openEncodedSlashBoundary(
-                                  openEncodedSlashHost(
-                                    openEncodedHyphenHost(
-                                      openEncodedPlusHost(
-                                        openEncodedHostBody(
-                                          openEncodedGapHost(
-                                            foldBoundaryMark(text),
+    openSchemedLookalike(
+      openPathQuote(
+        openPlainTg(
+          openBareEnd(
+            openSchemeLetter(
+              openLookalikeHost(
+                openLongLabel(
+                  openLongUserinfo(
+                    openHostlessPort(
+                      openEmptyHash(
+                        openDraftStops(
+                          openEncodedBracketHost(
+                            openStoppingSpace(
+                              openFinishedEncodedDot(
+                                openSchemedPercentHost(
+                                  openEncodedSlashBoundary(
+                                    openEncodedSlashHost(
+                                      openEncodedHyphenHost(
+                                        openEncodedPlusHost(
+                                          openEncodedHostBody(
+                                            openEncodedGapHost(
+                                              foldBoundaryMark(text),
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -1289,6 +1291,113 @@ function openedDraftUrls(text: string): string[] {
     ),
     source,
     true,
+  );
+}
+
+/**
+ * 带协议的主机名后面，点状间隔号在路径、问号、结尾、端口或点号前留在标签里。
+ * 后面的解析会把间隔号收成点，所以这里先写成 `x`。
+ * `@`、`#`、空格和句号仍打开前面的短链。
+ */
+function openSchemedLookalike(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const scheme = schemeAt(text, index);
+    if (scheme === 0) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const hostStart = schemedUserinfoEnd(text, index + scheme);
+    const hostEnd = schemedStrictHostEnd(text, hostStart);
+    const runEnd =
+      hostEnd === null ? hostStart : draftLookalikeRunEnd(text, hostEnd);
+    if (
+      hostEnd === null ||
+      runEnd === hostEnd ||
+      !schemedDraftLookalikeTail(text.slice(runEnd))
+    ) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    const tail = text.slice(runEnd).search(/\s/);
+    const next = tail === -1 ? text.length : runEnd + tail;
+    out += `${text.slice(index, hostEnd)}x${text.slice(runEnd, next)}`;
+    index = next;
+  }
+  return out;
+}
+
+function schemedUserinfoEnd(text: string, index: number): number {
+  const userinfo =
+    /^(?:[A-Za-z0-9$_.+!*'(),;?&=-]{1,64}(?::[A-Za-z0-9$_.+!*'(),;?&=-]{1,25})?@)/.exec(
+      text.slice(index),
+    );
+  return userinfo ? index + userinfo[0].length : index;
+}
+
+/** 写完的主机名取最长的严格域名，或一段点分 IPv4。中间的短链后缀不停。 */
+function schemedStrictHostEnd(text: string, index: number): number | null {
+  const address = new RegExp(`^(?:${DRAFT_IP})(?![0-9.])`, "i").exec(
+    text.slice(index),
+  );
+  let cursor = index;
+  let end: number | null = null;
+  const first = readAsciiHostLabel(text, cursor);
+  if (first > 0) {
+    cursor += first;
+    while (text.charAt(cursor) === ".") {
+      const next = readAsciiHostLabel(text, cursor + 1);
+      if (next === 0) {
+        break;
+      }
+      const label = text.slice(cursor + 1, cursor + 1 + next);
+      cursor += 1 + next;
+      if (isStrictTld(label)) {
+        end = cursor;
+      }
+    }
+  }
+  if (address?.[0] && (end === null || index + address[0].length > end)) {
+    return index + address[0].length;
+  }
+  return end;
+}
+
+function readAsciiHostLabel(text: string, index: number): number {
+  if (!/[A-Za-z0-9]/.test(text.charAt(index))) {
+    return 0;
+  }
+  let cursor = index + 1;
+  const limit = Math.min(text.length, index + 63);
+  while (cursor < limit && /[A-Za-z0-9-]/.test(text.charAt(cursor))) {
+    cursor += 1;
+  }
+  while (cursor > index && text.charAt(cursor - 1) === "-") {
+    cursor -= 1;
+  }
+  return cursor - index;
+}
+
+function draftLookalikeRunEnd(text: string, index: number): number {
+  let end = index;
+  while (end < text.length && DRAFT_DOT_LOOKALIKE.has(text.charCodeAt(end))) {
+    end += 1;
+  }
+  return end;
+}
+
+function schemedDraftLookalikeTail(rest: string): boolean {
+  return (
+    rest.length === 0 ||
+    rest.startsWith("/") ||
+    rest.startsWith("?") ||
+    rest.startsWith(".") ||
+    /^:\d{1,5}(?!\d)/.test(rest)
   );
 }
 

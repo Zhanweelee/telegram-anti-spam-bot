@@ -9781,6 +9781,106 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a dot lookalike inside a schemed draft label", async () => {
+    const path = "offer279";
+    const dot = "\u00B7";
+    const bullet = "\u2022";
+    const hyphen = "\u2027";
+    const operator = "\u2219";
+    const japan = "\u65E5\u672C";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 279 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78840, -1009072, `http://bit.ly${dot}/${path}`],
+      [78841, -1009073, `https://t.co${bullet}?${path}`],
+      [78842, -1009074, `http://www.bit.ly${hyphen}/${path}`],
+      [78843, -1009075, `http://203.0.113.10${operator}/${path}`],
+      [78844, -1009076, `http://bit.ly\u22C5\u22C5/${path}`],
+      [78845, -1009077, `http://bit.ly\u30FB:80/${path}`],
+      [78846, -1009078, `http://bit.ly${dot}/http://t.co/${path}`],
+      [78847, -1009079, `bit.ly${dot}.com/${path}`],
+      [78848, -1009080, `http://bit.ly${dot}.evil.com/${path}`],
+      [78849, -1009081, `bit.ly${dot}${dot}.com/${path}`],
+      [78850, -1009082, `203.0.113.10${dot}.evil.com/${path}`],
+      [78851, -1009083, `http://bit.ly${dot}.${japan}.com/${path}`],
+      [78852, -1009084, `http://bit.ly\uFF0E.notarealtld/${path}`],
+      [78853, -1009085, `see http://bit.ly${dot}/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, "bit.ly"),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const opened = [
+      [78854, -1009086, `bit.ly${dot}/${path}`, "bit.ly"],
+      [78855, -1009087, `www.bit.ly${bullet}/${path}`, "www.bit.ly"],
+      [78856, -1009088, `203.0.113.10${dot}/${path}`, "203.0.113.10"],
+      [78857, -1009089, `bit.ly${dot}?${path}`, "bit.ly"],
+      [78858, -1009090, `bit.ly${dot}:80/${path}`, "bit.ly"],
+      [78859, -1009091, `http://bit.ly${dot}@evil.com/${path}`, "bit.ly"],
+      [78860, -1009092, `http://bit.ly${dot}%23${path}`, "bit.ly"],
+      [78861, -1009093, `http://bit.ly\u3002/${path}`, "bit.ly"],
+      [78862, -1009094, `bit.ly${dot}.notarealtld/${path}`, "bit.ly"],
+      [78863, -1009095, `http://bit.ly${dot} evil.com/${path}`, "bit.ly"],
+    ] as const;
+    for (const [updateId, chatId, text, name] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, name),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([name]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const suffix = await draft(
+      78864,
+      -1009096,
+      `example.com${dot}.bit.ly/${path}`,
+    );
+    expect(suffix.status).toBe("event");
+    if (suffix.status === "event") {
+      expect(named(suffix.event.message?.hosts, "bit.ly")).toEqual([
+        "example.comx.bit.ly",
+      ]);
+      expect(JSON.stringify(suffix.event)).not.toContain(path);
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

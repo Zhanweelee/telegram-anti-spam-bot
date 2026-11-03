@@ -36,3 +36,4 @@ Android 在写完的主机名后面把句号或点状间隔号收成一个 ASCII
 - `example.com。日本.bit.ly/…` 按短链删除。证据是 `example.com.xn--wgv71a.bit.ly`。`example.com点。日本.bit.ly/…` 按短链删除。证据是 `example.comx.xn--wgv71a.bit.ly`。
 - `点日本。bit.ly/…` 仍按短链删除。证据是 `bit.ly`。
 - 带协议的点状间隔号留在标签里。见 ADR 0223。
+- 带协议的点状间隔号在隐藏草稿里也留在标签里。`http://bit.ly·/…` 留着。见 ADR 0312。
