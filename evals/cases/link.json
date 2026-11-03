@@ -4290,5 +4290,55 @@
     "id": "share-app-url",
     "text": "https://t.me/share/slug218?url=https%3A%2F%2Fbit.ly%2Foffer218",
     "label": "ham"
+  },
+  {
+    "id": "folder-username",
+    "text": "https://t.me/folder?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-resolve",
+    "text": "tg://resolve?domain=folder&text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-prefix",
+    "text": "https://folder.t.me?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-capital-text",
+    "text": "https://t.me/Folder/slug219?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-slash",
+    "text": "https://t.me/folder/?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-dotted",
+    "text": "https://t.me/folder/slug.219?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-invite-text",
+    "text": "https://t.me/folder/slug219?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-prefix-post",
+    "text": "https://folder.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "spam"
+  },
+  {
+    "id": "folder-extra",
+    "text": "https://t.me/folder/slug.219/extra?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "ham"
+  },
+  {
+    "id": "folder-subdomain-name",
+    "text": "https://folder.t.me/slug.219?text=https%3A%2F%2Fbit.ly%2Foffer219",
+    "label": "ham"
   }
 ]

@@ -2483,6 +2483,93 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a folder username draft and leaves an invite code", async () => {
+    const hidden = "offer219";
+    const slug = "slug.219";
+    const code = "slug219";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78082,
+      message: {
+        message_id: 78082,
+        date: 1761955200,
+        chat: { id: -1008313, type: "supergroup" },
+        from: { id: 219 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/folder?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const app = await normalize({
+      update_id: 78083,
+      message: {
+        message_id: 78083,
+        date: 1761955200,
+        chat: { id: -1008314, type: "supergroup" },
+        from: { id: 219 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/folder/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(app.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(app.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+    const invite = await normalize({
+      update_id: 78084,
+      message: {
+        message_id: 78084,
+        date: 1761955200,
+        chat: { id: -1008315, type: "supergroup" },
+        from: { id: 219 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/folder/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    const inviteDump = JSON.stringify(invite.event);
+    expect(inviteDump).not.toContain(hidden);
+    expect(inviteDump).not.toContain(code);
+    expect(inviteDump).not.toContain("bit.ly");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

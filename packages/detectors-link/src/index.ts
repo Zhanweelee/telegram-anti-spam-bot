@@ -964,6 +964,9 @@ function isUsernameDraft(url: URL): boolean {
   if (boostReplacesDraft(host, url, parts)) {
     return false;
   }
+  if (folderInviteDropsDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1336,6 +1339,22 @@ function boostReplacesDraft(
   return parts.length === 2 && channel(parts[1]);
 }
 
+/** 小写 `folder` 后面是邀请码时打开文件夹。带点的短名和没有这段时仍写草稿。 */
+function folderInviteDropsDraft(
+  host: string,
+  parts: readonly string[],
+): boolean {
+  const code = (value: string | undefined) =>
+    value !== undefined && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+  if (host === "folder.t.me") {
+    return parts.length === 1 && code(parts[0]);
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "folder") {
+    return false;
+  }
+  return parts.length === 2 && code(parts[1]);
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1416,7 +1435,6 @@ const reservedUsernames = new Set([
   "addlist",
   "c",
   "confirmphone",
-  "folder",
   "getpremium",
   "iv",
   "joinchat",

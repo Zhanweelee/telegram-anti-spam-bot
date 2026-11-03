@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-219
+
+- `t.me/folder` 仍按用户名读取。带点的短名和大写命令在桌面端仍写草稿，所以也读 `text`。见 ADR 0252。
+- `t.me/folder?text=`、`t.me/Folder/slug219?text=` 和 `t.me/folder/slug.219?text=` 里的短链删除。邀请码路径仍只记邀请，`text` 不读。再多一段路径和 `folder.t.me/短名` 留着。用户名、应用名和邀请码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-218
 
 - `t.me/share` 仍按用户名读取。应用名和数字路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0251。
