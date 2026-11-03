@@ -914,6 +914,12 @@ function openBareEnd(text: string): string {
         continue;
       }
     }
+    const dotted = bareDotSkip(rest);
+    if (dotted > 0) {
+      out += `${text.slice(index, domain)} `;
+      index = domain + dotted;
+      continue;
+    }
     if (
       rest.startsWith("/") ||
       rest.startsWith("?") ||
@@ -998,6 +1004,34 @@ function bareTailSplit(rest: string): boolean {
     schemeAt(rest, 1) > 0 &&
     !/[A-Za-z0-9./?#:]/.test(rest.charAt(0))
   );
+}
+
+/** 裸域名和 `www.` 不把路径前的点号留在这一段。点号后面的网址另开。 */
+function bareDotSkip(rest: string): number {
+  if (!rest.startsWith(".")) {
+    return 0;
+  }
+  const afterDot = rest.slice(1);
+  if (!/^[:/?]/.test(afterDot)) {
+    return 0;
+  }
+  let skip = 1;
+  const port = /^:\d{1,5}(?!\d)/.exec(afterDot);
+  if (port?.[0]) {
+    skip += port[0].length;
+  }
+  const tail = rest.slice(skip);
+  if (tail.startsWith("/") || tail.startsWith("?")) {
+    const body = tail.slice(1);
+    if (
+      schemeAt(body, 0) > 0 ||
+      bareDomainEnd(body, 0) !== null ||
+      bareIpAt(body)
+    ) {
+      skip += 1;
+    }
+  }
+  return skip;
 }
 
 function schemeAfterHostRun(authority: string): number | null {

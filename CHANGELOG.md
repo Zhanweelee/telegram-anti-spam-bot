@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-248
+
+- 隐藏草稿在没有协议的 `www.` 和裸域名的点号处停住，仍留下后面的主机名。见 ADR 0281。
+- `t.me/share/url?text=www.example.com./http://bit.ly/…` 删除。`http://www.example.com./http://bit.ly/…` 留着。`www.t.me./+…` 不记成邀请。路径和邀请码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-247
 
 - 隐藏草稿在除号接不上单词边界时仍留下前面的主机名。见 ADR 0280。

@@ -30,3 +30,4 @@ Android 的放松标签可以接上标签类里的字符。`http://bit.ly，广�
 - `t.me/share/url?text=http://bit.ly，广告`、U+200B 再接 `foo`，以及 `http://bit.ly点击`，留着。
 - 分享 `url` 里的 `http://bit.ly` 加 U+2215 再接 `@example.com/…` 按短链删除。证据有 `bit.ly`。后面的 `example.com` 仍留下。路径不进证据。
 - `http://bit` 加 U+200B 再接 `.ly/…` 仍按短链删除。
+- 没有协议的 `www.` 在点号处结束，后面的短链后来同样留下。见 ADR 0281。
