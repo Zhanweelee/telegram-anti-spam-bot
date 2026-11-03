@@ -111,6 +111,119 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("unban_unavailable");
   });
 
+  it("lifts restrictions only when the member is restricted", async () => {
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let status = "restricted";
+    let member = true;
+    const moderator = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        const method = url.slice(url.lastIndexOf("/") + 1);
+        const body = String(init?.body ?? "");
+        calls.push({ method, body });
+        if (method === "getChatMember") {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status,
+                is_member: member,
+                user: { id: 77, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
+      },
+    });
+    expect(
+      await moderator.unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).toBe("lifted");
+    expect(calls.map((call) => call.method)).toEqual([
+      "getChatMember",
+      "restrictChatMember",
+    ]);
+    expect(calls[0]?.body).toContain('"user_id":77');
+    expect(calls[1]?.body).toContain('"can_send_messages":true');
+    expect(calls[1]?.body).toContain('"can_react_to_messages":true');
+    expect(calls[1]?.body).toContain('"can_edit_tag":true');
+    expect(calls[1]?.body).toContain('"use_independent_chat_permissions":true');
+    expect(calls[1]?.body).not.toContain("until_date");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+
+    calls.length = 0;
+    member = false;
+    expect(
+      await moderator.unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).toBe("lifted");
+    expect(calls.map((call) => call.method)).toEqual([
+      "getChatMember",
+      "restrictChatMember",
+    ]);
+
+    calls.length = 0;
+    status = "member";
+    expect(
+      await moderator.unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).toBe("absent");
+    expect(calls.map((call) => call.method)).toEqual(["getChatMember"]);
+
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ description: phrase }), {
+            status: 400,
+          }),
+      }).unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("unmute_failed");
+    await createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ description: phrase }), { status: 400 }),
+    })
+      .unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      })
+      .catch((error: unknown) => {
+        expect(error).toBeInstanceOf(Error);
+        if (error instanceof Error) {
+          expect(error.message).toBe("unmute_failed");
+          expect(error.message).not.toContain(phrase);
+        }
+      });
+    await expect(
+      createTelegramModerator({ token: " " }).unmuteActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("unmute_unavailable");
+  });
+
   it("deletes, mutes, and bans with one call each and drops the response body", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

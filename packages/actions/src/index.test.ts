@@ -73,6 +73,9 @@ describe("delete action", () => {
           async restrictActor() {},
           async releaseActor() {},
           async unbanActor() {},
+          async unmuteActor() {
+            return "lifted" as const;
+          },
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -124,6 +127,9 @@ describe("delete action", () => {
         async restrictActor() {},
         async releaseActor() {},
         async unbanActor() {},
+        async unmuteActor() {
+          return "lifted" as const;
+        },
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -177,6 +183,9 @@ describe("delete action", () => {
         async restrictActor() {},
         async releaseActor() {},
         async unbanActor() {},
+        async unmuteActor() {
+          return "lifted" as const;
+        },
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -232,6 +241,9 @@ function ports(): ModerationPort & {
     async restrictActor() {},
     async releaseActor() {},
     async unbanActor() {},
+    async unmuteActor() {
+      return "lifted" as const;
+    },
   };
 }
 

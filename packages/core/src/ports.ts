@@ -80,6 +80,8 @@ export interface BanTarget {
   readonly actorId: string;
 }
 
+export type UnmuteResult = "lifted" | "absent";
+
 export interface JoinTarget extends BanTarget {
   readonly queryId?: string;
 }
@@ -89,6 +91,7 @@ export interface ModerationPort {
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
+  unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   declineJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
   restrictActor(target: MuteTarget): Promise<void>;

@@ -28,6 +28,13 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(unbanned).toBe("已解除封禁 -100 77");
+    expect(help).toContain("/unmute");
+    const unmuted = await runPrivateCommand({
+      text: "/unmute -100 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(unmuted).toBe("已解除禁言 -100 77");
     const quota = await runPrivateCommand({
       text: "/quota -100",
       actorId: "42",

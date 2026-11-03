@@ -85,6 +85,9 @@ function moderator(
     },
     async releaseActor() {},
     async unbanActor() {},
+    async unmuteActor() {
+      return "lifted" as const;
+    },
   };
 }
 

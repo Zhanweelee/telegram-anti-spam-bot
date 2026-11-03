@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-331
+
+- 私聊 `/unmute` 先看成员状态。只有 `restricted` 才把每一项权限打开。
+- 其它状态回复没有禁言。没有 token 或调用失败时回复「参数无效」。见 ADR 0363。
+- 30 天保留期没有改。
+
 ### P3-330
 
 - 私聊 `/unban` 对已经封禁的人调用 `unbanChatMember`，`only_if_banned` 为 true。
