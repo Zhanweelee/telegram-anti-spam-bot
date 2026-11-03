@@ -35,3 +35,4 @@ Android 的裸主机名在最后一个标签结束。`bit.lyª/…`、`www.bit.l
 - `bit.lyℹevil.com/…`、`bit.lyªevil.com/…`、`example.comℹbit.ly/…`、`http://bit.lyª/…`、`https://www.bit.lyª/…`、`http://user@bit.lyª/…`、`bаit.ly/…` 和 `notbit.lyª/…` 留着。
 - `bit.lyªhttp://t.co/…` 按短链删除。证据是 `bit.ly`。`t.co` 不另开。
 - 写完的主机名和后面的域名之间的句号仍可能再打开前面的短链。见 ADR 0216。
+- 写完的主机名和后面的域名之间的句号仍可能把前面的短链单独打开。`bit.ly。evil.com` 留着。见 ADR 0306。

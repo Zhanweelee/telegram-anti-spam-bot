@@ -2150,10 +2150,15 @@ function bareLookalikeDotSkip(rest: string): number {
   return 0;
 }
 
-/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。 */
+/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。句号留给主机名扫描收成一个点。 */
 function bareLabelSkip(rest: string): number {
   const code = rest.codePointAt(0);
-  if (code === undefined || !draftLabelCode(code) || boundaryMark(code)) {
+  if (
+    code === undefined ||
+    code === 0x3002 ||
+    !draftLabelCode(code) ||
+    boundaryMark(code)
+  ) {
     return 0;
   }
   const after = rest.slice(String.fromCodePoint(code).length);
