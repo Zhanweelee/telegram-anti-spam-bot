@@ -178,6 +178,7 @@ export {
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
+  type SenderChatTarget,
   type Storage,
   type UnmuteResult,
 } from "./ports.js";

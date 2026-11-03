@@ -116,6 +116,19 @@ export function createTelegramModerator(input: {
     async deferJoin(target) {
       await answerJoinQuery(input, target.queryId, "queue");
     },
+    async banSenderChat(target) {
+      await postTelegram({
+        token: input.token,
+        method: "banChatSenderChat",
+        fetchImpl: input.fetchImpl,
+        missing: "sender_unavailable",
+        failed: "sender_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          sender_chat_id: telegramId(target.senderChatId),
+        },
+      });
+    },
     async banActor(target) {
       await postTelegram({
         token: input.token,

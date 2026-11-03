@@ -1253,6 +1253,130 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("blocks a sender chat without banning a user", async () => {
+    const deps = kit();
+    const users: string[] = [];
+    const senders: { chatId: string; senderChatId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/bansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActor(target) {
+          users.push(target.actorId);
+        },
+        async banSenderChat(target) {
+          senders.push({
+            chatId: target.chatId,
+            senderChatId: target.senderChatId,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已禁止 -1005 在 -100 代发。频道主人的其它频道也会被挡住，直到解除",
+    });
+    expect(users).toEqual([]);
+    expect(senders).toEqual([{ chatId: "-100", senderChatId: "-1005" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/bansender <chatId> <senderChatId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/bansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async banSenderChat() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Blocked sender chat -1005 in -100. The owner cannot post as their other channels until this is lifted.",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/bansender -100 -1005", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banSenderChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/bansender -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/bansender <chatId> <senderChatId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/bansender -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banSenderChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/bansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/bansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banSenderChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"bansender"',
+    );
+
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/bansender -200 -1005",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async banSenderChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("approves a pending join without a query id", async () => {
     const deps = kit();
     const approved: {

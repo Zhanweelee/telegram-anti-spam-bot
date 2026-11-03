@@ -75,6 +75,7 @@ const COMMAND_NAMES = [
   "delete",
   "decline",
   "approve",
+  "bansender",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -108,6 +109,7 @@ export interface OperatorCommandInput {
       ModerationPort,
       | "approveJoin"
       | "banActor"
+      | "banSenderChat"
       | "declineJoin"
       | "deleteMessage"
       | "muteActor"
@@ -233,6 +235,8 @@ async function dispatch(
       return declineRequest(input, args);
     case "approve":
       return approveRequest(input, args);
+    case "bansender":
+      return banSender(input, args);
   }
 }
 
@@ -883,6 +887,53 @@ function rejectMute(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "mute",
+  });
+}
+
+async function banSender(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.bansender.usage");
+  }
+  const chatId = args[0];
+  const senderChatId = args[1];
+  if (
+    chatId === undefined ||
+    senderChatId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(senderChatId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const ban = input.moderator?.banSenderChat;
+  if (!ban) {
+    rejectSender(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await ban({
+      tenantId: input.event.tenantId,
+      chatId,
+      senderChatId,
+    });
+  } catch {
+    rejectSender(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.bansender.done", { chatId, senderChatId });
+}
+
+function rejectSender(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "bansender",
   });
 }
 

@@ -452,6 +452,38 @@ describe("telegram captcha transport", () => {
     ).toBeNull();
   });
 
+  it("bans a sender chat without banning a user", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token,
+      fetchImpl: async (input, init) => {
+        calls.push({
+          method: String(input),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
+      },
+    });
+    await moderator.banSenderChat({
+      tenantId: "local",
+      chatId: "-100",
+      senderChatId: "-1005",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/banChatSenderChat`,
+    ]);
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).toContain('"sender_chat_id":-1005');
+    expect(calls[0]?.body).not.toContain("user_id");
+    expect(calls[0]?.body).not.toContain("revoke_messages");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+  });
+
   it("approves a join request without a query id", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

@@ -23,6 +23,7 @@ import {
   type ReplyPort,
   type RuleSet,
   type RuntimeStore,
+  type SenderChatTarget,
   type Storage,
 } from "@tasb/core";
 
@@ -110,6 +111,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
+  readonly senderBanned: readonly SenderChatTarget[];
   readonly declined: readonly JoinTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
@@ -121,6 +123,7 @@ export function createMemoryModerator(): ModerationPort & {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
+  const senderBanned: SenderChatTarget[] = [];
   const declined: JoinTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
@@ -132,6 +135,7 @@ export function createMemoryModerator(): ModerationPort & {
     deleted,
     muted,
     banned,
+    senderBanned,
     declined,
     approved,
     deferred,
@@ -147,6 +151,13 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async banActor(target) {
       banned.push({ ...target });
+    },
+    async banSenderChat(target) {
+      senderBanned.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        senderChatId: target.senderChatId,
+      });
     },
     async approveJoin(target) {
       approved.push({
