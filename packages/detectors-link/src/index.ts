@@ -928,6 +928,9 @@ function isUsernameDraft(url: URL): boolean {
   if (host === "call.t.me" && parts.length > 0) {
     return false;
   }
+  if (aiStyleReplacesDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1070,6 +1073,17 @@ function desktopOverridesProfile(url: URL): boolean {
   return isAppNamePath(host, parts);
 }
 
+/** 第二段是文风短码。没有这段时 `addstyle` 仍是用户名。 */
+function aiStyleReplacesDraft(host: string, parts: readonly string[]): boolean {
+  if (host === "addstyle.t.me") {
+    return parts.length > 0;
+  }
+  if (!isExactDraftHost(host)) {
+    return false;
+  }
+  return parts[0]?.toLowerCase() === "addstyle" && parts.length >= 2;
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1150,7 +1164,6 @@ const reservedUsernames = new Set([
   "addemoji",
   "addlist",
   "addstickers",
-  "addstyle",
   "addtheme",
   "auction",
   "bg",

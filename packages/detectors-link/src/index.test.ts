@@ -1355,6 +1355,73 @@ describe("link fixtures", () => {
     expect(JSON.stringify(capital)).not.toContain("durov");
   });
 
+  it("reads an addstyle username draft and leaves a style slug", async () => {
+    const hidden = "offer201";
+    const slug = "tone201";
+    const address = "203.0.113.201";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/addstyle?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/addstyle/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://addstyle.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=addstyle&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("addstyle");
+    const style = await detector.detect({
+      event: eventFor(`https://t.me/addstyle/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(style).toBeNull();
+    expect(JSON.stringify(style)).not.toContain(hidden);
+    expect(JSON.stringify(style)).not.toContain(slug);
+    const capital = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/AddStyle/${slug}/?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/addstyle/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    expect(JSON.stringify(me)).not.toContain(address);
+    const numeric = await detector.detect({
+      event: eventFor(`https://addstyle.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    expect(JSON.stringify(numeric)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

@@ -3475,5 +3475,30 @@
     "id": "resolve-story-zero",
     "text": "tg://resolve?domain=durov&story=0&text=https%3A%2F%2Fbit.ly%2Foffer200",
     "label": "spam"
+  },
+  {
+    "id": "addstyle-username",
+    "text": "https://t.me/addstyle?text=https%3A%2F%2Fbit.ly%2Foffer201",
+    "label": "spam"
+  },
+  {
+    "id": "addstyle-resolve",
+    "text": "tg://resolve?domain=addstyle&text=https%3A%2F%2Fbit.ly%2Foffer201",
+    "label": "spam"
+  },
+  {
+    "id": "addstyle-prefix",
+    "text": "https://addstyle.t.me?text=https%3A%2F%2Fbit.ly%2Foffer201",
+    "label": "spam"
+  },
+  {
+    "id": "addstyle-slug",
+    "text": "https://t.me/addstyle/tone201?text=https%3A%2F%2Fbit.ly%2Foffer201",
+    "label": "ham"
+  },
+  {
+    "id": "addstyle-subdomain-post",
+    "text": "https://addstyle.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer201",
+    "label": "ham"
   }
 ]
