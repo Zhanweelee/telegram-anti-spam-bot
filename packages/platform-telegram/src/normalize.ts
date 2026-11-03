@@ -517,7 +517,90 @@ const DRAFT_STOP_CHAR = new RegExp(
 
 function openedDraftUrls(text: string): string[] {
   const source = `${COPY_URL.source}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
-  return scanUrls(openDraftStops(text), source);
+  return scanUrls(openLongUserinfo(openDraftStops(text)), source);
+}
+
+/** 用户名超过 64 或密码超过 25 时，Android 从 `@` 后面另开网址。放得下的仍是一条。 */
+function openLongUserinfo(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const scheme = schemeAt(text, index);
+    if (scheme === 0) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const at = userinfoOverflow(text, index + scheme);
+    if (at !== null) {
+      out += " ";
+      index = at + 1;
+      continue;
+    }
+    const end = text.slice(index).search(/\s/);
+    const next = end === -1 ? text.length : index + end;
+    out += text.slice(index, next);
+    index = next;
+  }
+  return out;
+}
+
+function schemeAt(text: string, index: number): number {
+  if (index > 0 && /[A-Za-z0-9_]/.test(text.charAt(index - 1))) {
+    return 0;
+  }
+  const slice = text.slice(index, index + 8).toLowerCase();
+  if (slice.startsWith("https://")) {
+    return 8;
+  }
+  if (slice.startsWith("http://")) {
+    return 7;
+  }
+  return 0;
+}
+
+function userinfoOverflow(text: string, start: number): number | null {
+  const user = readUserRun(text, start);
+  if (text.charAt(user.index) === "@") {
+    return user.count > 64 ? user.index : null;
+  }
+  if (text.charAt(user.index) !== ":" || user.count === 0 || user.count > 64) {
+    return null;
+  }
+  const password = readUserRun(text, user.index + 1);
+  if (text.charAt(password.index) === "@" && password.count > 25) {
+    return password.index;
+  }
+  return null;
+}
+
+function readUserRun(
+  text: string,
+  index: number,
+): { count: number; index: number } {
+  let count = 0;
+  while (index < text.length) {
+    const size = userCharSize(text, index);
+    if (size === 0) {
+      break;
+    }
+    count += 1;
+    index += size;
+  }
+  return { count, index };
+}
+
+function userCharSize(text: string, index: number): number {
+  if (
+    text.charAt(index) === "%" &&
+    /^[0-9A-Fa-f]{2}$/.test(text.slice(index + 1, index + 3))
+  ) {
+    return 3;
+  }
+  if (/[A-Za-z0-9$._+!*'(),;?&=-]/.test(text.charAt(index))) {
+    return 1;
+  }
+  return 0;
 }
 
 /** 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
@@ -1294,6 +1377,13 @@ function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
+  const opened = openLongUserinfo(raw);
+  if (opened !== raw) {
+    for (const part of queryUrls(opened)) {
+      pushClosedUrl(part, found);
+    }
+    return;
+  }
   const inner = hostFromUrl(raw, false) ?? hostFromUrl(closedIpUrl(raw), false);
   if (!inner) {
     return;
