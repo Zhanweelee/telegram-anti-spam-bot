@@ -107,7 +107,9 @@ function harness(options?: { failStorage?: boolean }) {
       return records.slice();
     },
     async deleteAudits() {
+      const removed = records.length;
       records.splice(0, records.length);
+      return removed;
     },
   };
   const moderator: ModerationPort = {

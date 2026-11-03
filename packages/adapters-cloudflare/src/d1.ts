@@ -306,14 +306,14 @@ export function createD1Storage(db: SqlDatabase): Storage {
     async deleteAudits(scope) {
       await migrationsFor(db);
       const parsed = parseAuditScope(scope);
-      if (parsed.chatId === undefined) {
-        await db.prepare(deleteAuditsSql).bind(parsed.tenantId).run();
-        return;
-      }
-      await db
-        .prepare(deleteAuditsInChatSql)
-        .bind(parsed.tenantId, parsed.chatId)
-        .run();
+      const result =
+        parsed.chatId === undefined
+          ? await db.prepare(deleteAuditsSql).bind(parsed.tenantId).run()
+          : await db
+              .prepare(deleteAuditsInChatSql)
+              .bind(parsed.tenantId, parsed.chatId)
+              .run();
+      return readChanges(result);
     },
     async getRuleSet(tenantId, chatId) {
       await migrationsFor(db);
@@ -519,6 +519,31 @@ function readReview(row: Record<string, unknown>): ReviewSample | null {
     createdAt: row.created_at,
   });
   return parsed.success ? parsed.data : null;
+}
+
+function readChanges(result: unknown): number {
+  if (typeof result !== "object" || result === null || !("meta" in result)) {
+    throw new Error("delete_changes_missing");
+  }
+  const meta = result.meta;
+  if (typeof meta !== "object" || meta === null || !("changes" in meta)) {
+    throw new Error("delete_changes_missing");
+  }
+  const changes = meta.changes;
+  if (
+    typeof changes === "number" &&
+    Number.isInteger(changes) &&
+    changes >= 0
+  ) {
+    return changes;
+  }
+  if (typeof changes === "bigint" && changes >= 0n) {
+    const asNumber = Number(changes);
+    if (Number.isSafeInteger(asNumber)) {
+      return asNumber;
+    }
+  }
+  throw new Error("delete_changes_missing");
 }
 
 function readCount(row: Record<string, unknown> | undefined): number {

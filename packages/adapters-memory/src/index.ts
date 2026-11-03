@@ -62,12 +62,15 @@ export function createMemoryStorage(options?: {
     },
     async deleteAudits(scope) {
       const parsed = parseAuditScope(scope);
+      let removed = 0;
       for (let index = records.length - 1; index >= 0; index -= 1) {
         const record = records[index];
         if (record && matchesScope(record, parsed)) {
           records.splice(index, 1);
+          removed += 1;
         }
       }
+      return removed;
     },
     async getRuleSet(tenantId, chatId) {
       return rules.get(key(tenantId, chatId)) ?? null;

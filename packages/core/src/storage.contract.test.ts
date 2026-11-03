@@ -36,12 +36,15 @@ function createReferenceStorage(): Storage {
     },
     async deleteAudits(scope) {
       const parsed = parseAuditScope(scope);
+      let removed = 0;
       for (let index = records.length - 1; index >= 0; index -= 1) {
         const record = records[index];
         if (record && inScope(record, parsed)) {
           records.splice(index, 1);
+          removed += 1;
         }
       }
+      return removed;
     },
     async getRuleSet(tenantId, chatId) {
       return rules.get(`${tenantId}\n${chatId}`) ?? null;

@@ -49,7 +49,7 @@ export interface Storage {
     eventId: string,
   ): Promise<AuditRecord | null>;
   exportAudits(scope: AuditScope): Promise<readonly AuditRecord[]>;
-  deleteAudits(scope: AuditScope): Promise<void>;
+  deleteAudits(scope: AuditScope): Promise<number>;
   getRuleSet(tenantId: string, chatId: string): Promise<RuleSet | null>;
   putRuleSet(tenantId: string, chatId: string, rules: RuleSet): Promise<void>;
 }
