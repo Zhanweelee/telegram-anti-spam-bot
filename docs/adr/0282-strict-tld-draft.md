@@ -35,3 +35,4 @@ Android 没有协议时，主机名的最后一段必须是严格顶级域，或
 - `example.com/http://bit.ly/…`、`www.example.com/http://bit.ly/…`、`example.xn--p1ai/http://bit.ly/…`、`foo.xn--a/http://bit.ly/…` 和 `http://foo.example/http://bit.ly/…` 留着。
 - `example.http://bit.ly/…` 按后面的短链删除。
 - `foo.example/https://t.me/+…` 按邀请删除。路径和邀请码不进证据。
+- 下划线留在没有协议的标签中间时，后面的网址后来仍不另开。见 ADR 0283。

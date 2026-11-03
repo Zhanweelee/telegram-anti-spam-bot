@@ -493,9 +493,10 @@ const DRAFT_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
 const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
 const DRAFT_IP_TAIL = '(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
-const DRAFT_BARE = `\\b(?:[a-z0-9-]+\\.)+(?:${androidStrictTld})(?![a-z0-9_-])(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?`;
+const DRAFT_ASCII_LABEL = "[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?";
+const DRAFT_BARE = `(?<!:\\/\\/)\\b(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})(?![a-z0-9_-])(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?`;
 const STRICT_TLD_LABEL = new RegExp(`^(?:${androidStrictTld})$`, "i");
-const DRAFT_URL = `(?:https?:\\/\\/|tg:(?:\\/\\/)?|www\\.)[^\\s<>"']+|${DRAFT_BARE}`;
+const DRAFT_URL = `(?<![A-Za-z0-9_])(?:https?:\\/\\/|tg:(?:\\/\\/)?)[^\\s<>"']+|www\\.[^\\s<>"']+|${DRAFT_BARE}`;
 
 function urlsInText(text: string): string[] {
   return scanUrls(text, COPY_URL.source);
@@ -1081,7 +1082,7 @@ function bareTailSplit(rest: string): boolean {
   return (
     rest.length > 0 &&
     schemeAt(rest, 1) > 0 &&
-    !/[A-Za-z0-9./?#:]/.test(rest.charAt(0))
+    !/[A-Za-z0-9_./?#:]/.test(rest.charAt(0))
   );
 }
 

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-250
+
+- 隐藏草稿把下划线留在没有协议的标签中间，仍不另开后面的网址。见 ADR 0283。
+- `t.me/share/url?text=foo_.com/http://bit.ly/…` 删除。`foo_bar.com/http://bit.ly/…` 留着。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-249
 
 - 隐藏草稿在 Android 不认的顶级域后面仍留下短链。见 ADR 0282。
