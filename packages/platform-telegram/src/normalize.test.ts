@@ -16795,6 +16795,62 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("marks a restricted member who is unrestricted", async () => {
+    const name = "广告员免费领取礼品";
+    const lifted = await normalize({
+      update_id: 2050,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "restricted" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+        },
+      },
+    });
+    expect(lifted.status).toBe("event");
+    if (lifted.status !== "event") {
+      return;
+    }
+    expect(lifted.event.membership).toBe("unrestrict");
+    expect(lifted.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(lifted.event.profile).toBeUndefined();
+    expect(JSON.stringify(lifted.event)).not.toContain(name);
+    const joined = await normalize({
+      update_id: 2051,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: { user: { id: 77 }, status: "member" },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status === "event") {
+      expect(joined.event.membership).toBe("join");
+    }
+    const botLifted = await normalize({
+      update_id: 2052,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "restricted",
+        },
+        new_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "member",
+        },
+      },
+    });
+    expect(botLifted.status).toBe("event");
+    if (botLifted.status === "event") {
+      expect(botLifted.event.membership).toBeUndefined();
+    }
+  });
+
   it("marks a configured admin id on a membership change", async () => {
     const outcome = await normalize(
       {

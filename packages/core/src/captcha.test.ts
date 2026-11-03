@@ -11,6 +11,7 @@ import {
   promoteChallenge,
   resolveChallenge,
   supersedeChallenge,
+  unrestrictChallenge,
 } from "./captcha.js";
 import { bindCaptchaStoreContract } from "./captcha-store.contract.js";
 import { createFixedClock } from "./clock.js";
@@ -279,6 +280,82 @@ describe("captcha flow", () => {
     ).toBe(false);
     expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
     expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("deletes the prompt when a restriction is lifted early", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await unrestrictChallenge({
+        event: unrestrictEvent(),
+        ports,
+      }),
+    ).toBe(true);
+    expect(removed).toEqual(["42"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries).toEqual([
+      {
+        level: "info",
+        message: "captcha_unrestricted",
+        fields: { eventId: "evt_unrestrict", chatId: "-100" },
+      },
+    ]);
+    expect(
+      await unrestrictChallenge({
+        event: joinEvent(),
+        ports,
+      }),
+    ).toBe(false);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("leaves an expired challenge for the expiry sweep", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    kit.clock.iso = "2026-11-01T00:06:00.000Z";
+    expect(
+      await unrestrictChallenge({
+        event: unrestrictEvent(),
+        ports,
+      }),
+    ).toBe(false);
+    expect(removed).toEqual([]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
   });
 
   it("keeps the challenge when the leave cannot delete the prompt", async () => {
@@ -1123,6 +1200,18 @@ function joinEvent(id = "evt_join") {
     occurredAt: "2026-11-01T00:00:00.000Z",
     actor: { id: "77", isAdmin: false },
     membership: "join",
+  });
+}
+
+function unrestrictEvent(id = "evt_unrestrict", actorId = "77") {
+  return parseEvent({
+    id,
+    tenantId: "local",
+    chatId: "-100",
+    kind: "chat_member",
+    occurredAt: "2026-11-01T00:00:10.000Z",
+    actor: { id: actorId, isAdmin: false },
+    membership: "unrestrict",
   });
 }
 

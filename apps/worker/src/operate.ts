@@ -10,6 +10,7 @@ import {
   type ReviewQueue,
   resolveChallenge,
   runOperatorCommand,
+  unrestrictChallenge,
 } from "@tasb/core";
 import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
@@ -115,6 +116,32 @@ export async function handleIncomingEvent(
       });
     } catch {
       logger.warn("captcha_promote_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+  }
+  if (event.kind === "chat_member" && event.membership === "unrestrict") {
+    try {
+      await unrestrictChallenge({
+        event,
+        ports: {
+          store: captchaStore,
+          storage,
+          restrict: (target) => moderator.restrictActor(target),
+          release: (target) => moderator.releaseActor(target),
+          clock: deps.clock ?? createSystemClock(),
+          logger,
+          removePrompt: (target) =>
+            moderator.deleteMessage({
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+            }),
+        },
+      });
+    } catch {
+      logger.warn("captcha_unrestrict_failed", {
         eventId: event.id,
         chatId: event.chatId,
       });

@@ -377,7 +377,7 @@ function joiningBot(value: Record<string, unknown>): boolean {
 
 function memberChange(
   value: Record<string, unknown>,
-): "join" | "leave" | "promote" | undefined {
+): "join" | "leave" | "promote" | "unrestrict" | undefined {
   if (joiningMember(value)) {
     return "join";
   }
@@ -387,7 +387,27 @@ function memberChange(
   if (promotingMember(value)) {
     return "promote";
   }
+  if (unrestrictingMember(value)) {
+    return "unrestrict";
+  }
   return undefined;
+}
+
+function unrestrictingMember(value: Record<string, unknown>): boolean {
+  if (!isRecord(value.new_chat_member)) {
+    return false;
+  }
+  const user = value.new_chat_member.user;
+  if (isRecord(user) && user.is_bot === true) {
+    return false;
+  }
+  if (value.new_chat_member.status !== "member") {
+    return false;
+  }
+  if (!isRecord(value.old_chat_member)) {
+    return false;
+  }
+  return value.old_chat_member.status === "restricted";
 }
 
 function promotingMember(value: Record<string, unknown>): boolean {

@@ -27,6 +27,7 @@ export {
   promoteChallenge,
   resolveChallenge,
   supersedeChallenge,
+  unrestrictChallenge,
 } from "./captcha.js";
 export {
   type ChatDirectory,
