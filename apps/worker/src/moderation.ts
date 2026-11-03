@@ -34,6 +34,7 @@ function createOpenModerator(): ModerationPort {
       throw new Error("restrict_unavailable");
     },
     lockChat: (target) => memory.lockChat(target),
+    unlockChat: (target) => memory.unlockChat(target),
     async unbanActor() {
       throw new Error("unban_unavailable");
     },

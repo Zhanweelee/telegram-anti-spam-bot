@@ -122,6 +122,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly unbanned: readonly BanTarget[];
   readonly unmuted: readonly BanTarget[];
   readonly locked: readonly ChatTarget[];
+  readonly unlocked: readonly ChatTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
@@ -136,6 +137,7 @@ export function createMemoryModerator(): ModerationPort & {
   const unbanned: BanTarget[] = [];
   const unmuted: BanTarget[] = [];
   const locked: ChatTarget[] = [];
+  const unlocked: ChatTarget[] = [];
   return {
     deleted,
     muted,
@@ -150,6 +152,7 @@ export function createMemoryModerator(): ModerationPort & {
     unbanned,
     unmuted,
     locked,
+    unlocked,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -212,6 +215,12 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async lockChat(target) {
       locked.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+      });
+    },
+    async unlockChat(target) {
+      unlocked.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
       });

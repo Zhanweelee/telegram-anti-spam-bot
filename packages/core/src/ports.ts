@@ -121,6 +121,7 @@ export interface ModerationPort {
   restrictActor(target: MuteTarget): Promise<void>;
   releaseActor(target: BanTarget): Promise<void>;
   lockChat(target: ChatTarget): Promise<void>;
+  unlockChat(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

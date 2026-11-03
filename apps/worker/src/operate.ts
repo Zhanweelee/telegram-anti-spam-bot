@@ -61,6 +61,9 @@ function commandModerator(
     async lockChat() {
       throw new Error("lock_unavailable");
     },
+    async unlockChat() {
+      throw new Error("unlock_unavailable");
+    },
     async muteActor() {
       throw new Error("mute_unavailable");
     },

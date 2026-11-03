@@ -152,6 +152,7 @@ function harness(options?: { failStorage?: boolean }) {
     async restrictActor() {},
     async releaseActor() {},
     async lockChat() {},
+    async unlockChat() {},
     async unbanActor() {},
     async unmuteActor() {
       return "lifted" as const;

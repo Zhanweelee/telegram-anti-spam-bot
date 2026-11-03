@@ -88,6 +88,7 @@ function moderator(
     },
     async releaseActor() {},
     async lockChat() {},
+    async unlockChat() {},
     async unbanActor() {},
     async unmuteActor() {
       return "lifted" as const;

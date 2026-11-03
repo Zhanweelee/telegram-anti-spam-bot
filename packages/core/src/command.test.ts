@@ -1253,6 +1253,121 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("opens default speaking permissions for one chat", async () => {
+    const deps = kit();
+    const opened: string[] = [];
+    const muted: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/unlock -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          muted.push(target.actorId);
+        },
+        async unlockChat(target) {
+          opened.push(target.chatId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已打开 -100 的默认发言权限。这可能比锁定前更宽。单人禁言仍在",
+    });
+    expect(muted).toEqual([]);
+    expect(opened).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/unlock <chatId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/unlock -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unlockChat() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Opened default speaking permissions in -100. This can be wider than before the lock. Individual mutes stay.",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/unlock -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unlockChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/unlock", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/unlock <chatId>" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/unlock ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unlockChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/unlock -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/unlock -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unlockChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"unlock"',
+    );
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/unlock -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async unlockChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("closes default speaking permissions for one chat", async () => {
     const deps = kit();
     const locked: string[] = [];

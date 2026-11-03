@@ -253,6 +253,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async unlockChat(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatPermissions",
+        fetchImpl: input.fetchImpl,
+        missing: "unlock_unavailable",
+        failed: "unlock_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          permissions: speaking,
+          use_independent_chat_permissions: true,
+        },
+      });
+    },
   };
 }
 
