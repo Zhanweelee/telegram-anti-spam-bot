@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-313
+
+- 入群的决策比验证更重时，删掉上一颗已经记下 `message_id` 的验证按钮和挑战。
+- 删不掉按钮时留下这一行。动作仍返回 `superseded`。dry-run 不删。见 ADR 0346。
+- 30 天保留期没有改。
+
 ### P3-312
 
 - 成员变成 `left` 或 `kicked` 时带 `membership: "leave"`，并删掉还在的验证按钮和挑战。

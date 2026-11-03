@@ -675,6 +675,67 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
   });
 
+  it("deletes the captcha button when a later join is banned", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    const name = "广告员免费领取礼品";
+    let prompts = 0;
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        return Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        });
+      },
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_ban_join_1",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_ban_join_2",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+        profile: { text: name, textSha256: await sha256Hex(name) },
+      }),
+      options,
+    );
+    expect(prompts).toBe(1);
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100123", actorId: "77" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toBeNull();
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(name);
+  });
+
   it("stops reading the shared blocklist as soon as the chat turns it off", async () => {
     const kit = deps();
     const blocklist = createMemoryBlocklistStore();

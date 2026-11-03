@@ -148,17 +148,35 @@ export async function cancelChallenge(input: {
   if (input.event.membership !== "leave") {
     return false;
   }
-  const challenge = await input.ports.store.get(
-    input.event.tenantId,
-    input.event.chatId,
-    input.event.actor.id,
+  return dropStoredChallenge(input.event, input.ports, "captcha_left");
+}
+
+export async function supersedeChallenge(input: {
+  readonly event: Event;
+  readonly ports: CaptchaPorts;
+}): Promise<boolean> {
+  if (input.event.membership !== "join") {
+    return false;
+  }
+  return dropStoredChallenge(input.event, input.ports, "captcha_superseded");
+}
+
+async function dropStoredChallenge(
+  event: Event,
+  ports: CaptchaPorts,
+  reason: "captcha_left" | "captcha_superseded",
+): Promise<boolean> {
+  const challenge = await ports.store.get(
+    event.tenantId,
+    event.chatId,
+    event.actor.id,
   );
   if (!challenge) {
     return false;
   }
   const messageId = challenge.messageId;
   if (messageId) {
-    const removePrompt = input.ports.removePrompt;
+    const removePrompt = ports.removePrompt;
     if (!removePrompt) {
       return false;
     }
@@ -169,21 +187,21 @@ export async function cancelChallenge(input: {
         messageId,
       });
     } catch {
-      input.ports.logger.warn("captcha_prompt_delete_failed", {
-        eventId: input.event.id,
-        chatId: input.event.chatId,
+      ports.logger.warn("captcha_prompt_delete_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
       });
       return false;
     }
   }
-  await input.ports.store.delete(
+  await ports.store.delete(
     challenge.tenantId,
     challenge.chatId,
     challenge.actorId,
   );
-  input.ports.logger.info("captcha_left", {
-    eventId: input.event.id,
-    chatId: input.event.chatId,
+  ports.logger.info(reason, {
+    eventId: event.id,
+    chatId: event.chatId,
   });
   return true;
 }
