@@ -622,6 +622,166 @@ describe("runOperatorCommand", () => {
     expect(fullPage.text).not.toContain("还有更早的审计");
   });
 
+  it("keeps a long audit line inside the private-message limit", async () => {
+    const deps = kit();
+    const ruleIds = Array.from(
+      { length: 60 },
+      (_, index) => `r${String(index).padStart(2, "0")}_${"a".repeat(60)}`,
+    );
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_rules",
+      action: "delete",
+      score: 1,
+      reasons: [],
+      evidence: [],
+      ruleIds,
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    const result = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(result.status).toBe("reply");
+    if (result.status !== "reply") {
+      return;
+    }
+    expect(result.text.length).toBeLessThanOrEqual(3500);
+    expect(result.text).toContain("evt_rules");
+    const rules = listedLogTokens(result.text, "rules", "zh");
+    expect(rules.ids.length + rules.omitted).toBe(60);
+    expect(rules.ids).toEqual(ruleIds.slice(0, rules.ids.length));
+    expect(rules.omitted).toBeGreaterThan(0);
+    expect(result.text).not.toContain(ruleIds[59]);
+    const reasons = listedLogTokens(result.text, "reasons", "zh");
+    expect(reasons).toEqual({ ids: [], omitted: 0 });
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    expect(english.text.length).toBeLessThanOrEqual(3500);
+    const englishRules = listedLogTokens(english.text, "rules", "en");
+    expect(englishRules.ids.length + englishRules.omitted).toBe(60);
+    expect(englishRules.ids).toEqual(ruleIds.slice(0, englishRules.ids.length));
+    expect(english.text).not.toContain(ruleIds[59]);
+  });
+
+  it("drops reasons before rules when one audit line is too long", async () => {
+    const deps = kit();
+    const ruleIds = Array.from(
+      { length: 40 },
+      (_, index) => `r${String(index).padStart(2, "0")}_${"b".repeat(60)}`,
+    );
+    const reasons = Array.from(
+      { length: 40 },
+      (_, index) => `s${String(index).padStart(2, "0")}_${"c".repeat(60)}`,
+    );
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_both",
+      action: "ban",
+      score: 3,
+      reasons,
+      evidence: [],
+      ruleIds,
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    const result = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(result.status).toBe("reply");
+    if (result.status !== "reply") {
+      return;
+    }
+    expect(result.text.length).toBeLessThanOrEqual(3500);
+    const listedRules = listedLogTokens(result.text, "rules", "zh");
+    const listedReasons = listedLogTokens(result.text, "reasons", "zh");
+    expect(listedRules.ids).toEqual(ruleIds);
+    expect(listedRules.omitted).toBe(0);
+    expect(listedReasons.ids.length + listedReasons.omitted).toBe(40);
+    expect(listedReasons.ids).toEqual(
+      reasons.slice(0, listedReasons.ids.length),
+    );
+    expect(listedReasons.omitted).toBeGreaterThan(0);
+    expect(listedReasons.ids[0]).toBe(reasons[0]);
+    expect(result.text).not.toContain(reasons[39]);
+  });
+
+  it("fits ten long audit lines without cutting a token", async () => {
+    const deps = kit();
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_old",
+      action: "log",
+      score: 0,
+      reasons: [],
+      evidence: [],
+      ruleIds: [],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    const pages = Array.from({ length: 10 }, (_, eventIndex) => {
+      const ruleIds = Array.from(
+        { length: 20 },
+        (_, ruleIndex) =>
+          `e${eventIndex}_${String(ruleIndex).padStart(2, "0")}_${"d".repeat(60)}`,
+      );
+      return { eventId: `evt_${eventIndex}`, ruleIds };
+    });
+    for (const page of pages) {
+      await deps.storage.appendAudit({
+        tenantId: "local",
+        chatId: "-100",
+        eventId: page.eventId,
+        action: "delete",
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [],
+        ruleIds: page.ruleIds,
+        createdAt: "2026-11-01T00:00:00Z",
+      });
+    }
+    const result = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(result.status).toBe("reply");
+    if (result.status !== "reply") {
+      return;
+    }
+    expect(result.text.length).toBeLessThanOrEqual(3500);
+    expect(result.text.endsWith("还有更早的审计，用 /export 导出")).toBe(true);
+    const lines = result.text.split("\n").slice(0, -1);
+    expect(lines).toHaveLength(10);
+    for (const [index, page] of pages.entries()) {
+      expect(lines[index]).toContain(page.eventId);
+      const listed = listedLogTokens(lines[index] ?? "", "rules", "zh");
+      const listedReasons = listedLogTokens(
+        lines[index] ?? "",
+        "reasons",
+        "zh",
+      );
+      expect(listed.ids.length + listed.omitted).toBe(20);
+      expect(listed.ids).toEqual(page.ruleIds.slice(0, listed.ids.length));
+      expect(listed.omitted).toBeGreaterThan(0);
+      expect(listedReasons).toEqual({ ids: [], omitted: 1 });
+      expect(lines[index]).not.toContain(page.ruleIds[19]);
+    }
+  });
+
   it("turns dry-run on and off for one chat", async () => {
     const deps = kit();
     const on = await runOperatorCommand({
@@ -3182,6 +3342,35 @@ function ruleFile(): RuleSource {
         ],
       };
     },
+  };
+}
+
+function listedLogTokens(
+  line: string,
+  field: "rules" | "reasons",
+  locale: "zh" | "en",
+): { ids: string[]; omitted: number } {
+  const afterRules = line.split(" rules ")[1] ?? "";
+  const [rulesSection = "", reasonsSection = ""] =
+    afterRules.split(" reasons ");
+  const section = field === "rules" ? rulesSection : reasonsSection;
+  const pattern =
+    locale === "zh"
+      ? field === "rules"
+        ? /^(?:(.*?) )?还有 (\d+) 条$/
+        : /^(?:(.*?) )?还有 (\d+) 个$/
+      : /^(?:(.*?) )?(\d+) more$/;
+  const matched = pattern.exec(section);
+  if (!matched) {
+    return {
+      ids: section.length === 0 ? [] : section.split(","),
+      omitted: 0,
+    };
+  }
+  const listed = matched[1] ?? "";
+  return {
+    ids: listed.length === 0 ? [] : listed.split(","),
+    omitted: Number(matched[2]),
   };
 }
 
