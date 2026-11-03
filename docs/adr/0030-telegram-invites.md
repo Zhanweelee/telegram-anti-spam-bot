@@ -35,4 +35,5 @@
 - `folder.t.me/`、`addlist.t.me/` 和 `joinchat.t.me/` 后来由 ADR 0142 记成邀请。没有第二段、其它主机和普通用户名子域仍不记。
 - `JoinChat` 和 `AddList` 后来由 ADR 0143 不区分大小写。`Folder` 仍只认小写。
 - `t.me/addlist?text=`、末尾斜杠和大写 `AddList/带点的短名` 后来由 ADR 0253 读取 `text`。小写 `addlist/短名` 仍不读 `text`。
+- `t.me/joinchat?text=`、末尾斜杠和大写 `JoinChat/带点的短名` 后来由 ADR 0254 读取 `text`。小写 `joinchat/短名` 仍不读 `text`。
 - `t.me/%20`、`telegram.me/%20` 和 `telegram.dog/%20` 后来由 ADR 0144 记成邀请。末尾斜杠、紧挨着的 `#` 和子域仍不记。

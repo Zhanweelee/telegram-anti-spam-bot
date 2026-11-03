@@ -2657,6 +2657,93 @@ describe("normalizeUpdate", () => {
     expect(inviteDump).not.toContain("bit.ly");
   });
 
+  it("keeps a joinchat username draft and leaves an invite code", async () => {
+    const hidden = "offer221";
+    const dotted = "slug.221";
+    const code = "slug221";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78088,
+      message: {
+        message_id: 78088,
+        date: 1761955200,
+        chat: { id: -1008319, type: "supergroup" },
+        from: { id: 221 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/joinchat?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const app = await normalize({
+      update_id: 78089,
+      message: {
+        message_id: 78089,
+        date: 1761955200,
+        chat: { id: -1008320, type: "supergroup" },
+        from: { id: 221 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/JoinChat/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(app.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(app.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(dotted);
+    const invite = await normalize({
+      update_id: 78090,
+      message: {
+        message_id: 78090,
+        date: 1761955200,
+        chat: { id: -1008321, type: "supergroup" },
+        from: { id: 221 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/joinchat/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(invite.event.message?.hosts).toEqual(["t.me"]);
+    const inviteDump = JSON.stringify(invite.event);
+    expect(inviteDump).not.toContain(hidden);
+    expect(inviteDump).not.toContain(code);
+    expect(inviteDump).not.toContain("bit.ly");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

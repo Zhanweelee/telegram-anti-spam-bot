@@ -31,5 +31,6 @@ ADR 0030 把 `t.me/joinchat/` 和 `t.me/addlist/` 记成邀请，比较时路径
 - `https://t.me/JoinChat/…`、`https://telegram.me/ADDLIST/…` 和带子域、末尾斜杠的同样写法按现有邀请规则删除。证据仍是 `invite:` 加主机名。
 - `https://t.me/JOINCHAT`、`https://t.me/JoinChat/…/more`、`https://example.com/JoinChat/…` 和 `https://t.me/Folder/…` 留着。
 - `t.me/AddList/带点的短名?text=` 后来由 ADR 0253 读取 `text`。小写 `addlist/短名` 仍不读 `text`。
+- `t.me/JoinChat/带点的短名?text=` 后来由 ADR 0254 读取 `text`。小写 `joinchat/短名` 仍不读 `text`。
 - `t.me/%20`、`telegram.me/%20` 和 `telegram.dog/%20` 后来由 ADR 0144 记成邀请。末尾斜杠、紧挨着的 `#` 和子域仍不记。
 - 邀请码不进证据。公开的 `t.me/名字` 仍保留。

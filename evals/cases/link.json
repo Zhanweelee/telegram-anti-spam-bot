@@ -4400,5 +4400,65 @@
     "id": "addlist-subdomain-name",
     "text": "https://addlist.t.me/slug.220?text=https%3A%2F%2Fbit.ly%2Foffer220",
     "label": "ham"
+  },
+  {
+    "id": "joinchat-username",
+    "text": "https://t.me/joinchat?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-resolve",
+    "text": "tg://resolve?domain=joinchat&text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-prefix",
+    "text": "https://joinchat.t.me?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-slash",
+    "text": "https://t.me/joinchat/?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-capital-dot",
+    "text": "https://t.me/JoinChat/slug.221?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-trail",
+    "text": "https://t.me/joinchat/slug221/?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-invite-text",
+    "text": "https://t.me/joinchat/slug221?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-prefix-post",
+    "text": "https://joinchat.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "spam"
+  },
+  {
+    "id": "joinchat-dotted",
+    "text": "https://t.me/joinchat/slug.221?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "ham"
+  },
+  {
+    "id": "joinchat-long",
+    "text": "https://t.me/joinchat/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "ham"
+  },
+  {
+    "id": "joinchat-extra",
+    "text": "https://t.me/joinchat/slug.221/extra?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "ham"
+  },
+  {
+    "id": "joinchat-subdomain-name",
+    "text": "https://joinchat.t.me/slug.221?text=https%3A%2F%2Fbit.ly%2Foffer221",
+    "label": "ham"
   }
 ]

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-221
+
+- `t.me/joinchat` 仍按用户名读取。末尾斜杠和大写命令在一边仍写草稿，所以也读 `text`。见 ADR 0254。
+- `t.me/joinchat?text=`、`t.me/JoinChat/slug.221?text=` 和 `t.me/joinchat/slug221/?text=` 里的短链删除。小写短名仍不读 `text`。邀请码仍只记邀请。再多一段路径和 `joinchat.t.me/短名` 留着。用户名、应用名和邀请码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-220
 
 - `t.me/addlist` 仍按用户名读取。末尾斜杠和大写命令在一边仍写草稿，所以也读 `text`。见 ADR 0253。

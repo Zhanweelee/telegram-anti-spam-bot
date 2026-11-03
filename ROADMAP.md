@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-221 joinchat 用户名仍读 text — done
+
+验收：`t.me/joinchat?text=`、`t.me/joinchat/?text=`、`joinchat.t.me?text=`、`tg://resolve?domain=joinchat&text=`、`t.me/JoinChat/slug.221?text=` 和 `t.me/joinchat/slug221/?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/joinchat/slug221?text=`、`t.me/joinchat/slug.221?text=` 和超过 128 位的小写短名不读 `text`。`joinchat.t.me/数字?text=` 仍只记邀请。`t.me/joinchat/短名/再一段` 和 `joinchat.t.me/短名` 留着。用户名、应用名和邀请码不进证据。默认名单仍是 ADR 0026。
+
 ### P3-220 addlist 用户名仍读 text — done
 
 验收：`t.me/addlist?text=`、`t.me/addlist/?text=`、`addlist.t.me?text=`、`tg://resolve?domain=addlist&text=`、`t.me/AddList/slug.220?text=` 和 `t.me/addlist/slug220/?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/addlist/slug220?text=`、`t.me/addlist/slug.220?text=` 和超过 128 位的小写短名不读 `text`。`addlist.t.me/数字?text=` 仍只记邀请。`t.me/addlist/短名/再一段` 和 `addlist.t.me/短名` 留着。用户名、应用名和邀请码不进证据。默认名单仍是 ADR 0026。
@@ -2509,6 +2513,12 @@
 
 - 做了什么：带协议的主机名里，非间距标记写在标签末尾且后面还能接上点、路径、查询或端口时，这个标记留在标签里。后面的希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 Android 仍算进这条链接时留下。选择写在 ADR 0229。
 - 学到什么：`http://bit͏.lyα/…` 在 Android 上是一条主机名，地址解析器给出的名字不是 `bit.ly`。非间距标记不能当词边界，原先会在点号前面把标签截断。`http://bit.lỳ/…` 的组合附加符号也留在标签里，点开的主机名不是短链。没有协议的 `bit͏.lyα/…` 仍只打开短链。`#`、`@` 和空格也会退回短链。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-03 P3-221
+
+- 做了什么：`t.me/joinchat` 从 `text` 抽主机名。末尾斜杠和大写命令同样读。小写短名不读 `text`。再多一段路径和子域上的短名不读。选择写在 ADR 0254。
+- 学到什么：桌面端把小写 `joinchat/短名` 收成 `tg://join`，末尾斜杠会落回用户名草稿。Android 只在小写 `joinchat/` 后面打开邀请。大写 `JoinChat/短名` 仍按用户名写草稿。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
 
 ### 2026-11-03 P3-220

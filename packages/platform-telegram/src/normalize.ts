@@ -1322,6 +1322,9 @@ function isUsernameDraft(url: URL): boolean {
   if (addListReplacesDraft(host, url.pathname, parts)) {
     return false;
   }
+  if (joinChatReplacesDraft(host, url.pathname, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1727,6 +1730,23 @@ function addListReplacesDraft(
   return parts.length === 2 && slug(parts[1]) && !pathname.endsWith("/");
 }
 
+/** 小写 `joinchat` 后面没有末尾斜杠时打开邀请。末尾斜杠和大写命令仍写草稿。 */
+function joinChatReplacesDraft(
+  host: string,
+  pathname: string,
+  parts: readonly string[],
+): boolean {
+  const slug = (value: string | undefined) =>
+    value !== undefined && /^[A-Za-z0-9._-]+$/.test(value);
+  if (host === "joinchat.t.me") {
+    return parts.length === 1 && slug(parts[0]);
+  }
+  if (!isExactDraftHost(host) || parts[0] !== "joinchat") {
+    return false;
+  }
+  return parts.length === 2 && slug(parts[1]) && !pathname.endsWith("/");
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1808,7 +1828,6 @@ const reservedUsernames = new Set([
   "confirmphone",
   "getpremium",
   "iv",
-  "joinchat",
   "m",
   "proxy",
   "s",
