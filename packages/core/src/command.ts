@@ -453,11 +453,9 @@ async function showLogs(
     return say(input, "command.logs.empty");
   }
   const page = records.length > LOG_LIMIT ? records.slice(-LOG_LIMIT) : records;
-  const body = page.map((record) => formatAudit(input, record)).join("\n");
-  if (records.length > LOG_LIMIT) {
-    return `${body}\n${say(input, "command.logs.more")}`;
-  }
-  return body;
+  const footer =
+    records.length > LOG_LIMIT ? say(input, "command.logs.more") : "";
+  return fitLogPage(input, page, footer);
 }
 
 async function exportAudits(
@@ -874,21 +872,130 @@ function policyBody(
   });
 }
 
-function formatAudit(input: OperatorCommandInput, record: AuditRecord): string {
-  const reasons = record.reasons
-    .map((reason) => safeToken(input, reason))
-    .join(",");
-  const rules = record.ruleIds
-    .map((ruleId) => safeToken(input, ruleId))
-    .join(",");
+interface LogLineFit {
+  readonly record: AuditRecord;
+  rules: string[];
+  reasons: string[];
+  readonly ruleTotal: number;
+  readonly reasonTotal: number;
+  frozen: boolean;
+}
+
+function fitLogPage(
+  input: OperatorCommandInput,
+  records: readonly AuditRecord[],
+  footer: string,
+): string {
+  const lines: LogLineFit[] = records.map((record) => ({
+    record,
+    rules: record.ruleIds.map((ruleId) => safeToken(input, ruleId)),
+    reasons: record.reasons.map((reason) => safeToken(input, reason)),
+    ruleTotal: record.ruleIds.length,
+    reasonTotal: record.reasons.length,
+    frozen: false,
+  }));
+  let text = renderLogPage(input, lines, footer);
+  if (text.length <= EXPORT_REPLY_LIMIT) {
+    return text;
+  }
+  while (text.length > EXPORT_REPLY_LIMIT) {
+    let index = -1;
+    let longest = -1;
+    for (let cursor = 0; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor];
+      if (!line || line.frozen) {
+        continue;
+      }
+      if (line.rules.length === 0 && line.reasons.length === 0) {
+        continue;
+      }
+      const size = variableLength(line);
+      if (size >= longest) {
+        longest = size;
+        index = cursor;
+      }
+    }
+    const line = index >= 0 ? lines[index] : undefined;
+    if (!line) {
+      return text;
+    }
+    const savedRules = [...line.rules];
+    const savedReasons = [...line.reasons];
+    let improved = false;
+    while (line.rules.length > 0 || line.reasons.length > 0) {
+      popLogToken(line);
+      const next = renderLogPage(input, lines, footer);
+      if (next.length < text.length) {
+        text = next;
+        improved = true;
+        break;
+      }
+    }
+    if (!improved) {
+      line.rules = savedRules;
+      line.reasons = savedReasons;
+      line.frozen = true;
+    }
+  }
+  return text;
+}
+
+function variableLength(line: LogLineFit): number {
+  return line.rules.join(",").length + line.reasons.join(",").length;
+}
+
+function popLogToken(line: LogLineFit): void {
+  if (line.reasons.length > 0) {
+    line.reasons.pop();
+    return;
+  }
+  line.rules.pop();
+}
+
+function renderLogPage(
+  input: OperatorCommandInput,
+  lines: readonly LogLineFit[],
+  footer: string,
+): string {
+  const body = lines.map((line) => renderLogLine(input, line)).join("\n");
+  return footer.length > 0 ? `${body}\n${footer}` : body;
+}
+
+function renderLogLine(input: OperatorCommandInput, line: LogLineFit): string {
   return say(input, "command.logs.line", {
-    createdAt: record.createdAt,
-    eventId: safeToken(input, record.eventId),
-    action: record.action,
-    score: record.score,
-    rules,
-    reasons,
+    createdAt: line.record.createdAt,
+    eventId: safeToken(input, line.record.eventId),
+    action: line.record.action,
+    score: line.record.score,
+    rules: joinCounted(
+      input,
+      line.rules,
+      line.ruleTotal - line.rules.length,
+      "command.logs.rules_more",
+    ),
+    reasons: joinCounted(
+      input,
+      line.reasons,
+      line.reasonTotal - line.reasons.length,
+      "command.logs.reasons_more",
+    ),
   });
+}
+
+function joinCounted(
+  input: OperatorCommandInput,
+  tokens: readonly string[],
+  omitted: number,
+  key: string,
+): string {
+  if (omitted <= 0) {
+    return tokens.join(",");
+  }
+  const more = say(input, key, { count: omitted });
+  if (tokens.length === 0) {
+    return more;
+  }
+  return `${tokens.join(",")} ${more}`;
 }
 
 function safeToken(input: OperatorCommandInput, value: string): string {
