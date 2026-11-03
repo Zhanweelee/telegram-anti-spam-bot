@@ -3745,5 +3745,45 @@
     "id": "nft-subdomain-post",
     "text": "https://nft.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer207",
     "label": "ham"
+  },
+  {
+    "id": "auction-username",
+    "text": "https://t.me/auction?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "spam"
+  },
+  {
+    "id": "auction-resolve",
+    "text": "tg://resolve?domain=auction&text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "spam"
+  },
+  {
+    "id": "auction-prefix",
+    "text": "https://auction.t.me?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "spam"
+  },
+  {
+    "id": "auction-capital",
+    "text": "https://t.me/Auction/lot208?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "spam"
+  },
+  {
+    "id": "auction-trailing-slash",
+    "text": "https://t.me/auction/lot208/?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "spam"
+  },
+  {
+    "id": "auction-slug",
+    "text": "https://t.me/auction/lot208?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "ham"
+  },
+  {
+    "id": "auction-hyphen",
+    "text": "https://t.me/auction/lot-now?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "ham"
+  },
+  {
+    "id": "auction-subdomain-post",
+    "text": "https://auction.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer208",
+    "label": "ham"
   }
 ]

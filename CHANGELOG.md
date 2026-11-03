@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-208
+
+- `t.me/auction` 仍按用户名读取。后面是拍卖短名时打开拍卖，不读 `text`。见 ADR 0241。
+- `t.me/auction?text=` 和 `t.me/Auction/短名?text=` 里的短链仍删除。`t.me/auction/短名?text=`、`t.me/auction/lot-now?text=` 和 `auction.t.me/数字?text=` 留着。用户名和短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-207
 
 - `t.me/nft` 仍按用户名读取。后面是礼物短名时打开礼物，不读 `text`。见 ADR 0240。
