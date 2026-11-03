@@ -74,6 +74,7 @@ function moderator(
     },
     async muteActor() {},
     async banActor() {},
+    async approveJoin() {},
     async declineJoin() {},
     async deferJoin() {},
     async restrictActor(target) {

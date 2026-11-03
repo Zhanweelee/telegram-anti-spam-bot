@@ -64,6 +64,9 @@ function commandModerator(
     async declineJoin() {
       throw new Error("decline_unavailable");
     },
+    async approveJoin() {
+      throw new Error("approve_unavailable");
+    },
   };
 }
 

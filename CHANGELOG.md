@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-337
+
+- 私聊 `/approve` 按成员号调用 `approveChatJoinRequest`，不带查询号。
+- 没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经批准。见 ADR 0369。
+- 30 天保留期没有改。带查询号的自动路径仍不自动通过。
+
 ### P3-336
 
 - 私聊 `/decline` 按成员号调用 `declineChatJoinRequest`，不带查询号。

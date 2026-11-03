@@ -68,6 +68,7 @@ describe("delete action", () => {
           },
           async muteActor() {},
           async banActor() {},
+          async approveJoin() {},
           async declineJoin() {},
           async deferJoin() {},
           async restrictActor() {},
@@ -125,6 +126,7 @@ describe("delete action", () => {
         },
         async muteActor() {},
         async banActor() {},
+        async approveJoin() {},
         async declineJoin() {},
         async deferJoin() {},
         async restrictActor() {},
@@ -184,6 +186,7 @@ describe("delete action", () => {
         },
         async muteActor() {},
         async banActor() {},
+        async approveJoin() {},
         async declineJoin() {},
         async deferJoin() {},
         async restrictActor() {},
@@ -245,6 +248,7 @@ function ports(): ModerationPort & {
     async banActor(target) {
       banned.push(target);
     },
+    async approveJoin() {},
     async declineJoin() {},
     async deferJoin() {},
     async restrictActor() {},

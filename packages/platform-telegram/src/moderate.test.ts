@@ -452,6 +452,38 @@ describe("telegram captcha transport", () => {
     ).toBeNull();
   });
 
+  it("approves a join request without a query id", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token,
+      fetchImpl: async (input, init) => {
+        calls.push({
+          method: String(input),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
+      },
+    });
+    await moderator.approveJoin({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "83",
+      queryId: "query83",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/approveChatJoinRequest`,
+    ]);
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).toContain('"user_id":83');
+    expect(calls[0]?.body).not.toContain("query83");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+  });
+
   it("declines a join request without sending the bio", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
