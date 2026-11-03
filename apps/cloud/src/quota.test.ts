@@ -125,6 +125,54 @@ describe("createMemoryQuotaStore", () => {
     });
   });
 
+  it("counts one event id once until it leaves the recent window", async () => {
+    const store = createMemoryQuotaStore();
+    const wide = quotaPolicyFromEnv({
+      QUOTA_ENABLED: "true",
+      QUOTA_LIMIT: "100",
+    });
+    const usage = {
+      tenantId: "local",
+      chatId: "-100",
+      atIso: "2026-01-15T00:00:00.000Z",
+      policy: wide,
+      eventId: "tg_0",
+    };
+    expect(await store.consume(usage)).toMatchObject({ used: 1 });
+    expect(await store.consume(usage)).toMatchObject({
+      used: 1,
+      degraded: false,
+    });
+    expect(await store.consume({ ...usage, eventId: "tg_1" })).toMatchObject({
+      used: 2,
+    });
+    expect(
+      await store.read({
+        tenantId: "local",
+        chatId: "-100",
+        atIso: usage.atIso,
+        policy: wide,
+      }),
+    ).toMatchObject({ used: 2 });
+    const huge = "x".repeat(129);
+    expect(await store.consume({ ...usage, eventId: huge })).toMatchObject({
+      used: 3,
+    });
+    expect(await store.consume({ ...usage, eventId: huge })).toMatchObject({
+      used: 4,
+    });
+    for (let index = 1; index <= 64; index += 1) {
+      await store.consume({ ...usage, eventId: `tg_${index}` });
+    }
+    expect(await store.consume(usage)).toMatchObject({ used: 68 });
+    expect(
+      await store.consume({
+        ...usage,
+        atIso: "2026-02-01T00:00:00.000Z",
+      }),
+    ).toMatchObject({ used: 1, degraded: false });
+  });
+
   it("resets a rolling window after 30 days", async () => {
     const rolling = quotaPolicyFromEnv({
       QUOTA_ENABLED: "true",

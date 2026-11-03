@@ -772,6 +772,58 @@ describe("screenTelegramEvent", () => {
     expect(second.decision.reasons).not.toContain("via_bot");
   });
 
+  it("counts one update once against the free quota", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(
+      await runtime.setRuleSwitch("local", "-100598", "via_inline", true),
+    ).toBe(true);
+    const quota = {
+      policy: quotaPolicyFromEnv({
+        QUOTA_ENABLED: "true",
+        QUOTA_LIMIT: "1",
+        QUOTA_BASIC: "keyword",
+      }),
+      store: createMemoryQuotaStore(),
+    };
+    const viaEvent = parseEvent({
+      id: "tg_2017",
+      tenantId: "local",
+      chatId: "-100598",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "94", isAdmin: false },
+      message: {
+        id: "15",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        via: true,
+      },
+    });
+    const first = await screenTelegramEvent(viaEvent, {
+      runtime,
+      quota,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    const second = await screenTelegramEvent(viaEvent, {
+      runtime,
+      quota,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(first.decision.action).toBe("delete");
+    expect(second.decision.action).toBe("delete");
+    expect(second.decision.reasons).toContain("via_bot");
+    expect(
+      await quota.store.read({
+        tenantId: "local",
+        chatId: "-100598",
+        atIso: "2026-11-01T00:00:00.000Z",
+        policy: quota.policy,
+      }),
+    ).toMatchObject({ used: 1, degraded: false });
+  });
+
   it("uses a chat override from the rule file and does not read storage", async () => {
     const text = "请免费领取礼品";
     const storage = countingStorage();
@@ -2019,7 +2071,7 @@ describe("screenTelegramEvent", () => {
     expect(first.decision.action).toBe("delete");
     expect(calls).toBe(1);
     const second = await screenTelegramEvent(
-      await event(phrase, false, "-100584"),
+      { ...(await event(phrase, false, "-100584")), id: "tg_2" },
       {
         logger,
         llm,

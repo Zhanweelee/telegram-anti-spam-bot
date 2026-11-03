@@ -12,6 +12,8 @@ const dayMs = 24 * 60 * 60 * 1000;
 const rollingWindowMs = 30 * dayMs;
 const maxChatsDefault = 256;
 const maxCount = 1_000_000;
+const seenEventLimit = 64;
+const seenEventIdPattern = /^[A-Za-z0-9_.:-]{1,128}$/;
 
 export const defaultQuotaLimit = 3000;
 
@@ -40,6 +42,8 @@ export interface QuotaUsage {
   readonly chatId: string;
   readonly atIso: string;
   readonly policy: QuotaPolicy;
+  /** When set, a repeat of this id does not increment the counter. */
+  readonly eventId?: string;
 }
 
 export interface QuotaStore {
@@ -50,6 +54,7 @@ export interface QuotaStore {
 interface Bucket {
   used: number;
   startedAtMs: number;
+  seen: string[];
 }
 
 export function defaultQuotaPolicy(enabled: boolean): QuotaPolicy {
@@ -191,6 +196,7 @@ function touch(
     }
     bucket.used = 0;
     bucket.startedAtMs = nowMs;
+    bucket.seen = [];
   }
   if (!bucket) {
     if (!increment) {
@@ -202,13 +208,35 @@ function touch(
     if (buckets.size >= maxChats) {
       return null;
     }
-    bucket = { used: 0, startedAtMs: nowMs };
+    bucket = { used: 0, startedAtMs: nowMs, seen: [] };
     buckets.set(key, bucket);
   }
   if (increment && bucket.used < maxCount) {
+    const eventId = rememberedEventId(input.eventId);
+    if (eventId !== null && bucket.seen.includes(eventId)) {
+      return snapshot(policy, bucket.used, nowMs, bucket.startedAtMs);
+    }
     bucket.used += 1;
+    rememberEvent(bucket, eventId);
   }
   return snapshot(policy, bucket.used, nowMs, bucket.startedAtMs);
+}
+
+function rememberedEventId(value: string | undefined): string | null {
+  if (value === undefined || !seenEventIdPattern.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+function rememberEvent(bucket: Bucket, eventId: string | null): void {
+  if (eventId === null) {
+    return;
+  }
+  bucket.seen.push(eventId);
+  if (bucket.seen.length > seenEventLimit) {
+    bucket.seen.shift();
+  }
 }
 
 function snapshot(
