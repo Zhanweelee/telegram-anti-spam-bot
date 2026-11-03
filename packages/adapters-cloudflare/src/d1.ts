@@ -302,6 +302,15 @@ export function createD1Storage(db: SqlDatabase): Storage {
         .bind(...auditValues(parsed))
         .run();
     },
+    async claimAudit(record) {
+      await migrationsFor(db);
+      const parsed = parseAuditRecord(record);
+      const result = await db
+        .prepare(insertAuditIfAbsentSql)
+        .bind(...auditValues(parsed))
+        .run();
+      return readChanges(result) >= 1;
+    },
     async putAuditsIfAbsent(records) {
       if (records.length === 0) {
         return;

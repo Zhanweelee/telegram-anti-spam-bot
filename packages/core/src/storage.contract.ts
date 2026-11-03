@@ -205,6 +205,22 @@ export function bindStorageContract(create: () => Storage): void {
       ]);
     });
 
+    it("claims an audit once", async () => {
+      const storage = create();
+      expect(await storage.claimAudit(record)).toBe(true);
+      expect(await storage.claimAudit(record)).toBe(false);
+      expect(await storage.getAudit("tenant_a", "chat_1", "evt_1")).toEqual(
+        record,
+      );
+      expect(await storage.claimAudit({ ...record, eventId: "evt_2" })).toBe(
+        true,
+      );
+      expect(await storage.exportAudits({ tenantId: "tenant_a" })).toEqual([
+        record,
+        { ...record, eventId: "evt_2" },
+      ]);
+    });
+
     it("stores a repeated audit once", async () => {
       const storage = create();
       await storage.putAuditsIfAbsent([
