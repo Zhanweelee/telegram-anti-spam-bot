@@ -958,6 +958,9 @@ function isUsernameDraft(url: URL): boolean {
   if (contactTokenReplacesDraft(host, url.pathname, parts)) {
     return false;
   }
+  if (newBotReplacesDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1290,6 +1293,26 @@ function contactTokenReplacesDraft(
   return parts.length > 1 || pathname.endsWith("/");
 }
 
+/** 后面一段是机器人管理员用户名。连字符仍写草稿。没有这段时 `newbot` 仍是用户名。 */
+function newBotReplacesDraft(host: string, parts: readonly string[]): boolean {
+  const slug = (value: string | undefined) =>
+    value !== undefined && /^[A-Za-z0-9._]+$/.test(value);
+  if (host === "newbot.t.me") {
+    return (
+      parts.length >= 1 &&
+      parts.length <= 2 &&
+      parts.every((part) => slug(part))
+    );
+  }
+  if (!isExactDraftHost(host) || parts[0]?.toLowerCase() !== "newbot") {
+    return false;
+  }
+  if (parts.length < 2 || parts.length > 3) {
+    return false;
+  }
+  return parts.slice(1).every((part) => slug(part));
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1377,7 +1400,6 @@ const reservedUsernames = new Set([
   "joinchat",
   "m",
   "msg",
-  "newbot",
   "proxy",
   "s",
   "share",

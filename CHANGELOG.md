@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-212
+
+- `t.me/newbot` 仍按用户名读取。后面是管理员用户名时打开创建机器人，不读 `text`。见 ADR 0245。
+- `t.me/newbot?text=` 和 `t.me/newbot/manager-now?text=` 里的短链仍删除。`t.me/newbot/manager212?text=`、`t.me/NewBot/短名?text=` 和 `newbot.t.me/数字?text=` 留着。用户名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-211
 
 - `t.me/login` 仍按用户名读取。登录码和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0244。

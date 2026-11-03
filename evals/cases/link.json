@@ -3925,5 +3925,55 @@
     "id": "login-subdomain-name",
     "text": "https://login.t.me/code211?text=https%3A%2F%2Fbit.ly%2Foffer211",
     "label": "ham"
+  },
+  {
+    "id": "newbot-username",
+    "text": "https://t.me/newbot?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "spam"
+  },
+  {
+    "id": "newbot-resolve",
+    "text": "tg://resolve?domain=newbot&text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "spam"
+  },
+  {
+    "id": "newbot-prefix",
+    "text": "https://newbot.t.me?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "spam"
+  },
+  {
+    "id": "newbot-slash",
+    "text": "https://t.me/newbot/?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "spam"
+  },
+  {
+    "id": "newbot-hyphen",
+    "text": "https://t.me/newbot/manager-now?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "spam"
+  },
+  {
+    "id": "newbot-manager",
+    "text": "https://t.me/newbot/manager212?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "ham"
+  },
+  {
+    "id": "newbot-capital",
+    "text": "https://t.me/NewBot/manager212?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "ham"
+  },
+  {
+    "id": "newbot-trailing-slash",
+    "text": "https://t.me/newbot/manager212/?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "ham"
+  },
+  {
+    "id": "newbot-pair",
+    "text": "https://t.me/newbot/manager212/bot212?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "ham"
+  },
+  {
+    "id": "newbot-subdomain-post",
+    "text": "https://newbot.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer212",
+    "label": "ham"
   }
 ]
