@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-322
+
+- 人还在群里、新状态仍是 `restricted` 且 `is_member` 为 false 时带 `membership: "leave"`，并清掉验证按钮。
+- 这种状态再回到群里时带 `membership: "join"`。不带 `unrestrict`，也不带 `promote`。`is_member` 缺失时仍按原来的状态判断。见 ADR 0355。
+- 30 天保留期没有改。
+
 ### P3-321
 
 - 发给 Telegram 的限制时长先收到 30 秒到 366 天。正好落在两端的时长保持原值。
