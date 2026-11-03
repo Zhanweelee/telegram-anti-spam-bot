@@ -553,8 +553,10 @@ function openedDraftUrls(text: string): string[] {
     openPathQuote(
       openPlainTg(
         openBareEnd(
-          openLongLabel(
-            openLongUserinfo(openDraftStops(openStoppingSpace(text))),
+          openLookalikeHost(
+            openLongLabel(
+              openLongUserinfo(openDraftStops(openStoppingSpace(text))),
+            ),
           ),
         ),
       ),
@@ -827,6 +829,71 @@ const HOST_PUNCT = "!#$&()*+,;=~";
 const DRAFT_DOT_LOOKALIKE = new Set([
   0x00b7, 0x2022, 0x2027, 0x2219, 0x22c5, 0x30fb, 0xff0e, 0xfe52, 0xff61,
 ]);
+
+/** 点状字符拼成的裸主机名不盖住后面的网址。带协议的仍是一条。 */
+function openLookalikeHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (schemeAt(text, index) > 0) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    const skip = lookalikeHostSkip(text, index);
+    if (skip > 0) {
+      out += " ";
+      index += skip;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function lookalikeHostSkip(text: string, index: number): number {
+  if (index > 0 && /[A-Za-z0-9_]/.test(text.charAt(index - 1))) {
+    return 0;
+  }
+  const first = readDraftLabel(text, index);
+  if (first === 0) {
+    return 0;
+  }
+  let cursor = index + first;
+  let sawLookalike = false;
+  while (cursor < text.length) {
+    const lookalike = DRAFT_DOT_LOOKALIKE.has(text.charCodeAt(cursor));
+    if (text.charAt(cursor) !== "." && !lookalike) {
+      break;
+    }
+    const next = readDraftLabel(text, cursor + 1);
+    if (next === 0) {
+      break;
+    }
+    if (lookalike) {
+      sawLookalike = true;
+    }
+    cursor += 1 + next;
+  }
+  if (!sawLookalike) {
+    return 0;
+  }
+  if (text.charAt(cursor) !== "/" && text.charAt(cursor) !== "?") {
+    return 0;
+  }
+  const body = text.slice(cursor + 1);
+  if (
+    schemeAt(body, 0) > 0 ||
+    strictBareEnd(body, 0) !== null ||
+    bareIpAt(body)
+  ) {
+    return cursor + 1 - index;
+  }
+  return 0;
+}
 
 /** 点状字符紧挨在 `@` 前面时，带协议的主机名在这里结束。后面的网址另开。 */
 function lookalikeBeforeAt(rest: string): number {
@@ -1244,6 +1311,10 @@ function openDraftStops(text: string): string {
       continue;
     }
     const current = text.charAt(index);
+    if (keepLookalikeNewline(text, index)) {
+      out += current;
+      continue;
+    }
     if (DRAFT_STOP_CHAR.test(current) || isSchemePercent(text, index)) {
       out += " ";
       continue;
@@ -1251,6 +1322,27 @@ function openDraftStops(text: string): string {
     out += current;
   }
   return out;
+}
+
+/** 点状字符旁边的换行仍交给粘连扫描吃掉，短链才接得上。 */
+function keepLookalikeNewline(text: string, index: number): boolean {
+  if (text.charAt(index) !== "\n" || schemeAt(text, index + 1) > 0) {
+    return false;
+  }
+  if (!/[A-Za-z0-9]/.test(text.charAt(index + 1))) {
+    return false;
+  }
+  if (index > 0 && DRAFT_DOT_LOOKALIKE.has(text.charCodeAt(index - 1))) {
+    return true;
+  }
+  let cursor = index - 1;
+  if (cursor < 0 || !/[A-Za-z0-9]/.test(text.charAt(cursor))) {
+    return false;
+  }
+  while (cursor >= 0 && /[A-Za-z0-9_-]/.test(text.charAt(cursor))) {
+    cursor -= 1;
+  }
+  return cursor >= 0 && DRAFT_DOT_LOOKALIKE.has(text.charCodeAt(cursor));
 }
 
 function isSchemePercent(text: string, index: number): boolean {
@@ -2021,7 +2113,11 @@ function pushClosedUrl(
 ): void {
   const opened = openPathQuote(
     openPlainTg(
-      openBareEnd(openLongLabel(openLongUserinfo(openStoppingSpace(raw)))),
+      openBareEnd(
+        openLookalikeHost(
+          openLongLabel(openLongUserinfo(openStoppingSpace(raw))),
+        ),
+      ),
     ),
   );
   if (opened !== raw) {

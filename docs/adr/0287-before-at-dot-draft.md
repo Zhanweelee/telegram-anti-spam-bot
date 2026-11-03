@@ -33,3 +33,4 @@ Android 不把 `·`、`•`、`‧`、`∙`、`⋅`、`・`、`．`、`﹒` 和 
 - `t.me/share/url?text=http://example.com．@http://bit.ly/…`、间隔号 `·` 和 `http://203.0.113.155．@http://bit.ly/…` 删除。分享 `url` 同样删除。证据仍只有主机名。
 - `http://example.com．@https://t.me/+…` 按邀请删除。路径和邀请码不进证据。
 - `http://example.com.@http://bit.ly/…` 和 `http://example.com．/http://bit.ly/…` 留着。`bit．ly` 和 `http://user@bit．ly/…` 仍按短链删除。
+- 只用点状字符当点、又没有协议的主机名后来仍盖住后面的网址。见 ADR 0288。
