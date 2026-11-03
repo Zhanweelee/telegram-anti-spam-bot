@@ -2150,16 +2150,14 @@ function bareLookalikeDotSkip(rest: string): number {
   return 0;
 }
 
-/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。句号留给主机名扫描收成一个点。 */
+/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。句号和点状间隔号在后面是域名时留给主机名扫描。 */
 function bareLabelSkip(rest: string): number {
   const code = rest.codePointAt(0);
-  if (
-    code === undefined ||
-    code === 0x3002 ||
-    !draftLabelCode(code) ||
-    boundaryMark(code)
-  ) {
+  if (code === undefined || !draftLabelCode(code) || boundaryMark(code)) {
     return 0;
+  }
+  if (code === 0x3002 || DRAFT_DOT_LOOKALIKE.has(code)) {
+    return joiningDotSkip(rest);
   }
   const after = rest.slice(String.fromCodePoint(code).length);
   if (
@@ -2169,6 +2167,25 @@ function bareLabelSkip(rest: string): number {
     return 0;
   }
   return String.fromCodePoint(code).length;
+}
+
+/** 一段句号或点状间隔号后面是 ASCII 域名时留下。否则在这里结束主机名。 */
+function joiningDotSkip(rest: string): number {
+  let index = 0;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (
+      code === undefined ||
+      (code !== 0x3002 && !DRAFT_DOT_LOOKALIKE.has(code))
+    ) {
+      break;
+    }
+    index += String.fromCodePoint(code).length;
+  }
+  if (index === 0 || draftDomainContinues(rest.slice(index))) {
+    return 0;
+  }
+  return index;
 }
 
 /** 写完的主机名后面紧挨协议时，映射字母不另开后面的网址。 */
