@@ -112,6 +112,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
   readonly senderBanned: readonly SenderChatTarget[];
+  readonly senderUnbanned: readonly SenderChatTarget[];
   readonly declined: readonly JoinTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
@@ -124,6 +125,7 @@ export function createMemoryModerator(): ModerationPort & {
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
   const senderBanned: SenderChatTarget[] = [];
+  const senderUnbanned: SenderChatTarget[] = [];
   const declined: JoinTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
@@ -136,6 +138,7 @@ export function createMemoryModerator(): ModerationPort & {
     muted,
     banned,
     senderBanned,
+    senderUnbanned,
     declined,
     approved,
     deferred,
@@ -154,6 +157,13 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async banSenderChat(target) {
       senderBanned.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        senderChatId: target.senderChatId,
+      });
+    },
+    async unbanSenderChat(target) {
+      senderUnbanned.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
         senderChatId: target.senderChatId,

@@ -145,6 +145,7 @@ function harness(options?: { failStorage?: boolean }) {
     async muteActor() {},
     async banActor() {},
     async banSenderChat() {},
+    async unbanSenderChat() {},
     async approveJoin() {},
     async declineJoin() {},
     async deferJoin() {},

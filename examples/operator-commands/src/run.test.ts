@@ -25,6 +25,13 @@ describe("operator command example", () => {
     expect(help).toContain("/decline");
     expect(help).toContain("/approve");
     expect(help).toContain("/bansender");
+    expect(help).toContain("/unbansender");
+    const lifted = await runPrivateCommand({
+      text: "/unbansender -100 -1005",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(lifted).toBe("已解除 -1005 在 -100 的代发禁止");
     const sender = await runPrivateCommand({
       text: "/bansender -100 -1005",
       actorId: "42",

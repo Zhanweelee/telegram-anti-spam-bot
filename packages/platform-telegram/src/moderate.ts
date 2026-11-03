@@ -129,6 +129,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async unbanSenderChat(target) {
+      await postTelegram({
+        token: input.token,
+        method: "unbanChatSenderChat",
+        fetchImpl: input.fetchImpl,
+        missing: "unban_sender_unavailable",
+        failed: "unban_sender_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          sender_chat_id: telegramId(target.senderChatId),
+        },
+      });
+    },
     async banActor(target) {
       await postTelegram({
         token: input.token,

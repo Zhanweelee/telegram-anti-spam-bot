@@ -1253,6 +1253,130 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("lifts a sender-chat block without unbanning a user", async () => {
+    const deps = kit();
+    const users: string[] = [];
+    const senders: { chatId: string; senderChatId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/unbansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unbanActor(target) {
+          users.push(target.actorId);
+        },
+        async unbanSenderChat(target) {
+          senders.push({
+            chatId: target.chatId,
+            senderChatId: target.senderChatId,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已解除 -1005 在 -100 的代发禁止",
+    });
+    expect(users).toEqual([]);
+    expect(senders).toEqual([{ chatId: "-100", senderChatId: "-1005" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/unbansender <chatId> <senderChatId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/unbansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unbanSenderChat() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Lifted the block on sender chat -1005 in -100",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/unbansender -100 -1005", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unbanSenderChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/unbansender -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/unbansender <chatId> <senderChatId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/unbansender -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unbanSenderChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/unbansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/unbansender -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unbanSenderChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"unbansender"',
+    );
+
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/unbansender -200 -1005",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async unbanSenderChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("blocks a sender chat without banning a user", async () => {
     const deps = kit();
     const users: string[] = [];
