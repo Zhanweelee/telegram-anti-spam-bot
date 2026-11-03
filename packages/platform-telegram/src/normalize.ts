@@ -407,7 +407,10 @@ function unrestrictingMember(value: Record<string, unknown>): boolean {
   if (!isRecord(value.old_chat_member)) {
     return false;
   }
-  return value.old_chat_member.status === "restricted";
+  return (
+    value.old_chat_member.status === "restricted" &&
+    !restrictedOutside(value.old_chat_member)
+  );
 }
 
 function promotingMember(value: Record<string, unknown>): boolean {
@@ -426,7 +429,10 @@ function promotingMember(value: Record<string, unknown>): boolean {
     return false;
   }
   const previous = value.old_chat_member.status;
-  return previous === "member" || previous === "restricted";
+  if (previous !== "member" && previous !== "restricted") {
+    return false;
+  }
+  return !restrictedOutside(value.old_chat_member);
 }
 
 function leavingMember(value: Record<string, unknown>): boolean {
@@ -437,19 +443,14 @@ function leavingMember(value: Record<string, unknown>): boolean {
   if (isRecord(user) && user.is_bot === true) {
     return false;
   }
+  if (!stillInside(value.old_chat_member)) {
+    return false;
+  }
   const status = value.new_chat_member.status;
-  if (status !== "left" && status !== "kicked") {
-    return false;
-  }
-  if (!isRecord(value.old_chat_member)) {
-    return false;
-  }
-  const previous = value.old_chat_member.status;
   return (
-    previous === "member" ||
-    previous === "restricted" ||
-    previous === "administrator" ||
-    previous === "creator"
+    status === "left" ||
+    status === "kicked" ||
+    restrictedOutside(value.new_chat_member)
   );
 }
 
@@ -465,11 +466,42 @@ function joiningMember(value: Record<string, unknown>): boolean {
   if (status !== "member" && status !== "restricted") {
     return false;
   }
+  if (restrictedOutside(value.new_chat_member)) {
+    return false;
+  }
   if (!isRecord(value.old_chat_member)) {
     return true;
   }
   const previous = value.old_chat_member.status;
-  return previous === "left" || previous === "kicked" || previous === undefined;
+  return (
+    previous === "left" ||
+    previous === "kicked" ||
+    previous === undefined ||
+    restrictedOutside(value.old_chat_member)
+  );
+}
+
+function stillInside(member: unknown): boolean {
+  if (!isRecord(member)) {
+    return false;
+  }
+  const status = member.status;
+  if (
+    status === "member" ||
+    status === "administrator" ||
+    status === "creator"
+  ) {
+    return true;
+  }
+  return status === "restricted" && member.is_member !== false;
+}
+
+function restrictedOutside(member: unknown): boolean {
+  return (
+    isRecord(member) &&
+    member.status === "restricted" &&
+    member.is_member === false
+  );
 }
 
 function isPrivateChat(chat: unknown): boolean {

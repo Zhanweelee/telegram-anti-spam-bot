@@ -16851,6 +16851,133 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("marks a restricted member who leaves while the status stays restricted", async () => {
+    const name = "广告员免费领取礼品";
+    const left = await normalize({
+      update_id: 2053,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+          is_member: true,
+        },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+          is_member: false,
+        },
+      },
+    });
+    expect(left.status).toBe("event");
+    if (left.status !== "event") {
+      return;
+    }
+    expect(left.event.membership).toBe("leave");
+    expect(left.event.profile).toBeUndefined();
+    expect(left.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(JSON.stringify(left.event)).not.toContain(name);
+    const returned = await normalize({
+      update_id: 2054,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+          is_member: true,
+        },
+      },
+    });
+    expect(returned.status).toBe("event");
+    if (returned.status === "event") {
+      expect(returned.event.membership).toBe("join");
+      expect(returned.event.profile?.text).toBe(name);
+    }
+    const returnedMember = await normalize({
+      update_id: 2055,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: { user: { id: 77 }, status: "member" },
+      },
+    });
+    expect(returnedMember.status).toBe("event");
+    if (returnedMember.status === "event") {
+      expect(returnedMember.event.membership).toBe("join");
+    }
+    const stayed = await normalize({
+      update_id: 2056,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "member",
+        },
+        new_chat_member: {
+          user: { id: 77 },
+          status: "restricted",
+          is_member: true,
+        },
+      },
+    });
+    expect(stayed.status).toBe("event");
+    if (stayed.status === "event") {
+      expect(stayed.event.membership).toBeUndefined();
+    }
+    const promotedAway = await normalize({
+      update_id: 2057,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: { user: { id: 77 }, status: "administrator" },
+      },
+    });
+    expect(promotedAway.status).toBe("event");
+    if (promotedAway.status === "event") {
+      expect(promotedAway.event.membership).toBeUndefined();
+      expect(promotedAway.event.actor.isAdmin).toBe(true);
+    }
+    const botLeft = await normalize({
+      update_id: 2058,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "restricted",
+          is_member: true,
+        },
+        new_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "restricted",
+          is_member: false,
+        },
+      },
+    });
+    expect(botLeft.status).toBe("event");
+    if (botLeft.status === "event") {
+      expect(botLeft.event.membership).toBeUndefined();
+    }
+  });
+
   it("marks a configured admin id on a membership change", async () => {
     const outcome = await normalize(
       {
