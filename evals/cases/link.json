@@ -3575,5 +3575,50 @@
     "id": "addemoji-subdomain-post",
     "text": "https://addemoji.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer203",
     "label": "ham"
+  },
+  {
+    "id": "addstickers-username",
+    "text": "https://t.me/addstickers?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-resolve",
+    "text": "tg://resolve?domain=addstickers&text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-prefix",
+    "text": "https://addstickers.t.me?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-hyphen",
+    "text": "https://t.me/addstickers/pack-now?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-capital",
+    "text": "https://t.me/AddStickers/pack204?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-trailing-slash",
+    "text": "https://t.me/addstickers/pack204/?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "spam"
+  },
+  {
+    "id": "addstickers-set",
+    "text": "https://t.me/addstickers/pack204?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "ham"
+  },
+  {
+    "id": "addstickers-dotted",
+    "text": "https://t.me/addstickers/pack.now?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "ham"
+  },
+  {
+    "id": "addstickers-subdomain-post",
+    "text": "https://addstickers.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer204",
+    "label": "ham"
   }
 ]
