@@ -93,6 +93,7 @@ const COMMAND_NAMES = [
   "untopic",
   "closetopic",
   "opentopic",
+  "hidegeneral",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -133,6 +134,7 @@ export interface OperatorCommandInput {
       | "declineJoin"
       | "deleteMessage"
       | "deleteMessages"
+      | "hideGeneral"
       | "lockChat"
       | "muteActor"
       | "openTopic"
@@ -291,6 +293,8 @@ async function dispatch(
       return closeForum(input, args);
     case "opentopic":
       return openForum(input, args);
+    case "hidegeneral":
+      return hideGeneralTopic(input, args);
   }
 }
 
@@ -1479,6 +1483,46 @@ function rejectOpen(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "opentopic",
+  });
+}
+
+async function hideGeneralTopic(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.hidegeneral.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const hide = input.moderator?.hideGeneral;
+  if (!hide) {
+    rejectHide(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await hide({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectHide(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.hidegeneral.done", { chatId });
+}
+
+function rejectHide(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "hidegeneral",
   });
 }
 

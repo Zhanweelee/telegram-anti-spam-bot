@@ -37,6 +37,15 @@ describe("operator command example", () => {
     expect(help).toContain("/untopic");
     expect(help).toContain("/closetopic");
     expect(help).toContain("/opentopic");
+    expect(help).toContain("/hidegeneral");
+    const hiddenGeneral = await runPrivateCommand({
+      text: "/hidegeneral -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(hiddenGeneral).toBe(
+      "已请求隐藏 -100 的通用话题。原先开着的话会一起关闭。消息还在。其它话题不在这次里",
+    );
     const openedGeneral = await runPrivateCommand({
       text: "/opentopic -100",
       actorId: "42",

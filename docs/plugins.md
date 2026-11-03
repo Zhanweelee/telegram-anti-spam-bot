@@ -97,6 +97,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/opentopic <chatId> [threadId]` 调用 `openTopic`。不带话题号时使用 `reopenGeneralForumTopic`。带上话题号时使用 `reopenForumTopic`，并只带这个话题号。话题号 `1` 不改写成通用话题。原先隐藏的通用话题会重新显示。消息还在。没有 token、话题号不合法或调用失败时回复「参数无效」，不把内存记录当成已经打开。不调用 `unhideGeneralForumTopic`，也不改黑名单、封禁或禁言。见 ADR 0382。
 
+`/hidegeneral <chatId>` 调用 `hideGeneral`。配了 token 时使用 `hideGeneralForumTopic`，只带群号。原先开着的通用话题会一起关闭。消息还在。其它话题不在这次里。多出来的参数不发出请求。没有 token、群号不合法或调用失败时回复「参数无效」，不把内存记录当成已经隐藏。不调用 `closeGeneralForumTopic`，也不改黑名单、封禁或禁言。见 ADR 0383。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

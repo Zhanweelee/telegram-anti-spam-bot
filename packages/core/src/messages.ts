@@ -157,6 +157,8 @@ export const messageKeys = [
   "command.opentopic.usage",
   "command.opentopic.done",
   "command.opentopic.done.thread",
+  "command.hidegeneral.usage",
+  "command.hidegeneral.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -210,6 +212,7 @@ const syntax = [
   "/untopic <chatId> [threadId]",
   "/closetopic <chatId> [threadId]",
   "/opentopic <chatId> [threadId]",
+  "/hidegeneral <chatId>",
 ].join("\n");
 
 const zh = {
@@ -385,6 +388,9 @@ const zh = {
     "已请求重新打开 {chatId} 的通用话题。原先隐藏的话会重新显示。消息还在。其它话题不在这次里",
   "command.opentopic.done.thread":
     "已请求重新打开 {chatId} 话题 {threadId}。消息还在",
+  "command.hidegeneral.usage": "用法：/hidegeneral <chatId>",
+  "command.hidegeneral.done":
+    "已请求隐藏 {chatId} 的通用话题。原先开着的话会一起关闭。消息还在。其它话题不在这次里",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -572,6 +578,9 @@ const en = {
     "Asked to reopen the General topic of {chatId}. It is shown again if it was hidden. The messages stay. Other topics are not part of this call.",
   "command.opentopic.done.thread":
     "Asked to reopen topic {threadId} of {chatId}. The messages stay.",
+  "command.hidegeneral.usage": "Usage: /hidegeneral <chatId>",
+  "command.hidegeneral.done":
+    "Asked to hide the General topic of {chatId}. An open General topic is closed as well. The messages stay. Other topics are not part of this call.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

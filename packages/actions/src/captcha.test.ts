@@ -109,6 +109,7 @@ function moderator(
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},
+    async hideGeneral() {},
   };
 }
 
