@@ -84,6 +84,8 @@ export const messageKeys = [
   "command.member.restricted.away.until",
   "command.delete.usage",
   "command.delete.done",
+  "command.decline.usage",
+  "command.decline.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -122,6 +124,7 @@ const syntax = [
   "/mute <chatId> <actorId> [seconds]",
   "/member <chatId> <actorId>",
   "/delete <chatId> <messageId>",
+  "/decline <chatId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -212,6 +215,8 @@ const zh = {
     "{chatId} {actorId} 禁言中，人不在群里，直到 {until}",
   "command.delete.usage": "用法：/delete <chatId> <messageId>",
   "command.delete.done": "已删除 {chatId} {messageId}",
+  "command.decline.usage": "用法：/decline <chatId> <actorId>",
+  "command.decline.done": "已拒绝 {chatId} {actorId}",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -311,6 +316,8 @@ const en = {
     "{actorId} is muted in {chatId} until {until} and is outside the chat",
   "command.delete.usage": "Usage: /delete <chatId> <messageId>",
   "command.delete.done": "Deleted {messageId} in {chatId}",
+  "command.decline.usage": "Usage: /decline <chatId> <actorId>",
+  "command.decline.done": "Declined {actorId} in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

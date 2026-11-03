@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-336
+
+- 私聊 `/decline` 按成员号调用 `declineChatJoinRequest`，不带查询号。
+- 没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经拒绝。见 ADR 0368。
+- 30 天保留期没有改。
+
 ### P3-335
 
 - 私聊 `/delete` 按消息号调用 `deleteMessage`，不带接收者。

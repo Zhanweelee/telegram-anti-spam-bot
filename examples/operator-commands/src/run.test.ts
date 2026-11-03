@@ -22,6 +22,13 @@ describe("operator command example", () => {
     expect(help).toContain("/packs");
     expect(help).toContain("/quota");
     expect(help).toContain("/delete");
+    expect(help).toContain("/decline");
+    const declined = await runPrivateCommand({
+      text: "/decline -100 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(declined).toBe("已拒绝 -100 77");
     const deleted = await runPrivateCommand({
       text: "/delete -100 88",
       actorId: "42",
