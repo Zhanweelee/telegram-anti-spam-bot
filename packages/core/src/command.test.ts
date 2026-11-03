@@ -2604,6 +2604,163 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("unpins a forum topic and leaves the messages", async () => {
+    const deps = kit();
+    const seen: { chatId: string; threadId?: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/untopic -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async unpinChat() {
+          throw new Error("called");
+        },
+        async unpinTopic(target) {
+          seen.push(
+            target.threadId === undefined
+              ? { chatId: target.chatId }
+              : { chatId: target.chatId, threadId: target.threadId },
+          );
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求撤下 -100 通用话题的全部置顶。消息还在。其它话题不在这次里",
+    });
+    expect(seen).toEqual([{ chatId: "-100" }]);
+    const topic = await runOperatorCommand({
+      event: event({ text: "/untopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinTopic(target) {
+          seen.push(
+            target.threadId === undefined
+              ? { chatId: target.chatId }
+              : { chatId: target.chatId, threadId: target.threadId },
+          );
+        },
+      },
+      ...kit(),
+    });
+    expect(topic).toMatchObject({
+      text: "已请求撤下 -100 话题 55 的全部置顶。消息还在",
+    });
+    expect(seen[1]).toEqual({ chatId: "-100", threadId: "55" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/untopic <chatId> [threadId]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/untopic -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unpinTopic() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to clear every pin in the General topic of -100. The messages stay. Other topics are not part of this call.",
+    });
+    const englishTopic = await runOperatorCommand({
+      event: event({ text: "/untopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unpinTopic() {},
+      },
+      ...kit(),
+    });
+    expect(englishTopic).toMatchObject({
+      text: "Asked to clear every pin in topic 55 of -100. The messages stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/untopic -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinTopic() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/untopic", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/untopic <chatId> [threadId]",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/untopic -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    expect(seen).toHaveLength(2);
+    const zero = await runOperatorCommand({
+      event: event({ text: "/untopic -100 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(zero).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/untopic -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/untopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinTopic() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"untopic"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/untopic -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async unpinTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

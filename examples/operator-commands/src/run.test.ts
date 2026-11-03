@@ -34,6 +34,15 @@ describe("operator command example", () => {
     expect(help).toContain("/revoke");
     expect(help).toContain("/unpin");
     expect(help).toContain("/admins");
+    expect(help).toContain("/untopic");
+    const generalTopic = await runPrivateCommand({
+      text: "/untopic -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(generalTopic).toBe(
+      "已请求撤下 -100 通用话题的全部置顶。消息还在。其它话题不在这次里",
+    );
     const unpinned = await runPrivateCommand({
       text: "/unpin -100",
       actorId: "42",

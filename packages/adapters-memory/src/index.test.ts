@@ -182,4 +182,14 @@ describe("memory adapter", () => {
     expect(moderator.unpinned).toEqual([{ tenantId: "t", chatId: "c" }]);
     expect(JSON.stringify(moderator.unpinned)).not.toContain("message");
   });
+
+  it("records a topic unpin with the thread id only when one was given", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.unpinTopic({ tenantId: "t", chatId: "c" });
+    await moderator.unpinTopic({ tenantId: "t", chatId: "c", threadId: "55" });
+    expect(moderator.topicsUnpinned).toEqual([
+      { tenantId: "t", chatId: "c" },
+      { tenantId: "t", chatId: "c", threadId: "55" },
+    ]);
+  });
 });

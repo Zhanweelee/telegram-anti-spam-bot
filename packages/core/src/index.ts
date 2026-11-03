@@ -189,6 +189,7 @@ export {
   type ReactionActorTarget,
   type SenderChatTarget,
   type Storage,
+  type TopicPinTarget,
   type UnmuteResult,
 } from "./ports.js";
 export {
