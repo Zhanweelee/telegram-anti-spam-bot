@@ -2,12 +2,12 @@ import type { LlmClassifier, LlmVerdict } from "@tasb/core";
 
 /**
  * Text classification model that the Workers Free plan still serves.
- * Checked 2026-11-01 against the model catalog and the 2026-07-28 changelog.
+ * Checked 2026-11-04 against the model catalog and the 2026-07-28 changelog.
  * Sentiment labels, not a spam-trained model. See ADR 0015.
  */
 export const FREE_PLAN_TEXT_MODEL = "@cf/huggingface/distilbert-sst-2-int8";
 
-/** Models the free plan rejects with HTTP 403 / internal 5035, as of 2026-11-01. */
+/** Models the free plan rejects with HTTP 403 / internal 5035, as of 2026-11-04. */
 export const PAID_PLAN_MODELS = [
   "@cf/moonshotai/kimi-k2.6",
   "@cf/moonshotai/kimi-k2.7-code",
@@ -15,6 +15,7 @@ export const PAID_PLAN_MODELS = [
   "@cf/zai-org/glm-5.3",
   "@cf/zai-org/glm-5.3-flash",
   "@cf/deepseek-ai/deepseek-v4-flash-0731",
+  "@cf/deepseek-ai/deepseek-v4.1-flash-1017",
   "@cf/deepseek-ai/deepseek-v4-pro-0813",
 ] as const;
 
