@@ -1,4 +1,5 @@
 import {
+  androidStrictTld,
   androidUrlSpan,
   type Event,
   type ForwardKind,
@@ -492,8 +493,8 @@ const DRAFT_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
 const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
 const DRAFT_IP_TAIL = '(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
-const DRAFT_BARE =
-  '\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
+const DRAFT_BARE = `\\b(?:[a-z0-9-]+\\.)+(?:${androidStrictTld})(?![a-z0-9_-])(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?`;
+const STRICT_TLD_LABEL = new RegExp(`^(?:${androidStrictTld})$`, "i");
 const DRAFT_URL = `(?:https?:\\/\\/|tg:(?:\\/\\/)?|www\\.)[^\\s<>"']+|${DRAFT_BARE}`;
 
 function urlsInText(text: string): string[] {
@@ -895,7 +896,19 @@ function openBareEnd(text: string): string {
       index = next;
       continue;
     }
-    const domain = bareDomainEnd(text, index);
+    const loose = bareDomainEnd(text, index);
+    const strict = strictBareEnd(text, index);
+    if (loose !== null && (strict === null || strict < loose)) {
+      const inner = urlAfterLoose(text.slice(loose));
+      if (inner >= 0) {
+        if (strict !== null) {
+          out += `${text.slice(index, strict)} `;
+        }
+        index = loose + inner;
+        continue;
+      }
+    }
+    const domain = strict ?? loose;
     if (domain === null) {
       out += text.charAt(index);
       index += 1;
@@ -936,6 +949,72 @@ function openBareEnd(text: string): string {
     index = domain + 1;
   }
   return out;
+}
+
+function isStrictTld(label: string): boolean {
+  return label.length > 0 && STRICT_TLD_LABEL.test(label);
+}
+
+/** 裸域名和 `www.` 停在 Android 认的顶级域。认不出的后缀另开后面的网址。 */
+function strictBareEnd(text: string, index: number): number | null {
+  if (index > 0 && /[A-Za-z0-9_]/.test(text.charAt(index - 1))) {
+    return null;
+  }
+  const address = new RegExp(`^(?:${DRAFT_IP})`, "i").exec(text.slice(index));
+  if (address?.[0] && bareIpAt(text.slice(index))) {
+    return index + address[0].length;
+  }
+  let cursor = index;
+  if (text.slice(cursor, cursor + 4).toLowerCase() === "www.") {
+    cursor += 4;
+  }
+  const first = readDraftLabel(text, cursor);
+  if (first === 0) {
+    return null;
+  }
+  let labels = 1;
+  cursor += first;
+  let lastStrict: number | null = null;
+  while (text.charAt(cursor) === ".") {
+    if (schemeAt(text, cursor + 1) > 0) {
+      break;
+    }
+    const next = readDraftLabel(text, cursor + 1);
+    if (next === 0) {
+      break;
+    }
+    const labelStart = cursor + 1;
+    cursor += 1 + next;
+    labels += 1;
+    if (!isStrictTld(text.slice(labelStart, cursor))) {
+      break;
+    }
+    if (labels >= 2) {
+      lastStrict = cursor;
+    }
+  }
+  return lastStrict;
+}
+
+function urlAfterLoose(rest: string): number {
+  let skip = 0;
+  const port = /^:\d{1,5}(?!\d)/.exec(rest);
+  if (port?.[0]) {
+    skip = port[0].length;
+  }
+  const tail = rest.slice(skip);
+  if (!tail.startsWith("/") && !tail.startsWith("?")) {
+    return -1;
+  }
+  const body = tail.slice(1);
+  if (
+    schemeAt(body, 0) > 0 ||
+    strictBareEnd(body, 0) !== null ||
+    bareIpAt(body)
+  ) {
+    return skip + 1;
+  }
+  return -1;
 }
 
 function bareDomainEnd(text: string, index: number): number | null {

@@ -35,3 +35,4 @@ Android 没有协议时，`www.` 和裸域名的尾巴只有一到五位端口�
 - `www.example.com?http://bit.ly/…` 和 `http://www.example.com./http://bit.ly/…` 留着。
 - `www.bit.ly./…` 仍按短链删除。路径不进证据。
 - `www.t.me./+…` 留着。`www.t.me/+…` 和 `https://t.me./+…` 仍按邀请删除。邀请码不进证据。
+- Android 不认的顶级域后来同样停住，后面的短链另留。见 ADR 0282。

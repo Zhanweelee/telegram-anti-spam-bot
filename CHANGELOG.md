@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-249
+
+- 隐藏草稿在 Android 不认的顶级域后面仍留下短链。见 ADR 0282。
+- `t.me/share/url?text=foo.example/http://bit.ly/…` 删除。`example.com/http://bit.ly/…` 留着。路径和邀请码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-248
 
 - 隐藏草稿在没有协议的 `www.` 和裸域名的点号处停住，仍留下后面的主机名。见 ADR 0281。

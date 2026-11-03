@@ -5950,6 +5950,198 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(embedded.event)).not.toContain(path);
   });
 
+  it("keeps a short link after a suffix Android does not treat as a TLD", async () => {
+    const path = "offer249";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 249 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const plain = await draft(
+      78255,
+      -1008487,
+      `foo.example/http://bit.ly/${path}`,
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toContain("bit.ly");
+    expect(plain.event.message?.hosts).not.toContain("foo.example");
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+
+    const query = await draft(
+      78256,
+      -1008488,
+      `foo.example?http://bit.ly/${path}`,
+    );
+    expect(query.status).toBe("event");
+    if (query.status !== "event") {
+      return;
+    }
+    expect(query.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(query.event)).not.toContain(path);
+
+    const tested = await draft(
+      78257,
+      -1008489,
+      `foo.test/http://bit.ly/${path}`,
+    );
+    expect(tested.status).toBe("event");
+    if (tested.status !== "event") {
+      return;
+    }
+    expect(tested.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(tested.event)).not.toContain(path);
+
+    const nested = await draft(
+      78258,
+      -1008490,
+      `www.foo.example/http://bit.ly/${path}`,
+    );
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.hosts).toContain("bit.ly");
+    expect(nested.event.message?.hosts).not.toContain("www.foo.example");
+    expect(JSON.stringify(nested.event)).not.toContain(path);
+
+    const earlier = await draft(
+      78259,
+      -1008491,
+      `foo.bar.example/http://bit.ly/${path}`,
+    );
+    expect(earlier.status).toBe("event");
+    if (earlier.status !== "event") {
+      return;
+    }
+    expect(earlier.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(earlier.event)).not.toContain(path);
+
+    const real = await draft(
+      78260,
+      -1008492,
+      `example.com/http://bit.ly/${path}`,
+    );
+    expect(real.status).toBe("event");
+    if (real.status !== "event") {
+      return;
+    }
+    expect(real.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(real.event)).not.toContain(path);
+
+    const www = await draft(
+      78261,
+      -1008493,
+      `www.example.com/http://bit.ly/${path}`,
+    );
+    expect(www.status).toBe("event");
+    if (www.status !== "event") {
+      return;
+    }
+    expect(www.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(www.event)).not.toContain(path);
+
+    const puny = await draft(
+      78262,
+      -1008494,
+      `example.xn--p1ai/http://bit.ly/${path}`,
+    );
+    expect(puny.status).toBe("event");
+    if (puny.status !== "event") {
+      return;
+    }
+    expect(puny.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(puny.event)).not.toContain(path);
+
+    const shaped = await draft(
+      78263,
+      -1008495,
+      `foo.xn--a/http://bit.ly/${path}`,
+    );
+    expect(shaped.status).toBe("event");
+    if (shaped.status !== "event") {
+      return;
+    }
+    expect(shaped.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(shaped.event)).not.toContain(path);
+
+    const schemed = await draft(
+      78264,
+      -1008496,
+      `http://foo.example/http://bit.ly/${path}`,
+    );
+    expect(schemed.status).toBe("event");
+    if (schemed.status !== "event") {
+      return;
+    }
+    expect(schemed.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(schemed.event)).not.toContain(path);
+
+    const glued = await draft(78265, -1008497, `example.http://bit.ly/${path}`);
+    expect(glued.status).toBe("event");
+    if (glued.status !== "event") {
+      return;
+    }
+    expect(glued.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(glued.event)).not.toContain(path);
+
+    const code = "CODE249";
+    const invite = await draft(
+      78266,
+      -1008498,
+      `foo.example/https://t.me/%2B${code}`,
+    );
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+
+    const embedded = await normalize({
+      update_id: 78267,
+      message: {
+        message_id: 78267,
+        date: 1761955200,
+        chat: { id: -1008499, type: "supergroup" },
+        from: { id: 249 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=foo.example/http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(embedded.event.message?.hosts).not.toContain("foo.example");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
