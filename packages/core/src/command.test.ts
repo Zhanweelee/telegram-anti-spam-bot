@@ -786,8 +786,21 @@ describe("runOperatorCommand", () => {
       adminActorIds: ["42"],
       ...deps,
     });
-    expect(longExport).toMatchObject({ text: "导出 20 条，超过私聊长度" });
-    expect(JSON.stringify(longExport)).not.toContain(phrase);
+    expect(longExport.status).toBe("reply");
+    if (longExport.status !== "reply") {
+      return;
+    }
+    expect(longExport.text.length).toBeLessThanOrEqual(3500);
+    const doc = JSON.parse(longExport.text) as {
+      omitted: number;
+      audits: { eventId: string }[];
+    };
+    expect(doc.omitted).toBeGreaterThan(0);
+    expect(doc.omitted + doc.audits.length).toBe(20);
+    expect(doc.audits.at(-1)?.eventId).toBe("evt_19");
+    expect(doc.audits[0]?.eventId).not.toBe("evt_0");
+    expect(longExport.text).not.toContain(phrase);
+    expect(longExport.text).not.toContain('"text"');
     const forgotten = await runOperatorCommand({
       event: event({ text: "/forget", direct: true }),
       adminActorIds: ["42"],
@@ -815,6 +828,39 @@ describe("runOperatorCommand", () => {
     expect(exported).toMatchObject({ text: "导出 4000 条，超过私聊长度" });
     expect(JSON.stringify(exported)).not.toContain(phrase);
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    for (let index = 0; index < 3; index += 1) {
+      await deps.storage.appendAudit({
+        tenantId: "local",
+        chatId: "-100",
+        eventId: `evt_${index}`,
+        action: "log",
+        score: 0,
+        reasons: [],
+        evidence: [],
+        ruleIds: [],
+        createdAt: "2026-11-01T00:00:00Z",
+      });
+    }
+    const page = await runOperatorCommand({
+      event: event({ text: "/export", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(page.status).toBe("reply");
+    if (page.status !== "reply") {
+      return;
+    }
+    const doc = JSON.parse(page.text) as {
+      omitted: number;
+      audits: { eventId: string }[];
+    };
+    expect(doc.audits.map((item) => item.eventId)).toEqual([
+      "evt_0",
+      "evt_1",
+      "evt_2",
+    ]);
+    expect(doc.omitted + doc.audits.length).toBe(4000);
+    expect(page.text).not.toContain(phrase);
   });
 
   it("forgets a chat without reading the audit rows", async () => {
