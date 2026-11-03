@@ -118,6 +118,52 @@ describe("handleIncomingEvent", () => {
     ]);
   });
 
+  it("reports a restriction without the member name", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/member -100 77", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "restricted",
+                is_member: true,
+                until_date: 1_700_000_000,
+                user: { id: 77, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "-100 77 禁言中，直到 1700000000",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChatMember"]);
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/member -100 77", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+  });
+
   it("mutes a member for one hour when no duration is given", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

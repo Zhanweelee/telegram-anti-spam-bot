@@ -21,6 +21,7 @@ import {
   type AuditScope,
   auditExportDocument,
   fitAuditExportDocument,
+  type MemberStanding,
   type ModerationPort,
   minimumAuditExportLength,
   type Storage,
@@ -70,6 +71,7 @@ const COMMAND_NAMES = [
   "unmute",
   "ban",
   "mute",
+  "member",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -101,7 +103,7 @@ export interface OperatorCommandInput {
   readonly moderator?: Partial<
     Pick<
       ModerationPort,
-      "banActor" | "muteActor" | "unbanActor" | "unmuteActor"
+      "banActor" | "muteActor" | "readMember" | "unbanActor" | "unmuteActor"
     >
   >;
   readonly scope?: CommandScope;
@@ -213,6 +215,8 @@ async function dispatch(
       return banMember(input, args);
     case "mute":
       return muteMember(input, args);
+    case "member":
+      return showMember(input, args);
   }
 }
 
@@ -562,6 +566,94 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function showMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.member.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readMember;
+  if (!read) {
+    rejectMember(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const standing = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    return describeMember(input, standing, chatId, actorId);
+  } catch {
+    rejectMember(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function describeMember(
+  input: OperatorCommandInput,
+  standing: MemberStanding,
+  chatId: string,
+  actorId: string,
+): string {
+  const names = { chatId, actorId };
+  switch (standing.status) {
+    case "creator":
+      return say(input, "command.member.creator", names);
+    case "administrator":
+      return say(input, "command.member.administrator", names);
+    case "member":
+      return say(input, "command.member.member", names);
+    case "left":
+      return say(input, "command.member.left", names);
+    case "kicked":
+      return standing.untilDate === null
+        ? say(input, "command.member.kicked", names)
+        : say(input, "command.member.kicked.until", {
+            ...names,
+            until: standing.untilDate,
+          });
+    case "restricted":
+      if (!standing.inChat) {
+        return standing.untilDate === null
+          ? say(input, "command.member.restricted.away", names)
+          : say(input, "command.member.restricted.away.until", {
+              ...names,
+              until: standing.untilDate,
+            });
+      }
+      return standing.untilDate === null
+        ? say(input, "command.member.restricted", names)
+        : say(input, "command.member.restricted.until", {
+            ...names,
+            until: standing.untilDate,
+          });
+  }
+}
+
+function rejectMember(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "member",
   });
 }
 

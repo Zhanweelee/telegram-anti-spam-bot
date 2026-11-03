@@ -82,6 +82,15 @@ export interface BanTarget {
 
 export type UnmuteResult = "lifted" | "absent";
 
+export type MemberStanding =
+  | { readonly status: "creator" | "administrator" | "member" | "left" }
+  | { readonly status: "kicked"; readonly untilDate: number | null }
+  | {
+      readonly status: "restricted";
+      readonly inChat: boolean;
+      readonly untilDate: number | null;
+    };
+
 export interface JoinTarget extends BanTarget {
   readonly queryId?: string;
 }
@@ -92,6 +101,7 @@ export interface ModerationPort {
   banActor(target: BanTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
+  readMember(target: BanTarget): Promise<MemberStanding>;
   declineJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
   restrictActor(target: MuteTarget): Promise<void>;

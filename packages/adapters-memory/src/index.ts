@@ -182,6 +182,9 @@ export function createMemoryModerator(): ModerationPort & {
       unmuted.push({ ...target });
       return "lifted" as const;
     },
+    async readMember() {
+      throw new Error("member_unavailable");
+    },
   };
 }
 

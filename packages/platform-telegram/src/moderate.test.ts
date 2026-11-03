@@ -111,6 +111,112 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("unban_unavailable");
   });
 
+  it("reads member standing and drops names and subscription dates", async () => {
+    const phrase = "请免费领取礼品";
+    const cases: {
+      readonly result: Record<string, unknown>;
+      readonly standing: unknown;
+    }[] = [
+      {
+        result: { status: "creator", user: { id: 77, first_name: phrase } },
+        standing: { status: "creator" },
+      },
+      {
+        result: {
+          status: "member",
+          until_date: 1_700_000_000,
+          tag: phrase,
+          user: { first_name: phrase },
+        },
+        standing: { status: "member" },
+      },
+      {
+        result: {
+          status: "kicked",
+          until_date: 0,
+          user: { first_name: phrase },
+        },
+        standing: { status: "kicked", untilDate: null },
+      },
+      {
+        result: {
+          status: "restricted",
+          is_member: false,
+          until_date: 1_700_000_000,
+          user: { first_name: phrase },
+        },
+        standing: {
+          status: "restricted",
+          inChat: false,
+          untilDate: 1_700_000_000,
+        },
+      },
+    ];
+    for (const item of cases) {
+      const calls: string[] = [];
+      const moderator = createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async (_input, init) => {
+          calls.push(String(init?.body ?? ""));
+          return new Response(
+            JSON.stringify({ ok: true, result: item.result }),
+            { status: 200 },
+          );
+        },
+      });
+      const standing = await moderator.readMember({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      });
+      expect(standing).toEqual(item.standing);
+      expect(JSON.stringify(standing)).not.toContain(phrase);
+      expect(calls).toEqual(['{"chat_id":-100,"user_id":77}']);
+    }
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { status: "vip" } }),
+            {
+              status: 200,
+            },
+          ),
+      }).readMember({ tenantId: "local", chatId: "-100", actorId: "77" }),
+    ).rejects.toThrow("member_failed");
+    const leaked = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ ok: false, description: phrase }), {
+          status: 400,
+        }),
+    });
+    await expect(
+      leaked.readMember({ tenantId: "local", chatId: "-100", actorId: "77" }),
+    ).rejects.toThrow("member_failed");
+    await leaked
+      .readMember({ tenantId: "local", chatId: "-100", actorId: "77" })
+      .catch((error: unknown) => {
+        expect(error).toBeInstanceOf(Error);
+        if (error instanceof Error) {
+          expect(error.message).toBe("member_failed");
+          expect(error.message).not.toContain(phrase);
+        }
+      });
+    let called = false;
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl: async () => {
+          called = true;
+          return new Response("ok", { status: 200 });
+        },
+      }).readMember({ tenantId: "local", chatId: "-100", actorId: "77" }),
+    ).rejects.toThrow("member_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("lifts restrictions only when the member is restricted", async () => {
     const phrase = "请免费领取礼品";
     const calls: { method: string; body: string }[] = [];

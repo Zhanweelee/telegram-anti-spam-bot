@@ -36,5 +36,8 @@ function createOpenModerator(): ModerationPort {
     async unmuteActor() {
       throw new Error("unmute_unavailable");
     },
+    async readMember() {
+      throw new Error("member_unavailable");
+    },
   };
 }

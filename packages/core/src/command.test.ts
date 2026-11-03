@@ -1253,6 +1253,172 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("reports a member standing without a display name", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const replyFor = async (
+      standing:
+        | { readonly status: "creator" | "administrator" | "member" | "left" }
+        | {
+            readonly status: "kicked";
+            readonly untilDate: number | null;
+          }
+        | {
+            readonly status: "restricted";
+            readonly inChat: boolean;
+            readonly untilDate: number | null;
+          },
+      text: string,
+    ) =>
+      runOperatorCommand({
+        event: event({ text, direct: true }),
+        adminActorIds: ["42"],
+        moderator: {
+          async readMember(target) {
+            seen.push(`${target.chatId}:${target.actorId}`);
+            return standing;
+          },
+        },
+        ...kit(),
+      });
+    expect(
+      await replyFor({ status: "creator" }, "/member -100 77"),
+    ).toMatchObject({ text: "-100 77 是群主" });
+    expect(
+      await replyFor({ status: "administrator" }, "/member -100 77"),
+    ).toMatchObject({ text: "-100 77 是管理员" });
+    expect(
+      await replyFor({ status: "member" }, "/member -100 77"),
+    ).toMatchObject({ text: "-100 77 在群里" });
+    expect(await replyFor({ status: "left" }, "/member -100 77")).toMatchObject(
+      { text: "-100 77 已离开" },
+    );
+    expect(
+      await replyFor({ status: "kicked", untilDate: null }, "/member -100 77"),
+    ).toMatchObject({ text: "-100 77 已封禁" });
+    expect(
+      await replyFor(
+        { status: "kicked", untilDate: 1_700_000_000 },
+        "/member -100 77",
+      ),
+    ).toMatchObject({ text: "-100 77 已封禁，直到 1700000000" });
+    expect(
+      await replyFor(
+        { status: "restricted", inChat: true, untilDate: null },
+        "/member -100 77",
+      ),
+    ).toMatchObject({ text: "-100 77 禁言中" });
+    expect(
+      await replyFor(
+        { status: "restricted", inChat: true, untilDate: 1_700_000_000 },
+        "/member -100 77",
+      ),
+    ).toMatchObject({ text: "-100 77 禁言中，直到 1700000000" });
+    expect(
+      await replyFor(
+        { status: "restricted", inChat: false, untilDate: null },
+        "/member -100 77",
+      ),
+    ).toMatchObject({ text: "-100 77 禁言中，人不在群里" });
+    expect(
+      await replyFor(
+        { status: "restricted", inChat: false, untilDate: 1_700_000_000 },
+        "/member -100 77",
+      ),
+    ).toMatchObject({ text: "-100 77 禁言中，人不在群里，直到 1700000000" });
+    expect(seen).toEqual(Array.from({ length: 10 }, () => "-100:77"));
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/member <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/member -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readMember() {
+          return { status: "creator" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "77 owns -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/member -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMember() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/member -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/member <chatId> <actorId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/member -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMember() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/member -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/member -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMember() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/member -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readMember() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("mutes a member for the default hour", async () => {
     const deps = kit();
     const muted: {

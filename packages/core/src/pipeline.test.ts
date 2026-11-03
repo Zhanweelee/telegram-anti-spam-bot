@@ -152,6 +152,9 @@ function harness(options?: { failStorage?: boolean }) {
     async unmuteActor() {
       return "lifted" as const;
     },
+    async readMember() {
+      return { status: "member" as const };
+    },
   };
   return {
     records,

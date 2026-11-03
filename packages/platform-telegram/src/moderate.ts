@@ -1,5 +1,6 @@
 import type {
   BanTarget,
+  MemberStanding,
   ModerationPort,
   MuteTarget,
   UnmuteResult,
@@ -159,6 +160,20 @@ export function createTelegramModerator(input: {
         },
       });
       return "lifted";
+    },
+    async readMember(target): Promise<MemberStanding> {
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "member_unavailable",
+        failed: "member_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      return readStanding(member);
     },
     async restrictActor(target) {
       await postTelegram({
@@ -342,6 +357,65 @@ function silencedUntil(
     until_date: nowSeconds() + restrictionSeconds(target.durationSeconds),
     use_independent_chat_permissions: true,
   };
+}
+
+function readStanding(body: unknown): MemberStanding {
+  const result = memberResult(body);
+  const status = result.status;
+  if (
+    status === "creator" ||
+    status === "administrator" ||
+    status === "member" ||
+    status === "left"
+  ) {
+    return { status };
+  }
+  if (status === "kicked") {
+    return { status, untilDate: expiry(result) };
+  }
+  if (status === "restricted") {
+    return {
+      status,
+      inChat: stillInChat(result),
+      untilDate: expiry(result),
+    };
+  }
+  throw new Error("member_failed");
+}
+
+function memberResult(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("member_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || !("status" in result)) {
+    throw new Error("member_failed");
+  }
+  if (typeof result.status !== "string" || result.status.length === 0) {
+    throw new Error("member_failed");
+  }
+  return result;
+}
+
+function expiry(result: Record<string, unknown>): number | null {
+  if (!("until_date" in result) || result.until_date === undefined) {
+    return null;
+  }
+  const value = result.until_date;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("member_failed");
+  }
+  return value === 0 ? null : value;
+}
+
+function stillInChat(result: Record<string, unknown>): boolean {
+  if (!("is_member" in result) || result.is_member === undefined) {
+    return true;
+  }
+  if (typeof result.is_member !== "boolean") {
+    throw new Error("member_failed");
+  }
+  return result.is_member;
 }
 
 function memberStatus(body: unknown): "restricted" | "open" {
