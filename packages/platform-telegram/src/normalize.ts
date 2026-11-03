@@ -629,6 +629,134 @@ function openEncodedSlashBoundary(text: string): string {
   return text.replace(/%2F(?=\/)/gi, (mark) => `${mark} `);
 }
 
+/** 已经结束的主机名在编码间隔前停下。协议正后面的间隔留下十六进制。 */
+function openEncodedGapHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const gap = draftEncodedGapLength(text, index);
+    if (gap > 0 && encodedDotAfterHost(out)) {
+      const hex = text.slice(index, index + gap).replace(/%/g, "");
+      out += ` ${hex}`;
+      index += gap;
+      continue;
+    }
+    if (gap > 0 && out.toLowerCase().endsWith("://")) {
+      out += text.slice(index, index + gap).replace(/%/g, "");
+      index += gap;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function draftEncodedGapLength(text: string, index: number): number {
+  const single = draftSingleEncodedGap(text, index);
+  if (single > 0) {
+    return single;
+  }
+  return draftDoubleEncodedGap(text, index);
+}
+
+function draftSingleEncodedGap(text: string, index: number): number {
+  const first = draftPercentByte(text, index);
+  if (first === null) {
+    return 0;
+  }
+  const width = draftUtf8Width(first.byte);
+  if (width === 0) {
+    return 0;
+  }
+  const bytes = [first.byte];
+  let next = first.next;
+  for (let part = 1; part < width; part += 1) {
+    const byte = draftPercentByte(text, next);
+    if (byte === null || (byte.byte & 0xc0) !== 0x80) {
+      return 0;
+    }
+    bytes.push(byte.byte);
+    next = byte.next;
+  }
+  let char = "";
+  try {
+    char = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(
+      Uint8Array.from(bytes),
+    );
+  } catch {
+    return 0;
+  }
+  if (foldMatchText(char) !== "") {
+    return 0;
+  }
+  return next - index;
+}
+
+function draftDoubleEncodedGap(text: string, index: number): number {
+  let inner = "";
+  let cursor = index;
+  let groups = 0;
+  while (groups < 4 && cursor + 5 <= text.length) {
+    if (text.slice(cursor, cursor + 3).toLowerCase() !== "%25") {
+      break;
+    }
+    const hex = text.slice(cursor + 3, cursor + 5);
+    if (!/^[0-9A-Fa-f]{2}$/.test(hex)) {
+      break;
+    }
+    inner += `%${hex}`;
+    cursor += 5;
+    groups += 1;
+    if (draftEncodedGapsCover(inner)) {
+      return cursor - index;
+    }
+  }
+  return 0;
+}
+
+function draftEncodedGapsCover(text: string): boolean {
+  let index = 0;
+  while (index < text.length) {
+    const skipped = draftSingleEncodedGap(text, index);
+    if (skipped === 0) {
+      return false;
+    }
+    index += skipped;
+  }
+  return text.length > 0;
+}
+
+function draftPercentByte(
+  text: string,
+  index: number,
+): { byte: number; next: number } | null {
+  if (text.charCodeAt(index) !== 37) {
+    return null;
+  }
+  const hex = text.slice(index + 1, index + 3);
+  if (!/^[0-9A-Fa-f]{2}$/.test(hex)) {
+    return null;
+  }
+  return { byte: Number.parseInt(hex, 16), next: index + 3 };
+}
+
+function draftUtf8Width(first: number): number {
+  if (first < 0x80) {
+    return 1;
+  }
+  if (first >= 0xc2 && first <= 0xdf) {
+    return 2;
+  }
+  if (first >= 0xe0 && first <= 0xef) {
+    return 3;
+  }
+  if (first >= 0xf0 && first <= 0xf4) {
+    return 4;
+  }
+  return 0;
+}
+
 /** 粘连扫描会吃掉的间隔。普通空格留下，字面主机名仍能打开。 */
 const DRAFT_HOST_GAP =
   /[\t\n\v\f\r\u00A0\u00AD\u061C\u1680\u180E\u2000-\u200F\u2028-\u202E\u202F\u205F\u2060-\u2064\u2066-\u2069\u3000\uFEFF]/;
@@ -938,7 +1066,9 @@ function openedDraftUrls(text: string): string[] {
                           openEncodedSlashHost(
                             openEncodedHyphenHost(
                               openEncodedPlusHost(
-                                openEncodedHostBody(foldBoundaryMark(text)),
+                                openEncodedHostBody(
+                                  openEncodedGapHost(foldBoundaryMark(text)),
+                                ),
                               ),
                             ),
                           ),
