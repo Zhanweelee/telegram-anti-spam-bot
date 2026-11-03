@@ -795,10 +795,52 @@ function formatPolicy(
   chatId: string,
   policy: PrefilterPolicy,
 ): string {
-  const allow =
-    policy.allowActorIds.length === 0
-      ? say(input, "command.allow.empty")
-      : policy.allowActorIds.join(",");
+  const full = policyBody(input, chatId, policy, policy.allowActorIds);
+  if (policy.allowActorIds.length === 0 || full.length <= EXPORT_REPLY_LIMIT) {
+    return full;
+  }
+  let best = policyBody(input, chatId, policy, [], policy.allowActorIds.length);
+  let low = 0;
+  let high = policy.allowActorIds.length - 1;
+  while (low <= high) {
+    const count = Math.floor((low + high) / 2);
+    const text = policyBody(
+      input,
+      chatId,
+      policy,
+      policy.allowActorIds.slice(0, count),
+      policy.allowActorIds.length - count,
+    );
+    if (text.length <= EXPORT_REPLY_LIMIT) {
+      best = text;
+      low = count + 1;
+    } else {
+      high = count - 1;
+    }
+  }
+  return best;
+}
+
+function policyBody(
+  input: OperatorCommandInput,
+  chatId: string,
+  policy: PrefilterPolicy,
+  ids: readonly string[],
+  omitted?: number,
+): string {
+  const listed = ids.length === 0 ? "" : ids.join(",");
+  const more =
+    omitted === undefined || omitted <= 0
+      ? ""
+      : say(input, "command.whitelist.more", { count: omitted });
+  let allow = say(input, "command.allow.empty");
+  if (listed.length > 0 && more.length > 0) {
+    allow = `${listed}\n${more}`;
+  } else if (listed.length > 0) {
+    allow = listed;
+  } else if (more.length > 0) {
+    allow = more;
+  }
   return say(input, "command.whitelist.body", {
     chatId,
     exemptAdmins: String(policy.exemptAdmins),

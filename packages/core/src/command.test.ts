@@ -363,6 +363,54 @@ describe("runOperatorCommand", () => {
     });
   });
 
+  it("fits a long allowlist without cutting an id", async () => {
+    const deps = kit();
+    const ids = Array.from({ length: 200 }, (_, index) =>
+      String(10n ** 19n + BigInt(index)),
+    );
+    await deps.policyStore.put("local", "-100", {
+      exemptAdmins: true,
+      allowActorIds: ids,
+    });
+    const shown = await runOperatorCommand({
+      event: event({ text: "/whitelist -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(shown.status).toBe("reply");
+    if (shown.status !== "reply") {
+      return;
+    }
+    expect(shown.text.length).toBeLessThanOrEqual(3500);
+    const lines = shown.text.split("\n");
+    expect(lines[0]).toBe("whitelist -100");
+    expect(lines[1]).toBe("exemptAdmins true");
+    const listed = lines[2]?.slice("allow ".length).split(",") ?? [];
+    const omitted = Number(/^还有 (\d+) 个$/.exec(lines[3] ?? "")?.[1]);
+    expect(listed.length + omitted).toBe(200);
+    expect(listed).toEqual(ids.slice(0, listed.length));
+    expect(shown.text).not.toContain(ids[199]);
+    const english = await runOperatorCommand({
+      event: event({ text: "/whitelist -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    expect(english.text.length).toBeLessThanOrEqual(3500);
+    const englishLines = english.text.split("\n");
+    expect(englishLines[0]).toBe("allowlist -100");
+    const englishIds = englishLines[2]?.slice("allow ".length).split(",") ?? [];
+    const englishOmitted = Number(
+      /^(\d+) more$/.exec(englishLines[3] ?? "")?.[1],
+    );
+    expect(englishIds.length + englishOmitted).toBe(200);
+    expect(englishIds).toEqual(ids.slice(0, englishIds.length));
+  });
+
   it("rejects a non-numeric actor id without writing", async () => {
     const deps = kit();
     const result = await runOperatorCommand({
