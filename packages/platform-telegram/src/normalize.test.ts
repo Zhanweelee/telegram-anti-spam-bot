@@ -10238,6 +10238,141 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a script letter after a buried schemed mark in a draft", async () => {
+    const path = "offer283";
+    const greek = "\u03B1";
+    const armenian = "\u0561";
+    const gap = "\u200B";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 283 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78947, -1009179, `http://bit.ly${gap}.${greek}/${path}`],
+      [78948, -1009180, `http://bit${gap}.ly${greek}/${path}`],
+      [78949, -1009181, `http://bit.l${gap}y${greek}/${path}`],
+      [78950, -1009182, `http://bi${gap}t.ly${greek}/${path}`],
+      [78951, -1009183, `http://bit.ly${gap}\u3002${greek}/${path}`],
+      [78952, -1009184, `http://www.bit.ly${gap}.${greek}/${path}`],
+      [78953, -1009185, `http://203.0.113.10${gap}.${greek}/${path}`],
+      [78954, -1009186, `http://203.0.113${gap}.10${armenian}/${path}`],
+      [78955, -1009187, `see http://bit${gap}.ly${greek}/${path}`],
+      [78956, -1009188, `http://bit${gap}.ly${greek}`],
+      [78957, -1009189, `http://bit${gap}.ly${greek}:80/${path}`],
+      [78958, -1009190, `http://bit.l\uFE0Fy${greek}/${path}`],
+      [78959, -1009191, `http://bit.l\u00ADy${greek}/${path}`],
+      [78960, -1009192, `http://bit.l\u034Fy${greek}/${path}`],
+      [78961, -1009193, `http://bit${gap}.ly${greek}/http://t.co/${path}`],
+      [78962, -1009194, `http://bit${gap}.ly${greek}.evil.com/${path}`],
+      [
+        78963,
+        -1009195,
+        `http://example.com${gap}.ly${greek}/http://bit.ly/${path}`,
+      ],
+      [78964, -1009196, `http://bit${gap}.ly${greek.repeat(61)}/${path}`],
+      [78965, -1009197, `http://bit.l${gap}y${greek.repeat(60)}/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, "bit.ly"),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const opened = [
+      [78966, -1009198, `bit${gap}.ly${greek}/${path}`, "bit.ly"],
+      [78967, -1009199, `bit.ly${gap}.${greek}/${path}`, "bit.ly"],
+      [78968, -1009200, `www.bit.ly${gap}.${greek}/${path}`, "www.bit.ly"],
+      [78969, -1009201, `203.0.113.10${gap}.${greek}/${path}`, "203.0.113.10"],
+      [78970, -1009202, `http://bit${gap}.ly${greek}%23${path}`, "bit.ly"],
+      [
+        78971,
+        -1009203,
+        `http://bit${gap}.ly${greek}@evil.com/${path}`,
+        "bit.ly",
+      ],
+      [78972, -1009204, `http://bit${gap}.ly${greek} ${path}`, "bit.ly"],
+      [78973, -1009205, `http://bit.ly%0A${greek}/${path}`, "bit.ly"],
+      [
+        78974,
+        -1009206,
+        `http://bit${gap}.ly${greek.repeat(62)}/${path}`,
+        "bit.ly",
+      ],
+      [
+        78975,
+        -1009207,
+        `http://bit.l${gap}y${greek.repeat(61)}/${path}`,
+        "bit.ly",
+      ],
+      [78976, -1009208, `http://b${greek}it.ly/${path}`, "bit.ly"],
+    ] as const;
+    for (const [updateId, chatId, text, name] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(
+        named(hit.event.message?.hosts, name),
+        `${text} ${JSON.stringify(hit.event.message?.hosts)}`,
+      ).toEqual([name]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const later = await draft(
+      78977,
+      -1009209,
+      `http://bit${gap}.ly${greek}/${path} http://t.co/${path}`,
+    );
+    expect(later.status).toBe("event");
+    if (later.status === "event") {
+      expect(named(later.event.message?.hosts, "bit.ly")).toEqual([]);
+      expect(named(later.event.message?.hosts, "t.co")).toEqual(["t.co"]);
+      expect(JSON.stringify(later.event)).not.toContain(path);
+    }
+
+    const suffix = await draft(
+      78978,
+      -1009210,
+      `http://bit${gap}.ly${greek}.bit.ly/${path}`,
+    );
+    expect(suffix.status).toBe("event");
+    if (suffix.status === "event") {
+      expect(named(suffix.event.message?.hosts, "bit.ly")).toEqual([
+        "bit.lyx.bit.ly",
+      ]);
+      expect(JSON.stringify(suffix.event)).not.toContain(path);
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

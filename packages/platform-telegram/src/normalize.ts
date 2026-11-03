@@ -1298,7 +1298,7 @@ function openedDraftUrls(text: string): string[] {
 
 /**
  * 带协议的主机名后面，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 `@` 前会被收掉。
- * 点号后面新起的这类标签也一样。中间被地址解析忽略的标记同样会先被收掉。
+ * 点号后面新起的这类标签也一样。主机名中间被地址解析忽略的标记同样先拿掉。
  * 收掉之后 `@` 会变成用户信息。这里先换成空格，前面的短链仍单独打开。
  */
 function openSchemedScript(text: string): string {
@@ -1312,7 +1312,7 @@ function openSchemedScript(text: string): string {
       continue;
     }
     const hostStart = schemedUserinfoEnd(text, index + scheme);
-    const hostEnd = schemedStrictHostEnd(text, hostStart);
+    const hostEnd = schemedMarkedHostEnd(text, hostStart);
     const runEnd = hostEnd === null ? null : schemedScriptBreak(text, hostEnd);
     if (hostEnd === null || runEnd === null) {
       const end = text.slice(index).search(/\s/);
@@ -1325,6 +1325,40 @@ function openSchemedScript(text: string): string {
     index = runEnd;
   }
   return out;
+}
+
+/** 判断主机名时先拿掉忽略标记，结束位置仍指回原文。 */
+function schemedMarkedHostEnd(text: string, index: number): number | null {
+  let stripped = "";
+  const map: number[] = [];
+  for (let cursor = index; cursor < text.length; ) {
+    const code = text.codePointAt(cursor);
+    if (code === undefined) {
+      break;
+    }
+    const char = String.fromCodePoint(code);
+    if (!draftIgnoredMark(code)) {
+      map.push(cursor);
+      stripped += char;
+    }
+    cursor += char.length;
+  }
+  const end = schemedStrictHostEnd(stripped, 0);
+  if (end === null || end === 0) {
+    return null;
+  }
+  const mapped = map[end];
+  if (end < map.length && mapped !== undefined) {
+    return mapped;
+  }
+  const last = map[end - 1];
+  if (last === undefined) {
+    return null;
+  }
+  const lastCode = text.codePointAt(last);
+  return (
+    last + (lastCode === undefined ? 1 : String.fromCodePoint(lastCode).length)
+  );
 }
 
 function schemedScriptBreak(text: string, hostEnd: number): number | null {
