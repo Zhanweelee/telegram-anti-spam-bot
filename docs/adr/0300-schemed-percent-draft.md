@@ -37,3 +37,4 @@ Android 的主机名标签不含 `%`。`http://b%E2%85%A0t.ly/…` 拆成 `http:
 - `http://b%69t.ly/…`、`b%69t.ly/…`、`https://bit.ly%2F…` 和 `https://bit.ly/%E2%85%A0…` 仍按短链删除。证据是 `bit.ly`。路径不进证据。
 - `http://bit.ly%E2%85%A0evil.com/…` 仍按短链删除。证据是 `bit.ly`。`http://b%E2%85%A0@bit.ly/…` 仍按短链删除。
 - 亚美尼亚文、西里尔文、希腊文和拉丁文里的标点仍可能收成短链。见 ADR 0209。
+- 空权威后面的井号仍会把后面的短链吞进同一条。`http://#bit.ly` 留着。见 ADR 0301。

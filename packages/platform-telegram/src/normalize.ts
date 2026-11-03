@@ -1184,6 +1184,38 @@ const DRAFT_STOP_CHAR = new RegExp(
   `[${String.fromCharCode(0)}-${String.fromCharCode(0x1f)}${String.fromCharCode(0x7f)}[\\]\\\\^\`{|\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF}]`,
 );
 
+/** `://` 后面紧挨的 `#` 结束这一段，后面的主机名另开。 */
+function openEmptyHash(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (text.charAt(index) === "#" && emptyHashScheme(text, index) > 0) {
+      out += " ";
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function emptyHashScheme(text: string, index: number): number {
+  if (index >= 8 && text.slice(index - 8, index).toLowerCase() === "https://") {
+    const start = index - 8;
+    if (start > 0 && /[A-Za-z0-9_]/.test(text.charAt(start - 1))) {
+      return 0;
+    }
+    return 8;
+  }
+  if (index >= 7 && text.slice(index - 7, index).toLowerCase() === "http://") {
+    const start = index - 7;
+    if (start > 0 && /[A-Za-z0-9_]/.test(text.charAt(start - 1))) {
+      return 0;
+    }
+    return 7;
+  }
+  return 0;
+}
+
 function openedDraftUrls(text: string): string[] {
   const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
@@ -1194,18 +1226,20 @@ function openedDraftUrls(text: string): string[] {
             openLookalikeHost(
               openLongLabel(
                 openLongUserinfo(
-                  openDraftStops(
-                    openEncodedBracketHost(
-                      openStoppingSpace(
-                        openFinishedEncodedDot(
-                          openSchemedPercentHost(
-                            openEncodedSlashBoundary(
-                              openEncodedSlashHost(
-                                openEncodedHyphenHost(
-                                  openEncodedPlusHost(
-                                    openEncodedHostBody(
-                                      openEncodedGapHost(
-                                        foldBoundaryMark(text),
+                  openEmptyHash(
+                    openDraftStops(
+                      openEncodedBracketHost(
+                        openStoppingSpace(
+                          openFinishedEncodedDot(
+                            openSchemedPercentHost(
+                              openEncodedSlashBoundary(
+                                openEncodedSlashHost(
+                                  openEncodedHyphenHost(
+                                    openEncodedPlusHost(
+                                      openEncodedHostBody(
+                                        openEncodedGapHost(
+                                          foldBoundaryMark(text),
+                                        ),
                                       ),
                                     ),
                                   ),
