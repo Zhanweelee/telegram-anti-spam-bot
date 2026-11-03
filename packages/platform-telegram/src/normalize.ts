@@ -3073,6 +3073,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(webApp.button_text, urls);
   }
   pushPlainUrls(message.connected_website, urls);
+  const sharedChat = message.chat_shared;
+  if (isRecord(sharedChat)) {
+    pushPlainUrls(sharedChat.title, urls);
+    pushPlainUrls(sharedChat.username, urls);
+  }
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {

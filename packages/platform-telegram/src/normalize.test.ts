@@ -18396,6 +18396,101 @@ describe("normalizeUpdate", () => {
     expect(site.event.message?.invites).toBeUndefined();
   });
 
+  it("keeps hostnames from a shared chat title", async () => {
+    const path = "offer287";
+    const code = "INV287";
+    const phrase = "请免费领取礼品";
+    const labeled = await normalize({
+      update_id: 79008,
+      message: {
+        message_id: 79008,
+        date: 1761955200,
+        chat: {
+          id: -1009244,
+          type: "private",
+          title: "https://cutt.ly/old287",
+        },
+        from: { id: 287, first_name: "https://tinyurl.com/name287" },
+        text: "今天站会",
+        chat_shared: {
+          request_id: 287287,
+          chat_id: -1009287287,
+          title: `${phrase} https://bit.ly/${path} https://t.me/+${code}.`,
+          username: "spamchannel",
+          photo: [{ file_id: "AgAD287secret", file_unique_id: "uniq287" }],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain("spamchannel");
+    expect(labeledDump).not.toContain("old287");
+    expect(labeledDump).not.toContain("name287");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("AgAD287secret");
+    expect(labeledDump).not.toContain("287287");
+    expect(labeledDump).not.toContain("1009287287");
+
+    const plain = await normalize({
+      update_id: 79009,
+      message: {
+        message_id: 79009,
+        date: 1761955200,
+        chat: { id: -1009245, type: "private" },
+        from: { id: 287 },
+        chat_shared: {
+          request_id: 287288,
+          chat_id: -1009287288,
+          title: `https://example.com/${path}`,
+        },
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("");
+    expect(plain.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    expect(plain.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+
+    const named = await normalize({
+      update_id: 79010,
+      message: {
+        message_id: 79010,
+        date: 1761955200,
+        chat: { id: -1009246, type: "private" },
+        from: { id: 287 },
+        text: "今天站会",
+        chat_shared: {
+          request_id: 287289,
+          chat_id: -1009287289,
+          title: "周末聚会",
+          username: "bit.ly",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(named.event)).not.toContain("周末聚会");
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";
