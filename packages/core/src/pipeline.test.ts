@@ -166,6 +166,7 @@ function harness(options?: { failStorage?: boolean }) {
     },
     async clearReactions() {},
     async revokeInvite() {},
+    async unpinChat() {},
   };
   return {
     records,

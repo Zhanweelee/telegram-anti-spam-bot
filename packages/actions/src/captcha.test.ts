@@ -102,6 +102,7 @@ function moderator(
     },
     async clearReactions() {},
     async revokeInvite() {},
+    async unpinChat() {},
   };
 }
 

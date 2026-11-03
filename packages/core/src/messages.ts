@@ -121,6 +121,8 @@ export const messageKeys = [
   "command.clearreact.done",
   "command.revoke.usage",
   "command.revoke.done",
+  "command.unpin.usage",
+  "command.unpin.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -169,6 +171,7 @@ const syntax = [
   "/perms <chatId>",
   "/clearreact <chatId> <actorId>",
   "/revoke <chatId> <inviteLink>",
+  "/unpin <chatId>",
 ].join("\n");
 
 const zh = {
@@ -301,6 +304,9 @@ const zh = {
   "command.revoke.usage": "用法：/revoke <chatId> <inviteLink>",
   "command.revoke.done":
     "已请求撤销 {chatId} 里机器人自己发的邀请链接。别人发的撤不掉，新的主链接也不在这里",
+  "command.unpin.usage": "用法：/unpin <chatId>",
+  "command.unpin.done":
+    "已请求撤下 {chatId} 的全部置顶。消息还在。话题里的置顶不在这次里",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -445,6 +451,9 @@ const en = {
   "command.revoke.usage": "Usage: /revoke <chatId> <inviteLink>",
   "command.revoke.done":
     "Asked to revoke a bot-created invite link in {chatId}. Other admins' links stay, and a new primary link is not shown here.",
+  "command.unpin.usage": "Usage: /unpin <chatId>",
+  "command.unpin.done":
+    "Asked to clear every pin in {chatId}. The messages stay. Pins inside topics are not part of this call.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

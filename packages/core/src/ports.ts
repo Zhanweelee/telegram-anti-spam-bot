@@ -166,6 +166,7 @@ export interface ModerationPort {
   releaseActor(target: BanTarget): Promise<void>;
   lockChat(target: ChatTarget): Promise<void>;
   unlockChat(target: ChatTarget): Promise<void>;
+  unpinChat(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {
