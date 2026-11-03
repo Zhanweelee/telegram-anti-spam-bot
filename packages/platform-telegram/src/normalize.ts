@@ -3093,6 +3093,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
       pushPlainUrls(community.name, urls);
     }
   }
+  pushPlainUrls(storyPosterNames(message), urls);
   return urls;
 }
 
@@ -5376,6 +5377,23 @@ function giftPublisherNames(message: Record<string, unknown>): string {
     if (isRecord(chat)) {
       pushTrimmed(chat.username, parts);
     }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function storyPosterNames(message: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const field of ["story", "reply_to_story"]) {
+    const story = message[field];
+    if (!isRecord(story) || !isRecord(story.chat)) {
+      continue;
+    }
+    pushTrimmed(story.chat.title, parts);
+    pushTrimmed(story.chat.first_name, parts);
+    pushTrimmed(story.chat.last_name, parts);
   }
   if (parts.length === 0) {
     return "";

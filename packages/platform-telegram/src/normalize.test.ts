@@ -19085,6 +19085,155 @@ describe("normalizeUpdate", () => {
     expect(upgradedDump).not.toContain("bit.ly");
   });
 
+  it("keeps a story poster name and drops the username", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INV292";
+    const visible = `${phrase} https://bit.ly/name292 https://t.me/+${code}.`;
+    const posted = await normalize({
+      update_id: 79027,
+      message: {
+        message_id: 79027,
+        date: 1761955200,
+        chat: {
+          id: -1009273,
+          type: "supergroup",
+          title: "https://tinyurl.com/grp292",
+        },
+        from: { id: 292, first_name: "https://ow.ly/from292" },
+        text: "今天站会",
+        story: {
+          chat: {
+            id: -1009292292,
+            type: "channel",
+            title: visible,
+            username: "cutt.ly",
+            bio: "https://is.gd/bio292",
+            description: "https://rb.gy/desc292",
+            invite_link: "https://t.me/+SKIP292",
+          },
+          id: 880292,
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.text).toBe("今天站会");
+    expect(posted.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(posted.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(posted.event.message?.invites).toEqual(["t.me"]);
+    const postedDump = JSON.stringify(posted.event);
+    expect(postedDump).not.toContain(phrase);
+    expect(postedDump).not.toContain(code);
+    expect(postedDump).not.toContain("name292");
+    expect(postedDump).not.toContain("SKIP292");
+    expect(postedDump).not.toContain("880292");
+    expect(postedDump).not.toContain("cutt.ly");
+    expect(postedDump).not.toContain("is.gd");
+    expect(postedDump).not.toContain("rb.gy");
+    expect(postedDump).not.toContain("tinyurl.com");
+    expect(postedDump).not.toContain("ow.ly");
+
+    const person = await normalize({
+      update_id: 79028,
+      message: {
+        message_id: 79028,
+        date: 1761955200,
+        chat: { id: -1009274, type: "private", title: phrase },
+        from: { id: 292, first_name: "https://tinyurl.com/from292b" },
+        story: {
+          chat: {
+            id: 292001,
+            type: "private",
+            first_name: " https://example.com/ada292 ",
+            last_name: "https://bit.ly/lee292",
+            username: "cutt.ly",
+          },
+          id: 880293,
+        },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.text).toBe("");
+    expect(person.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain(phrase);
+    expect(personDump).not.toContain("ada292");
+    expect(personDump).not.toContain("lee292");
+    expect(personDump).not.toContain("from292b");
+    expect(personDump).not.toContain("880293");
+    expect(personDump).not.toContain("292001");
+    expect(personDump).not.toContain("cutt.ly");
+    expect(personDump).not.toContain("tinyurl.com");
+
+    const replied = await normalize({
+      update_id: 79029,
+      message: {
+        message_id: 79029,
+        date: 1761955200,
+        chat: {
+          id: -1009275,
+          type: "supergroup",
+          title: "https://ow.ly/grp292b",
+        },
+        from: { id: 292, first_name: "Ada" },
+        text: "https://example.com/ok292",
+        reply_to_story: {
+          chat: {
+            id: -1009292293,
+            type: "channel",
+            title: "https://bit.ly/reply292",
+            username: "is.gd",
+          },
+          id: 880294,
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("https://example.com/ok292");
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain("reply292");
+    expect(repliedDump).not.toContain("880294");
+    expect(repliedDump).not.toContain("is.gd");
+    expect(repliedDump).not.toContain("ow.ly");
+
+    const blank = await normalize({
+      update_id: 79030,
+      message: {
+        message_id: 79030,
+        date: 1761955200,
+        chat: { id: -1009276, type: "private" },
+        from: { id: 292, first_name: "Ada" },
+        story: {
+          chat: {
+            id: -1009292294,
+            type: "channel",
+            title: "   ",
+            username: "bit.ly",
+          },
+          id: 880295,
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("");
+    expect(blank.event.message?.hosts).toBeUndefined();
+    const blankDump = JSON.stringify(blank.event);
+    expect(blankDump).not.toContain("bit.ly");
+    expect(blankDump).not.toContain("880295");
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";

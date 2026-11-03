@@ -16558,6 +16558,88 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(result.decision)).not.toContain("PlushPepe-291");
   });
 
+  it("keeps a story poster name and drops the username", async () => {
+    const path = "offer292";
+    const kept = await normalizeUpdate({
+      update: {
+        update_id: 2505,
+        message: {
+          message_id: 2505,
+          date: 1761955200,
+          chat: { id: -1009277, type: "supergroup", title: "机密群名" },
+          from: { id: 292, first_name: "Ada" },
+          story: {
+            chat: {
+              id: -1009292295,
+              type: "channel",
+              title: `https://example.com/${path}`,
+              username: "bit.ly",
+            },
+            id: 880296,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const allowed = await screenTelegramEvent(kept.event, {
+      logger,
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const keptDump = JSON.stringify({ allowed, logs: logger.entries });
+    expect(keptDump).not.toContain("bit.ly");
+    expect(keptDump).not.toContain(path);
+    expect(keptDump).not.toContain("机密群名");
+    expect(keptDump).not.toContain("880296");
+
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2506,
+        message: {
+          message_id: 2506,
+          date: 1761955200,
+          chat: { id: -1009278, type: "supergroup", title: "机密群名" },
+          from: { id: 292, first_name: "Ada" },
+          text: "今天站会",
+          reply_to_story: {
+            chat: {
+              id: 292002,
+              type: "private",
+              first_name: `https://bit.ly/${path}`,
+              username: "example.com",
+            },
+            id: 880297,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const result = await screenTelegramEvent(opened.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(result.decision)).not.toContain(path);
+    expect(JSON.stringify(result.decision)).not.toContain("880297");
+  });
+
   it("keeps a script letter after a schemed hyphen in a draft", async () => {
     const path = "offer284";
     const greek = "\u03B1";
