@@ -989,6 +989,45 @@ function encodedPlusSplitsHost(text: string, index: number): boolean {
   ).test(rest);
 }
 
+/**
+ * 一层括号点。闭合括号写成百分号时，已经结束的主机名后面留下十六进制。
+ * 字面闭合括号收成点，避免停住字符先把 `[.]` 拆开。
+ */
+const DRAFT_BRACKET_DOT =
+  /(?:[[\uFF3B]|%5B)(?:\.|。|%2E)(?:[\]\uFF3D]|%5D)|(?:[(\uFF08]|%28)(?:\.|。|%2E)(?:[)\uFF09]|%29)|(?:[{\uFF5B]|%7B)(?:\.|。|%2E)(?:[}\uFF5D]|%7D)/gi;
+
+/** 已经结束的主机名后面，编码括号点留下闭合十六进制。字面括号点收成点。 */
+function openEncodedBracketHost(text: string): string {
+  const pattern = new RegExp(DRAFT_BRACKET_DOT.source, "gi");
+  let out = "";
+  let index = 0;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    const raw = match[0] ?? "";
+    out += text.slice(index, start);
+    const closer = draftEncodedBracketHex(raw);
+    if (closer !== null && encodedDotAfterHost(out)) {
+      out += ` ${closer}`;
+    } else if (closer === null && encodedDotAfterHost(out)) {
+      out += " ";
+    } else if (closer === null) {
+      out += ".";
+    } else {
+      out += raw;
+    }
+    index = start + raw.length;
+  }
+  return out + text.slice(index);
+}
+
+function draftEncodedBracketHex(raw: string): string | null {
+  const tail = raw.slice(-3);
+  if (/^%(?:5d|29|7d)$/i.test(tail)) {
+    return tail.slice(1);
+  }
+  return null;
+}
+
 /** 已经结束的主机名后面，`%2E` 留下两位十六进制。紧挨协议的 `%2E` 仍交给粘连扫描。 */
 function openFinishedEncodedDot(text: string): string {
   let out = "";
@@ -1060,14 +1099,16 @@ function openedDraftUrls(text: string): string[] {
               openLongLabel(
                 openLongUserinfo(
                   openDraftStops(
-                    openStoppingSpace(
-                      openFinishedEncodedDot(
-                        openEncodedSlashBoundary(
-                          openEncodedSlashHost(
-                            openEncodedHyphenHost(
-                              openEncodedPlusHost(
-                                openEncodedHostBody(
-                                  openEncodedGapHost(foldBoundaryMark(text)),
+                    openEncodedBracketHost(
+                      openStoppingSpace(
+                        openFinishedEncodedDot(
+                          openEncodedSlashBoundary(
+                            openEncodedSlashHost(
+                              openEncodedHyphenHost(
+                                openEncodedPlusHost(
+                                  openEncodedHostBody(
+                                    openEncodedGapHost(foldBoundaryMark(text)),
+                                  ),
                                 ),
                               ),
                             ),

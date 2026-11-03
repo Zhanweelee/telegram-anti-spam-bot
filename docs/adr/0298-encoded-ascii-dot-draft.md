@@ -34,3 +34,4 @@ Android 不把 `%2E` 收成点。`example.com%2Ebit.ly/…` 打开的是 `2Ebit.
 - `http://bit.ly%2Eevil.com/…` 和 `bit.ly%2Eevil.com/…` 仍按短链删除。证据是 `bit.ly`。`203.0.113.170%2Eevil.com/…` 仍按裸 IP 删除。`%2E.203.0.113.170/…` 按裸 IP 删除。
 - `bit%2Ely`、换行、空格或制表符后面的网址仍按短链删除。`t%2Eme/+…` 仍按邀请删除。`%2E203.0.113.170/http://t.co/…` 按 `t.co` 删除。
 - 第二层 `%252E` 仍留下。路径里的 `%2E` 不另开一条短链。
+- 已经结束的主机名后面，编码括号点仍会粘进前一段。`http://bit.ly%5B.%5Devil.com` 收成 `bit.ly5devil.com`。见 ADR 0299。
