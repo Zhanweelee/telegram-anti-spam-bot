@@ -330,6 +330,69 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("unmute_unavailable");
   });
 
+  it("clears recent reactions for a user or a sender chat", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.clearReactions({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      kind: "user",
+    });
+    await moderator.clearReactions({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "-1005",
+      kind: "chat",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/deleteAllMessageReactions`,
+      `https://api.telegram.org/bot${token}/deleteAllMessageReactions`,
+    ]);
+    const userBody = JSON.parse(calls[0]?.body ?? "{}") as {
+      user_id?: number;
+      actor_chat_id?: number;
+    };
+    const chatBody = JSON.parse(calls[1]?.body ?? "{}") as {
+      user_id?: number;
+      actor_chat_id?: number;
+    };
+    expect(userBody.user_id).toBe(77);
+    expect(userBody.actor_chat_id).toBeUndefined();
+    expect(chatBody.actor_chat_id).toBe(-1005);
+    expect(chatBody.user_id).toBeUndefined();
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).not.toContain("message_id");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl,
+      }).clearReactions({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        kind: "user",
+      }),
+    ).rejects.toThrow("reactions_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

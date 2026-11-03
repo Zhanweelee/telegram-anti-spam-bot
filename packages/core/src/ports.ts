@@ -118,6 +118,13 @@ export interface SenderChatTarget {
   readonly senderChatId: string;
 }
 
+export interface ReactionActorTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+  readonly kind: "user" | "chat";
+}
+
 export type UnmuteResult = "lifted" | "absent";
 
 export type MemberStanding =
@@ -139,6 +146,7 @@ export interface ModerationPort {
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;
+  clearReactions(target: ReactionActorTarget): Promise<void>;
   unbanSenderChat(target: SenderChatTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;

@@ -164,6 +164,7 @@ function harness(options?: { failStorage?: boolean }) {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async clearReactions() {},
   };
   return {
     records,

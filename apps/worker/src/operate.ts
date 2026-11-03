@@ -73,6 +73,9 @@ function commandModerator(
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async clearReactions() {
+      throw new Error("reactions_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

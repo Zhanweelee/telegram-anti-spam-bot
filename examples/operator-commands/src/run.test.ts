@@ -30,6 +30,15 @@ describe("operator command example", () => {
     expect(help).toContain("/lock");
     expect(help).toContain("/unlock");
     expect(help).toContain("/perms");
+    expect(help).toContain("/clearreact");
+    const reactionReply = await runPrivateCommand({
+      text: "/clearreact -100 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(reactionReply).toBe(
+      "已请求清除 77 在 -100 的最近反应。一万条以前的可能还在",
+    );
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",

@@ -117,6 +117,8 @@ export const messageKeys = [
   "command.perms.pin_messages",
   "command.perms.manage_topics",
   "command.perms.unknown",
+  "command.clearreact.usage",
+  "command.clearreact.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -163,6 +165,7 @@ const syntax = [
   "/lock <chatId>",
   "/unlock <chatId>",
   "/perms <chatId>",
+  "/clearreact <chatId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -289,6 +292,9 @@ const zh = {
   "command.perms.pin_messages": "置顶",
   "command.perms.manage_topics": "话题",
   "command.perms.unknown": "未知",
+  "command.clearreact.usage": "用法：/clearreact <chatId> <actorId>",
+  "command.clearreact.done":
+    "已请求清除 {actorId} 在 {chatId} 的最近反应。一万条以前的可能还在",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -427,6 +433,9 @@ const en = {
   "command.perms.pin_messages": "pin",
   "command.perms.manage_topics": "topics",
   "command.perms.unknown": "unknown",
+  "command.clearreact.usage": "Usage: /clearreact <chatId> <actorId>",
+  "command.clearreact.done":
+    "Asked to clear recent reactions by {actorId} in {chatId}. Ones older than the latest 10000 may remain.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

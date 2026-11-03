@@ -21,6 +21,7 @@ import {
   parseCaptchaChallenge,
   parseRuleSet,
   prefilterPolicySchema,
+  type ReactionActorTarget,
   type ReplyMessage,
   type ReplyPort,
   type RuleSet,
@@ -125,6 +126,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly unmuted: readonly BanTarget[];
   readonly locked: readonly ChatTarget[];
   readonly unlocked: readonly ChatTarget[];
+  readonly reactionsCleared: readonly ReactionActorTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -141,6 +143,7 @@ export function createMemoryModerator(): ModerationPort & {
   const unmuted: BanTarget[] = [];
   const locked: ChatTarget[] = [];
   const unlocked: ChatTarget[] = [];
+  const reactionsCleared: ReactionActorTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -157,6 +160,7 @@ export function createMemoryModerator(): ModerationPort & {
     unmuted,
     locked,
     unlocked,
+    reactionsCleared,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -248,6 +252,14 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async readPermissions() {
       throw new Error("perms_unavailable");
+    },
+    async clearReactions(target) {
+      reactionsCleared.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        actorId: target.actorId,
+        kind: target.kind,
+      });
     },
   };
 }
