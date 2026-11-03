@@ -220,6 +220,7 @@ export async function resolveChallenge(input: {
     input.event.actor.id,
   );
   if (!challenge) {
+    await forgetClicked(input.event, input.ports, undefined);
     return "ignored";
   }
   const nowIso = input.ports.clock.nowIso();
@@ -231,9 +232,11 @@ export async function resolveChallenge(input: {
       challenge.nonce,
     );
     if (!taken) {
+      await forgetClicked(input.event, input.ports, challenge.messageId);
       return "ignored";
     }
     await expireTaken(taken, input.ports, nowIso, input.event.id);
+    await forgetClicked(input.event, input.ports, taken.messageId);
     return "expired";
   }
   if (challenge.nonce !== nonce) {
@@ -241,6 +244,7 @@ export async function resolveChallenge(input: {
       eventId: input.event.id,
       chatId: input.event.chatId,
     });
+    await forgetClicked(input.event, input.ports, challenge.messageId);
     return "ignored";
   }
   const taken = await input.ports.store.take(
@@ -250,6 +254,7 @@ export async function resolveChallenge(input: {
     challenge.nonce,
   );
   if (!taken) {
+    await forgetClicked(input.event, input.ports, challenge.messageId);
     return "ignored";
   }
   try {
@@ -282,6 +287,7 @@ export async function resolveChallenge(input: {
     chatId: input.event.chatId,
   });
   await forgetPrompt(taken, input.ports, input.event.id);
+  await forgetClicked(input.event, input.ports, taken.messageId);
   return "passed";
 }
 
@@ -333,20 +339,47 @@ async function forgetPrompt(
   eventId: string,
 ): Promise<void> {
   const messageId = challenge.messageId;
+  if (!messageId) {
+    return;
+  }
+  await forgetMessage(ports, eventId, {
+    tenantId: challenge.tenantId,
+    chatId: challenge.chatId,
+    messageId,
+  });
+}
+
+async function forgetClicked(
+  event: Event,
+  ports: CaptchaPorts,
+  storedId: string | undefined,
+): Promise<void> {
+  const messageId = event.challenge?.messageId;
+  if (!messageId || messageId === storedId) {
+    return;
+  }
+  await forgetMessage(ports, event.id, {
+    tenantId: event.tenantId,
+    chatId: event.chatId,
+    messageId,
+  });
+}
+
+async function forgetMessage(
+  ports: CaptchaPorts,
+  eventId: string,
+  target: CaptchaPromptTarget,
+): Promise<void> {
   const removePrompt = ports.removePrompt;
-  if (!messageId || !removePrompt) {
+  if (!removePrompt) {
     return;
   }
   try {
-    await removePrompt({
-      tenantId: challenge.tenantId,
-      chatId: challenge.chatId,
-      messageId,
-    });
+    await removePrompt(target);
   } catch {
     ports.logger.warn("captcha_prompt_delete_failed", {
       eventId,
-      chatId: challenge.chatId,
+      chatId: target.chatId,
     });
   }
 }

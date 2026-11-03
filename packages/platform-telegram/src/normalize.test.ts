@@ -16845,7 +16845,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.kind).toBe("challenge");
     expect(outcome.event.message).toBeUndefined();
-    expect(outcome.event.challenge).toEqual({ nonce });
+    expect(outcome.event.challenge).toEqual({ nonce, messageId: "4" });
     expect(outcome.event.actor).toEqual({ id: "77", isAdmin: false });
     expect(JSON.stringify(outcome.event)).not.toContain(leaked);
   });

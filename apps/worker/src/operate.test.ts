@@ -537,6 +537,53 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
   });
 
+  it("deletes the clicked captcha button and the stored one after a pass", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_click_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      {
+        ...kit,
+        moderator,
+        captchaStore,
+        createNonce: () => nonce,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          Response.json({ ok: true, result: { message_id: 42 } }),
+      },
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_click_pass",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "challenge",
+        occurredAt: "2026-11-01T00:01:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        challenge: { nonce, messageId: "43" },
+      }),
+      { ...kit, moderator, captchaStore },
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+      { tenantId: "local", chatId: "-100123", messageId: "43" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toBeNull();
+    expect(moderator.released).toHaveLength(1);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+  });
+
   it("stores the captcha button id and deletes that message after a pass", async () => {
     const kit = deps();
     const moderator = createMemoryModerator();
