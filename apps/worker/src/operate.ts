@@ -241,42 +241,43 @@ export async function handleIncomingEvent(
   if (messageId === null) {
     return;
   }
+  let attached = false;
   try {
-    const attached = await captchaStore.attachPrompt(
+    attached = await captchaStore.attachPrompt(
       event.tenantId,
       event.chatId,
       event.actor.id,
       challenge.nonce,
       messageId,
     );
-    let dropId: string | undefined;
-    if (!attached) {
-      dropId = messageId;
-    } else if (
-      challenge.messageId !== undefined &&
-      challenge.messageId !== messageId
-    ) {
-      dropId = challenge.messageId;
-    }
-    if (dropId !== undefined) {
-      try {
-        await moderator.deleteMessage({
-          tenantId: event.tenantId,
-          chatId: event.chatId,
-          messageId: dropId,
-        });
-      } catch {
-        logger.warn("captcha_prompt_delete_failed", {
-          eventId: event.id,
-          chatId: event.chatId,
-        });
-      }
-    }
   } catch {
     logger.warn("captcha_prompt_failed", {
       eventId: event.id,
       chatId: event.chatId,
     });
+  }
+  let dropId: string | undefined;
+  if (!attached) {
+    dropId = messageId;
+  } else if (
+    challenge.messageId !== undefined &&
+    challenge.messageId !== messageId
+  ) {
+    dropId = challenge.messageId;
+  }
+  if (dropId !== undefined) {
+    try {
+      await moderator.deleteMessage({
+        tenantId: event.tenantId,
+        chatId: event.chatId,
+        messageId: dropId,
+      });
+    } catch {
+      logger.warn("captcha_prompt_delete_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
   }
 }
 
