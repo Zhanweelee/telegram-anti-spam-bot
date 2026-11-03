@@ -3080,6 +3080,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(sharedUserNames(message), urls);
   pushPlainUrls(managedBotNames(message), urls);
+  pushPlainUrls(writeAccessName(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -5132,6 +5133,10 @@ function messageText(
   if (managed.length > 0) {
     return managed;
   }
+  const writeAccess = writeAccessName(message);
+  if (writeAccess.length > 0) {
+    return writeAccess;
+  }
   return "";
 }
 
@@ -5182,6 +5187,15 @@ function managedBotNames(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/** 用户允许 bot 发消息时带上的小程序名字。来源布尔值不读。 */
+function writeAccessName(message: Record<string, unknown>): string {
+  const allowed = message.write_access_allowed;
+  if (!isRecord(allowed) || typeof allowed.web_app_name !== "string") {
+    return "";
+  }
+  return allowed.web_app_name.trim().slice(0, MAX_TEXT);
 }
 
 function pushUserLabels(value: unknown, parts: string[]): void {

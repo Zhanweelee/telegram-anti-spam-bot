@@ -18728,6 +18728,156 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("tinyurl.com");
   });
 
+  it("keeps a write access web app name and drops the sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INV290";
+    const visible = `${phrase} https://bit.ly/name290 https://t.me/+${code}.`;
+    const labeled = await normalize({
+      update_id: 79017,
+      message: {
+        message_id: 79017,
+        date: 1761955200,
+        chat: {
+          id: -1009259,
+          type: "private",
+          title: "https://cutt.ly/grp290",
+        },
+        from: { id: 290, first_name: "https://tinyurl.com/from290" },
+        text: "今天站会",
+        write_access_allowed: {
+          from_request: true,
+          from_attachment_menu: false,
+          web_app_name: visible,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("name290");
+    expect(labeledDump).not.toContain("from290");
+    expect(labeledDump).not.toContain("grp290");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const ordinary = await normalize({
+      update_id: 79018,
+      message: {
+        message_id: 79018,
+        date: 1761955200,
+        chat: {
+          id: -1009260,
+          type: "private",
+          title: "https://bit.ly/kept290",
+        },
+        from: { id: 290, first_name: phrase },
+        text: "今天站会",
+        write_access_allowed: {
+          web_app_name: "https://example.com/ok290",
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok290");
+    expect(ordinaryDump).not.toContain("kept290");
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("bit.ly");
+
+    const names = "Ada https://bit.ly/body290";
+    const alone = await normalize({
+      update_id: 79019,
+      message: {
+        message_id: 79019,
+        date: 1761955200,
+        chat: { id: -1009261, type: "private", title: phrase },
+        from: { id: 290, first_name: "https://tinyurl.com/from290b" },
+        write_access_allowed: {
+          web_app_name: `  ${names}  `,
+        },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe(names);
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain(phrase);
+    expect(aloneDump).not.toContain("from290b");
+    expect(aloneDump).not.toContain("tinyurl.com");
+
+    const flags = await normalize({
+      update_id: 79020,
+      message: {
+        message_id: 79020,
+        date: 1761955200,
+        chat: {
+          id: -1009264,
+          type: "private",
+          title: "https://bit.ly/title290",
+        },
+        from: { id: 290, first_name: "https://tinyurl.com/from290c" },
+        write_access_allowed: {
+          from_request: "https://bit.ly/flag290",
+          from_attachment_menu: true,
+        },
+      },
+    });
+    expect(flags.status).toBe("event");
+    if (flags.status !== "event") {
+      return;
+    }
+    expect(flags.event.message?.text).toBe("");
+    expect(flags.event.message?.hosts).toBeUndefined();
+    const flagsDump = JSON.stringify(flags.event);
+    expect(flagsDump).not.toContain("flag290");
+    expect(flagsDump).not.toContain("title290");
+    expect(flagsDump).not.toContain("from290c");
+    expect(flagsDump).not.toContain("bit.ly");
+    expect(flagsDump).not.toContain("tinyurl.com");
+
+    const ranked = await normalize({
+      update_id: 79021,
+      message: {
+        message_id: 79021,
+        date: 1761955200,
+        chat: { id: -1009265, type: "private" },
+        from: { id: 290, first_name: "Ada" },
+        managed_bot_created: {
+          bot: { id: 290001, is_bot: true, first_name: "Bot Ada" },
+        },
+        write_access_allowed: {
+          web_app_name: "https://bit.ly/rank290",
+        },
+      },
+    });
+    expect(ranked.status).toBe("event");
+    if (ranked.status !== "event") {
+      return;
+    }
+    expect(ranked.event.message?.text).toBe("Bot Ada");
+    expect(ranked.event.message?.hosts).toEqual(["bit.ly"]);
+    const rankedDump = JSON.stringify(ranked.event);
+    expect(rankedDump).not.toContain("rank290");
+    expect(rankedDump).not.toContain("290001");
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";
