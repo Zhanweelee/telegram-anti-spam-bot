@@ -1,5 +1,6 @@
 import {
   type ChatDirectory,
+  cancelChallenge,
   createSystemClock,
   type Event,
   type Locale,
@@ -65,6 +66,32 @@ export async function handleIncomingEvent(
   }
   if (event.kind === "bot_membership") {
     return;
+  }
+  if (event.kind === "chat_member" && event.membership === "leave") {
+    try {
+      await cancelChallenge({
+        event,
+        ports: {
+          store: captchaStore,
+          storage,
+          restrict: (target) => moderator.restrictActor(target),
+          release: (target) => moderator.releaseActor(target),
+          clock: deps.clock ?? createSystemClock(),
+          logger,
+          removePrompt: (target) =>
+            moderator.deleteMessage({
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+            }),
+        },
+      });
+    } catch {
+      logger.warn("captcha_leave_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
   }
   if (event.kind === "challenge") {
     try {

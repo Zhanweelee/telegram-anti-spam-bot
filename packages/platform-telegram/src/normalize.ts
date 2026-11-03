@@ -203,9 +203,9 @@ async function chatMemberEvent(
   const admins = new Set(input.adminUserIds);
   const direct = isPrivateChat(value.chat);
   const botJoin = joiningBot(value);
-  const membership = joiningMember(value) ? ("join" as const) : undefined;
+  const membership = memberChange(value);
   const profile =
-    membership && isRecord(value.new_chat_member.user)
+    membership === "join" && isRecord(value.new_chat_member.user)
       ? await joinProfile(value.new_chat_member.user)
       : undefined;
   const configured = admins.has(actor);
@@ -361,6 +361,42 @@ function joiningBot(value: Record<string, unknown>): boolean {
   }
   const previous = value.old_chat_member.status;
   return previous === "left" || previous === "kicked" || previous === undefined;
+}
+
+function memberChange(
+  value: Record<string, unknown>,
+): "join" | "leave" | undefined {
+  if (joiningMember(value)) {
+    return "join";
+  }
+  if (leavingMember(value)) {
+    return "leave";
+  }
+  return undefined;
+}
+
+function leavingMember(value: Record<string, unknown>): boolean {
+  if (!isRecord(value.new_chat_member)) {
+    return false;
+  }
+  const user = value.new_chat_member.user;
+  if (isRecord(user) && user.is_bot === true) {
+    return false;
+  }
+  const status = value.new_chat_member.status;
+  if (status !== "left" && status !== "kicked") {
+    return false;
+  }
+  if (!isRecord(value.old_chat_member)) {
+    return false;
+  }
+  const previous = value.old_chat_member.status;
+  return (
+    previous === "member" ||
+    previous === "restricted" ||
+    previous === "administrator" ||
+    previous === "creator"
+  );
 }
 
 function joiningMember(value: Record<string, unknown>): boolean {

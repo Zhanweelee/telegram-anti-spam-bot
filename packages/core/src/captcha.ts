@@ -141,6 +141,53 @@ export async function beginChallenge(input: {
   return challenge;
 }
 
+export async function cancelChallenge(input: {
+  readonly event: Event;
+  readonly ports: CaptchaPorts;
+}): Promise<boolean> {
+  if (input.event.membership !== "leave") {
+    return false;
+  }
+  const challenge = await input.ports.store.get(
+    input.event.tenantId,
+    input.event.chatId,
+    input.event.actor.id,
+  );
+  if (!challenge) {
+    return false;
+  }
+  const messageId = challenge.messageId;
+  if (messageId) {
+    const removePrompt = input.ports.removePrompt;
+    if (!removePrompt) {
+      return false;
+    }
+    try {
+      await removePrompt({
+        tenantId: challenge.tenantId,
+        chatId: challenge.chatId,
+        messageId,
+      });
+    } catch {
+      input.ports.logger.warn("captcha_prompt_delete_failed", {
+        eventId: input.event.id,
+        chatId: input.event.chatId,
+      });
+      return false;
+    }
+  }
+  await input.ports.store.delete(
+    challenge.tenantId,
+    challenge.chatId,
+    challenge.actorId,
+  );
+  input.ports.logger.info("captcha_left", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+  });
+  return true;
+}
+
 export async function resolveChallenge(input: {
   readonly event: Event;
   readonly ports: CaptchaPorts;

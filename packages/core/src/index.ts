@@ -19,6 +19,7 @@ export {
   type CaptchaChallenge,
   type CaptchaPorts,
   type CaptchaStore,
+  cancelChallenge,
   captchaChallengeSchema,
   expireChallenges,
   isExpired,

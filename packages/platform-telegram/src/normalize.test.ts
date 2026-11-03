@@ -16756,7 +16756,7 @@ describe("normalizeUpdate", () => {
     });
     expect(leave.status).toBe("event");
     if (leave.status === "event") {
-      expect(leave.event.membership).toBeUndefined();
+      expect(leave.event.membership).toBe("leave");
     }
     const bot = await normalize({
       update_id: 2005,
@@ -16894,6 +16894,143 @@ describe("normalizeUpdate", () => {
     expect(
       (await normalize({ update_id: 3, message: { text: "no ids" } })).status,
     ).toBe("ignored");
+  });
+
+  it("marks a human leave and keeps the name off the event", async () => {
+    const name = "广告员";
+    const memberLeft = await normalize({
+      update_id: 2040,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup", title: name },
+        from: { id: 1, first_name: name },
+        date: 1761955200,
+        old_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+        },
+        new_chat_member: {
+          user: { id: 77, first_name: name, username: "gift" },
+          status: "left",
+        },
+      },
+    });
+    expect(memberLeft.status).toBe("event");
+    if (memberLeft.status === "event") {
+      expect(memberLeft.event.membership).toBe("leave");
+      expect(memberLeft.event.profile).toBeUndefined();
+      expect(memberLeft.event.actor).toEqual({ id: "77", isAdmin: false });
+      expect(JSON.stringify(memberLeft.event)).not.toContain(name);
+    }
+    const restrictedKicked = await normalize({
+      update_id: 2041,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "restricted" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "kicked",
+        },
+      },
+    });
+    expect(restrictedKicked.status).toBe("event");
+    if (restrictedKicked.status === "event") {
+      expect(restrictedKicked.event.membership).toBe("leave");
+      expect(restrictedKicked.event.profile).toBeUndefined();
+      expect(JSON.stringify(restrictedKicked.event)).not.toContain(name);
+    }
+    const adminLeft = await normalize({
+      update_id: 2042,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "administrator" },
+        new_chat_member: { user: { id: 77 }, status: "left" },
+      },
+    });
+    expect(adminLeft.status).toBe("event");
+    if (adminLeft.status === "event") {
+      expect(adminLeft.event.membership).toBe("leave");
+      expect(adminLeft.event.actor.isAdmin).toBe(false);
+    }
+    const creatorKicked = await normalize({
+      update_id: 2043,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "creator" },
+        new_chat_member: { user: { id: 77 }, status: "kicked" },
+      },
+    });
+    expect(creatorKicked.status).toBe("event");
+    if (creatorKicked.status === "event") {
+      expect(creatorKicked.event.membership).toBe("leave");
+    }
+    const restricted = await normalize({
+      update_id: 2044,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+        },
+      },
+    });
+    expect(restricted.status).toBe("event");
+    if (restricted.status === "event") {
+      expect(restricted.event.membership).toBeUndefined();
+      expect(restricted.event.profile).toBeUndefined();
+      expect(JSON.stringify(restricted.event)).not.toContain(name);
+    }
+    const alreadyGone = await normalize({
+      update_id: 2045,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: { user: { id: 77 }, status: "kicked" },
+      },
+    });
+    expect(alreadyGone.status).toBe("event");
+    if (alreadyGone.status === "event") {
+      expect(alreadyGone.event.membership).toBeUndefined();
+    }
+    const missingOld = await normalize({
+      update_id: 2046,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        new_chat_member: { user: { id: 77, first_name: name }, status: "left" },
+      },
+    });
+    expect(missingOld.status).toBe("event");
+    if (missingOld.status === "event") {
+      expect(missingOld.event.membership).toBeUndefined();
+      expect(JSON.stringify(missingOld.event)).not.toContain(name);
+    }
+    const botLeft = await normalize({
+      update_id: 2047,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "member",
+        },
+        new_chat_member: {
+          user: { id: 88, is_bot: true, username: name },
+          status: "left",
+        },
+      },
+    });
+    expect(botLeft.status).toBe("event");
+    if (botLeft.status === "event") {
+      expect(botLeft.event.membership).toBeUndefined();
+      expect(botLeft.event.actor.bot).toBeUndefined();
+      expect(JSON.stringify(botLeft.event)).not.toContain(name);
+    }
   });
 
   it("keeps a joining name for screening and drops other profile fields", async () => {
