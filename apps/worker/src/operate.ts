@@ -154,10 +154,16 @@ export async function handleIncomingEvent(
     ...(quota ? { quota } : {}),
     ...(notifier ? { notifier } : {}),
   });
-  const prompted = result.actionResults.some(
+  const ownsPrompt = result.actionResults.some(
     (item) => item.actionId === "captcha" && item.status === "executed",
   );
-  if (!prompted) {
+  const repeatsPrompt = result.actionResults.some(
+    (item) =>
+      item.actionId === "captcha" &&
+      item.status === "skipped" &&
+      item.detail === "duplicate",
+  );
+  if (!ownsPrompt && !repeatsPrompt) {
     return;
   }
   const challenge = await captchaStore.get(
@@ -176,19 +182,21 @@ export async function handleIncomingEvent(
       ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
     });
   } catch {
-    try {
-      await moderator.releaseActor({
-        tenantId: event.tenantId,
-        chatId: event.chatId,
-        actorId: event.actor.id,
-      });
-      await captchaStore.delete(event.tenantId, event.chatId, event.actor.id);
-    } catch {
-      logger.warn("captcha_prompt_failed", {
-        eventId: event.id,
-        chatId: event.chatId,
-      });
-      return;
+    if (ownsPrompt) {
+      try {
+        await moderator.releaseActor({
+          tenantId: event.tenantId,
+          chatId: event.chatId,
+          actorId: event.actor.id,
+        });
+        await captchaStore.delete(event.tenantId, event.chatId, event.actor.id);
+      } catch {
+        logger.warn("captcha_prompt_failed", {
+          eventId: event.id,
+          chatId: event.chatId,
+        });
+        return;
+      }
     }
     logger.warn("captcha_prompt_failed", {
       eventId: event.id,

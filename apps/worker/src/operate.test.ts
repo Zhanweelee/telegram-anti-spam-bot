@@ -273,6 +273,89 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
   });
 
+  it("sends the captcha button again when the same join is delivered twice", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let prompts = 0;
+    const event = parseEvent({
+      id: "evt_button_retry",
+      tenantId: "local",
+      chatId: "-100123",
+      kind: "chat_member",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "77", isAdmin: false },
+      membership: "join",
+    });
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        return new Response("ok", { status: 200 });
+      },
+    };
+    await handleIncomingEvent(event, options);
+    await handleIncomingEvent(event, options);
+    expect(prompts).toBe(2);
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+    });
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("keeps the challenge when a repeated join cannot resend the button", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let prompts = 0;
+    const event = parseEvent({
+      id: "evt_button_retry_fail",
+      tenantId: "local",
+      chatId: "-100123",
+      kind: "chat_member",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "77", isAdmin: false },
+      membership: "join",
+    });
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        if (prompts > 1) {
+          return new Response("no", { status: 500 });
+        }
+        return new Response("ok", { status: 200 });
+      },
+    };
+    await handleIncomingEvent(event, options);
+    await handleIncomingEvent(event, options);
+    expect(prompts).toBe(2);
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+    });
+    expect(
+      kit.logger.entries.some(
+        (entry) => entry.message === "captcha_prompt_failed",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+  });
+
   it("stops reading the shared blocklist as soon as the chat turns it off", async () => {
     const kit = deps();
     const blocklist = createMemoryBlocklistStore();
