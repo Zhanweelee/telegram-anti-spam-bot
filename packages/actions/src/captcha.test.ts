@@ -35,6 +35,7 @@ function store(): CaptchaStore {
     async delete(tenantId, chatId, actorId) {
       values.delete(`${tenantId}\n${chatId}\n${actorId}`);
     },
+    async deleteMany() {},
     async listExpired() {
       return [];
     },
@@ -67,6 +68,7 @@ function moderator(
 function storage(): Storage {
   return {
     async appendAudit() {},
+    async putAuditsIfAbsent() {},
     async listAudits() {
       return [];
     },

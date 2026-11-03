@@ -5,7 +5,54 @@ import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
-import { resolveStores, type StoreSlot } from "./stores.js";
+import { adaptD1, resolveStores, type StoreSlot } from "./stores.js";
+
+describe("adaptD1", () => {
+  it("sends every statement in one batch", async () => {
+    const batches: (readonly {
+      readonly sql: string;
+      readonly values: unknown[];
+    }[])[] = [];
+    const db = {
+      prepare(sql: string) {
+        const statement = {
+          sql,
+          values: [] as unknown[],
+          bind(...values: unknown[]) {
+            return { ...statement, values };
+          },
+        };
+        return statement;
+      },
+      batch(
+        statements: readonly {
+          readonly sql: string;
+          readonly values: unknown[];
+        }[],
+      ) {
+        batches.push(statements);
+        return Promise.resolve([]);
+      },
+    };
+    const sql = adaptD1(db as unknown as D1Database);
+    const first = sql.prepare("INSERT INTO audits VALUES (?)").bind("a");
+    const second = sql
+      .prepare("DELETE FROM captcha_challenges WHERE actor_id = ?")
+      .bind("b");
+    await sql.batch([first, second]);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]).toEqual([
+      expect.objectContaining({
+        sql: "INSERT INTO audits VALUES (?)",
+        values: ["a"],
+      }),
+      expect.objectContaining({
+        sql: "DELETE FROM captcha_challenges WHERE actor_id = ?",
+        values: ["b"],
+      }),
+    ]);
+  });
+});
 
 describe("resolveStores", () => {
   it("keeps memory stores when D1 and KV are absent", () => {

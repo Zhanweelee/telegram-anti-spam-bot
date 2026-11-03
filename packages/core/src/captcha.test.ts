@@ -30,6 +30,12 @@ function createReferenceStore(): CaptchaStore {
     async delete(tenantId, chatId, actorId) {
       values.delete(key(tenantId, chatId, actorId));
     },
+    async deleteMany(challenges) {
+      for (const challenge of challenges) {
+        const parsed = parseCaptchaChallenge(challenge);
+        values.delete(key(parsed.tenantId, parsed.chatId, parsed.actorId));
+      }
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
@@ -110,6 +116,33 @@ describe("captcha flow", () => {
     expect(await expireChallenges(kit.ports)).toBe(0);
     expect(kit.records).toHaveLength(1);
     expect(kit.released).toEqual([]);
+  });
+
+  it("retries an expiry when the bulk delete fails", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 60,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    kit.clock.iso = "2026-11-01T00:02:00.000Z";
+    const deleteMany = kit.store.deleteMany.bind(kit.store);
+    let fail = true;
+    kit.store.deleteMany = (challenges) => {
+      if (fail) {
+        fail = false;
+        return Promise.reject(new Error(secret));
+      }
+      return deleteMany(challenges);
+    };
+    await expect(expireChallenges(kit.ports)).rejects.toThrow(secret);
+    expect(kit.records).toHaveLength(1);
+    expect(await kit.store.get("local", "-100", "77")).not.toBeNull();
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+    expect(await expireChallenges(kit.ports)).toBe(1);
+    expect(kit.records).toHaveLength(1);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
   });
 
   it("ignores a wrong button and does not log the nonce", async () => {
@@ -204,6 +237,20 @@ function harness() {
   const storage: Storage = {
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
+    },
+    async putAuditsIfAbsent(input) {
+      for (const record of input) {
+        const parsed = parseAuditRecord(record);
+        const exists = records.some(
+          (item) =>
+            item.tenantId === parsed.tenantId &&
+            item.chatId === parsed.chatId &&
+            item.eventId === parsed.eventId,
+        );
+        if (!exists) {
+          records.push(parsed);
+        }
+      }
     },
     async listAudits() {
       return records;

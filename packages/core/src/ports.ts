@@ -42,6 +42,7 @@ export type AuditScope = z.output<typeof auditScopeSchema>;
 
 export interface Storage {
   appendAudit(record: AuditRecord): Promise<void>;
+  putAuditsIfAbsent(records: readonly AuditRecord[]): Promise<void>;
   listAudits(query: AuditQuery): Promise<readonly AuditRecord[]>;
   getAudit(
     tenantId: string,

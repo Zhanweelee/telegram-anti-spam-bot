@@ -3,6 +3,7 @@ import type { Clock } from "./clock.js";
 import type { Event } from "./event.js";
 import type { Logger } from "./logger.js";
 import {
+  type AuditRecord,
   type BanTarget,
   type MuteTarget,
   parseAuditRecord,
@@ -32,6 +33,7 @@ export interface CaptchaStore {
   ): Promise<CaptchaChallenge | null>;
   put(challenge: CaptchaChallenge): Promise<void>;
   delete(tenantId: string, chatId: string, actorId: string): Promise<void>;
+  deleteMany(challenges: readonly CaptchaChallenge[]): Promise<void>;
   listExpired(nowIso: string): Promise<readonly CaptchaChallenge[]>;
 }
 
@@ -154,8 +156,20 @@ export async function resolveChallenge(input: {
 export async function expireChallenges(ports: CaptchaPorts): Promise<number> {
   const nowIso = ports.clock.nowIso();
   const due = await ports.store.listExpired(nowIso);
+  if (due.length === 0) {
+    return 0;
+  }
+  await ports.storage.putAuditsIfAbsent(
+    due.map((challenge) =>
+      expiryAudit(challenge, nowIso, expiredEventId(challenge)),
+    ),
+  );
+  await ports.store.deleteMany(due);
   for (const challenge of due) {
-    await expireOne(challenge, ports, nowIso, expiredEventId(challenge));
+    ports.logger.info("captcha_expired", {
+      eventId: expiredEventId(challenge),
+      chatId: challenge.chatId,
+    });
   }
   return due.length;
 }
@@ -166,22 +180,35 @@ async function expireOne(
   nowIso: string,
   eventId: string,
 ): Promise<void> {
+  await ports.storage.putAuditsIfAbsent([
+    expiryAudit(challenge, nowIso, eventId),
+  ]);
   await ports.store.delete(
     challenge.tenantId,
     challenge.chatId,
     challenge.actorId,
   );
-  await writeAudit(ports.storage, {
-    tenantId: challenge.tenantId,
-    chatId: challenge.chatId,
-    eventId,
-    reason: "captcha_expired",
-    summary: "captcha:expired",
-    createdAt: nowIso,
-  });
   ports.logger.info("captcha_expired", {
     eventId,
     chatId: challenge.chatId,
+  });
+}
+
+function expiryAudit(
+  challenge: CaptchaChallenge,
+  nowIso: string,
+  eventId: string,
+): AuditRecord {
+  return parseAuditRecord({
+    tenantId: challenge.tenantId,
+    chatId: challenge.chatId,
+    eventId,
+    action: "captcha",
+    score: 1,
+    reasons: ["captcha_expired"],
+    evidence: [{ kind: "feature", summary: "captcha:expired" }],
+    ruleIds: ["new_member"],
+    createdAt: nowIso,
   });
 }
 

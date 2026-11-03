@@ -44,6 +44,12 @@ export function bindCaptchaStoreContract(create: () => CaptchaStore): void {
       expect(await store.get("tenant_a", "chat_1", "user_2")).toMatchObject({
         nonce: "ef".repeat(8),
       });
+      await store.deleteMany([
+        { ...second, actorId: "user_2", nonce: "ef".repeat(8) },
+      ]);
+      expect(await store.get("tenant_a", "chat_1", "user_2")).toBeNull();
+      await store.deleteMany([]);
+      expect(await store.get("tenant_a", "chat_1", "user_2")).toBeNull();
     });
 
     it("lists only challenges due at the clock", async () => {

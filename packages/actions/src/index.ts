@@ -94,6 +94,7 @@ const closedStorage: Storage = {
   async appendAudit() {
     throw new Error("storage");
   },
+  async putAuditsIfAbsent() {},
   async listAudits() {
     return [];
   },

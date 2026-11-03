@@ -49,6 +49,7 @@ function countingStorage(): Storage & { reads: number } {
       return reads;
     },
     appendAudit: (record) => storage.appendAudit(record),
+    putAuditsIfAbsent: (records) => storage.putAuditsIfAbsent(records),
     listAudits: (query) => storage.listAudits(query),
     getAudit: (tenantId, chatId, eventId) =>
       storage.getAudit(tenantId, chatId, eventId),

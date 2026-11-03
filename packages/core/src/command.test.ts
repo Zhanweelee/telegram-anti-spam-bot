@@ -146,6 +146,7 @@ function storage(): Storage & {
         ) ?? null
       );
     },
+    async putAuditsIfAbsent() {},
     async exportAudits(scope) {
       return records.filter(
         (record) =>
