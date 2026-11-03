@@ -385,6 +385,46 @@ describe("POST /telegram/webhook", () => {
     expect(logged).not.toContain(phrase);
   });
 
+  it("counts one update once against the webhook budget", async () => {
+    const phrase = "加微x看看";
+    let calls = 0;
+    const app = createApp({
+      webhookBudget: createWebhookBudget(createMemoryRateWindow(), 1),
+      onEvent: async () => {
+        calls += 1;
+      },
+    });
+    const send = (updateId: number) =>
+      app.request(
+        "/telegram/webhook",
+        {
+          method: "POST",
+          headers: { "x-telegram-bot-api-secret-token": SECRET },
+          body: JSON.stringify({
+            update_id: updateId,
+            message: {
+              message_id: 10,
+              date: 1761955200,
+              chat: { id: -100586, type: "supergroup" },
+              from: { id: 7 },
+              text: phrase,
+            },
+          }),
+        },
+        { WEBHOOK_SECRET: SECRET },
+      );
+    const first = await send(5860);
+    const retry = await send(5860);
+    const next = await send(5861);
+    const nextBody = await next.text();
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual({ ok: true });
+    expect(await retry.json()).toEqual({ ok: true });
+    expect(JSON.parse(nextBody)).toEqual({ ok: true, limited: true });
+    expect(calls).toBe(2);
+    expect(nextBody).not.toContain(phrase);
+  });
+
   it("expires a D1 captcha from the scheduled handler", async () => {
     const queries: string[] = [];
     const db = {

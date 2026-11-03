@@ -11,6 +11,8 @@ export interface WebhookBudget {
     readonly tenantId: string;
     readonly chatId: string;
     readonly nowMs: number;
+    /** When set, a repeat of this id does not consume another slot. */
+    readonly eventId?: string;
   }): Promise<WebhookBudgetDecision>;
 }
 
@@ -28,6 +30,7 @@ export function createWebhookBudget(
           key: `w\n${input.tenantId}\n${input.chatId}`,
           nowMs: input.nowMs,
           windowMs: WEBHOOK_BUDGET_WINDOW_MS,
+          ...(input.eventId === undefined ? {} : { eventId: input.eventId }),
         });
         if (count === null) {
           return "skipped";

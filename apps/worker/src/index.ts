@@ -114,6 +114,7 @@ export function createApp(
           tenantId: event.tenantId,
           chatId: event.chatId,
           nowMs: Date.parse(event.occurredAt),
+          eventId: event.id,
         });
         if (decision === "skipped") {
           logger.warn("webhook_budget_skipped", {
