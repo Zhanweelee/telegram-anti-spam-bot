@@ -3785,5 +3785,50 @@
     "id": "auction-subdomain-post",
     "text": "https://auction.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer208",
     "label": "ham"
+  },
+  {
+    "id": "bg-username",
+    "text": "https://t.me/bg?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "spam"
+  },
+  {
+    "id": "bg-resolve",
+    "text": "tg://resolve?domain=bg&text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "spam"
+  },
+  {
+    "id": "bg-prefix",
+    "text": "https://bg.t.me?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "spam"
+  },
+  {
+    "id": "bg-capital",
+    "text": "https://t.me/Bg/paper209?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "spam"
+  },
+  {
+    "id": "bg-trailing-slash",
+    "text": "https://t.me/bg/paper209/?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "spam"
+  },
+  {
+    "id": "bg-slug",
+    "text": "https://t.me/bg/paper209?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "ham"
+  },
+  {
+    "id": "bg-hyphen",
+    "text": "https://t.me/bg/paper-now?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "ham"
+  },
+  {
+    "id": "bg-tilde",
+    "text": "https://t.me/bg/paper~now?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "ham"
+  },
+  {
+    "id": "bg-subdomain-post",
+    "text": "https://bg.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer209",
+    "label": "ham"
   }
 ]

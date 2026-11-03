@@ -1899,6 +1899,65 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a bg username draft and leaves a wallpaper slug", async () => {
+    const hidden = "offer209";
+    const slug = "paper209";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78062,
+      message: {
+        message_id: 78062,
+        date: 1761955200,
+        chat: { id: -1008293, type: "supergroup" },
+        from: { id: 209 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/bg?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const paper = await normalize({
+      update_id: 78063,
+      message: {
+        message_id: 78063,
+        date: 1761955200,
+        chat: { id: -1008294, type: "supergroup" },
+        from: { id: 209 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/bg/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(paper.status).toBe("event");
+    if (paper.status !== "event") {
+      return;
+    }
+    expect(paper.event.message?.hosts).toEqual(["t.me"]);
+    expect(paper.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(paper.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

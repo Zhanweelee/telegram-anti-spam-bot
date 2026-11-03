@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-209
+
+- `t.me/bg` 仍按用户名读取。后面是壁纸短名时打开壁纸，不读 `text`。见 ADR 0242。
+- `t.me/bg?text=` 和 `t.me/Bg/短名?text=` 里的短链仍删除。`t.me/bg/短名?text=`、`t.me/bg/paper~now?text=` 和 `bg.t.me/数字?text=` 留着。用户名和短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-208
 
 - `t.me/auction` 仍按用户名读取。后面是拍卖短名时打开拍卖，不读 `text`。见 ADR 0241。
