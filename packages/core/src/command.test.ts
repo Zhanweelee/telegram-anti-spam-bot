@@ -1253,6 +1253,109 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("bans a member in a managed chat", async () => {
+    const deps = kit();
+    const banned: { chatId: string; actorId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/ban -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActor(target) {
+          banned.push({ chatId: target.chatId, actorId: target.actorId });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已封禁 -100 77" });
+    expect(banned).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/ban <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/ban -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async banActor() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "Banned 77 in -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/ban -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/ban -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/ban <chatId> <actorId>" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/ban -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/ban -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/ban -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/ban -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async banActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("unbans a member in a managed chat", async () => {
     const deps = kit();
     const unbanned: { chatId: string; actorId: string }[] = [];
