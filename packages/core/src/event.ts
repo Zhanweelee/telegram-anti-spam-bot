@@ -119,6 +119,11 @@ export const eventSchema = z.strictObject({
   message: messageSchema.optional(),
   /** Visible join name. Request memory only; audits keep the hash. */
   profile: profileSchema.optional(),
+  /** Guard-bot join query. Phrases and blank ids stay out. */
+  joinQueryId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,128}$/)
+    .optional(),
 });
 
 export type EventKind = z.output<typeof eventKindSchema>;

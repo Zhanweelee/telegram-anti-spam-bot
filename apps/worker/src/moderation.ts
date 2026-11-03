@@ -23,6 +23,7 @@ function createOpenModerator(): ModerationPort {
     muteActor: (target) => memory.muteActor(target),
     banActor: (target) => memory.banActor(target),
     declineJoin: (target) => memory.declineJoin(target),
+    deferJoin: (target) => memory.deferJoin(target),
     async restrictActor() {
       throw new Error("restrict_unavailable");
     },

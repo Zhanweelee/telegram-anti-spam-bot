@@ -171,6 +171,7 @@ export {
   type BanTarget,
   type DeleteTarget,
   fitAuditExportDocument,
+  type JoinTarget,
   type ModerationPort,
   type MuteTarget,
   parseAuditQuery,

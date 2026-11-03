@@ -230,10 +230,12 @@ export function createDeclineAction(): Action {
           detail: "missing_actor",
         };
       }
+      const queryId = ctx.event.joinQueryId;
       await ctx.moderator.declineJoin({
         tenantId: ctx.event.tenantId,
         chatId: ctx.event.chatId,
         actorId: ctx.event.actor.id,
+        ...(queryId ? { queryId } : {}),
       });
       return { actionId: "decline", status: "executed" };
     },

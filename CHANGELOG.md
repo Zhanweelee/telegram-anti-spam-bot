@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-327
+
+- 入群申请带上安全的 `query_id` 时记成 `joinQueryId`。命中答复 `decline`，未命中或豁免答复 `queue`。
+- 没有查询号时仍只在拒绝时调用 `declineChatJoinRequest`。不自动通过。见 ADR 0360。
+- 30 天保留期没有改。
+
 ### P3-326
 
 - 人还在群里、成员标签改成另一段非空内容时，新标签进入 `profile`。昵称不带。

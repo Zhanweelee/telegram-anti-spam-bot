@@ -78,6 +78,10 @@ export function createTelegramModerator(input: {
       });
     },
     async declineJoin(target) {
+      if (target.queryId) {
+        await answerJoinQuery(input, target.queryId, "decline");
+        return;
+      }
       await postTelegram({
         token: input.token,
         method: "declineChatJoinRequest",
@@ -89,6 +93,9 @@ export function createTelegramModerator(input: {
           user_id: telegramId(target.actorId),
         },
       });
+    },
+    async deferJoin(target) {
+      await answerJoinQuery(input, target.queryId, "queue");
     },
     async banActor(target) {
       await postTelegram({
@@ -193,6 +200,27 @@ export async function answerCallbackQuery(input: {
     missing: "callback_unavailable",
     failed: "callback_failed",
     body: { callback_query_id: input.callbackId },
+  });
+}
+
+async function answerJoinQuery(
+  input: {
+    readonly token: string | undefined;
+    readonly fetchImpl?: typeof fetch;
+  },
+  queryId: string,
+  result: "decline" | "queue",
+): Promise<void> {
+  await postTelegram({
+    token: input.token,
+    method: "answerChatJoinRequestQuery",
+    fetchImpl: input.fetchImpl,
+    missing: "decline_unavailable",
+    failed: "decline_failed",
+    body: {
+      chat_join_request_query_id: queryId,
+      result,
+    },
   });
 }
 

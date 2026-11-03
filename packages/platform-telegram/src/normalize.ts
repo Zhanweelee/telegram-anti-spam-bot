@@ -255,6 +255,7 @@ async function joinRequestEvent(
     return { status: "ignored" };
   }
   const profile = await requestBio(value.bio);
+  const joinQueryId = safeJoinQueryId(value.query_id);
   const direct = isPrivateChat(value.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -265,7 +266,15 @@ async function joinRequestEvent(
     actor: { id: actor, isAdmin: new Set(input.adminUserIds).has(actor) },
     ...(direct ? { direct: true } : {}),
     ...(profile ? { profile } : {}),
+    ...(joinQueryId ? { joinQueryId } : {}),
   });
+}
+
+function safeJoinQueryId(value: unknown): string | undefined {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
+    return undefined;
+  }
+  return value;
 }
 
 async function requestBio(

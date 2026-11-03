@@ -6,6 +6,7 @@ import {
   createMemoryLogger,
   type DeleteTarget,
   type Event,
+  type JoinTarget,
   type ModerationPort,
   type MuteTarget,
   parseEvent,
@@ -68,6 +69,7 @@ describe("delete action", () => {
           async muteActor() {},
           async banActor() {},
           async declineJoin() {},
+          async deferJoin() {},
           async restrictActor() {},
           async releaseActor() {},
         },
@@ -117,6 +119,7 @@ describe("delete action", () => {
         async muteActor() {},
         async banActor() {},
         async declineJoin() {},
+        async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
       },
@@ -168,6 +171,7 @@ describe("delete action", () => {
         async muteActor() {},
         async banActor() {},
         async declineJoin() {},
+        async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
       },
@@ -221,6 +225,7 @@ function ports(): ModerationPort & {
       banned.push(target);
     },
     async declineJoin() {},
+    async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
   };
@@ -493,5 +498,68 @@ describe("decline action", () => {
       status: "failed",
       detail: "not_join_request",
     });
+  });
+
+  it("forwards a guarded join query when it declines", async () => {
+    const declined: JoinTarget[] = [];
+    const moderator = {
+      ...ports(),
+      async declineJoin(target: JoinTarget) {
+        declined.push(target);
+      },
+    };
+    const request = parseEvent({
+      id: "evt_join",
+      tenantId: "local",
+      chatId: "-100",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "83", isAdmin: false },
+      joinQueryId: "query83",
+      profile: { text: "请免费领取礼品", textSha256: "ab".repeat(32) },
+    });
+    const executed = await action.execute({
+      event: request,
+      decision: {
+        action: "decline",
+        ruleIds: ["join_request"],
+        score: 1,
+        reasons: ["short_link"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(executed.status).toBe("executed");
+    expect(declined).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "83",
+        queryId: "query83",
+      },
+    ]);
+    const dry = await action.execute({
+      event: request,
+      decision: {
+        action: "decline",
+        ruleIds: ["join_request"],
+        score: 1,
+        reasons: ["short_link"],
+        evidence: [],
+      },
+      dryRun: true,
+      moderator,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(dry).toEqual({
+      actionId: "decline",
+      status: "skipped",
+      detail: "dry_run",
+    });
+    expect(declined).toHaveLength(1);
   });
 });
