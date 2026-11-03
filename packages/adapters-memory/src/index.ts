@@ -135,6 +135,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly topicsClosed: readonly ForumTopicTarget[];
   readonly topicsOpened: readonly ForumTopicTarget[];
   readonly generalsHidden: readonly ChatTarget[];
+  readonly generalsShown: readonly ChatTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -158,6 +159,7 @@ export function createMemoryModerator(): ModerationPort & {
   const topicsClosed: ForumTopicTarget[] = [];
   const topicsOpened: ForumTopicTarget[] = [];
   const generalsHidden: ChatTarget[] = [];
+  const generalsShown: ChatTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -181,6 +183,7 @@ export function createMemoryModerator(): ModerationPort & {
     topicsClosed,
     topicsOpened,
     generalsHidden,
+    generalsShown,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -331,6 +334,12 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async hideGeneral(target) {
       generalsHidden.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+      });
+    },
+    async showGeneral(target) {
+      generalsShown.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
       });

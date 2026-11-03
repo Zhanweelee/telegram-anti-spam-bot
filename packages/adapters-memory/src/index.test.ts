@@ -219,4 +219,11 @@ describe("memory adapter", () => {
     expect(moderator.generalsHidden).toEqual([{ tenantId: "t", chatId: "c" }]);
     expect(JSON.stringify(moderator.generalsHidden)).not.toContain("thread");
   });
+
+  it("records a shown General topic without a thread id", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.showGeneral({ tenantId: "t", chatId: "c" });
+    expect(moderator.generalsShown).toEqual([{ tenantId: "t", chatId: "c" }]);
+    expect(JSON.stringify(moderator.generalsShown)).not.toContain("thread");
+  });
 });

@@ -3239,6 +3239,134 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("shows the General topic and leaves it closed", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async openTopic() {
+          throw new Error("called");
+        },
+        async hideGeneral() {
+          throw new Error("called");
+        },
+        async showGeneral(target) {
+          seen.push(target.chatId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求显示 -100 的通用话题。原先关着的话仍然关着。消息还在。其它话题不在这次里",
+    });
+    expect(seen).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/showgeneral <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async showGeneral() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to show the General topic of -100. A closed General topic stays closed. The messages stay. Other topics are not part of this call.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async showGeneral() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/showgeneral", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/showgeneral <chatId>",
+    });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async showGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/showgeneral <chatId>",
+    });
+    expect(seen).toEqual(["-100"]);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/showgeneral ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async showGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/showgeneral -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async showGeneral() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"showgeneral"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/showgeneral -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async showGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];
