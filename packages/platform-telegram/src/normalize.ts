@@ -487,10 +487,20 @@ function linkHosts(message: Record<string, unknown>): {
 const COPY_URL =
   /(?:https?:\/\/|tg:(?:\/\/)?|www\.)[^\s<>"']+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s<>"']*)?/gi;
 
+const DRAFT_IP_HEAD = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])";
+const DRAFT_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
+const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
+const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
+const DRAFT_IP_TAIL = "(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>\"']*)?";
+
 function urlsInText(text: string): string[] {
+  return scanUrls(text, COPY_URL.source);
+}
+
+function scanUrls(text: string, source: string): string[] {
   const found: string[] = [];
   const folded = foldHostScan(text);
-  for (const match of folded.matchAll(new RegExp(COPY_URL.source, "gi"))) {
+  for (const match of folded.matchAll(new RegExp(source, "gi"))) {
     const raw = match[0]?.replace(/[),.;!?]+$/g, "");
     if (!raw) {
       continue;
@@ -506,7 +516,8 @@ const DRAFT_STOP_CHAR = new RegExp(
 );
 
 function openedDraftUrls(text: string): string[] {
-  return urlsInText(openDraftStops(text));
+  const source = `${COPY_URL.source}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
+  return scanUrls(openDraftStops(text), source);
 }
 
 /** 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
@@ -1272,11 +1283,18 @@ function queryUrls(value: string): string[] {
   return value.split(/\s+/).filter((part) => part.length > 0);
 }
 
+function closedIpUrl(raw: string): string {
+  if (!new RegExp(`^(?:${DRAFT_IP})${DRAFT_IP_TAIL}$`, "i").test(raw)) {
+    return "";
+  }
+  return `http://${raw}`;
+}
+
 function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
-  const inner = hostFromUrl(raw, false);
+  const inner = hostFromUrl(raw, false) ?? hostFromUrl(closedIpUrl(raw), false);
   if (!inner) {
     return;
   }

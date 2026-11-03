@@ -3873,6 +3873,108 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(kept.event)).not.toContain("bit.ly");
   });
 
+  it("keeps a bare ip in a hidden draft", async () => {
+    const path = "offer236";
+    const address = "203.0.113.236";
+    const opened = await normalize({
+      update_id: 78135,
+      message: {
+        message_id: 78135,
+        date: 1761955200,
+        chat: { id: -1008366, type: "supergroup" },
+        from: { id: 236 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=${address}/${path}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual(["t.me", address]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+    const embedded = await normalize({
+      update_id: 78136,
+      message: {
+        message_id: 78136,
+        date: 1761955200,
+        chat: { id: -1008367, type: "supergroup" },
+        from: { id: 236 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=${address}/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toEqual(["t.me", address]);
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+    const buried = await normalize({
+      update_id: 78137,
+      message: {
+        message_id: 78137,
+        date: 1761955200,
+        chat: { id: -1008368, type: "supergroup" },
+        from: { id: 236 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://example.com/${address}/${path}`,
+          },
+        ],
+      },
+    });
+    expect(buried.status).toBe("event");
+    if (buried.status !== "event") {
+      return;
+    }
+    expect(buried.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(buried.event.message?.hosts ?? []).not.toContain(address);
+    expect(JSON.stringify(buried.event)).not.toContain(path);
+    const zero = await normalize({
+      update_id: 78138,
+      message: {
+        message_id: 78138,
+        date: 1761955200,
+        chat: { id: -1008369, type: "supergroup" },
+        from: { id: 236 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: "https://t.me/durov?text=0.0.0.1",
+          },
+        ],
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(zero.event)).not.toContain("0.0.0.1");
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
