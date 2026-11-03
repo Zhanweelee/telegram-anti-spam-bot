@@ -3665,5 +3665,45 @@
     "id": "addtheme-subdomain-post",
     "text": "https://addtheme.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer205",
     "label": "ham"
+  },
+  {
+    "id": "setlanguage-username",
+    "text": "https://t.me/setlanguage?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "spam"
+  },
+  {
+    "id": "setlanguage-resolve",
+    "text": "tg://resolve?domain=setlanguage&text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "spam"
+  },
+  {
+    "id": "setlanguage-prefix",
+    "text": "https://setlanguage.t.me?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "spam"
+  },
+  {
+    "id": "setlanguage-capital",
+    "text": "https://t.me/SetLanguage/lang206?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "spam"
+  },
+  {
+    "id": "setlanguage-trailing-slash",
+    "text": "https://t.me/setlanguage/lang206/?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "spam"
+  },
+  {
+    "id": "setlanguage-pack",
+    "text": "https://t.me/setlanguage/lang206?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "ham"
+  },
+  {
+    "id": "setlanguage-hyphen",
+    "text": "https://t.me/setlanguage/zh-hans?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "ham"
+  },
+  {
+    "id": "setlanguage-subdomain-post",
+    "text": "https://setlanguage.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer206",
+    "label": "ham"
   }
 ]

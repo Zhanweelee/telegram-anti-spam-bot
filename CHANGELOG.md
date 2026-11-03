@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-206
+
+- `t.me/setlanguage` 仍按用户名读取。后面是语言包短名时打开语言包，不读 `text`。见 ADR 0239。
+- `t.me/setlanguage?text=` 和 `t.me/SetLanguage/短名?text=` 里的短链仍删除。`t.me/setlanguage/短名?text=`、`t.me/setlanguage/zh-hans?text=` 和 `setlanguage.t.me/数字?text=` 留着。用户名和短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-205
 
 - `t.me/addtheme` 仍按用户名读取。后面是主题短名时打开主题，不读 `text`。见 ADR 0238。

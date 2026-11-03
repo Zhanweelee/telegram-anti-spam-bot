@@ -1722,6 +1722,65 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a setlanguage username draft and leaves a language pack", async () => {
+    const hidden = "offer206";
+    const slug = "lang206";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78056,
+      message: {
+        message_id: 78056,
+        date: 1761955200,
+        chat: { id: -1008287, type: "supergroup" },
+        from: { id: 206 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/setlanguage?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const pack = await normalize({
+      update_id: 78057,
+      message: {
+        message_id: 78057,
+        date: 1761955200,
+        chat: { id: -1008288, type: "supergroup" },
+        from: { id: 206 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/setlanguage/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(pack.status).toBe("event");
+    if (pack.status !== "event") {
+      return;
+    }
+    expect(pack.event.message?.hosts).toEqual(["t.me"]);
+    expect(pack.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(pack.event);
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
