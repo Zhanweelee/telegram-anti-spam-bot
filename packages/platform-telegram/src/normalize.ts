@@ -629,6 +629,46 @@ function openEncodedSlashBoundary(text: string): string {
   return text.replace(/%2F(?=\/)/gi, (mark) => `${mark} `);
 }
 
+/** 不在路径里的 `%2B` 留下两位十六进制，后面的主机名仍能以短链结尾。 */
+function openEncodedPlusHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (encodedPlusSplitsHost(text, index)) {
+      out += ` ${text.slice(index + 1, index + 3)}`;
+      index += 3;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedPlusSplitsHost(text: string, index: number): boolean {
+  if (text.slice(index, index + 3).toLowerCase() !== "%2b") {
+    return false;
+  }
+  if (text.charAt(index - 1) === "/") {
+    return false;
+  }
+  if (text.slice(index - 3, index).toLowerCase() === "%2f") {
+    return false;
+  }
+  const rest = text.slice(index + 3);
+  const scheme = rest.slice(0, 8).toLowerCase();
+  if (scheme.startsWith("https://") || scheme.startsWith("http://")) {
+    return false;
+  }
+  if (new RegExp(`^(?:${DRAFT_IP})(?![0-9.])`, "i").test(rest)) {
+    return true;
+  }
+  return new RegExp(
+    `^(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})(?![A-Za-z0-9_-])`,
+    "i",
+  ).test(rest);
+}
+
 /** 已经结束的主机名后面，`%2E` 不再收成点。紧挨协议的 `%2E` 仍交给粘连扫描。 */
 function openFinishedEncodedDot(text: string): string {
   let out = "";
@@ -702,7 +742,9 @@ function openedDraftUrls(text: string): string[] {
                   openDraftStops(
                     openStoppingSpace(
                       openFinishedEncodedDot(
-                        openEncodedSlashBoundary(foldBoundaryMark(text)),
+                        openEncodedSlashBoundary(
+                          openEncodedPlusHost(foldBoundaryMark(text)),
+                        ),
                       ),
                     ),
                   ),

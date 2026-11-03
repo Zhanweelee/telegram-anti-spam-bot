@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-260
+
+- 隐藏草稿在不处于路径里的 `%2B` 后面留下两位十六进制。见 ADR 0293。
+- `t.me/share/url?text=example.com%2Bwww.bit.ly/…` 删除。证据是 `2bwww.bit.ly`。`example.com%2Bbit.ly/…` 留着。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-259
 
 - 隐藏草稿在 `%2F` 后面紧挨字面斜杠时仍分开下一段。见 ADR 0292。
