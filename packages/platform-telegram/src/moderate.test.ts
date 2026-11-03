@@ -452,6 +452,39 @@ describe("telegram captcha transport", () => {
     ).toBeNull();
   });
 
+  it("opens default speaking permissions without a member id", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token,
+      fetchImpl: async (input, init) => {
+        calls.push({
+          method: String(input),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
+      },
+    });
+    await moderator.unlockChat({ tenantId: "local", chatId: "-100" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatPermissions`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      permissions?: Record<string, boolean>;
+      use_independent_chat_permissions?: boolean;
+    };
+    expect(body.use_independent_chat_permissions).toBe(true);
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).not.toContain("user_id");
+    expect(calls[0]?.body).not.toContain("until_date");
+    expect(Object.values(body.permissions ?? {})).toEqual(Array(16).fill(true));
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+  });
+
   it("closes default speaking permissions without a member id", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

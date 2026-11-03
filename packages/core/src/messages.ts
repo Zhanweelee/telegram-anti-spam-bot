@@ -94,6 +94,8 @@ export const messageKeys = [
   "command.unbansender.done",
   "command.lock.usage",
   "command.lock.done",
+  "command.unlock.usage",
+  "command.unlock.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -137,6 +139,7 @@ const syntax = [
   "/bansender <chatId> <senderChatId>",
   "/unbansender <chatId> <senderChatId>",
   "/lock <chatId>",
+  "/unlock <chatId>",
 ].join("\n");
 
 const zh = {
@@ -239,6 +242,9 @@ const zh = {
   "command.lock.usage": "用法：/lock <chatId>",
   "command.lock.done":
     "已关闭 {chatId} 的默认发言权限。管理员仍可发言。此状态会保持到重新设置权限",
+  "command.unlock.usage": "用法：/unlock <chatId>",
+  "command.unlock.done":
+    "已打开 {chatId} 的默认发言权限。这可能比锁定前更宽。单人禁言仍在",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -351,6 +357,9 @@ const en = {
   "command.lock.usage": "Usage: /lock <chatId>",
   "command.lock.done":
     "Closed default speaking permissions in {chatId}. Administrators can still speak. This stays until permissions are set again.",
+  "command.unlock.usage": "Usage: /unlock <chatId>",
+  "command.unlock.done":
+    "Opened default speaking permissions in {chatId}. This can be wider than before the lock. Individual mutes stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

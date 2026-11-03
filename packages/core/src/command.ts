@@ -78,6 +78,7 @@ const COMMAND_NAMES = [
   "bansender",
   "unbansender",
   "lock",
+  "unlock",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -120,6 +121,7 @@ export interface OperatorCommandInput {
       | "unbanActor"
       | "unbanSenderChat"
       | "unmuteActor"
+      | "unlockChat"
     >
   >;
   readonly scope?: CommandScope;
@@ -245,6 +247,8 @@ async function dispatch(
       return unbanSender(input, args);
     case "lock":
       return closeChat(input, args);
+    case "unlock":
+      return openChat(input, args);
   }
 }
 
@@ -982,6 +986,46 @@ function rejectLock(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "lock",
+  });
+}
+
+async function openChat(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.unlock.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const unlock = input.moderator?.unlockChat;
+  if (!unlock) {
+    rejectUnlock(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await unlock({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectUnlock(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unlock.done", { chatId });
+}
+
+function rejectUnlock(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unlock",
   });
 }
 
