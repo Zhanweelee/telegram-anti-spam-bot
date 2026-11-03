@@ -1028,6 +1028,102 @@ function draftEncodedBracketHex(raw: string): string | null {
   return null;
 }
 
+/**
+ * 带协议的主机名在多字节百分号前停下。
+ * 路径、用户信息、间隔和点状字符仍留在这一段。
+ */
+function openSchemedPercentHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const lookalike = encodedDotLookalikeLength(text, index);
+    if (lookalike > 0) {
+      out += text.slice(index, index + lookalike);
+      index += lookalike;
+      continue;
+    }
+    const byte = draftPercentByte(text, index);
+    if (
+      byte !== null &&
+      byte.byte >= 0x80 &&
+      draftEncodedGapLength(text, index) === 0 &&
+      schemedAuthorityAt(text, index)
+    ) {
+      out += " ";
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedDotLookalikeLength(text: string, index: number): number {
+  const first = draftPercentByte(text, index);
+  if (first === null) {
+    return 0;
+  }
+  const width = draftUtf8Width(first.byte);
+  if (width < 2) {
+    return 0;
+  }
+  const bytes = [first.byte];
+  let next = first.next;
+  for (let part = 1; part < width; part += 1) {
+    const byte = draftPercentByte(text, next);
+    if (byte === null || (byte.byte & 0xc0) !== 0x80) {
+      return 0;
+    }
+    bytes.push(byte.byte);
+    next = byte.next;
+  }
+  let char = "";
+  try {
+    char = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(
+      Uint8Array.from(bytes),
+    );
+  } catch {
+    return 0;
+  }
+  return DRAFT_DOT_LOOKALIKE.has(char.codePointAt(0) ?? -1) ? next - index : 0;
+}
+
+function schemedAuthorityAt(text: string, index: number): boolean {
+  let from = index;
+  while (from > 0) {
+    const head = text.slice(0, from).toLowerCase();
+    const https = head.lastIndexOf("https://");
+    const http = head.lastIndexOf("http://");
+    let scheme = -1;
+    let mark = 0;
+    if (https > http) {
+      scheme = https;
+      mark = 8;
+    } else if (http >= 0 && !(https >= 0 && http === https + 1)) {
+      scheme = http;
+      mark = 7;
+    } else if (https >= 0) {
+      scheme = https;
+      mark = 8;
+    }
+    if (scheme < 0) {
+      return false;
+    }
+    if (scheme > 0 && /[A-Za-z0-9_]/.test(text.charAt(scheme - 1))) {
+      from = scheme;
+      continue;
+    }
+    const authority = text.slice(scheme + mark, index);
+    if (/[/?#\s]/.test(authority)) {
+      return false;
+    }
+    const rest = text.slice(index);
+    const end = rest.search(/[/?#\s]/);
+    const tail = end === -1 ? rest : rest.slice(0, end);
+    return !tail.includes("@");
+  }
+  return false;
+}
+
 /** 已经结束的主机名后面，`%2E` 留下两位十六进制。紧挨协议的 `%2E` 仍交给粘连扫描。 */
 function openFinishedEncodedDot(text: string): string {
   let out = "";
@@ -1102,12 +1198,16 @@ function openedDraftUrls(text: string): string[] {
                     openEncodedBracketHost(
                       openStoppingSpace(
                         openFinishedEncodedDot(
-                          openEncodedSlashBoundary(
-                            openEncodedSlashHost(
-                              openEncodedHyphenHost(
-                                openEncodedPlusHost(
-                                  openEncodedHostBody(
-                                    openEncodedGapHost(foldBoundaryMark(text)),
+                          openSchemedPercentHost(
+                            openEncodedSlashBoundary(
+                              openEncodedSlashHost(
+                                openEncodedHyphenHost(
+                                  openEncodedPlusHost(
+                                    openEncodedHostBody(
+                                      openEncodedGapHost(
+                                        foldBoundaryMark(text),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
