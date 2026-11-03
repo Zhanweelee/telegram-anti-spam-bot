@@ -624,6 +624,54 @@ function markInsideAuthority(raw: string): boolean {
   return false;
 }
 
+/** 已经结束的主机名后面，`%2E` 不再收成点。紧挨协议的 `%2E` 仍交给粘连扫描。 */
+function openFinishedEncodedDot(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (
+      text.slice(index, index + 3).toLowerCase() === "%2e" &&
+      !encodedDotBeforeScheme(text, index + 3) &&
+      encodedDotAfterHost(out)
+    ) {
+      out += " ";
+      index += 3;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedDotBeforeScheme(text: string, index: number): boolean {
+  const next = text.slice(index, index + 8).toLowerCase();
+  return next.startsWith("https://") || next.startsWith("http://");
+}
+
+function encodedDotAfterHost(out: string): boolean {
+  let host = out;
+  const scheme = host.toLowerCase().lastIndexOf("://");
+  if (scheme >= 0) {
+    host = host.slice(scheme + 3);
+  }
+  const at = host.lastIndexOf("@");
+  if (at >= 0) {
+    host = host.slice(at + 1);
+  }
+  if (/[/?#\s]/.test(host)) {
+    return false;
+  }
+  host = host.replace(/:\d{1,5}$/, "");
+  if (new RegExp(`^(?:${DRAFT_IP})$`, "i").test(host)) {
+    return true;
+  }
+  return new RegExp(
+    `^(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})$`,
+    "i",
+  ).test(host);
+}
+
 /** 路径或问号已经开始后，单引号仍属于这一段。 */
 function pathStarted(raw: string): boolean {
   const scheme = raw.indexOf("://");
@@ -646,7 +694,11 @@ function openedDraftUrls(text: string): string[] {
             openLookalikeHost(
               openLongLabel(
                 openLongUserinfo(
-                  openDraftStops(openStoppingSpace(foldBoundaryMark(text))),
+                  openDraftStops(
+                    openStoppingSpace(
+                      openFinishedEncodedDot(foldBoundaryMark(text)),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -2250,7 +2302,11 @@ function pushClosedUrl(
         openSchemeLetter(
           openLookalikeHost(
             openLongLabel(
-              openLongUserinfo(openStoppingSpace(foldBoundaryMark(raw))),
+              openLongUserinfo(
+                openStoppingSpace(
+                  openFinishedEncodedDot(foldBoundaryMark(raw)),
+                ),
+              ),
             ),
           ),
         ),

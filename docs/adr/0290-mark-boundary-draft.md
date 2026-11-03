@@ -36,3 +36,4 @@ Android 的单词边界会跳过非间距组合附加符号。`example.com`、`w
 - 同一段再写 `https://t.me/+…` 不记成邀请。
 - `example.com` 加符号再写 `/http://bit.ly/…`，以及符号开头的 `http://bit.ly/…`，按短链删除。路径不进证据。
 - `http://example.com` 加符号再写短链，以及 `example.com/` 加符号再写短链，留着。
+- 已经结束的主机名后面紧挨 `%2E` 时，隐藏草稿仍把这段收成点，短链不再是原来的主机名。见 ADR 0291。

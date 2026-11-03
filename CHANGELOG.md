@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-258
+
+- 隐藏草稿在已经结束的主机名后面不再把 `%2E` 收成点。见 ADR 0291。
+- `t.me/share/url?text=http://bit.ly%2Eevil.example/…` 删除。`example.com%2Ehttp://bit.ly/…` 留着。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-257
 
 - 隐藏草稿不再把组合附加符号当成单词边界。见 ADR 0290。
