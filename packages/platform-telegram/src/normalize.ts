@@ -1727,7 +1727,6 @@ const reservedUsernames = new Set([
   "getpremium",
   "iv",
   "joinchat",
-  "login",
   "m",
   "msg",
   "newbot",

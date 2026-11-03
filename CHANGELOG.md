@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-211
+
+- `t.me/login` 仍按用户名读取。登录码和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0244。
+- `t.me/login?text=`、`t.me/login/code211?text=` 和 `t.me/login/5?text=` 里的短链删除。再多一段路径和 `login.t.me/短名` 留着。用户名和登录码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-210
 
 - `t.me/contact` 仍按用户名读取。后面是联系人令牌时打开联系人，不读 `text`。见 ADR 0243。

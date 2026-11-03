@@ -3875,5 +3875,55 @@
     "id": "contact-subdomain-post",
     "text": "https://contact.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer210",
     "label": "ham"
+  },
+  {
+    "id": "login-username",
+    "text": "https://t.me/login?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-resolve",
+    "text": "tg://resolve?domain=login&text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-prefix",
+    "text": "https://login.t.me?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-capital",
+    "text": "https://t.me/Login/code211?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-slash",
+    "text": "https://t.me/login/?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-code",
+    "text": "https://t.me/login/code211?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-post",
+    "text": "https://t.me/login/5?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-subdomain-post",
+    "text": "https://login.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "spam"
+  },
+  {
+    "id": "login-extra",
+    "text": "https://t.me/login/code211/extra?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "ham"
+  },
+  {
+    "id": "login-subdomain-name",
+    "text": "https://login.t.me/code211?text=https%3A%2F%2Fbit.ly%2Foffer211",
+    "label": "ham"
   }
 ]
