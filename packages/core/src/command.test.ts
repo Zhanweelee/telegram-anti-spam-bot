@@ -3367,6 +3367,148 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("deletes one forum topic and the messages inside it", async () => {
+    const deps = kit();
+    const seen: { chatId: string; threadId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async deleteMessages() {
+          throw new Error("called");
+        },
+        async deleteTopic(target) {
+          seen.push({ chatId: target.chatId, threadId: target.threadId });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求删除 -100 话题 55 和里面的消息。其它话题不在这次里",
+    });
+    expect(seen).toEqual([{ chatId: "-100", threadId: "55" }]);
+    const numbered = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic(target) {
+          seen.push({ chatId: target.chatId, threadId: target.threadId });
+        },
+      },
+      ...kit(),
+    });
+    expect(numbered).toMatchObject({
+      text: "已请求删除 -100 话题 1 和里面的消息。其它话题不在这次里",
+    });
+    expect(seen[1]).toEqual({ chatId: "-100", threadId: "1" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/deltopic <chatId> <threadId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async deleteTopic() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to delete topic 55 of -100 and the messages inside it. Other topics are not part of this call.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 55", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/deltopic -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/deltopic <chatId> <threadId>",
+    });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/deltopic -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const zero = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(zero).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/deltopic -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteTopic() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"deltopic"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/deltopic -200 55", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteTopic() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

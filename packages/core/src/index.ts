@@ -183,6 +183,7 @@ export {
   type MemberStanding,
   type ModerationPort,
   type MuteTarget,
+  type NamedForumTopicTarget,
   type PermissionState,
   parseAuditQuery,
   parseAuditRecord,

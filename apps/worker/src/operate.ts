@@ -100,6 +100,9 @@ function commandModerator(
     async showGeneral() {
       throw new Error("showgeneral_unavailable");
     },
+    async deleteTopic() {
+      throw new Error("deltopic_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

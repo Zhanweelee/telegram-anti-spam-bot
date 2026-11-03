@@ -111,6 +111,7 @@ function moderator(
     async openTopic() {},
     async hideGeneral() {},
     async showGeneral() {},
+    async deleteTopic() {},
   };
 }
 
