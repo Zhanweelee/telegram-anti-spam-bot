@@ -92,6 +92,7 @@ const COMMAND_NAMES = [
   "admins",
   "untopic",
   "closetopic",
+  "opentopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -134,6 +135,7 @@ export interface OperatorCommandInput {
       | "deleteMessages"
       | "lockChat"
       | "muteActor"
+      | "openTopic"
       | "readAdministrators"
       | "readMember"
       | "readPermissions"
@@ -287,6 +289,8 @@ async function dispatch(
       return clearTopicPins(input, args);
     case "closetopic":
       return closeForum(input, args);
+    case "opentopic":
+      return openForum(input, args);
   }
 }
 
@@ -1423,6 +1427,58 @@ function rejectClose(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "closetopic",
+  });
+}
+
+async function openForum(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1 && args.length !== 2) {
+    return say(input, "command.opentopic.usage");
+  }
+  const chatId = args[0];
+  const threadId = args[1];
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    (threadId !== undefined && !isMessageId(threadId))
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const open = input.moderator?.openTopic;
+  if (!open) {
+    rejectOpen(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await open({
+      tenantId: input.event.tenantId,
+      chatId,
+      ...(threadId === undefined ? {} : { threadId }),
+    });
+  } catch {
+    rejectOpen(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    threadId === undefined
+      ? "command.opentopic.done"
+      : "command.opentopic.done.thread",
+    { chatId, threadId: threadId ?? "" },
+  );
+}
+
+function rejectOpen(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "opentopic",
   });
 }
 

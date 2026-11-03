@@ -36,6 +36,15 @@ describe("operator command example", () => {
     expect(help).toContain("/admins");
     expect(help).toContain("/untopic");
     expect(help).toContain("/closetopic");
+    expect(help).toContain("/opentopic");
+    const openedGeneral = await runPrivateCommand({
+      text: "/opentopic -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(openedGeneral).toBe(
+      "已请求重新打开 -100 的通用话题。原先隐藏的话会重新显示。消息还在。其它话题不在这次里",
+    );
     const closedGeneral = await runPrivateCommand({
       text: "/closetopic -100",
       actorId: "42",

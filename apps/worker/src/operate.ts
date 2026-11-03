@@ -91,6 +91,9 @@ function commandModerator(
     async closeTopic() {
       throw new Error("closetopic_unavailable");
     },
+    async openTopic() {
+      throw new Error("opentopic_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

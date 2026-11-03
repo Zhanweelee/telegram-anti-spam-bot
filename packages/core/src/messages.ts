@@ -154,6 +154,9 @@ export const messageKeys = [
   "command.closetopic.usage",
   "command.closetopic.done",
   "command.closetopic.done.thread",
+  "command.opentopic.usage",
+  "command.opentopic.done",
+  "command.opentopic.done.thread",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -206,6 +209,7 @@ const syntax = [
   "/admins <chatId>",
   "/untopic <chatId> [threadId]",
   "/closetopic <chatId> [threadId]",
+  "/opentopic <chatId> [threadId]",
 ].join("\n");
 
 const zh = {
@@ -376,6 +380,11 @@ const zh = {
     "已请求关闭 {chatId} 的通用话题。消息还在。其它话题不在这次里",
   "command.closetopic.done.thread":
     "已请求关闭 {chatId} 话题 {threadId}。消息还在",
+  "command.opentopic.usage": "用法：/opentopic <chatId> [threadId]",
+  "command.opentopic.done":
+    "已请求重新打开 {chatId} 的通用话题。原先隐藏的话会重新显示。消息还在。其它话题不在这次里",
+  "command.opentopic.done.thread":
+    "已请求重新打开 {chatId} 话题 {threadId}。消息还在",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -558,6 +567,11 @@ const en = {
     "Asked to close the General topic of {chatId}. The messages stay. Other topics are not part of this call.",
   "command.closetopic.done.thread":
     "Asked to close topic {threadId} of {chatId}. The messages stay.",
+  "command.opentopic.usage": "Usage: /opentopic <chatId> [threadId]",
+  "command.opentopic.done":
+    "Asked to reopen the General topic of {chatId}. It is shown again if it was hidden. The messages stay. Other topics are not part of this call.",
+  "command.opentopic.done.thread":
+    "Asked to reopen topic {threadId} of {chatId}. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
