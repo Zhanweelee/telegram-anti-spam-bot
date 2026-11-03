@@ -123,5 +123,68 @@ export function bindCaptchaStoreContract(create: () => CaptchaStore): void {
       });
       expect(await store.get("tenant_a", "chat_1", "user_2")).toBeNull();
     });
+
+    it("attaches a prompt id only while the nonce matches", async () => {
+      const store = create();
+      const challenge = {
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+        actorId: "user_1",
+        nonce: "ab".repeat(8),
+        expiresAt: "2026-11-01T00:05:00.000Z",
+      };
+      expect(
+        await store.attachPrompt(
+          "tenant_a",
+          "chat_1",
+          "user_1",
+          challenge.nonce,
+          "42",
+        ),
+      ).toBe(false);
+      await store.put(challenge);
+      expect(
+        await store.attachPrompt(
+          "tenant_a",
+          "chat_1",
+          "user_1",
+          "cd".repeat(8),
+          "42",
+        ),
+      ).toBe(false);
+      expect(
+        await store.attachPrompt(
+          "tenant_a",
+          "chat_1",
+          "user_1",
+          challenge.nonce,
+          "0",
+        ),
+      ).toBe(false);
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toEqual(
+        challenge,
+      );
+      expect(
+        await store.attachPrompt(
+          "tenant_a",
+          "chat_1",
+          "user_1",
+          challenge.nonce,
+          "42",
+        ),
+      ).toBe(true);
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toEqual({
+        ...challenge,
+        messageId: "42",
+      });
+      await store.put({ ...challenge, nonce: "cd".repeat(8) });
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toEqual({
+        ...challenge,
+        nonce: "cd".repeat(8),
+      });
+      expect(
+        await store.take("tenant_a", "chat_1", "user_1", "cd".repeat(8)),
+      ).toEqual({ ...challenge, nonce: "cd".repeat(8) });
+    });
   });
 }

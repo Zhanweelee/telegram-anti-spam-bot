@@ -31,6 +31,46 @@ describe("d1 storage", () => {
     );
   });
 
+  it("adds the captcha prompt column to a table created without it", async () => {
+    const db = openSqlite();
+    await db
+      .prepare(
+        `CREATE TABLE captcha_challenges (
+          tenant_id TEXT NOT NULL,
+          chat_id TEXT NOT NULL,
+          actor_id TEXT NOT NULL,
+          nonce TEXT NOT NULL,
+          expires_at TEXT NOT NULL,
+          PRIMARY KEY (tenant_id, chat_id, actor_id)
+        )`,
+      )
+      .run();
+    await applyStorageMigrations(db);
+    await applyStorageMigrations(db);
+    const store = createD1CaptchaStore(db);
+    const challenge = {
+      tenantId: "tenant_a",
+      chatId: "chat_1",
+      actorId: "user_1",
+      nonce: "ab".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+    };
+    await store.put(challenge);
+    expect(
+      await store.attachPrompt(
+        "tenant_a",
+        "chat_1",
+        "user_1",
+        challenge.nonce,
+        "42",
+      ),
+    ).toBe(true);
+    expect(await store.get("tenant_a", "chat_1", "user_1")).toEqual({
+      ...challenge,
+      messageId: "42",
+    });
+  });
+
   it("applies the migration twice and then stores a rule set", async () => {
     const db = openSqlite();
     await applyStorageMigrations(db);

@@ -77,6 +77,12 @@ export async function handleIncomingEvent(
           release: (target) => moderator.releaseActor(target),
           clock: deps.clock ?? createSystemClock(),
           logger,
+          removePrompt: (target) =>
+            moderator.deleteMessage({
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+            }),
         },
       });
     } catch {
@@ -174,8 +180,9 @@ export async function handleIncomingEvent(
   if (!challenge) {
     return;
   }
+  let messageId: string | null;
   try {
-    await sendCaptchaButton({
+    messageId = await sendCaptchaButton({
       token: deps.botToken,
       chatId: event.chatId,
       nonce: challenge.nonce,
@@ -198,6 +205,47 @@ export async function handleIncomingEvent(
         return;
       }
     }
+    logger.warn("captcha_prompt_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+    return;
+  }
+  if (messageId === null) {
+    return;
+  }
+  try {
+    const attached = await captchaStore.attachPrompt(
+      event.tenantId,
+      event.chatId,
+      event.actor.id,
+      challenge.nonce,
+      messageId,
+    );
+    let dropId: string | undefined;
+    if (!attached) {
+      dropId = messageId;
+    } else if (
+      challenge.messageId !== undefined &&
+      challenge.messageId !== messageId
+    ) {
+      dropId = challenge.messageId;
+    }
+    if (dropId !== undefined) {
+      try {
+        await moderator.deleteMessage({
+          tenantId: event.tenantId,
+          chatId: event.chatId,
+          messageId: dropId,
+        });
+      } catch {
+        logger.warn("captcha_prompt_delete_failed", {
+          eventId: event.id,
+          chatId: event.chatId,
+        });
+      }
+    }
+  } catch {
     logger.warn("captcha_prompt_failed", {
       eventId: event.id,
       chatId: event.chatId,

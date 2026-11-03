@@ -40,5 +40,6 @@ CREATE TABLE IF NOT EXISTS captcha_challenges (
   actor_id TEXT NOT NULL,
   nonce TEXT NOT NULL,
   expires_at TEXT NOT NULL,
+  message_id TEXT,
   PRIMARY KEY (tenant_id, chat_id, actor_id)
 );

@@ -77,6 +77,7 @@ export const storageMigrationStatements = [
   actor_id TEXT NOT NULL,
   nonce TEXT NOT NULL,
   expires_at TEXT NOT NULL,
+  message_id TEXT,
   PRIMARY KEY (tenant_id, chat_id, actor_id)
 )`,
 ] as const;
@@ -185,13 +186,14 @@ WHERE tenant_id = ? AND chat_id = ?
 ORDER BY created_at ASC, event_id ASC`;
 
 const upsertCaptchaSql = `INSERT INTO captcha_challenges (
-  tenant_id, chat_id, actor_id, nonce, expires_at
-) VALUES (?, ?, ?, ?, ?)
+  tenant_id, chat_id, actor_id, nonce, expires_at, message_id
+) VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(tenant_id, chat_id, actor_id) DO UPDATE SET
   nonce = excluded.nonce,
-  expires_at = excluded.expires_at`;
+  expires_at = excluded.expires_at,
+  message_id = excluded.message_id`;
 
-const readCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at
+const readCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at, message_id
 FROM captcha_challenges
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 
@@ -203,13 +205,23 @@ WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?`;
 
 const takeCaptchaSql = `DELETE FROM captcha_challenges
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?
-RETURNING tenant_id, chat_id, actor_id, nonce, expires_at`;
+RETURNING tenant_id, chat_id, actor_id, nonce, expires_at, message_id`;
 
-const listDueCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at
+const attachCaptchaSql = `UPDATE captcha_challenges
+SET message_id = ?
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?`;
+
+const listDueCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at, message_id
 FROM captcha_challenges
 WHERE expires_at <= ?
 ORDER BY expires_at ASC
 LIMIT 64`;
+
+const captchaColumnsSql =
+  "SELECT name FROM pragma_table_info('captcha_challenges')";
+
+const addCaptchaMessageIdSql =
+  "ALTER TABLE captcha_challenges ADD COLUMN message_id TEXT";
 
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
 
@@ -235,6 +247,7 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
           parsed.actorId,
           parsed.nonce,
           expiresAt,
+          parsed.messageId ?? null,
         )
         .run();
     },
@@ -293,6 +306,19 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
       }
       return taken;
     },
+    async attachPrompt(tenantId, chatId, actorId, nonce, messageId) {
+      await migrationsFor(db);
+      const parsed =
+        captchaChallengeSchema.shape.messageId.safeParse(messageId);
+      if (!parsed.success || parsed.data === undefined) {
+        return false;
+      }
+      const result = await db
+        .prepare(attachCaptchaSql)
+        .bind(parsed.data, tenantId, chatId, actorId, nonce)
+        .run();
+      return readChanges(result) >= 1;
+    },
     async listExpired(nowIso) {
       await migrationsFor(db);
       const stamp = Date.parse(nowIso);
@@ -320,12 +346,18 @@ function readCaptcha(row: unknown): CaptchaChallenge | null {
     return null;
   }
   const record = row as Record<string, unknown>;
+  const messageId = captchaChallengeSchema.shape.messageId.safeParse(
+    record.message_id,
+  );
   const parsed = captchaChallengeSchema.safeParse({
     tenantId: record.tenant_id,
     chatId: record.chat_id,
     actorId: record.actor_id,
     nonce: record.nonce,
     expiresAt: record.expires_at,
+    ...(messageId.success && messageId.data !== undefined
+      ? { messageId: messageId.data }
+      : {}),
   });
   return parsed.success ? parsed.data : null;
 }
@@ -333,6 +365,11 @@ function readCaptcha(row: unknown): CaptchaChallenge | null {
 export async function applyStorageMigrations(db: SqlDatabase): Promise<void> {
   for (const statement of storageMigrationStatements) {
     await db.prepare(statement).run();
+  }
+  const rows = await db.prepare(captchaColumnsSql).all();
+  const names = (rows.results ?? []).map((row) => row.name);
+  if (!names.includes("message_id")) {
+    await db.prepare(addCaptchaMessageIdSql).run();
   }
 }
 

@@ -42,6 +42,9 @@ function store(): CaptchaStore {
     async takeMany() {
       return [];
     },
+    async attachPrompt() {
+      return false;
+    },
     async listExpired() {
       return [];
     },

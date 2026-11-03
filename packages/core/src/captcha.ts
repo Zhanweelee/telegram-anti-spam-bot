@@ -14,6 +14,7 @@ const isoSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/);
 const nonceSchema = z.string().regex(/^[a-f0-9]{16}$/);
+const messageIdSchema = z.string().regex(/^[1-9][0-9]{0,15}$/);
 
 export const captchaChallengeSchema = z.strictObject({
   tenantId: z.string().min(1),
@@ -21,6 +22,7 @@ export const captchaChallengeSchema = z.strictObject({
   actorId: z.string().min(1).max(128),
   nonce: nonceSchema,
   expiresAt: isoSchema,
+  messageId: messageIdSchema.optional(),
 });
 
 export type CaptchaChallenge = z.output<typeof captchaChallengeSchema>;
@@ -47,7 +49,24 @@ export interface CaptchaStore {
   takeMany(
     challenges: readonly CaptchaChallenge[],
   ): Promise<readonly CaptchaChallenge[]>;
+  /**
+   * Stores the prompt message id while the nonce still matches.
+   * A different nonce, a missing row, or a bad id leaves the row unchanged.
+   */
+  attachPrompt(
+    tenantId: string,
+    chatId: string,
+    actorId: string,
+    nonce: string,
+    messageId: string,
+  ): Promise<boolean>;
   listExpired(nowIso: string): Promise<readonly CaptchaChallenge[]>;
+}
+
+export interface CaptchaPromptTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly messageId: string;
 }
 
 export interface CaptchaPorts {
@@ -57,6 +76,7 @@ export interface CaptchaPorts {
   readonly release: (target: BanTarget) => Promise<void>;
   readonly clock: Clock;
   readonly logger: Logger;
+  readonly removePrompt?: (target: CaptchaPromptTarget) => Promise<void>;
 }
 
 export function parseCaptchaChallenge(input: unknown): CaptchaChallenge {
@@ -188,6 +208,7 @@ export async function resolveChallenge(input: {
     eventId: input.event.id,
     chatId: input.event.chatId,
   });
+  await forgetPrompt(taken, input.ports, input.event.id);
   return "passed";
 }
 
@@ -207,10 +228,12 @@ export async function expireChallenges(ports: CaptchaPorts): Promise<number> {
     ),
   );
   for (const challenge of taken) {
+    const eventId = expiredEventId(challenge);
     ports.logger.info("captcha_expired", {
-      eventId: expiredEventId(challenge),
+      eventId,
       chatId: challenge.chatId,
     });
+    await forgetPrompt(challenge, ports, eventId);
   }
   return taken.length;
 }
@@ -228,6 +251,31 @@ async function expireTaken(
     eventId,
     chatId: challenge.chatId,
   });
+  await forgetPrompt(challenge, ports, eventId);
+}
+
+async function forgetPrompt(
+  challenge: CaptchaChallenge,
+  ports: CaptchaPorts,
+  eventId: string,
+): Promise<void> {
+  const messageId = challenge.messageId;
+  const removePrompt = ports.removePrompt;
+  if (!messageId || !removePrompt) {
+    return;
+  }
+  try {
+    await removePrompt({
+      tenantId: challenge.tenantId,
+      chatId: challenge.chatId,
+      messageId,
+    });
+  } catch {
+    ports.logger.warn("captcha_prompt_delete_failed", {
+      eventId,
+      chatId: challenge.chatId,
+    });
+  }
 }
 
 function expiryAudit(
