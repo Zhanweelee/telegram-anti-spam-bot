@@ -76,6 +76,9 @@ describe("delete action", () => {
           async unmuteActor() {
             return "lifted" as const;
           },
+          async readMember() {
+            return { status: "member" as const };
+          },
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -129,6 +132,9 @@ describe("delete action", () => {
         async unbanActor() {},
         async unmuteActor() {
           return "lifted" as const;
+        },
+        async readMember() {
+          return { status: "member" as const };
         },
       },
       logger: { info() {}, warn() {}, error() {} },
@@ -185,6 +191,9 @@ describe("delete action", () => {
         async unbanActor() {},
         async unmuteActor() {
           return "lifted" as const;
+        },
+        async readMember() {
+          return { status: "member" as const };
         },
       },
       logger: { info() {}, warn() {}, error() {} },
@@ -243,6 +252,9 @@ function ports(): ModerationPort & {
     async unbanActor() {},
     async unmuteActor() {
       return "lifted" as const;
+    },
+    async readMember() {
+      return { status: "member" as const };
     },
   };
 }

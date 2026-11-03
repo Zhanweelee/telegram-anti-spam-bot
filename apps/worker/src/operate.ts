@@ -55,6 +55,9 @@ function commandModerator(
     async muteActor() {
       throw new Error("mute_unavailable");
     },
+    async readMember() {
+      throw new Error("member_unavailable");
+    },
   };
 }
 

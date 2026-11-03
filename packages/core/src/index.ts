@@ -172,6 +172,7 @@ export {
   type DeleteTarget,
   fitAuditExportDocument,
   type JoinTarget,
+  type MemberStanding,
   type ModerationPort,
   type MuteTarget,
   parseAuditQuery,
