@@ -5722,6 +5722,76 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(broken.event)).not.toContain(path);
   });
 
+  it("keeps the host before a division slash in a hidden draft", async () => {
+    const path = "offer247";
+    const slash = "\u2215";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 247 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const plain = await draft(
+      78241,
+      -1008473,
+      `http://bit.ly${slash}@example.com/${path}`,
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toContain("bit.ly");
+    expect(plain.event.message?.hosts).toContain("example.com");
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+
+    const comma = await draft(78242, -1008474, "http://bit.ly，广告");
+    expect(comma.status).toBe("event");
+    if (comma.status !== "event") {
+      return;
+    }
+    expect(comma.event.message?.hosts ?? []).not.toContain("bit.ly");
+
+    const embedded = await normalize({
+      update_id: 78243,
+      message: {
+        message_id: 78243,
+        date: 1761955200,
+        chat: { id: -1008475, type: "supergroup" },
+        from: { id: 247 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://bit.ly${slash}@example.com/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(embedded.event.message?.hosts).toContain("example.com");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

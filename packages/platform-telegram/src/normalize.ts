@@ -1815,11 +1815,22 @@ function pushClosedUrl(
     hostFromUrl(raw, false) ??
     hostFromUrl(closedIpUrl(raw), false) ??
     hostFromUrl(closedBareUrl(raw), false);
-  if (!inner) {
+  if (inner) {
+    found.push({ host: inner.host, invite: inner.invite });
+    for (const extra of inner.extras ?? []) {
+      found.push(extra);
+    }
+  }
+  const span = androidUrlSpan(raw);
+  if (span === null) {
     return;
   }
-  found.push({ host: inner.host, invite: inner.invite });
-  for (const extra of inner.extras ?? []) {
+  const shortened = hostFromUrl(span, false);
+  if (!shortened) {
+    return;
+  }
+  found.push({ host: shortened.host, invite: shortened.invite });
+  for (const extra of shortened.extras ?? []) {
     found.push(extra);
   }
 }
