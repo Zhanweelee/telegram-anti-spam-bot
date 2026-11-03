@@ -629,6 +629,55 @@ function openEncodedSlashBoundary(text: string): string {
   return text.replace(/%2F(?=\/)/gi, (mark) => `${mark} `);
 }
 
+/** 不在路径里的 `%2D` 和 `%252D` 留下十六进制，后面的主机名仍能以短链结尾。 */
+function openEncodedHyphenHost(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const taken = encodedHyphenHostMark(text, index);
+    if (taken > 0) {
+      out += ` ${text.slice(index + 1, index + taken)}`;
+      index += taken;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedHyphenHostMark(text: string, index: number): number {
+  const five = text.slice(index, index + 5).toLowerCase();
+  const three = text.slice(index, index + 3).toLowerCase();
+  const taken = five === "%252d" ? 5 : three === "%2d" ? 3 : 0;
+  if (taken === 0) {
+    return 0;
+  }
+  if (text.charAt(index - 1) === "/") {
+    return 0;
+  }
+  if (text.slice(index - 3, index).toLowerCase() === "%2f") {
+    return 0;
+  }
+  const rest = text.slice(index + taken);
+  const scheme = rest.slice(0, 8).toLowerCase();
+  if (scheme.startsWith("https://") || scheme.startsWith("http://")) {
+    return 0;
+  }
+  if (new RegExp(`^(?:${DRAFT_IP})(?![0-9.])`, "i").test(rest)) {
+    return taken;
+  }
+  if (
+    new RegExp(
+      `^(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})(?![A-Za-z0-9_-])`,
+      "i",
+    ).test(rest)
+  ) {
+    return taken;
+  }
+  return 0;
+}
+
 /** 贴在字面主机名前面的 `%2F` 留下两位十六进制，短链后缀仍对得上。 */
 function openEncodedSlashHost(text: string): string {
   let out = "";
@@ -781,7 +830,9 @@ function openedDraftUrls(text: string): string[] {
                       openFinishedEncodedDot(
                         openEncodedSlashBoundary(
                           openEncodedSlashHost(
-                            openEncodedPlusHost(foldBoundaryMark(text)),
+                            openEncodedHyphenHost(
+                              openEncodedPlusHost(foldBoundaryMark(text)),
+                            ),
                           ),
                         ),
                       ),
