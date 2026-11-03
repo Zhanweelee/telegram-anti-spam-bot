@@ -88,6 +88,9 @@ describe("delete action", () => {
           async readPermissions() {
             throw new Error("perms_unavailable");
           },
+          async readAdministrators() {
+            throw new Error("admins_unavailable");
+          },
           async clearReactions() {},
           async revokeInvite() {},
           async unpinChat() {},
@@ -156,6 +159,9 @@ describe("delete action", () => {
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
+        },
+        async readAdministrators() {
+          throw new Error("admins_unavailable");
         },
         async clearReactions() {},
         async revokeInvite() {},
@@ -227,6 +233,9 @@ describe("delete action", () => {
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
+        },
+        async readAdministrators() {
+          throw new Error("admins_unavailable");
         },
         async clearReactions() {},
         async revokeInvite() {},
@@ -300,6 +309,9 @@ function ports(): ModerationPort & {
     },
     async readPermissions() {
       throw new Error("perms_unavailable");
+    },
+    async readAdministrators() {
+      throw new Error("admins_unavailable");
     },
     async clearReactions() {},
     async revokeInvite() {},

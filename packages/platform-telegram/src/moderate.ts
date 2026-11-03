@@ -1,5 +1,7 @@
 import type {
+  AdministratorRight,
   BanTarget,
+  ChatAdministrator,
   DefaultChatPermissions,
   MemberStanding,
   ModerationPort,
@@ -246,6 +248,20 @@ export function createTelegramModerator(input: {
         },
       });
       return readDefaultPermissions(chat);
+    },
+    async readAdministrators(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChatAdministrators",
+        fetchImpl: input.fetchImpl,
+        missing: "admins_unavailable",
+        failed: "admins_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          return_bots: true,
+        },
+      });
+      return administratorList(chat);
     },
     async clearReactions(target) {
       await postTelegram({
@@ -561,6 +577,86 @@ function readDefaultPermissions(body: unknown): DefaultChatPermissions {
     pinMessages: state(pin),
     manageTopics: state(flag("can_manage_topics"), pin),
   };
+}
+
+const administratorFields = [
+  ["can_manage_chat", "manageChat"],
+  ["can_delete_messages", "deleteMessages"],
+  ["can_manage_video_chats", "manageVideoChats"],
+  ["can_restrict_members", "restrictMembers"],
+  ["can_promote_members", "promoteMembers"],
+  ["can_change_info", "changeInfo"],
+  ["can_invite_users", "inviteUsers"],
+  ["can_post_stories", "postStories"],
+  ["can_edit_stories", "editStories"],
+  ["can_delete_stories", "deleteStories"],
+  ["can_post_messages", "postMessages"],
+  ["can_edit_messages", "editMessages"],
+  ["can_pin_messages", "pinMessages"],
+  ["can_manage_topics", "manageTopics"],
+  ["can_manage_direct_messages", "manageDirectMessages"],
+  ["can_manage_tags", "manageTags"],
+  ["can_send_welcome_messages", "sendWelcomeMessages"],
+] as const satisfies ReadonlyArray<readonly [string, AdministratorRight]>;
+
+function administratorList(body: unknown): ChatAdministrator[] {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("admins_failed");
+  }
+  const result = body.result;
+  if (!Array.isArray(result)) {
+    throw new Error("admins_failed");
+  }
+  return result.map((item) => oneAdministrator(item));
+}
+
+function oneAdministrator(item: unknown): ChatAdministrator {
+  if (typeof item !== "object" || item === null || Array.isArray(item)) {
+    throw new Error("admins_failed");
+  }
+  const record = item as Record<string, unknown>;
+  const role = record.status;
+  if (role !== "creator" && role !== "administrator") {
+    throw new Error("admins_failed");
+  }
+  const user = record.user;
+  if (typeof user !== "object" || user === null || Array.isArray(user)) {
+    throw new Error("admins_failed");
+  }
+  const profile = user as Record<string, unknown>;
+  const actorId = administratorId(profile.id);
+  if (actorId === undefined) {
+    throw new Error("admins_failed");
+  }
+  return {
+    actorId,
+    bot: profile.is_bot === true,
+    role,
+    anonymous: record.is_anonymous === true,
+    rights: role === "creator" ? [] : turnedOnRights(record),
+  };
+}
+
+function administratorId(id: unknown): string | undefined {
+  if (typeof id === "number" && Number.isSafeInteger(id) && id > 0) {
+    return String(id);
+  }
+  if (typeof id === "string" && /^[1-9]\d{0,15}$/.test(id)) {
+    return id;
+  }
+  return undefined;
+}
+
+function turnedOnRights(
+  record: Record<string, unknown>,
+): readonly AdministratorRight[] {
+  const rights: AdministratorRight[] = [];
+  for (const [field, right] of administratorFields) {
+    if (record[field] === true) {
+      rights.push(right);
+    }
+  }
+  return rights;
 }
 
 function chatResult(body: unknown): Record<string, unknown> {

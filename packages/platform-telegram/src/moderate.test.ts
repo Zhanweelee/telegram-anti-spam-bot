@@ -501,6 +501,153 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("lists administrators and drops names", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            {
+              status: "creator",
+              user: {
+                id: 42,
+                is_bot: true,
+                first_name: phrase,
+                username: "spam_bot",
+              },
+              is_anonymous: true,
+              custom_title: phrase,
+              can_delete_messages: true,
+            },
+            {
+              status: "administrator",
+              user: { id: 77, is_bot: false, first_name: phrase },
+              can_be_edited: true,
+              is_anonymous: false,
+              can_delete_messages: true,
+              can_restrict_members: false,
+              can_invite_users: true,
+              can_pin_messages: true,
+              custom_title: phrase,
+            },
+            {
+              status: "administrator",
+              user: { id: 88, is_bot: true, first_name: phrase },
+              can_be_edited: true,
+              can_manage_chat: true,
+              can_delete_messages: true,
+              can_manage_video_chats: true,
+              can_restrict_members: true,
+              can_promote_members: true,
+              can_change_info: true,
+              can_invite_users: true,
+              can_post_stories: true,
+              can_edit_stories: true,
+              can_delete_stories: true,
+              can_post_messages: true,
+              can_edit_messages: true,
+              can_pin_messages: true,
+              can_manage_topics: true,
+              can_manage_direct_messages: true,
+              can_manage_tags: true,
+              can_send_welcome_messages: true,
+              custom_title: phrase,
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const admins = await moderator.readAdministrators({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChatAdministrators`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      return_bots?: boolean;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.return_bots).toBe(true);
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    expect(JSON.stringify(admins)).not.toContain(phrase);
+    expect(JSON.stringify(admins)).not.toContain("spam_bot");
+    expect(admins).toEqual([
+      {
+        actorId: "42",
+        bot: true,
+        role: "creator",
+        anonymous: true,
+        rights: [],
+      },
+      {
+        actorId: "77",
+        bot: false,
+        role: "administrator",
+        anonymous: false,
+        rights: ["deleteMessages", "inviteUsers", "pinMessages"],
+      },
+      {
+        actorId: "88",
+        bot: true,
+        role: "administrator",
+        anonymous: false,
+        rights: [
+          "manageChat",
+          "deleteMessages",
+          "manageVideoChats",
+          "restrictMembers",
+          "promoteMembers",
+          "changeInfo",
+          "inviteUsers",
+          "postStories",
+          "editStories",
+          "deleteStories",
+          "postMessages",
+          "editMessages",
+          "pinMessages",
+          "manageTopics",
+          "manageDirectMessages",
+          "manageTags",
+          "sendWelcomeMessages",
+        ],
+      },
+    ]);
+    called = false;
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { title: phrase } }),
+            {
+              status: 200,
+            },
+          ),
+      }).readAdministrators({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("admins_failed");
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readAdministrators({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("admins_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

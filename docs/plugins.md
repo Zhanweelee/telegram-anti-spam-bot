@@ -89,6 +89,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/unpin <chatId>` 调用 `unpinChat`。配了 token 时使用 `unpinAllChatMessages`，只带群号。消息还在。话题里的置顶不在这次里。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经撤下。不删消息，也不改黑名单、封禁或禁言。见 ADR 0378。
 
+`/admins <chatId>` 调用 `readAdministrators`。配了 token 时使用 `getChatAdministrators`，并带上 `return_bots`。回复只有编号、是否机器人、创建者或管理员、匿名，以及标成 true 的权限。姓名、用户名和自定义头衔不进回复。创建者不展开权限。放不下时保留前面的若干人并写上剩下的个数。没有 token 或调用失败时回复「参数无效」。不改黑名单、封禁或禁言。见 ADR 0379。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

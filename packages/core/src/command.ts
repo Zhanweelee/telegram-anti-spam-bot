@@ -8,7 +8,7 @@ import type { ChatDirectory } from "./chats.js";
 import type { Event } from "./event.js";
 import { fitFeedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
-import type { Locale } from "./messages.js";
+import type { Locale, MessageKey } from "./messages.js";
 import { translate } from "./messages.js";
 import {
   defaultPrefilterPolicy,
@@ -17,9 +17,12 @@ import {
 } from "./policy-load.js";
 import type { PolicyStore } from "./policy-store.js";
 import {
+  type AdministratorRight,
   type AuditRecord,
   type AuditScope,
+  administratorRights,
   auditExportDocument,
+  type ChatAdministrator,
   type DefaultChatPermissions,
   fitAuditExportDocument,
   type MemberStanding,
@@ -86,6 +89,7 @@ const COMMAND_NAMES = [
   "clearreact",
   "revoke",
   "unpin",
+  "admins",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -127,6 +131,7 @@ export interface OperatorCommandInput {
       | "deleteMessages"
       | "lockChat"
       | "muteActor"
+      | "readAdministrators"
       | "readMember"
       | "readPermissions"
       | "revokeInvite"
@@ -272,6 +277,8 @@ async function dispatch(
       return revokeChatInvite(input, args);
     case "unpin":
       return unpinAll(input, args);
+    case "admins":
+      return showAdministrators(input, args);
   }
 }
 
@@ -999,6 +1006,130 @@ function permissionStateKey(state: PermissionState): string {
     return "command.switch.off";
   }
   return "command.perms.unknown";
+}
+
+const administratorLabels = {
+  manageChat: "command.admins.manage_chat",
+  deleteMessages: "command.admins.delete_messages",
+  manageVideoChats: "command.admins.manage_video_chats",
+  restrictMembers: "command.admins.restrict_members",
+  promoteMembers: "command.admins.promote_members",
+  changeInfo: "command.admins.change_info",
+  inviteUsers: "command.admins.invite_users",
+  postStories: "command.admins.post_stories",
+  editStories: "command.admins.edit_stories",
+  deleteStories: "command.admins.delete_stories",
+  postMessages: "command.admins.post_messages",
+  editMessages: "command.admins.edit_messages",
+  pinMessages: "command.admins.pin_messages",
+  manageTopics: "command.admins.manage_topics",
+  manageDirectMessages: "command.admins.manage_direct_messages",
+  manageTags: "command.admins.manage_tags",
+  sendWelcomeMessages: "command.admins.send_welcome_messages",
+} as const satisfies Record<AdministratorRight, MessageKey>;
+
+async function showAdministrators(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.admins.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readAdministrators;
+  if (!read) {
+    rejectAdministrators(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const admins = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+    return describeAdministrators(input, chatId, admins);
+  } catch {
+    rejectAdministrators(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function describeAdministrators(
+  input: OperatorCommandInput,
+  chatId: string,
+  admins: readonly ChatAdministrator[],
+): string {
+  const header = say(input, "command.admins.header", { chatId });
+  if (admins.length === 0) {
+    return `${header}\n${say(input, "command.admins.empty")}`;
+  }
+  return fitAdministratorLines(
+    header,
+    admins.map((admin) => administratorLine(input, admin)),
+    (count) => say(input, "command.admins.more", { count }),
+  );
+}
+
+function administratorLine(
+  input: OperatorCommandInput,
+  admin: ChatAdministrator,
+): string {
+  const parts = [admin.actorId];
+  if (admin.bot) {
+    parts.push(say(input, "command.admins.bot"));
+  }
+  parts.push(
+    say(
+      input,
+      admin.role === "creator"
+        ? "command.admins.creator"
+        : "command.admins.administrator",
+    ),
+  );
+  if (admin.anonymous) {
+    parts.push(say(input, "command.admins.anonymous"));
+  }
+  for (const right of administratorRights) {
+    if (admin.rights.includes(right)) {
+      parts.push(say(input, administratorLabels[right]));
+    }
+  }
+  return parts.join(" ");
+}
+
+function fitAdministratorLines(
+  header: string,
+  lines: readonly string[],
+  more: (count: number) => string,
+): string {
+  const full = [header, ...lines].join("\n");
+  if (full.length <= EXPORT_REPLY_LIMIT) {
+    return full;
+  }
+  for (let kept = lines.length - 1; kept >= 0; kept -= 1) {
+    const tail = more(lines.length - kept);
+    const body =
+      kept === 0 ? tail : `${lines.slice(0, kept).join("\n")}\n${tail}`;
+    const text = `${header}\n${body}`;
+    if (text.length <= EXPORT_REPLY_LIMIT) {
+      return text;
+    }
+  }
+  return `${header}\n${more(lines.length)}`;
+}
+
+function rejectAdministrators(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "admins",
+  });
 }
 
 function rejectPermissions(input: OperatorCommandInput): void {

@@ -2425,6 +2425,185 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("lists administrators by id and turned-on rights", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const text = [
+      "admins -100",
+      "42 机器人 创建者 匿名",
+      "77 管理员 删除 邀请 置顶",
+    ].join("\n");
+    const done = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators(target) {
+          seen.push(target.chatId);
+          return [
+            {
+              actorId: "42",
+              bot: true,
+              role: "creator",
+              anonymous: true,
+              rights: [],
+            },
+            {
+              actorId: "77",
+              bot: false,
+              role: "administrator",
+              anonymous: false,
+              rights: ["deleteMessages", "inviteUsers", "pinMessages"],
+            },
+          ];
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text });
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    expect(seen).toEqual(["-100"]);
+    const empty = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          return [];
+        },
+      },
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "admins -100\nnone" });
+    const many = Array.from({ length: 400 }, (_, index) => ({
+      actorId: `9${String(index).padStart(5, "0")}`,
+      bot: false,
+      role: "administrator" as const,
+      anonymous: false,
+      rights: ["deleteMessages"] as const,
+    }));
+    const fitted = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          return many;
+        },
+      },
+      ...kit(),
+    });
+    expect(fitted.status).toBe("reply");
+    if (fitted.status === "reply") {
+      expect(fitted.text.length).toBeLessThanOrEqual(3500);
+      expect(fitted.text).toContain("900000");
+      expect(fitted.text).toContain("+");
+      expect(fitted.text).not.toContain("900399");
+    }
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/admins <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readAdministrators() {
+          return [
+            {
+              actorId: "42",
+              bot: true,
+              role: "creator",
+              anonymous: true,
+              rights: [],
+            },
+            {
+              actorId: "77",
+              bot: false,
+              role: "administrator",
+              anonymous: false,
+              rights: ["deleteMessages", "inviteUsers", "pinMessages"],
+            },
+          ];
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: [
+        "admins -100",
+        "42 bot creator anonymous",
+        "77 administrator delete invite pin",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/admins -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/admins", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/admins <chatId>" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/admins ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"admins"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/admins -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readAdministrators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

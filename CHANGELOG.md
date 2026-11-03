@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-347
+
+- 私聊 `/admins` 用 `getChatAdministrators` 回报管理员编号和已经打开的权限。
+- 姓名和自定义头衔不进回复。没有 token 或调用失败时回复「参数无效」。见 ADR 0379。
+- 30 天保留期没有改。
+
 ### P3-346
 
 - 私聊 `/unpin` 用 `unpinAllChatMessages` 撤下一群的全部置顶。

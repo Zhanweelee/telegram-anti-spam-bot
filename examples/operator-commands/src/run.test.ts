@@ -33,6 +33,7 @@ describe("operator command example", () => {
     expect(help).toContain("/clearreact");
     expect(help).toContain("/revoke");
     expect(help).toContain("/unpin");
+    expect(help).toContain("/admins");
     const unpinned = await runPrivateCommand({
       text: "/unpin -100",
       actorId: "42",
@@ -59,6 +60,12 @@ describe("operator command example", () => {
     expect(reactionReply).toBe(
       "已请求清除 77 在 -100 的最近反应。一万条以前的可能还在",
     );
+    const admins = await runPrivateCommand({
+      text: "/admins -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(admins).toBe("参数无效");
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",
