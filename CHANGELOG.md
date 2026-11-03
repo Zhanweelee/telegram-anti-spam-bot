@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-205
+
+- `t.me/addtheme` 仍按用户名读取。后面是主题短名时打开主题，不读 `text`。见 ADR 0238。
+- `t.me/addtheme?text=`、`t.me/addtheme/theme-now?text=` 和 `t.me/AddTheme/短名?text=` 里的短链仍删除。`t.me/addtheme/短名?text=` 和 `addtheme.t.me/数字?text=` 留着。用户名和短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-204
 
 - `t.me/addstickers` 仍按用户名读取。后面是贴纸包短名时打开贴纸包，不读 `text`。见 ADR 0237。

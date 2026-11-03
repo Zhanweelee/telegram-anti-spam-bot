@@ -1716,6 +1716,110 @@ describe("link fixtures", () => {
     expect(JSON.stringify(numeric)).not.toContain(hidden);
   });
 
+  it("reads an addtheme username draft and leaves a theme slug", async () => {
+    const hidden = "offer205";
+    const slug = "theme205";
+    const address = "203.0.113.205";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/addtheme?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://addtheme.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=addtheme&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("addtheme");
+    const hyphenated = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/theme-now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenated?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(hyphenated)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/AddTheme/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const trailed = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/${slug}/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const set = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(set).toBeNull();
+    expect(JSON.stringify(set)).not.toContain(hidden);
+    expect(JSON.stringify(set)).not.toContain(slug);
+    const dotted = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/theme.now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted).toBeNull();
+    const underscored = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/theme_now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(underscored).toBeNull();
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/addtheme/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post).toBeNull();
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/addtheme/${slug}?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/addtheme/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    expect(JSON.stringify(me)).not.toContain(address);
+    const numeric = await detector.detect({
+      event: eventFor(`https://addtheme.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    expect(JSON.stringify(numeric)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

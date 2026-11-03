@@ -3620,5 +3620,50 @@
     "id": "addstickers-subdomain-post",
     "text": "https://addstickers.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer204",
     "label": "ham"
+  },
+  {
+    "id": "addtheme-username",
+    "text": "https://t.me/addtheme?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-resolve",
+    "text": "tg://resolve?domain=addtheme&text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-prefix",
+    "text": "https://addtheme.t.me?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-hyphen",
+    "text": "https://t.me/addtheme/theme-now?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-capital",
+    "text": "https://t.me/AddTheme/theme205?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-trailing-slash",
+    "text": "https://t.me/addtheme/theme205/?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "spam"
+  },
+  {
+    "id": "addtheme-slug",
+    "text": "https://t.me/addtheme/theme205?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "ham"
+  },
+  {
+    "id": "addtheme-dotted",
+    "text": "https://t.me/addtheme/theme.now?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "ham"
+  },
+  {
+    "id": "addtheme-subdomain-post",
+    "text": "https://addtheme.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer205",
+    "label": "ham"
   }
 ]
