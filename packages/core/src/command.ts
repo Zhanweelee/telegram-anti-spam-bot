@@ -419,13 +419,18 @@ async function showLogs(
   }
   const records = await input.storage.listAudits(
     chatId === undefined
-      ? { tenantId: input.event.tenantId, limit: LOG_LIMIT }
-      : { tenantId: input.event.tenantId, chatId, limit: LOG_LIMIT },
+      ? { tenantId: input.event.tenantId, limit: LOG_LIMIT + 1 }
+      : { tenantId: input.event.tenantId, chatId, limit: LOG_LIMIT + 1 },
   );
   if (records.length === 0) {
     return say(input, "command.logs.empty");
   }
-  return records.map((record) => formatAudit(input, record)).join("\n");
+  const page = records.length > LOG_LIMIT ? records.slice(-LOG_LIMIT) : records;
+  const body = page.map((record) => formatAudit(input, record)).join("\n");
+  if (records.length > LOG_LIMIT) {
+    return `${body}\n${say(input, "command.logs.more")}`;
+  }
+  return body;
 }
 
 async function exportAudits(

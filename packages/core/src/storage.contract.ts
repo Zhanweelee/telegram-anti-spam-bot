@@ -84,7 +84,7 @@ export function bindStorageContract(create: () => Storage): void {
       ).toBeNull();
     });
 
-    it("lists audits oldest first for that tenant and chat", async () => {
+    it("lists the newest audits for that tenant and chat", async () => {
       const storage = create();
       await storage.appendAudit(record);
       await storage.appendAudit({ ...record, eventId: "evt_2" });
@@ -99,25 +99,25 @@ export function bindStorageContract(create: () => Storage): void {
         eventId: "evt_3",
         messageId: "msg_3",
       });
+      const newest = {
+        ...record,
+        chatId: "chat_2",
+        eventId: "evt_3",
+        messageId: "msg_3",
+      };
       expect(
         await storage.listAudits({ tenantId: "tenant_a", limit: 10 }),
-      ).toEqual([
-        record,
-        { ...record, eventId: "evt_2" },
-        {
-          ...record,
-          chatId: "chat_2",
-          eventId: "evt_3",
-          messageId: "msg_3",
-        },
-      ]);
+      ).toEqual([record, { ...record, eventId: "evt_2" }, newest]);
+      expect(
+        await storage.listAudits({ tenantId: "tenant_a", limit: 2 }),
+      ).toEqual([{ ...record, eventId: "evt_2" }, newest]);
       expect(
         await storage.listAudits({
           tenantId: "tenant_a",
           chatId: "chat_1",
           limit: 1,
         }),
-      ).toEqual([record]);
+      ).toEqual([{ ...record, eventId: "evt_2" }]);
       expect(
         await storage.listAudits({
           tenantId: "tenant_a",
@@ -229,9 +229,13 @@ export function bindStorageContract(create: () => Storage): void {
       expect(exported).toHaveLength(101);
       expect(exported[0]?.eventId).toBe("evt_0");
       expect(exported[100]?.eventId).toBe("evt_100");
-      expect(
-        await storage.listAudits({ tenantId: "tenant_a", limit: 100 }),
-      ).toHaveLength(100);
+      const page = await storage.listAudits({
+        tenantId: "tenant_a",
+        limit: 100,
+      });
+      expect(page).toHaveLength(100);
+      expect(page[0]?.eventId).toBe("evt_1");
+      expect(page[99]?.eventId).toBe("evt_100");
     });
   });
 }

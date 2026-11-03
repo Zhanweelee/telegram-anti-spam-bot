@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-296
+
+- 私聊 `/logs` 列出最近 10 条审计，时间从早到晚。还有更早的记录时，回复指向 `/export`。
+- `listAudits` 返回最近的一页。导出仍从最早的一行开始。见 ADR 0329。
+- 正好 10 条或更少时不写这一行。空范围仍是 `no audits`。额度和 30 天保留期没有改。
+
 ### P3-295
 
 - Cron 清理到期挑战时先 `putAuditsIfAbsent`，再 `deleteMany`。一次仍最多 64 条。

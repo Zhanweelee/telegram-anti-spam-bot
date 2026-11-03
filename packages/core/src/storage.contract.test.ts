@@ -30,9 +30,8 @@ function createReferenceStorage(): Storage {
     },
     async listAudits(query) {
       const parsed = parseAuditQuery(query);
-      return records
-        .filter((record) => inScope(record, parsed))
-        .slice(0, parsed.limit);
+      const matched = records.filter((record) => inScope(record, parsed));
+      return matched.slice(Math.max(0, matched.length - parsed.limit));
     },
     async getAudit(tenantId, chatId, eventId) {
       return (
