@@ -1,8 +1,10 @@
 import type {
   BanTarget,
+  DefaultChatPermissions,
   MemberStanding,
   ModerationPort,
   MuteTarget,
+  PermissionState,
   UnmuteResult,
 } from "@tasb/core";
 import { telegramId } from "./ids.js";
@@ -232,6 +234,19 @@ export function createTelegramModerator(input: {
       });
       return readStanding(member);
     },
+    async readPermissions(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "perms_unavailable",
+        failed: "perms_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readDefaultPermissions(chat);
+    },
     async restrictActor(target) {
       await postTelegram({
         token: input.token,
@@ -442,6 +457,69 @@ function silencedUntil(
     until_date: nowSeconds() + restrictionSeconds(target.durationSeconds),
     use_independent_chat_permissions: true,
   };
+}
+
+function readDefaultPermissions(body: unknown): DefaultChatPermissions {
+  const permissions = chatResult(body).permissions;
+  if (
+    typeof permissions !== "object" ||
+    permissions === null ||
+    Array.isArray(permissions)
+  ) {
+    throw new Error("perms_failed");
+  }
+  const raw = permissions as Record<string, unknown>;
+  const flag = (key: string): boolean | undefined => {
+    if (!Object.hasOwn(raw, key) || raw[key] === undefined) {
+      return undefined;
+    }
+    const value = raw[key];
+    if (typeof value !== "boolean") {
+      throw new Error("perms_failed");
+    }
+    return value;
+  };
+  const state = (
+    value: boolean | undefined,
+    fallback?: boolean,
+  ): PermissionState => {
+    const chosen = value ?? fallback;
+    if (chosen === undefined) {
+      return "unknown";
+    }
+    return chosen ? "on" : "off";
+  };
+  const messages = flag("can_send_messages");
+  const pin = flag("can_pin_messages");
+  return {
+    sendMessages: state(messages),
+    sendAudios: state(flag("can_send_audios")),
+    sendDocuments: state(flag("can_send_documents")),
+    sendPhotos: state(flag("can_send_photos")),
+    sendVideos: state(flag("can_send_videos")),
+    sendVideoNotes: state(flag("can_send_video_notes")),
+    sendVoiceNotes: state(flag("can_send_voice_notes")),
+    sendPolls: state(flag("can_send_polls")),
+    sendOtherMessages: state(flag("can_send_other_messages")),
+    addWebPagePreviews: state(flag("can_add_web_page_previews")),
+    reactToMessages: state(flag("can_react_to_messages"), messages),
+    editTag: state(flag("can_edit_tag"), pin),
+    changeInfo: state(flag("can_change_info")),
+    inviteUsers: state(flag("can_invite_users")),
+    pinMessages: state(pin),
+    manageTopics: state(flag("can_manage_topics"), pin),
+  };
+}
+
+function chatResult(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("perms_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("perms_failed");
+  }
+  return result as Record<string, unknown>;
 }
 
 function readStanding(body: unknown): MemberStanding {

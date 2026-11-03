@@ -161,6 +161,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readMember() {
       return { status: "member" as const };
     },
+    async readPermissions() {
+      throw new Error("perms_unavailable");
+    },
   };
   return {
     records,

@@ -330,6 +330,89 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("unmute_unavailable");
   });
 
+  it("reads default speaking permissions and drops the chat title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            description: phrase,
+            permissions: {
+              can_send_messages: true,
+              can_pin_messages: false,
+              can_react_to_messages: false,
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const permissions = await moderator.readPermissions({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).not.toContain("user_id");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    expect(JSON.stringify(permissions)).not.toContain(phrase);
+    expect(permissions).toEqual({
+      sendMessages: "on",
+      sendAudios: "unknown",
+      sendDocuments: "unknown",
+      sendPhotos: "unknown",
+      sendVideos: "unknown",
+      sendVideoNotes: "unknown",
+      sendVoiceNotes: "unknown",
+      sendPolls: "unknown",
+      sendOtherMessages: "unknown",
+      addWebPagePreviews: "unknown",
+      reactToMessages: "off",
+      editTag: "off",
+      changeInfo: "unknown",
+      inviteUsers: "unknown",
+      pinMessages: "off",
+      manageTopics: "off",
+    });
+    called = false;
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "channel", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readPermissions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("perms_failed");
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl,
+      }).readPermissions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("perms_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("deletes several messages in one call", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

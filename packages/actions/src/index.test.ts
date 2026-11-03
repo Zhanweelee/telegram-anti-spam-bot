@@ -85,6 +85,9 @@ describe("delete action", () => {
           async readMember() {
             return { status: "member" as const };
           },
+          async readPermissions() {
+            throw new Error("perms_unavailable");
+          },
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -147,6 +150,9 @@ describe("delete action", () => {
         },
         async readMember() {
           return { status: "member" as const };
+        },
+        async readPermissions() {
+          throw new Error("perms_unavailable");
         },
       },
       logger: { info() {}, warn() {}, error() {} },
@@ -212,6 +218,9 @@ describe("delete action", () => {
         },
         async readMember() {
           return { status: "member" as const };
+        },
+        async readPermissions() {
+          throw new Error("perms_unavailable");
         },
       },
       logger: { info() {}, warn() {}, error() {} },
@@ -279,6 +288,9 @@ function ports(): ModerationPort & {
     },
     async readMember() {
       return { status: "member" as const };
+    },
+    async readPermissions() {
+      throw new Error("perms_unavailable");
     },
   };
 }

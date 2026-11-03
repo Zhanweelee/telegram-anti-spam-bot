@@ -20,10 +20,12 @@ import {
   type AuditRecord,
   type AuditScope,
   auditExportDocument,
+  type DefaultChatPermissions,
   fitAuditExportDocument,
   type MemberStanding,
   type ModerationPort,
   minimumAuditExportLength,
+  type PermissionState,
   type Storage,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
@@ -80,6 +82,7 @@ const COMMAND_NAMES = [
   "unbansender",
   "lock",
   "unlock",
+  "perms",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -121,6 +124,7 @@ export interface OperatorCommandInput {
       | "lockChat"
       | "muteActor"
       | "readMember"
+      | "readPermissions"
       | "unbanActor"
       | "unbanSenderChat"
       | "unmuteActor"
@@ -254,6 +258,8 @@ async function dispatch(
       return closeChat(input, args);
     case "unlock":
       return openChat(input, args);
+    case "perms":
+      return showPermissions(input, args);
   }
 }
 
@@ -903,6 +909,91 @@ function rejectMember(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "member",
+  });
+}
+
+const permissionLines = [
+  ["command.perms.send_messages", "sendMessages"],
+  ["command.perms.send_audios", "sendAudios"],
+  ["command.perms.send_documents", "sendDocuments"],
+  ["command.perms.send_photos", "sendPhotos"],
+  ["command.perms.send_videos", "sendVideos"],
+  ["command.perms.send_video_notes", "sendVideoNotes"],
+  ["command.perms.send_voice_notes", "sendVoiceNotes"],
+  ["command.perms.send_polls", "sendPolls"],
+  ["command.perms.send_other_messages", "sendOtherMessages"],
+  ["command.perms.add_web_page_previews", "addWebPagePreviews"],
+  ["command.perms.react_to_messages", "reactToMessages"],
+  ["command.perms.edit_tag", "editTag"],
+  ["command.perms.change_info", "changeInfo"],
+  ["command.perms.invite_users", "inviteUsers"],
+  ["command.perms.pin_messages", "pinMessages"],
+  ["command.perms.manage_topics", "manageTopics"],
+] as const satisfies ReadonlyArray<
+  readonly [string, keyof DefaultChatPermissions]
+>;
+
+async function showPermissions(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.perms.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readPermissions;
+  if (!read) {
+    rejectPermissions(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const permissions = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+    return describePermissions(input, chatId, permissions);
+  } catch {
+    rejectPermissions(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function describePermissions(
+  input: OperatorCommandInput,
+  chatId: string,
+  permissions: DefaultChatPermissions,
+): string {
+  const lines = [say(input, "command.perms.header", { chatId })];
+  for (const [label, field] of permissionLines) {
+    lines.push(
+      `${say(input, label)} ${say(input, permissionStateKey(permissions[field]))}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function permissionStateKey(state: PermissionState): string {
+  if (state === "on") {
+    return "command.switch.on";
+  }
+  if (state === "off") {
+    return "command.switch.off";
+  }
+  return "command.perms.unknown";
+}
+
+function rejectPermissions(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "perms",
   });
 }
 

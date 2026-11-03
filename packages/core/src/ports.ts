@@ -91,6 +91,27 @@ export interface ChatTarget {
   readonly chatId: string;
 }
 
+export type PermissionState = "on" | "off" | "unknown";
+
+export interface DefaultChatPermissions {
+  readonly sendMessages: PermissionState;
+  readonly sendAudios: PermissionState;
+  readonly sendDocuments: PermissionState;
+  readonly sendPhotos: PermissionState;
+  readonly sendVideos: PermissionState;
+  readonly sendVideoNotes: PermissionState;
+  readonly sendVoiceNotes: PermissionState;
+  readonly sendPolls: PermissionState;
+  readonly sendOtherMessages: PermissionState;
+  readonly addWebPagePreviews: PermissionState;
+  readonly reactToMessages: PermissionState;
+  readonly editTag: PermissionState;
+  readonly changeInfo: PermissionState;
+  readonly inviteUsers: PermissionState;
+  readonly pinMessages: PermissionState;
+  readonly manageTopics: PermissionState;
+}
+
 export interface SenderChatTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -122,6 +143,7 @@ export interface ModerationPort {
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
+  readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
   declineJoin(target: JoinTarget): Promise<void>;
   approveJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
