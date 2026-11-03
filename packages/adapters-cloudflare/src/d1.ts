@@ -125,10 +125,18 @@ const countAuditsSql =
 const countAuditsInChatSql =
   "SELECT COUNT(*) AS total FROM audits WHERE tenant_id = ? AND chat_id = ?";
 
-const deleteAuditsSql = "DELETE FROM audits WHERE tenant_id = ?";
+const deletePageSize = 1000;
 
-const deleteAuditsInChatSql =
-  "DELETE FROM audits WHERE tenant_id = ? AND chat_id = ?";
+const deletePageBudget = 32;
+
+const deleteAuditsSql = `DELETE FROM audits WHERE rowid IN (
+  SELECT rowid FROM audits WHERE tenant_id = ? LIMIT ${deletePageSize}
+)`;
+
+const deleteAuditsInChatSql = `DELETE FROM audits WHERE rowid IN (
+  SELECT rowid FROM audits
+  WHERE tenant_id = ? AND chat_id = ? LIMIT ${deletePageSize}
+)`;
 
 const exportPageSize = 100;
 
@@ -469,14 +477,22 @@ export function createD1Storage(db: SqlDatabase): Storage {
     async deleteAudits(scope) {
       await migrationsFor(db);
       const parsed = parseAuditScope(scope);
-      const result =
-        parsed.chatId === undefined
-          ? await db.prepare(deleteAuditsSql).bind(parsed.tenantId).run()
-          : await db
-              .prepare(deleteAuditsInChatSql)
-              .bind(parsed.tenantId, parsed.chatId)
-              .run();
-      return readChanges(result);
+      let removed = 0;
+      for (let page = 0; page < deletePageBudget; page += 1) {
+        const result =
+          parsed.chatId === undefined
+            ? await db.prepare(deleteAuditsSql).bind(parsed.tenantId).run()
+            : await db
+                .prepare(deleteAuditsInChatSql)
+                .bind(parsed.tenantId, parsed.chatId)
+                .run();
+        const changes = readChanges(result);
+        removed += changes;
+        if (changes < deletePageSize) {
+          return removed;
+        }
+      }
+      return removed;
     },
     async getRuleSet(tenantId, chatId) {
       await migrationsFor(db);

@@ -1163,6 +1163,96 @@ describe("runOperatorCommand", () => {
     expect(page.text).not.toContain(phrase);
   });
 
+  it("says how many audits remain when a forget page stops early", async () => {
+    const audit = {
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_1",
+      action: "delete" as const,
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword" as const, summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    const deps = kit();
+    await deps.storage.appendAudit(audit);
+    await deps.storage.appendAudit({ ...audit, eventId: "evt_2" });
+    deps.storage.deleteAudits = async (scope) => {
+      const index = deps.storage.records.findIndex(
+        (record) =>
+          record.tenantId === scope.tenantId &&
+          (scope.chatId === undefined || record.chatId === scope.chatId),
+      );
+      if (index >= 0) {
+        deps.storage.records.splice(index, 1);
+      }
+      return 1;
+    };
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "已删除 1 条，还剩 1 条" });
+    expect(deps.storage.records).toHaveLength(1);
+
+    const english = kit();
+    await english.storage.appendAudit(audit);
+    await english.storage.appendAudit({ ...audit, eventId: "evt_2" });
+    english.storage.deleteAudits = async (scope) => {
+      const index = english.storage.records.findIndex(
+        (record) =>
+          record.tenantId === scope.tenantId &&
+          (scope.chatId === undefined || record.chatId === scope.chatId),
+      );
+      if (index >= 0) {
+        english.storage.records.splice(index, 1);
+      }
+      return 1;
+    };
+    const translated = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...english,
+    });
+    expect(translated).toMatchObject({
+      text: "Deleted 1, 1 remaining",
+    });
+  });
+
+  it("does not count leftovers when forget fails", async () => {
+    const deps = kit();
+    await deps.storage.appendAudit({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_1",
+      action: "delete",
+      score: 1,
+      reasons: ["keyword_match"],
+      evidence: [{ kind: "keyword", summary: "keyword:spam" }],
+      ruleIds: ["spam_keywords"],
+      createdAt: "2026-11-01T00:00:00Z",
+    });
+    let counted = 0;
+    const countAudits = deps.storage.countAudits.bind(deps.storage);
+    deps.storage.countAudits = async (scope) => {
+      counted += 1;
+      return countAudits(scope);
+    };
+    deps.storage.deleteAudits = () => Promise.reject(new Error(phrase));
+    const forgotten = await runOperatorCommand({
+      event: event({ text: "/forget -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(forgotten).toMatchObject({ text: "参数无效" });
+    expect(counted).toBe(0);
+    expect(deps.storage.records).toHaveLength(1);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
   it("forgets a chat without reading the audit rows", async () => {
     const deps = kit();
     await deps.storage.appendAudit({

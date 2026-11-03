@@ -553,6 +553,10 @@ async function forgetAudits(
   }
   try {
     const removed = await input.storage.deleteAudits(scope);
+    const left = await input.storage.countAudits(scope);
+    if (left > 0) {
+      return say(input, "command.forget.remaining", { count: removed, left });
+    }
     return say(input, "command.forget.deleted", { count: removed });
   } catch {
     input.logger.warn("operator_rejected", {

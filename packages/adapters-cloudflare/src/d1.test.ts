@@ -231,6 +231,86 @@ describe("d1 storage", () => {
     ).rejects.toThrow("audit_count_missing");
   });
 
+  it("deletes one chat in pages of 1000 and leaves the rest", async () => {
+    const statements: string[] = [];
+    const storage = createD1Storage(recordingSqlite(statements));
+    const audit = {
+      tenantId: "tenant_a",
+      chatId: "chat_1",
+      eventId: "evt_0",
+      action: "log" as const,
+      score: 0,
+      reasons: [],
+      evidence: [],
+      ruleIds: [],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    for (let index = 0; index < 1001; index += 1) {
+      await storage.appendAudit({ ...audit, eventId: `evt_${index}` });
+    }
+    await storage.appendAudit({
+      ...audit,
+      chatId: "chat_2",
+      eventId: "evt_other",
+    });
+    await storage.appendAudit({
+      ...audit,
+      tenantId: "tenant_b",
+      eventId: "evt_b",
+    });
+    statements.length = 0;
+    expect(
+      await storage.deleteAudits({ tenantId: "tenant_a", chatId: "chat_1" }),
+    ).toBe(1001);
+    expect(statements).toHaveLength(2);
+    expect(statements.every((sql) => sql.includes("LIMIT 1000"))).toBe(true);
+    expect(statements.every((sql) => sql.includes("chat_id"))).toBe(true);
+    expect(
+      await storage.countAudits({ tenantId: "tenant_a", chatId: "chat_1" }),
+    ).toBe(0);
+    expect(
+      await storage.countAudits({ tenantId: "tenant_a", chatId: "chat_2" }),
+    ).toBe(1);
+    expect(await storage.countAudits({ tenantId: "tenant_b" })).toBe(1);
+  });
+
+  it("stops a tenant delete after 32 full pages", async () => {
+    const statements: string[] = [];
+    let deletes = 0;
+    const db: SqlDatabase = {
+      prepare(sql) {
+        statements.push(sql);
+        const prepared: SqlPrepared = {
+          bind() {
+            return prepared;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            if (sql.startsWith("DELETE")) {
+              deletes += 1;
+              return { meta: { changes: 1000 } };
+            }
+            return {};
+          },
+        };
+        return prepared;
+      },
+      batch(statementsToRun) {
+        return runEach(statementsToRun);
+      },
+    };
+    expect(
+      await createD1Storage(db).deleteAudits({ tenantId: "tenant_a" }),
+    ).toBe(32_000);
+    expect(deletes).toBe(32);
+    const deleted = statements.filter((sql) => sql.startsWith("DELETE"));
+    expect(deleted).toHaveLength(32);
+    expect(deleted.every((sql) => sql.includes("LIMIT 1000"))).toBe(true);
+    expect(deleted.every((sql) => sql.includes("chat_id"))).toBe(false);
+  });
+
   it("rejects a delete result that does not report a count", async () => {
     const db: SqlDatabase = {
       prepare() {
@@ -340,6 +420,19 @@ describe("d1 storage", () => {
     expect(await storage.getRuleSet("tenant_a", "chat_1")).toBeNull();
   });
 });
+
+function recordingSqlite(statements: string[]): SqlDatabase {
+  const db = openSqlite();
+  return {
+    prepare(sql) {
+      statements.push(sql);
+      return db.prepare(sql);
+    },
+    batch(statementsToRun) {
+      return db.batch(statementsToRun);
+    },
+  };
+}
 
 function openSqlite(): SqlDatabase {
   const database = new DatabaseSync(":memory:");
