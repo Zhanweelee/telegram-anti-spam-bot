@@ -1514,7 +1514,7 @@ function openLongLabel(text: string): string {
         index = skipUnfinishedAt(text, index + scheme + host + 1);
         continue;
       }
-      if (labelEndsUrl(rest) || hostPunctEnds(rest)) {
+      if (labelEndsUrl(authority.slice(0, host), rest) || hostPunctEnds(rest)) {
         out += `${text.slice(index, index + scheme + host)} `;
         index += scheme + host + 1;
         continue;
@@ -1672,9 +1672,9 @@ function lookalikeBeforeAt(rest: string): number {
   return cursor + 1;
 }
 
-function labelEndsUrl(rest: string): boolean {
+function labelEndsUrl(host: string, rest: string): boolean {
   if (rest.startsWith("-")) {
-    return true;
+    return !hyphenLabelFits(host, rest);
   }
   if (
     !rest.startsWith(".") ||
@@ -1688,6 +1688,80 @@ function labelEndsUrl(rest: string): boolean {
     return false;
   }
   return !/^[:/?_]/.test(rest.charAt(1));
+}
+
+/** 连字符后面的标签字仍放得进 63 个字时，这一段不切开。 */
+function hyphenLabelFits(host: string, rest: string): boolean {
+  const dot = host.lastIndexOf(".");
+  const label = dot === -1 ? host : host.slice(dot + 1);
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9_-]*[A-Za-z0-9])?$/.test(label)) {
+    return false;
+  }
+  let units = label.length;
+  let index = 0;
+  while (index < rest.length && units < 63) {
+    const mark = rest.charAt(index);
+    if (mark === "-" || mark === "_") {
+      let look = index;
+      let marks = 0;
+      while (
+        look < rest.length &&
+        (rest.charAt(look) === "-" || rest.charAt(look) === "_")
+      ) {
+        look += 1;
+        marks += 1;
+      }
+      const after = draftHostUnit(rest, look);
+      if (after === 0 || units + marks >= 63) {
+        break;
+      }
+      units += marks + 1;
+      index = look + after;
+      continue;
+    }
+    const size = draftHostUnit(rest, index);
+    if (size === 0) {
+      break;
+    }
+    units += 1;
+    index += size;
+  }
+  if (index === 0) {
+    return false;
+  }
+  if (
+    index < rest.length &&
+    (draftHostUnit(rest, index) > 0 ||
+      rest.charAt(index) === "-" ||
+      rest.charAt(index) === "_")
+  ) {
+    return false;
+  }
+  const next = rest.charAt(index);
+  return (
+    next.length === 0 ||
+    next === "/" ||
+    next === "?" ||
+    next === "." ||
+    next === ":" ||
+    next === "@" ||
+    next === "#" ||
+    next === " "
+  );
+}
+
+function draftHostUnit(text: string, index: number): number {
+  const code = text.codePointAt(index);
+  if (code === undefined) {
+    return 0;
+  }
+  if (code <= 0x7f) {
+    return /[A-Za-z0-9]/.test(text.charAt(index)) ? 1 : 0;
+  }
+  if (!draftLabelCode(code)) {
+    return 0;
+  }
+  return code > 0xffff ? 2 : 1;
 }
 
 /** Android 收进标签的字。带协议的主机名在点号后面仍接着这个字。 */

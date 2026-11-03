@@ -8950,6 +8950,106 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a supplementary label character inside a draft host", async () => {
+    const path = "offer271";
+    const ext = "\u{20000}";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 271 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78694, -1008926, `http://bit.ly${ext}/${path}`],
+      [78695, -1008927, `https://t.co${ext}?${path}`],
+      [78696, -1008928, `http://bit.ly${ext}`],
+      [78697, -1008929, `http://bit.ly${ext}.evil.com/${path}`],
+      [78698, -1008930, `http://bit.ly.${ext}/${path}`],
+      [78699, -1008931, `http://bit.ly-${ext}/${path}`],
+      [78700, -1008932, `http://bit.ly${ext}:80/${path}`],
+      [78701, -1008933, `http://bit.ly${ext}:80@evil.com/${path}`],
+      [78702, -1008934, `http://bit.ly${ext}/http://t.co/${path}`],
+      [78703, -1008935, `http://www.bit.ly${ext}/${path}`],
+      [78704, -1008936, `http://203.0.113.10${ext}/${path}`],
+      [78705, -1008937, `http://t.me${ext}/%2BCODE271`],
+      [78716, -1008948, `http://bit.ly${ext.repeat(61)}/${path}`],
+      [78717, -1008949, `http://bit.ly-${ext.repeat(31)}/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(named(hit.event.message?.hosts, "bit.ly"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(hit.event.message?.invites ?? [], text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+      expect(JSON.stringify(hit.event), text).not.toContain("CODE271");
+    }
+
+    const opened = [
+      [78706, -1008938, `http://bit.ly${ext}@evil.com/${path}`],
+      [78707, -1008939, `https://t.co${ext}@evil.com/${path}`],
+      [78708, -1008940, `http://bit.ly${ext}%23evil.com/${path}`],
+      [78709, -1008941, `http://bit.ly${ext}%20evil.com/${path}`],
+      [78710, -1008942, `http://203.0.113.10${ext}@evil.com/${path}`],
+      [78711, -1008943, `bit.ly${ext}/${path}`],
+      [78712, -1008944, `www.bit.ly${ext}/${path}`],
+      [78713, -1008945, `http://bit.ly\u{10140}/${path}`],
+      [78714, -1008946, `https://t.me/%2BCODE271`],
+      [78718, -1008950, `http://bit.ly${ext.repeat(62)}/${path}`],
+      [78719, -1008951, `http://bit.ly-${ext.repeat(61)}/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      const hosts = hit.event.message?.hosts ?? [];
+      const invites = hit.event.message?.invites ?? [];
+      const hitShort =
+        named(hosts, "bit.ly").length > 0 ||
+        named(hosts, "t.co").length > 0 ||
+        named(hosts, "203.0.113.10").length > 0 ||
+        invites.includes("t.me");
+      expect(hitShort, `${text} ${JSON.stringify(hosts)}`).toBe(true);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+      expect(JSON.stringify(hit.event), text).not.toContain("CODE271");
+    }
+
+    const later = await draft(
+      78715,
+      -1008947,
+      `http://bit.ly${ext}/${path}%20http://t.co/${path}`,
+    );
+    expect(later.status).toBe("event");
+    if (later.status === "event") {
+      expect(named(later.event.message?.hosts, "t.co")).toEqual(["t.co"]);
+      expect(named(later.event.message?.hosts, "bit.ly")).toEqual([]);
+      expect(JSON.stringify(later.event)).not.toContain(path);
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
