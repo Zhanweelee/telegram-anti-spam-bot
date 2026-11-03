@@ -5,6 +5,7 @@ import {
   type Event,
   type Locale,
   type Logger,
+  promoteChallenge,
   type ReplyPort,
   type ReviewQueue,
   resolveChallenge,
@@ -88,6 +89,32 @@ export async function handleIncomingEvent(
       });
     } catch {
       logger.warn("captcha_leave_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+  }
+  if (event.kind === "chat_member" && event.membership === "promote") {
+    try {
+      await promoteChallenge({
+        event,
+        ports: {
+          store: captchaStore,
+          storage,
+          restrict: (target) => moderator.restrictActor(target),
+          release: (target) => moderator.releaseActor(target),
+          clock: deps.clock ?? createSystemClock(),
+          logger,
+          removePrompt: (target) =>
+            moderator.deleteMessage({
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+            }),
+        },
+      });
+    } catch {
+      logger.warn("captcha_promote_failed", {
         eventId: event.id,
         chatId: event.chatId,
       });

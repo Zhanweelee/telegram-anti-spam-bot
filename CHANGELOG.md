@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-318
+
+- 人从 `member` 或 `restricted` 变成 `administrator` 或 `creator` 时带 `membership: "promote"`，并删掉还在的验证按钮和挑战。
+- 不解除限制，也不写 `captcha_expired`。从群外直接成为管理员、bot，以及已经是管理员的变化不带。见 ADR 0351。
+- 30 天保留期没有改。
+
 ### P3-317
 
 - 点到另一名成员还在用的验证按钮时不删，挑战和限制都留着。

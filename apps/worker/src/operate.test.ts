@@ -911,6 +911,127 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
   });
 
+  it("deletes the captcha button when the member is promoted", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let prompts = 0;
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        return Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        });
+      },
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_promote_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_promote",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: true },
+        membership: "promote",
+      }),
+      options,
+    );
+    expect(prompts).toBe(1);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toBeNull();
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(
+      kit.logger.entries.some((entry) => entry.message === "captcha_promoted"),
+    ).toBe(true);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
+  it("keeps the challenge when promotion cannot drop the row", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore: {
+        ...captchaStore,
+        async delete() {
+          throw new Error(phrase);
+        },
+      },
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        }),
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_promote_keep_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_promote_keep",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: true },
+        membership: "promote",
+      }),
+      options,
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+      messageId: "42",
+    });
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(kit.logger.entries.map((entry) => entry.message)).toContain(
+      "captcha_promote_failed",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
   it("keeps the challenge when leaving cannot drop the row", async () => {
     const kit = deps();
     const moderator = createMemoryModerator();

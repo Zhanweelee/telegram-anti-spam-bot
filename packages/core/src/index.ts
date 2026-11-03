@@ -24,6 +24,7 @@ export {
   expireChallenges,
   isExpired,
   parseCaptchaChallenge,
+  promoteChallenge,
   resolveChallenge,
   supersedeChallenge,
 } from "./captcha.js";
