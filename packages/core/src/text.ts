@@ -935,7 +935,8 @@ function isHostInterrupter(char: string, code: number): boolean {
  * ASCII letters do not glue onto that host. A run Android still includes
  * in a schemed host stays, including a label after a dot, an ideographic
  * dot, or an ignored mark anywhere in that host, so that host is not read
- * as the shortener in front. A run before `#`, `@`, or a space still drops.
+ * as the shortener in front. A non-spacing mark before the next label
+ * stays in that host. A run before `#`, `@`, or a space still drops.
  * An empty label still drops. These letters are removed, not mapped.
  */
 function lastSchemeIndex(out: string): number {
@@ -1887,7 +1888,7 @@ function acceptableLabelEnd(
   if (labelBoundary(raw, index)) {
     return true;
   }
-  if (index >= raw.length || /^\p{Mn}$/u.test(last)) {
+  if (index >= raw.length) {
     return false;
   }
   const next = raw.charAt(index);
@@ -1954,8 +1955,9 @@ function readAndroidLabel(raw: string, index: number): number | null {
  * The label still ends where the next character has no word boundary.
  * A label character can also end when `/`, `?`, a dot and another label,
  * or a finished port follows. A supplementary label character counts as
- * one unit toward the 63-character cap. A non-spacing mark stays transparent, so
- * the label still ends on the letter before it. A division slash or
+ * one unit toward the 63-character cap. A non-spacing mark stays in the
+ * label when one of those follows, and stays out when the next character
+ * has no word boundary. A division slash or
  * fraction slash stays in the host until one of those continuations.
  * An underscore can sit inside a label. A label cannot end in front of one.
  * A dot starts a label only when one follows.

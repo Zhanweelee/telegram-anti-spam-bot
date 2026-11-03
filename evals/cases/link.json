@@ -3340,5 +3340,35 @@
     "id": "buried-gap-suffix",
     "text": "http://bit\u200B.ly\u03B1.bit.ly/offer195",
     "label": "spam"
+  },
+  {
+    "id": "mark-label-letter",
+    "text": "http://bit\u034F.ly\u03B1/offer196",
+    "label": "ham"
+  },
+  {
+    "id": "mark-label-dot",
+    "text": "http://bit.ly\u034F.\u03B1/offer196",
+    "label": "ham"
+  },
+  {
+    "id": "mark-label-address",
+    "text": "http://203.0.113\u034F.10\u0561/offer196",
+    "label": "ham"
+  },
+  {
+    "id": "mark-label-bare",
+    "text": "bit\u034F.ly\u03B1/offer196",
+    "label": "spam"
+  },
+  {
+    "id": "mark-label-hash",
+    "text": "http://bit\u034F.ly\u03B1#offer196",
+    "label": "spam"
+  },
+  {
+    "id": "mark-label-suffix",
+    "text": "http://bit\u034F.ly\u03B1.bit.ly/offer196",
+    "label": "spam"
   }
 ]

@@ -1033,6 +1033,46 @@ describe("foldHostInterrupters", () => {
     expect(foldHostScan(`http://bit.l\u200By${"\u03B1".repeat(61)}/z`)).toBe(
       "http://bit.ly/z",
     );
+    expect(foldHostScan("http://bit\u034F.ly\u03B1/z")).toBe(
+      "http://bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://bit.ly\u034F.\u03B1/z")).toBe(
+      "http://bit.ly.\u03B1/z",
+    );
+    expect(foldHostScan("http://bit\uFE0F.ly\u03B1/z")).toBe(
+      "http://bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://bit\u180B.ly\u03B1/z")).toBe(
+      "http://bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://bit\u180F.ly\u03B1/z")).toBe(
+      "http://bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://www.bit\u034F.ly\u03B1/z")).toBe(
+      "http://www.bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://203.0.113\u034F.10\u0561/z")).toBe(
+      "http://203.0.113.10\u0561/z",
+    );
+    expect(foldHostScan("see http://bit\u034F.ly\u03B1/z")).toBe(
+      "see http://bit.ly\u03B1/z",
+    );
+    expect(foldHostScan("http://bit\u034F.ly\u03B1:80/z")).toBe(
+      "http://bit.ly\u03B1:80/z",
+    );
+    expect(foldHostScan("http://bit\u034F.ly\u03B1#z")).toBe("http://bit.ly#z");
+    expect(foldHostScan("http://bit\u034F.ly\u03B1 z")).toBe("http://bit.ly z");
+    expect(foldHostScan("http://bit\u034F.ly\u03B1@evil.com")).toBe(
+      "http://bit.ly@evil.com",
+    );
+    expect(foldHostScan("bit\u034F.ly\u03B1/z")).toBe("bit.ly/z");
+    expect(foldHostScan("http://bit\u034F.ly/z")).toBe("http://bit.ly/z");
+    expect(foldHostScan(`http://bit\u034F.ly${"\u03B1".repeat(62)}/z`)).toBe(
+      "http://bit.ly/z",
+    );
+    expect(foldHostScan(`http://bit\u034F.ly${"\u03B1".repeat(61)}/z`)).toBe(
+      `http://bit.ly${"\u03B1".repeat(61)}/z`,
+    );
   });
 });
 
@@ -1331,6 +1371,16 @@ describe("androidUrlSpan", () => {
     );
     expect(androidUrlSpan(`http://bit.ly${mark}:80@evil.com`)).toBe(
       `http://bit.ly${mark}:80`,
+    );
+    expect(androidUrlSpan("http://bit\u034F.ly\u03B1/z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u034F.\u03B1/z")).toBeNull();
+    expect(androidUrlSpan("http://bit.ly\u034F/z")).toBeNull();
+    expect(androidUrlSpan("http://bit\u034F.ly\u03B1:80/z")).toBeNull();
+    expect(androidUrlSpan("http://bit\u034F.ly\u03B1#z")).toBe(
+      "http://bit\u034F.ly",
+    );
+    expect(androidUrlSpan("http://bit\u034F.ly\u03B1 z")).toBe(
+      "http://bit\u034F.ly",
     );
   });
 

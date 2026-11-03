@@ -5779,6 +5779,7 @@ describe("link fixtures", () => {
       `example.com${mark}bit.ly/${path}`,
       `bit.ly${mark}/${path}`,
       `www.bit.ly${mark}/${path}`,
+      `http://bit.ly${mark}/${path}`,
     ];
     for (const text of glued) {
       const hit = await detector.detect({
@@ -5812,7 +5813,6 @@ describe("link fixtures", () => {
       `example.com\u0399http://bit.ly/${path}`,
       `example.com\u03B9http://bit.ly/${path}`,
       `example.com\u1FBEhttp://bit.ly/${path}`,
-      `http://bit.ly${mark}/${path}`,
       `bi\uFE0Ft.ly/${path}`,
       `b\u0456t.ly/${path}`,
       `点击bit.ly/${path}`,
@@ -8815,6 +8815,86 @@ describe("link fixtures", () => {
 
     const suffix = await detector.detect({
       event: eventFor(`http://bit${gap}.ly${greek}.bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(suffix?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.lyx.bit.ly",
+    ]);
+    expect(JSON.stringify(suffix)).not.toContain(path);
+  });
+
+  it("keeps a script letter after a buried nonspacing mark", async () => {
+    const detector = createLinkDetector();
+    const path = "offer196";
+    const greek = "\u03B1";
+    const mark = "\u034F";
+    const kept = [
+      `http://bit${mark}.ly${greek}/${path}`,
+      `http://bit.ly${mark}.${greek}/${path}`,
+      `http://bit${"\uFE0F"}.ly${greek}/${path}`,
+      `http://bit${"\u180B"}.ly${greek}/${path}`,
+      `http://bit${"\u180F"}.ly${greek}/${path}`,
+      `http://www.bit${mark}.ly${greek}/${path}`,
+      `http://203.0.113${mark}.10\u0561/${path}`,
+      `see http://bit${mark}.ly${greek}/${path}`,
+      `http://bit${mark}.ly${greek}`,
+      `http://bit${mark}.ly${greek}:80/${path}`,
+      `http://bit${mark}.ly${greek}/http://t.co/${path}`,
+      `http://bit${mark}.ly${greek}.evil.com/${path}`,
+      `http://bit${mark}.ly${greek.repeat(61)}/${path}`,
+    ];
+    for (const text of kept) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(hit, text).toBeNull();
+      expect(JSON.stringify(hit), text).not.toContain("t.co");
+      expect(JSON.stringify(hit), text).not.toContain("203.0.113.10");
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const opened = [
+      [`bit${mark}.ly${greek}/${path}`, "short_link:bit.ly"],
+      [`www.bit${mark}.ly${greek}/${path}`, "short_link:www.bit.ly"],
+      [`203.0.113.10${mark}.${greek}/${path}`, "ip_host:203.0.113.10"],
+      [`http://bit${mark}.ly${greek}#${path}`, "short_link:bit.ly"],
+      [`http://bit${mark}.ly${greek}@evil.com/${path}`, "short_link:bit.ly"],
+      [`http://bit${mark}.ly${greek} ${path}`, "short_link:bit.ly"],
+      [`http://bit.ly\n${greek}/${path}`, "short_link:bit.ly"],
+      [`http://bit${mark}.ly${greek.repeat(62)}/${path}`, "short_link:bit.ly"],
+      [`http://bit${mark}.ly/${path}`, "short_link:bit.ly"],
+      [`http://b${greek}it.ly/${path}`, "short_link:bit.ly"],
+    ] as const;
+    for (const [text, summary] of opened) {
+      const hit = await detector.detect({
+        event: eventFor(text),
+        logger: createMemoryLogger(),
+        signal,
+      });
+      expect(
+        hit?.evidence.map((item) => item.summary),
+        text,
+      ).toEqual([summary]);
+      expect(JSON.stringify(hit), text).not.toContain(path);
+    }
+
+    const later = await detector.detect({
+      event: eventFor(
+        `http://bit${mark}.ly${greek}/${path} http://t.co/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(later?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:t.co",
+    ]);
+    expect(JSON.stringify(later)).not.toContain(path);
+
+    const suffix = await detector.detect({
+      event: eventFor(`http://bit${mark}.ly${greek}.bit.ly/${path}`),
       logger: createMemoryLogger(),
       signal,
     });
