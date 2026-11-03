@@ -491,26 +491,49 @@ const DRAFT_IP_HEAD = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])";
 const DRAFT_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
 const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
-const DRAFT_IP_TAIL = "(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>\"']*)?";
+const DRAFT_IP_TAIL = '(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
 const DRAFT_BARE =
-  "\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>\"']*)?";
+  '\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
 const DRAFT_URL = `(?:https?:\\/\\/|tg:(?:\\/\\/)?|www\\.)[^\\s<>"']+|${DRAFT_BARE}`;
 
 function urlsInText(text: string): string[] {
   return scanUrls(text, COPY_URL.source);
 }
 
-function scanUrls(text: string, source: string): string[] {
+function scanUrls(
+  text: string,
+  source: string,
+  keepPathApostrophe = false,
+): string[] {
   const found: string[] = [];
   const folded = foldHostScan(text);
-  for (const match of folded.matchAll(new RegExp(source, "gi"))) {
-    const raw = match[0]?.replace(/[),.;!?]+$/g, "");
-    if (!raw) {
-      continue;
+  const re = new RegExp(source, "gi");
+  let match: RegExpExecArray | null = re.exec(folded);
+  while (match !== null) {
+    let raw = match[0] ?? "";
+    if (keepPathApostrophe && pathStarted(raw)) {
+      const extra = /^'[^\s<>"]*/.exec(folded.slice(re.lastIndex));
+      if (extra?.[0]) {
+        raw += extra[0];
+        re.lastIndex += extra[0].length;
+      }
     }
-    found.push(/^(?:https?|tg):/i.test(raw) ? raw : `http://${raw}`);
+    const trimmed = raw.replace(/[),.;!?]+$/g, "");
+    if (trimmed) {
+      found.push(
+        /^(?:https?|tg):/i.test(trimmed) ? trimmed : `http://${trimmed}`,
+      );
+    }
+    match = re.exec(folded);
   }
   return found;
+}
+
+/** 路径或问号已经开始后，单引号仍属于这一段。 */
+function pathStarted(raw: string): boolean {
+  const scheme = raw.indexOf("://");
+  const body = scheme === -1 ? raw : raw.slice(scheme + 3);
+  return /[/?]/.test(body);
 }
 
 /** 草稿里 Android 停住、而整段抽取不停的字符。路径里留住的增补字符另外判断。 */
@@ -521,11 +544,67 @@ const DRAFT_STOP_CHAR = new RegExp(
 function openedDraftUrls(text: string): string[] {
   const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
-    openPlainTg(
-      openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
+    openPathQuote(
+      openPlainTg(
+        openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
+      ),
     ),
     source,
+    true,
   );
+}
+
+/** 路径还没开始的单引号，以及双引号，仍结束这一段。路径里的单引号留下。 */
+function openPathQuote(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const end = text.slice(index).search(/\s/);
+    const next = end === -1 ? text.length : index + end;
+    const split = quoteSplit(text.slice(index, next));
+    if (split === null) {
+      out += text.slice(index, next);
+      index = next;
+      if (index < text.length) {
+        out += text.charAt(index);
+        index += 1;
+      }
+      continue;
+    }
+    out += split === 0 ? " " : `${text.slice(index, index + split)} `;
+    index += split + 1;
+  }
+  return out;
+}
+
+function quoteSplit(token: string): number | null {
+  let index = schemeAt(token, 0);
+  while (index < token.length) {
+    const current = token.charAt(index);
+    if (current === "/" || current === "?") {
+      const quote = token.indexOf('"', index);
+      if (quote !== -1 && schemeAt(token, quote + 1) > 0) {
+        return quote;
+      }
+      return null;
+    }
+    if (current === "'") {
+      const rest = token.slice(index + 1);
+      if (schemeAt(rest, 0) > 0 || bareHostAt(rest)) {
+        return index;
+      }
+      return null;
+    }
+    if (current === '"' && schemeAt(token, index + 1) > 0) {
+      return index;
+    }
+    index += 1;
+  }
+  return null;
+}
+
+function bareHostAt(rest: string): boolean {
+  return bareDomainEnd(rest, 0) !== null || bareIpAt(rest);
 }
 
 /** 没有两个斜杠的 `tg:` 不盖住后面的网址。`tg://` 仍是一条。 */
@@ -1706,7 +1785,9 @@ function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
-  const opened = openPlainTg(openBareEnd(openLongLabel(openLongUserinfo(raw))));
+  const opened = openPathQuote(
+    openPlainTg(openBareEnd(openLongLabel(openLongUserinfo(raw)))),
+  );
   if (opened !== raw) {
     for (const part of queryUrls(opened)) {
       pushClosedUrl(part, found);

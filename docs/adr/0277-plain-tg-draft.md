@@ -33,3 +33,4 @@ Android 的协议是 `tg://`，两个斜杠不能少。`tg:http://bit.ly/…` �
 - 分享 `url` 里的 `tg:http://bit.ly/…` 同样删除。
 - `tg://http://bit.ly/…` 和 `tg://203.0.113.244/…` 留着。`tg://msg?…&to=` 不因为这个参数删除。
 - `tg:join?invite=…` 和 `tg:https://t.me/+…` 仍按邀请删除。邀请码和路径不进证据。
+- 路径里的单引号后来同样留在这一段。见 ADR 0278。

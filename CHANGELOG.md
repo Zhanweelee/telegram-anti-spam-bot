@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-245
+
+- 隐藏草稿把路径里的单引号留在这一段。见 ADR 0278。
+- `t.me/share/url?text=http://example.com/'http://bit.ly/…` 留着。`example.com'bit.ly/…` 仍删除后面的短链。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-244
 
 - 隐藏草稿在没有两个斜杠的 `tg:` 后面仍留下主机名。见 ADR 0277。
