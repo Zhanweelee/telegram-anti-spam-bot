@@ -180,6 +180,7 @@ async function applyQuota(
       chatId: event.chatId,
       atIso: event.occurredAt,
       policy: quota.policy,
+      eventId: event.id,
     });
     if (!snapshot) {
       logger.warn("quota_skipped", {
