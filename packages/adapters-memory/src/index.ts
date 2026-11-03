@@ -60,6 +60,10 @@ export function createMemoryStorage(options?: {
       const parsed = parseAuditScope(scope);
       return records.filter((record) => matchesScope(record, parsed));
     },
+    async countAudits(scope) {
+      const parsed = parseAuditScope(scope);
+      return records.filter((record) => matchesScope(record, parsed)).length;
+    },
     async deleteAudits(scope) {
       const parsed = parseAuditScope(scope);
       let removed = 0;

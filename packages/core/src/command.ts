@@ -20,6 +20,7 @@ import {
   type AuditRecord,
   type AuditScope,
   auditExportDocument,
+  minimumAuditExportLength,
   type Storage,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
@@ -436,6 +437,13 @@ async function exportAudits(
     return scope;
   }
   try {
+    const total = await input.storage.countAudits(scope);
+    if (total === 0) {
+      return auditExportDocument(scope, []);
+    }
+    if (minimumAuditExportLength(scope, total) > EXPORT_REPLY_LIMIT) {
+      return say(input, "command.export.too_long", { count: total });
+    }
     const records = await input.storage.exportAudits(scope);
     const json = auditExportDocument(scope, records);
     if (json.length > EXPORT_REPLY_LIMIT) {

@@ -103,6 +103,9 @@ const closedStorage: Storage = {
   async exportAudits() {
     return [];
   },
+  async countAudits() {
+    return 0;
+  },
   async deleteAudits() {
     return 0;
   },

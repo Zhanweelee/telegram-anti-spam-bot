@@ -34,6 +34,10 @@ function createReferenceStorage(): Storage {
       const parsed = parseAuditScope(scope);
       return records.filter((record) => inScope(record, parsed));
     },
+    async countAudits(scope) {
+      const parsed = parseAuditScope(scope);
+      return records.filter((record) => inScope(record, parsed)).length;
+    },
     async deleteAudits(scope) {
       const parsed = parseAuditScope(scope);
       let removed = 0;

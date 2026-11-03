@@ -166,6 +166,28 @@ describe("d1 storage", () => {
     expect(left.results?.[0]?.nonce).toBe(phrase);
   });
 
+  it("rejects a count result that does not report a total", async () => {
+    const db: SqlDatabase = {
+      prepare() {
+        const prepared: SqlPrepared = {
+          bind() {
+            return prepared;
+          },
+          async all() {
+            return { results: [] };
+          },
+          async run() {
+            return {};
+          },
+        };
+        return prepared;
+      },
+    };
+    await expect(
+      createD1Storage(db).countAudits({ tenantId: "tenant_a" }),
+    ).rejects.toThrow("audit_count_missing");
+  });
+
   it("rejects a delete result that does not report a count", async () => {
     const db: SqlDatabase = {
       prepare() {

@@ -49,6 +49,7 @@ export interface Storage {
     eventId: string,
   ): Promise<AuditRecord | null>;
   exportAudits(scope: AuditScope): Promise<readonly AuditRecord[]>;
+  countAudits(scope: AuditScope): Promise<number>;
   deleteAudits(scope: AuditScope): Promise<number>;
   getRuleSet(tenantId: string, chatId: string): Promise<RuleSet | null>;
   putRuleSet(tenantId: string, chatId: string, rules: RuleSet): Promise<void>;
@@ -109,4 +110,42 @@ export function auditExportDocument(
   };
   assertNoRawContent(document);
   return JSON.stringify(document);
+}
+
+/** Shortest JSON length of `count` audits in this scope. */
+export function minimumAuditExportLength(
+  scope: AuditScope,
+  count: number,
+): number {
+  const parsed = parseAuditScope(scope);
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error("audit_count_invalid");
+  }
+  const emptyLength = auditExportDocument(parsed, []).length;
+  if (count === 0) {
+    return emptyLength;
+  }
+  const oneLength = auditExportDocument(parsed, [shortestAudit(parsed)]).length;
+  const recordLength = oneLength - emptyLength;
+  if (
+    recordLength > 0 &&
+    count > Math.floor((Number.MAX_SAFE_INTEGER - emptyLength) / recordLength)
+  ) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  return emptyLength + count * recordLength + (count - 1);
+}
+
+function shortestAudit(scope: AuditScope): AuditRecord {
+  return parseAuditRecord({
+    tenantId: scope.tenantId,
+    chatId: scope.chatId ?? "c",
+    eventId: "e",
+    action: "log",
+    score: 0,
+    reasons: [],
+    evidence: [],
+    ruleIds: [],
+    createdAt: "2026-11-01T00:00:00Z",
+  });
 }
