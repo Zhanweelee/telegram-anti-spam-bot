@@ -212,4 +212,11 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", threadId: "1" },
     ]);
   });
+
+  it("records a hidden General topic without a thread id", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.hideGeneral({ tenantId: "t", chatId: "c" });
+    expect(moderator.generalsHidden).toEqual([{ tenantId: "t", chatId: "c" }]);
+    expect(JSON.stringify(moderator.generalsHidden)).not.toContain("thread");
+  });
 });

@@ -94,6 +94,9 @@ function commandModerator(
     async openTopic() {
       throw new Error("opentopic_unavailable");
     },
+    async hideGeneral() {
+      throw new Error("hidegeneral_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

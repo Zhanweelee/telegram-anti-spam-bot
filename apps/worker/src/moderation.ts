@@ -57,5 +57,6 @@ function createOpenModerator(): ModerationPort {
     unpinTopic: (target) => memory.unpinTopic(target),
     closeTopic: (target) => memory.closeTopic(target),
     openTopic: (target) => memory.openTopic(target),
+    hideGeneral: (target) => memory.hideGeneral(target),
   };
 }

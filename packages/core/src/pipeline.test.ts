@@ -173,6 +173,7 @@ function harness(options?: { failStorage?: boolean }) {
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},
+    async hideGeneral() {},
   };
   return {
     records,
