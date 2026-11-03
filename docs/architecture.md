@@ -42,7 +42,7 @@ Event
   → aggregate        max 或 sum，按规则阈值比较
   → decision         取最重动作：ban > mute > delete > captcha > report > log > allow
   → actions          delete / mute / ban；dry-run 只记录，不调用端口
-  → audit            非 allow 且非 dry-run 时写存储。失败不影响决策
+  → audit            非 allow 且非 dry-run 时先读已有审计。已经有记录就不再执行动作，也不再插入。没有记录才写存储。失败不影响决策。见 ADR 0335。
 ```
 
 检测器抛错或超时：默认 fail-open（当作没命中，并记一条 `detector_error`）。`failureMode: "closed"` 时把该检测器当作 score 1。配置错误（重复插件、非法超时、非法事件）直接抛出，不吞掉。

@@ -85,6 +85,9 @@ type Kind =
 
 function classify(entry: LogEntry): Kind | null {
   if (entry.message === "pipeline_completed") {
+    if (entry.fields.duplicate === true) {
+      return null;
+    }
     const action = label(entry.fields, "action");
     if (!action || !ACTIONS.has(action)) {
       return null;
@@ -111,7 +114,9 @@ function isStorageFailure(entry: LogEntry): boolean {
     return true;
   }
   return (
-    entry.message === "audit_failed" && entry.fields.code === "storage_failed"
+    (entry.message === "audit_failed" ||
+      entry.message === "audit_lookup_failed") &&
+    entry.fields.code === "storage_failed"
   );
 }
 

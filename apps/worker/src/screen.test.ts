@@ -80,8 +80,10 @@ describe("screenTelegramEvent", () => {
   it("runs mute and ban from chat rules without deleting", async () => {
     const text = "请免费领取礼品";
     const cache = createMemoryCache();
+    const storage = createMemoryStorage();
     const mute = await screenTelegramEvent(await event(text), {
       cache,
+      storage,
       source: {
         async loadChat() {
           return null;
@@ -110,6 +112,7 @@ describe("screenTelegramEvent", () => {
 
     const ban = await screenTelegramEvent(await event(text, false, "-1009"), {
       cache: createMemoryCache(),
+      storage,
       source: {
         async loadChat() {
           return null;
