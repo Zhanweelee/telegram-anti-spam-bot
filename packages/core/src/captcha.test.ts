@@ -542,7 +542,7 @@ describe("captcha flow", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("cd".repeat(8));
   });
 
-  it("deletes a clicked button when the challenge is already gone", async () => {
+  it("keeps the button when the clicker has no challenge", async () => {
     const kit = harness();
     const removed: string[] = [];
     const ports = {
@@ -551,16 +551,28 @@ describe("captcha flow", () => {
         removed.push(target.messageId);
       },
     };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
     expect(
       await resolveChallenge({
-        event: answerEvent("ab".repeat(8), "43"),
+        event: answerEvent("ab".repeat(8), "42", "88"),
         ports,
       }),
     ).toBe("ignored");
-    expect(removed).toEqual(["43"]);
+    expect(removed).toEqual([]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
     expect(kit.released).toEqual([]);
     expect(kit.records).toEqual([]);
-    expect(JSON.stringify(kit.logger.entries)).not.toContain("43");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
   });
 
   it("passes when the clicked button cannot be deleted", async () => {
@@ -950,14 +962,14 @@ function leaveEvent(id = "evt_leave", actorId = "77") {
   });
 }
 
-function answerEvent(nonce: string, messageId?: string) {
+function answerEvent(nonce: string, messageId?: string, actorId = "77") {
   return parseEvent({
     id: "evt_answer",
     tenantId: "local",
     chatId: "-100",
     kind: "challenge",
     occurredAt: "2026-11-01T00:01:00.000Z",
-    actor: { id: "77", isAdmin: false },
+    actor: { id: actorId, isAdmin: false },
     challenge: messageId ? { nonce, messageId } : { nonce },
   });
 }

@@ -220,7 +220,6 @@ export async function resolveChallenge(input: {
     input.event.actor.id,
   );
   if (!challenge) {
-    await forgetClicked(input.event, input.ports, undefined);
     return "ignored";
   }
   const nowIso = input.ports.clock.nowIso();
