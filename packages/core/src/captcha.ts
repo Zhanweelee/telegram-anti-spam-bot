@@ -170,6 +170,27 @@ export async function promoteChallenge(input: {
   return dropStoredChallenge(input.event, input.ports, "captcha_promoted");
 }
 
+export async function unrestrictChallenge(input: {
+  readonly event: Event;
+  readonly ports: CaptchaPorts;
+}): Promise<boolean> {
+  if (input.event.membership !== "unrestrict") {
+    return false;
+  }
+  const challenge = await input.ports.store.get(
+    input.event.tenantId,
+    input.event.chatId,
+    input.event.actor.id,
+  );
+  if (
+    !challenge ||
+    isExpired(challenge.expiresAt, input.ports.clock.nowIso())
+  ) {
+    return false;
+  }
+  return dropStoredChallenge(input.event, input.ports, "captcha_unrestricted");
+}
+
 export async function supersedeChallenge(input: {
   readonly event: Event;
   readonly ports: CaptchaPorts;
@@ -183,7 +204,11 @@ export async function supersedeChallenge(input: {
 async function dropStoredChallenge(
   event: Event,
   ports: CaptchaPorts,
-  reason: "captcha_left" | "captcha_promoted" | "captcha_superseded",
+  reason:
+    | "captcha_left"
+    | "captcha_promoted"
+    | "captcha_superseded"
+    | "captcha_unrestricted",
 ): Promise<boolean> {
   const challenge = await ports.store.get(
     event.tenantId,

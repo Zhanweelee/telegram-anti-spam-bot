@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-319
+
+- 人从 `restricted` 变成 `member` 时带 `membership: "unrestrict"`。挑战还没到期就删掉验证按钮和挑战。
+- 已经到期的挑战留给到期清理。不解除限制，也不写 `captcha_expired`。bot 不带。见 ADR 0352。
+- 30 天保留期没有改。
+
 ### P3-318
 
 - 人从 `member` 或 `restricted` 变成 `administrator` 或 `creator` 时带 `membership: "promote"`，并删掉还在的验证按钮和挑战。

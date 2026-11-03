@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-319 提前解除限制时删掉验证按钮 — done
+
+验收：人从 `restricted` 变成 `member` 时，事件带 `membership: "unrestrict"`，不带昵称。挑战还没到期时删掉按钮和挑战，不解除限制，也不写 `captcha_expired`。已经到期的挑战留着，交给到期清理。删不掉或没有删除端口时挑战还在。从群外入群、bot，以及 `member` 变成 `restricted`，都不带 `unrestrict`。日志不含 nonce、按钮 id 和异常文本。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-318 升为管理员时删掉验证按钮 — done
 
 验收：人从 `member` 或 `restricted` 变成 `administrator` 或 `creator` 时，事件带 `membership: "promote"`，不带昵称。有按钮 id 时删掉这条消息和挑战，不解除限制，也不写 `captcha_expired`。删不掉或没有删除端口时挑战还在。没有 id 时只删挑战。从群外直接成为管理员、bot、`member` 变成 `restricted`，以及已经是管理员的变化，都不带 `promote`。日志不含 nonce、按钮 id 和异常文本。规则、白名单、额度和 30 天保留期不动。
@@ -1508,6 +1512,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-319
+
+- 做了什么：限制被提前解除、挑战还没到期时，删掉验证按钮和挑战。
+- 学到什么：`until_date` 到点也会变成 `member`。那时挑战已经到期，要留给到期清理写 `captcha_expired`。提前解除才在这条路径删。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-318
 
