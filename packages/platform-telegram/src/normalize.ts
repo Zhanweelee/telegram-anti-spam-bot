@@ -553,9 +553,11 @@ function openedDraftUrls(text: string): string[] {
     openPathQuote(
       openPlainTg(
         openBareEnd(
-          openLookalikeHost(
-            openLongLabel(
-              openLongUserinfo(openDraftStops(openStoppingSpace(text))),
+          openSchemeLetter(
+            openLookalikeHost(
+              openLongLabel(
+                openLongUserinfo(openDraftStops(openStoppingSpace(text))),
+              ),
             ),
           ),
         ),
@@ -893,6 +895,42 @@ function lookalikeHostSkip(text: string, index: number): number {
     return cursor + 1 - index;
   }
   return 0;
+}
+
+const DRAFT_SCHEME_LETTER = new Set([
+  0x0406, 0x0410, 0x0415, 0x041e, 0x0420, 0x0421, 0x0423, 0x0425, 0x0430,
+  0x0435, 0x043e, 0x0440, 0x0441, 0x0443, 0x0445, 0x0456,
+]);
+
+function schemeLetter(code: number): boolean {
+  return (
+    DRAFT_SCHEME_LETTER.has(code) ||
+    (code >= 0xff21 && code <= 0xff3a) ||
+    (code >= 0xff41 && code <= 0xff5a)
+  );
+}
+
+/** 形近字母紧挨在协议前面时另开后面的网址。带协议的同一段仍留在一起。 */
+function openSchemeLetter(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    if (schemeAt(text, index) > 0) {
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      out += text.slice(index, next);
+      index = next;
+      continue;
+    }
+    if (schemeLetter(text.charCodeAt(index)) && schemeAt(text, index + 1) > 0) {
+      out += " ";
+      index += 1;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
 }
 
 /** 点状字符紧挨在 `@` 前面时，带协议的主机名在这里结束。后面的网址另开。 */
@@ -2114,8 +2152,10 @@ function pushClosedUrl(
   const opened = openPathQuote(
     openPlainTg(
       openBareEnd(
-        openLookalikeHost(
-          openLongLabel(openLongUserinfo(openStoppingSpace(raw))),
+        openSchemeLetter(
+          openLookalikeHost(
+            openLongLabel(openLongUserinfo(openStoppingSpace(raw))),
+          ),
         ),
       ),
     ),

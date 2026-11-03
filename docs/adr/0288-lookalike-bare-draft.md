@@ -32,3 +32,4 @@ Android 不把 `·`、`•`、`‧`、`∙`、`⋅`、`・`、`．`、`﹒` 和 
 - `t.me/share/url?text=bit．ly．com/http://t.co/…`、`safe．com/http://bit.ly/…` 和 `www.example．com/http://bit.ly/…` 删除。分享 `url` 同样删除。证据仍只有主机名。
 - `bit．ly．com/https://t.me/+…` 按邀请删除。路径和邀请码不进证据。
 - `http://bit．ly．com/http://t.co/…` 和 `b·it.ly/…` 留着。`bit．ly` 和换行拆开的 `bit．` 加 `ly` 仍按短链删除。
+- 形近字母紧挨在协议前面、前面又不是已结束的主机名时，隐藏草稿仍把字母收成 ASCII，短链粘进标签。见 ADR 0289。
