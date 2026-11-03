@@ -577,9 +577,14 @@ function scanUrls(
       continue;
     }
     if (trimmed) {
-      found.push(
-        /^(?:https?|tg):/i.test(trimmed) ? trimmed : `http://${trimmed}`,
-      );
+      let url = /^(?:https?|tg):/i.test(trimmed)
+        ? trimmed
+        : `http://${trimmed}`;
+      // 后面的空格仍交给这一段，Android 才能退回上一个单词。
+      if (keepPathApostrophe && folded.charAt(end) === " ") {
+        url += " ";
+      }
+      found.push(url);
     }
     match = re.exec(folded);
   }
@@ -1678,7 +1683,41 @@ function labelEndsUrl(rest: string): boolean {
   ) {
     return false;
   }
+  const next = rest.codePointAt(1);
+  if (next !== undefined && draftLabelCode(next)) {
+    return false;
+  }
   return !/^[:/?_]/.test(rest.charAt(1));
+}
+
+/** Android 收进标签的字。带协议的主机名在点号后面仍接着这个字。 */
+function draftLabelCode(code: number): boolean {
+  if (
+    code === 0x00a0 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x3000
+  ) {
+    return false;
+  }
+  if (code >= 0x00a0 && code <= 0xd7ff) {
+    return true;
+  }
+  if (code >= 0xf900 && code <= 0xfdcf) {
+    return true;
+  }
+  if (code >= 0xfdf0 && code <= 0xffef) {
+    return true;
+  }
+  if (code >= 0x20000 && code <= 0xdfffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  if (code >= 0xe1000 && code <= 0xefffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  return false;
 }
 
 /** 路径还没开始时，这些标点结束主机名。端口和 `user:pass@` 仍属于这一条。 */
@@ -1803,6 +1842,12 @@ function openBareEnd(text: string): string {
     if (letter > 0) {
       out += `${text.slice(index, domain)} `;
       index = domain + letter;
+      continue;
+    }
+    const label = bareLabelSkip(rest);
+    if (label > 0) {
+      out += `${text.slice(index, domain)} `;
+      index = domain + label;
       continue;
     }
     if (
@@ -2020,6 +2065,15 @@ function bareLookalikeDotSkip(rest: string): number {
 }
 
 /** 已结束的裸主机名不把后面的非 ASCII 字母留在这一段。字母后面的网址另开。 */
+/** 没有协议的主机名在 Android 留在标签里的字前面结束。 */
+function bareLabelSkip(rest: string): number {
+  const code = rest.codePointAt(0);
+  if (code === undefined || !draftLabelCode(code) || boundaryMark(code)) {
+    return 0;
+  }
+  return String.fromCodePoint(code).length;
+}
+
 function bareLetterSkip(rest: string): number {
   let index = 0;
   while (rest.charAt(index) === "_") {

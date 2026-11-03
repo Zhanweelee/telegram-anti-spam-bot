@@ -8864,6 +8864,92 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a schemed label character inside a draft host", async () => {
+    const path = "offer270";
+    const mark = "\u4e00";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 270 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const named = (hosts: readonly string[] | undefined, name: string) =>
+      (hosts ?? []).filter(
+        (host) => host === name || host.endsWith(`.${name}`),
+      );
+    const closed = [
+      [78671, -1008903, `http://bit.ly${mark}/${path}`],
+      [78672, -1008904, `https://t.co${mark}?${path}`],
+      [78673, -1008905, `http://bit.ly${mark}`],
+      [78674, -1008906, `http://bit.ly${mark}.evil.com/${path}`],
+      [78675, -1008907, `http://bit.ly.${mark}/${path}`],
+      [78676, -1008908, `http://bit.ly${mark}:80/${path}`],
+      [78677, -1008909, `http://bit.ly${mark}:80`],
+      [78678, -1008910, `http://bit.ly${mark}:80@evil.com/${path}`],
+      [78679, -1008911, `http://bit.ly${mark}/http://t.co/${path}`],
+      [78680, -1008912, `http://www.bit.ly${mark}/${path}`],
+      [78681, -1008913, `http://203.0.113.10${mark}/${path}`],
+      [78682, -1008914, `http://t.me${mark}/%2BCODE270`],
+      [78683, -1008915, `http://bit.ly\uff0c/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of closed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(named(hit.event.message?.hosts, "bit.ly"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "t.co"), text).toEqual([]);
+      expect(named(hit.event.message?.hosts, "203.0.113.10"), text).toEqual([]);
+      expect(hit.event.message?.invites ?? [], text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+      expect(JSON.stringify(hit.event), text).not.toContain("CODE270");
+    }
+
+    const opened = [
+      [78684, -1008916, `http://bit.ly${mark}@evil.com/${path}`],
+      [78685, -1008917, `https://t.co${mark}@evil.com/${path}`],
+      [78686, -1008918, `http://bit.ly${mark}%23evil.com/${path}`],
+      [78687, -1008919, `http://bit.ly${mark}%20evil.com/${path}`],
+      [78688, -1008920, `http://bit.ly${mark}.%20evil.com/${path}`],
+      [78689, -1008921, `http://203.0.113.10${mark}@evil.com/${path}`],
+      [78690, -1008922, `bit.ly${mark}/${path}`],
+      [78691, -1008923, `www.bit.ly${mark}/${path}`],
+      [78692, -1008924, `http://bit.ly${mark}/${path}%20http://t.co/${path}`],
+      [78693, -1008925, `https://t.me/%2BCODE270`],
+    ] as const;
+    for (const [updateId, chatId, text] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      const hosts = hit.event.message?.hosts ?? [];
+      const invites = hit.event.message?.invites ?? [];
+      const hitShort =
+        named(hosts, "bit.ly").length > 0 ||
+        named(hosts, "t.co").length > 0 ||
+        named(hosts, "203.0.113.10").length > 0 ||
+        invites.includes("t.me");
+      expect(hitShort, `${text} ${JSON.stringify(hosts)}`).toBe(true);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+      expect(JSON.stringify(hit.event), text).not.toContain("CODE270");
+    }
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
