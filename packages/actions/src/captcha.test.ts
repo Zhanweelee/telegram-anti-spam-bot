@@ -87,6 +87,7 @@ function moderator(
       restricted.push({ ...target });
     },
     async releaseActor() {},
+    async lockChat() {},
     async unbanActor() {},
     async unmuteActor() {
       return "lifted" as const;

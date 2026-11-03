@@ -75,6 +75,7 @@ describe("delete action", () => {
           async deferJoin() {},
           async restrictActor() {},
           async releaseActor() {},
+          async lockChat() {},
           async unbanActor() {},
           async unmuteActor() {
             return "lifted" as const;
@@ -135,6 +136,7 @@ describe("delete action", () => {
         async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
+        async lockChat() {},
         async unbanActor() {},
         async unmuteActor() {
           return "lifted" as const;
@@ -197,6 +199,7 @@ describe("delete action", () => {
         async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
+        async lockChat() {},
         async unbanActor() {},
         async unmuteActor() {
           return "lifted" as const;
@@ -261,6 +264,7 @@ function ports(): ModerationPort & {
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
+    async lockChat() {},
     async unbanActor() {},
     async unmuteActor() {
       return "lifted" as const;

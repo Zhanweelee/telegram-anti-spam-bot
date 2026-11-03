@@ -92,6 +92,8 @@ export const messageKeys = [
   "command.bansender.done",
   "command.unbansender.usage",
   "command.unbansender.done",
+  "command.lock.usage",
+  "command.lock.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -134,6 +136,7 @@ const syntax = [
   "/approve <chatId> <actorId>",
   "/bansender <chatId> <senderChatId>",
   "/unbansender <chatId> <senderChatId>",
+  "/lock <chatId>",
 ].join("\n");
 
 const zh = {
@@ -233,6 +236,9 @@ const zh = {
     "已禁止 {senderChatId} 在 {chatId} 代发。频道主人的其它频道也会被挡住，直到解除",
   "command.unbansender.usage": "用法：/unbansender <chatId> <senderChatId>",
   "command.unbansender.done": "已解除 {senderChatId} 在 {chatId} 的代发禁止",
+  "command.lock.usage": "用法：/lock <chatId>",
+  "command.lock.done":
+    "已关闭 {chatId} 的默认发言权限。管理员仍可发言。此状态会保持到重新设置权限",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -342,6 +348,9 @@ const en = {
   "command.unbansender.usage": "Usage: /unbansender <chatId> <senderChatId>",
   "command.unbansender.done":
     "Lifted the block on sender chat {senderChatId} in {chatId}",
+  "command.lock.usage": "Usage: /lock <chatId>",
+  "command.lock.done":
+    "Closed default speaking permissions in {chatId}. Administrators can still speak. This stays until permissions are set again.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
