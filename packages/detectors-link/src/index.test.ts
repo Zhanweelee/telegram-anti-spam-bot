@@ -2498,6 +2498,110 @@ describe("link fixtures", () => {
     expect(JSON.stringify(numeric)).not.toContain(hidden);
   });
 
+  it("reads a gift preview username draft including a preview slug", async () => {
+    const hidden = "offer213";
+    const slug = "slug213";
+    const address = "203.0.113.213";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://stargift_preview.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=stargift_preview&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("stargift_preview");
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/StarGift_Preview/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const preview = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(preview)).not.toContain(slug);
+    const hyphenated = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview/slug-now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenated?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const trailed = await detector.detect({
+      event: eventFor(`https://t.me/stargift_preview/${slug}/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/stargift_preview/${slug}?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/stargift_preview/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.213");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const numeric = await detector.detect({
+      event: eventFor(`https://stargift_preview.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const extra = await detector.detect({
+      event: eventFor(
+        `https://t.me/stargift_preview/${slug}/extra?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://stargift_preview.t.me/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

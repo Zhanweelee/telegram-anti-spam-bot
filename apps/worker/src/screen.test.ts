@@ -10956,4 +10956,78 @@ describe("screenTelegramEvent", () => {
     expect(allowedDump).not.toContain("from212");
     expect(allowedDump).not.toContain("机密群名");
   });
+
+  it("reads a gift preview username draft including a preview slug", async () => {
+    const path = "offer213";
+    const slug = "slug213";
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2343,
+        message: {
+          message_id: 2343,
+          date: 1761955200,
+          chat: { id: -1008301, type: "supergroup", title: "机密群名" },
+          from: { id: 213, first_name: "Ada" },
+          text: `https://t.me/stargift_preview?text=https://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const previewed = await normalizeUpdate({
+      update: {
+        update_id: 2344,
+        message: {
+          message_id: 2344,
+          date: 1761955200,
+          chat: { id: -1008302, type: "supergroup", title: "机密群名" },
+          from: { id: 213, first_name: "https://tinyurl.com/from213" },
+          text: `https://t.me/stargift_preview/${slug}?text=https://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(previewed.status).toBe("event");
+    if (previewed.status !== "event") {
+      return;
+    }
+    const previewLogger = createMemoryLogger();
+    const previewModerator = createMemoryModerator();
+    const deleted = await screenTelegramEvent(previewed.event, {
+      logger: previewLogger,
+      moderator: previewModerator,
+    });
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.reasons).toEqual(["short_link"]);
+    const previewDump = JSON.stringify({
+      result: deleted,
+      logs: previewLogger.entries,
+    });
+    expect(previewDump).not.toContain(path);
+    expect(previewDump).not.toContain(slug);
+    expect(previewDump).not.toContain("from213");
+    expect(previewDump).not.toContain("机密群名");
+  });
 });

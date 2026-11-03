@@ -52,6 +52,7 @@ ADR 0139 不读 `t.me/用户名/app` 上的 `text`。当时把这段路径都当
 - `t.me/contact/令牌` 后来由 ADR 0243 不读 `text`。大小写不同的命令和 `t.me/contact` 仍读。末尾斜杠也不读。
 - `t.me/login/短名` 仍读 `text`。见 ADR 0244。Android 对非零数字弹出登录码，桌面端仍写草稿。
 - `t.me/newbot/短名` 后来由 ADR 0245 不读 `text`。连字符和 `t.me/newbot` 仍读。
+- `t.me/stargift_preview/短名` 仍读 `text`。见 ADR 0246。Android 打开礼物预览，桌面端仍写草稿。
 - 应用名路径上的 `profile` 仍读。没有应用名、且资料页没有被其它参数改掉时，后来由 ADR 0232 不读。
 - 再套一层预填链接仍放行。用户名和应用名不进证据。
 - 应用名后来由 ADR 0147 去掉 128 的上限。全数字的第二段仍是帖子，位数也不再停在 16。

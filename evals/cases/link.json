@@ -3975,5 +3975,55 @@
     "id": "newbot-subdomain-post",
     "text": "https://newbot.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer212",
     "label": "ham"
+  },
+  {
+    "id": "preview-username",
+    "text": "https://t.me/stargift_preview?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-resolve",
+    "text": "tg://resolve?domain=stargift_preview&text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-prefix",
+    "text": "https://stargift_preview.t.me?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-capital",
+    "text": "https://t.me/StarGift_Preview/slug213?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-slash",
+    "text": "https://t.me/stargift_preview/?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-slug",
+    "text": "https://t.me/stargift_preview/slug213?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-post",
+    "text": "https://t.me/stargift_preview/5?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-subdomain-post",
+    "text": "https://stargift_preview.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "spam"
+  },
+  {
+    "id": "preview-extra",
+    "text": "https://t.me/stargift_preview/slug213/extra?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "ham"
+  },
+  {
+    "id": "preview-subdomain-name",
+    "text": "https://stargift_preview.t.me/slug213?text=https%3A%2F%2Fbit.ly%2Foffer213",
+    "label": "ham"
   }
 ]

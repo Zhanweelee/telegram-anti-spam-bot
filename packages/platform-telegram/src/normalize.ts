@@ -1758,7 +1758,6 @@ const reservedUsernames = new Set([
   "socks",
   "stargift_auction",
   "telegrampassport",
-  "stargift_preview",
   "web",
   "webproxy",
 ]);

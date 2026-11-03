@@ -2134,6 +2134,64 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(slug);
   });
 
+  it("keeps a gift preview username draft including a preview slug", async () => {
+    const hidden = "offer213";
+    const slug = "slug213";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78070,
+      message: {
+        message_id: 78070,
+        date: 1761955200,
+        chat: { id: -1008301, type: "supergroup" },
+        from: { id: 213 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/stargift_preview?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(user.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(user.event)).not.toContain(hidden);
+    const preview = await normalize({
+      update_id: 78071,
+      message: {
+        message_id: 78071,
+        date: 1761955200,
+        chat: { id: -1008302, type: "supergroup" },
+        from: { id: 213 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/stargift_preview/${slug}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(preview.status).toBe("event");
+    if (preview.status !== "event") {
+      return;
+    }
+    expect(preview.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(preview.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(preview.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

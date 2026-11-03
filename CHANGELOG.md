@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-213
+
+- `t.me/stargift_preview` 仍按用户名读取。预览短名和应用名路径在桌面端仍写草稿，所以也读 `text`。见 ADR 0246。
+- `t.me/stargift_preview?text=`、`t.me/stargift_preview/slug213?text=` 和 `t.me/stargift_preview/5?text=` 里的短链删除。再多一段路径和 `stargift_preview.t.me/短名` 留着。用户名和预览短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-212
 
 - `t.me/newbot` 仍按用户名读取。后面是管理员用户名时打开创建机器人，不读 `text`。见 ADR 0245。
