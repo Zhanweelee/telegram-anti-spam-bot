@@ -850,6 +850,47 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("shows the General topic without reopening it", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.showGeneral({ tenantId: "local", chatId: "-100" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/unhideGeneralForumTopic`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      message_thread_id?: number;
+      message_id?: number;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.message_thread_id).toBeUndefined();
+    expect(body.message_id).toBeUndefined();
+    expect(calls[0]?.method).not.toContain("reopen");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).showGeneral({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("showgeneral_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

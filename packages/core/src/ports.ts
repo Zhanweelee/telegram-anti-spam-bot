@@ -210,6 +210,7 @@ export interface ModerationPort {
   closeTopic(target: ForumTopicTarget): Promise<void>;
   openTopic(target: ForumTopicTarget): Promise<void>;
   hideGeneral(target: ChatTarget): Promise<void>;
+  showGeneral(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

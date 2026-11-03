@@ -97,6 +97,9 @@ function commandModerator(
     async hideGeneral() {
       throw new Error("hidegeneral_unavailable");
     },
+    async showGeneral() {
+      throw new Error("showgeneral_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

@@ -110,6 +110,7 @@ function moderator(
     async closeTopic() {},
     async openTopic() {},
     async hideGeneral() {},
+    async showGeneral() {},
   };
 }
 

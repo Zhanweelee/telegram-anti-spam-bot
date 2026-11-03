@@ -426,6 +426,18 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async showGeneral(target) {
+      await postTelegram({
+        token: input.token,
+        method: "unhideGeneralForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "showgeneral_unavailable",
+        failed: "showgeneral_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+    },
   };
 }
 
