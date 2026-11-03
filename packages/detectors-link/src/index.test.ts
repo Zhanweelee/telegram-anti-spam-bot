@@ -4416,6 +4416,56 @@ describe("link fixtures", () => {
     expect(JSON.stringify(callback)).not.toContain(path);
   });
 
+  it("reads a short link after an invalid percent in a query", async () => {
+    const detector = createLinkDetector();
+    const path = "offer231";
+    const embedded = await detector.detect({
+      event: eventFor(`https://t.me/durov?text=http://bit.ly/%FF${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(embedded?.reasons).toEqual(["short_link"]);
+    expect(embedded?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(embedded)).not.toContain(path);
+    const trailing = await detector.detect({
+      event: eventFor(`https://t.me/durov?text=http://bit.ly/${path}%FF`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(trailing?.reasons).toEqual(["short_link"]);
+    expect(trailing?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(trailing)).not.toContain(path);
+    const shared = await detector.detect({
+      event: eventFor(`tg://msg_url?url=http://bit.ly/%FF${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(shared?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(shared)).not.toContain(path);
+    const stuck = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=https://example.com/%2http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(stuck).toBeNull();
+    expect(JSON.stringify(stuck)).not.toContain(path);
+    const glued = await detector.detect({
+      event: eventFor(
+        `https://t.me/durov?text=${encodeURIComponent(`https://example.com/a+http://bit.ly/${path}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(glued).toBeNull();
+    expect(JSON.stringify(glued)).not.toContain(path);
+  });
+
   it("reads a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

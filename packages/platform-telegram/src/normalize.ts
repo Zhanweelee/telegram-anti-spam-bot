@@ -1918,18 +1918,40 @@ function searchParam(url: URL, name: string): string | null {
   return null;
 }
 
-/** 查询里的 `+` 是空格。`%2B` 仍是加号。 */
+/** 查询里的 `+` 是空格。不完整的 `%` 留下。非法 UTF-8 换成替换字符。`%2B` 仍是加号。 */
 function queryValue(raw: string, name: string): string | null {
   const match = new RegExp(`[?&]${name}=([^&#]*)`, "i").exec(raw);
   const value = match?.[1];
   if (value === undefined || value.length === 0) {
     return null;
   }
-  try {
-    return decodeURIComponent(value.replace(/\+/g, " "));
-  } catch {
-    return null;
+  return formDecode(value);
+}
+
+function formDecode(value: string): string {
+  const source = value.replace(/\+/g, " ");
+  const bytes: number[] = [];
+  let out = "";
+  const flush = (): void => {
+    if (bytes.length === 0) {
+      return;
+    }
+    out += new TextDecoder().decode(Uint8Array.from(bytes));
+    bytes.length = 0;
+  };
+  for (let index = 0; index < source.length; index += 1) {
+    const current = source.charAt(index);
+    const hex = source.slice(index + 1, index + 3);
+    if (current === "%" && /^[0-9A-Fa-f]{2}$/.test(hex)) {
+      bytes.push(Number.parseInt(hex, 16));
+      index += 2;
+      continue;
+    }
+    flush();
+    out += current;
   }
+  flush();
+  return out;
 }
 
 function isTelegramShare(url: URL): boolean {

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-231
+
+- 查询里的非法 UTF-8 百分号仍留下主机名。不完整的 `%` 留在原处。见 ADR 0264。
+- `t.me/durov?text=http://bit.ly/%FF…` 和 `tg://msg_url?url=` 里的短链删除。`%2http://bit.ly` 留着。`%2B` 仍是加号。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-230
 
 - 查询里的 `+` 在 `text`、分享 `url` 和 `callback_url` 里是空格。`%2B` 仍是加号。见 ADR 0263。

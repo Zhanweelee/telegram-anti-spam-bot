@@ -12345,4 +12345,68 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(unread.decision)).not.toContain(path);
     expect(JSON.stringify(unread.decision)).not.toContain("bit.ly");
   });
+
+  it("reads a short link after an invalid percent in a query", async () => {
+    const path = "offer231";
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2381,
+        message: {
+          message_id: 2381,
+          date: 1761955200,
+          chat: { id: -1008351, type: "supergroup", title: "机密群名" },
+          from: { id: 231, first_name: "Ada" },
+          text: `https://t.me/durov?text=http://bit.ly/%FF${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const stuck = await normalizeUpdate({
+      update: {
+        update_id: 2382,
+        message: {
+          message_id: 2382,
+          date: 1761955200,
+          chat: { id: -1008352, type: "supergroup", title: "机密群名" },
+          from: { id: 231, first_name: "Ada" },
+          text: `https://t.me/durov?text=https://example.com/%2http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(stuck.status).toBe("event");
+    if (stuck.status !== "event") {
+      return;
+    }
+    const kept = await screenTelegramEvent(stuck.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(JSON.stringify(kept.decision)).not.toContain(path);
+    expect(JSON.stringify(kept.decision)).not.toContain("bit.ly");
+  });
 });

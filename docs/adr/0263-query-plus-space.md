@@ -39,3 +39,4 @@ Android `Uri.getQueryParameter` 和桌面端 `qthelp::url_decode` 都先把查�
 - 查询值用 `%2B` 编码时留着。
 - `tg://msg_url?url=https://t.me/+…` 仍按邀请删除。
 - 正文里的 `%2B` 仍按 ADR 0197 处理。这条只改查询值。
+- 查询里非法的 UTF-8 百分号后来仍留下主机名。见 ADR 0264。

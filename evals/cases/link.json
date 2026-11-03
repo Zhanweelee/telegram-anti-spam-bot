@@ -4950,5 +4950,25 @@
     "id": "query-plus-encoded",
     "text": "https://t.me/durov?text=https%3A%2F%2Fexample.com%2Fa%2Bhttp%3A%2F%2Fbit.ly%2Foffer230",
     "label": "ham"
+  },
+  {
+    "id": "invalid-percent-draft",
+    "text": "https://t.me/durov?text=http://bit.ly/%FFoffer231",
+    "label": "spam"
+  },
+  {
+    "id": "invalid-percent-tail",
+    "text": "https://t.me/durov?text=http://bit.ly/offer231%FF",
+    "label": "spam"
+  },
+  {
+    "id": "invalid-percent-share",
+    "text": "tg://msg_url?url=http://bit.ly/%FFoffer231",
+    "label": "spam"
+  },
+  {
+    "id": "broken-percent-glued",
+    "text": "https://t.me/durov?text=https://example.com/%2http://bit.ly/offer231",
+    "label": "ham"
   }
 ]

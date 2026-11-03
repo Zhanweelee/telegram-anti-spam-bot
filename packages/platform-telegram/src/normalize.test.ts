@@ -3475,6 +3475,83 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(encoded.event)).not.toContain("bit.ly");
   });
 
+  it("keeps a short link after an invalid percent in a query", async () => {
+    const path = "offer231";
+    const opened = await normalize({
+      update_id: 78120,
+      message: {
+        message_id: 78120,
+        date: 1761955200,
+        chat: { id: -1008351, type: "supergroup" },
+        from: { id: 231 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=http://bit.ly/%FF${path}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+    const shared = await normalize({
+      update_id: 78121,
+      message: {
+        message_id: 78121,
+        date: 1761955200,
+        chat: { id: -1008352, type: "supergroup" },
+        from: { id: 231 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://bit.ly/${path}%FF`,
+          },
+        ],
+      },
+    });
+    expect(shared.status).toBe("event");
+    if (shared.status !== "event") {
+      return;
+    }
+    expect(shared.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(shared.event)).not.toContain(path);
+    const stuck = await normalize({
+      update_id: 78122,
+      message: {
+        message_id: 78122,
+        date: 1761955200,
+        chat: { id: -1008353, type: "supergroup" },
+        from: { id: 231 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/durov?text=https://example.com/%2http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(stuck.status).toBe("event");
+    if (stuck.status !== "event") {
+      return;
+    }
+    expect(stuck.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(stuck.event)).not.toContain(path);
+    expect(JSON.stringify(stuck.event)).not.toContain("bit.ly");
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
