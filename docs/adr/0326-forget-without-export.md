@@ -27,5 +27,5 @@
 ## 后果
 
 - 每个 `Storage` 的 `deleteAudits` 都要返回条数，并继续跑 `bindStorageContract`。
-- `/forget` 在 D1 上是一条删除。`/export` 仍按页读出全部审计。
+- `/forget` 在 D1 上按页删除，见 ADR 0361。仍不先导出。`/export` 仍按页读出全部审计。
 - 驱动没有报告条数时，行可能已经删除，私聊回复「参数无效」。再执行一次会看到 0。
