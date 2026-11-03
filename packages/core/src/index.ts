@@ -25,6 +25,7 @@ export {
   isExpired,
   parseCaptchaChallenge,
   resolveChallenge,
+  supersedeChallenge,
 } from "./captcha.js";
 export {
   type ChatDirectory,

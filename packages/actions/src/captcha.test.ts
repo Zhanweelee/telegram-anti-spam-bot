@@ -318,6 +318,177 @@ describe("captcha action", () => {
     expect(ports.restricted).toEqual([]);
   });
 
+  it("deletes the stored prompt when a join is banned instead", async () => {
+    const challenges = store();
+    const ports = moderator();
+    const logger = createMemoryLogger();
+    let nonces = 0;
+    await challenges.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "42",
+    });
+    const result = await action(clock, challenges, () => {
+      nonces += 1;
+      return nonce;
+    }).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "ban",
+        ruleIds: ["join_name"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [{ kind: "keyword", summary: "keyword:hit" }],
+      },
+      dryRun: false,
+      moderator: ports,
+      logger,
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({
+      actionId: "captcha",
+      status: "skipped",
+      detail: "superseded",
+    });
+    expect(nonces).toBe(0);
+    expect(ports.deleted).toEqual([
+      { tenantId: "local", chatId: "-100", messageId: "42" },
+    ]);
+    expect(ports.restricted).toEqual([]);
+    expect(await challenges.get("local", "-100", "77")).toBeNull();
+    expect(JSON.stringify(logger.entries)).not.toContain("42");
+    expect(JSON.stringify(logger.entries)).not.toContain("cd".repeat(8));
+    expect(JSON.stringify(result)).not.toContain(nonce);
+  });
+
+  it("keeps the stored prompt when the banned join cannot delete it", async () => {
+    const challenges = store();
+    const ports = moderator();
+    ports.deleteMessage = async () => {
+      throw new Error(phrase);
+    };
+    const logger = createMemoryLogger();
+    await challenges.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "42",
+    });
+    const result = await action(clock, challenges).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "mute",
+        ruleIds: ["join_name"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: ports,
+      logger,
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({
+      actionId: "captcha",
+      status: "skipped",
+      detail: "superseded",
+    });
+    expect(await challenges.get("local", "-100", "77")).toMatchObject({
+      messageId: "42",
+    });
+    expect(ports.restricted).toEqual([]);
+    expect(logger.entries.map((entry) => entry.message)).toEqual([
+      "captcha_prompt_delete_failed",
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain("42");
+  });
+
+  it("still skips captcha when the stored row cannot be dropped", async () => {
+    const challenges = store();
+    const logger = createMemoryLogger();
+    await challenges.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+    });
+    const result = await action(clock, {
+      ...challenges,
+      async delete() {
+        throw new Error(phrase);
+      },
+    }).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "ban",
+        ruleIds: ["join_name"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [],
+      },
+      dryRun: false,
+      moderator: moderator(),
+      logger,
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({
+      actionId: "captcha",
+      status: "skipped",
+      detail: "superseded",
+    });
+    expect(await challenges.get("local", "-100", "77")).toMatchObject({
+      nonce: "cd".repeat(8),
+    });
+    expect(logger.entries.map((entry) => entry.message)).toEqual([
+      "captcha_supersede_failed",
+    ]);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain("cd".repeat(8));
+  });
+
+  it("keeps the stored prompt when a banned join is only a dry run", async () => {
+    const challenges = store();
+    const ports = moderator();
+    await challenges.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "42",
+    });
+    const result = await action(clock, challenges).execute({
+      event: joinEvent("join"),
+      decision: {
+        action: "delete",
+        ruleIds: ["join_name"],
+        score: 1,
+        reasons: ["keyword_match"],
+        evidence: [],
+      },
+      dryRun: true,
+      moderator: ports,
+      logger: createMemoryLogger(),
+      signal: { aborted: false },
+    });
+    expect(result).toEqual({
+      actionId: "captcha",
+      status: "skipped",
+      detail: "dry_run",
+    });
+    expect(ports.deleted).toEqual([]);
+    expect(await challenges.get("local", "-100", "77")).toMatchObject({
+      messageId: "42",
+    });
+  });
+
   it("does not restrict when a detector throws", async () => {
     const ports = moderator();
     const logger = createMemoryLogger();

@@ -8,6 +8,7 @@ import {
   moreSevere,
   type Notifier,
   type Storage,
+  supersedeChallenge,
 } from "@tasb/core";
 import { z } from "zod";
 
@@ -134,6 +135,25 @@ export function createCaptchaAction(deps: CaptchaActionDeps): Action {
         return { actionId: "captcha", status: "skipped", detail: "not_join" };
       }
       if (moreSevere(ctx.decision.action, "captcha") !== "captcha") {
+        try {
+          await supersedeChallenge({
+            event: ctx.event,
+            ports: {
+              store: deps.store,
+              storage: closedStorage,
+              restrict: (target) => ctx.moderator.restrictActor(target),
+              release: (target) => ctx.moderator.releaseActor(target),
+              clock: deps.clock,
+              logger: ctx.logger,
+              removePrompt: (target) => ctx.moderator.deleteMessage(target),
+            },
+          });
+        } catch {
+          ctx.logger.warn("captcha_supersede_failed", {
+            eventId: ctx.event.id,
+            chatId: ctx.event.chatId,
+          });
+        }
         return { actionId: "captcha", status: "skipped", detail: "superseded" };
       }
       if (ctx.event.actor.id.length === 0) {

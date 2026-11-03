@@ -9,6 +9,7 @@ import {
   isExpired,
   parseCaptchaChallenge,
   resolveChallenge,
+  supersedeChallenge,
 } from "./captcha.js";
 import { bindCaptchaStoreContract } from "./captcha-store.contract.js";
 import { createFixedClock } from "./clock.js";
@@ -337,6 +338,107 @@ describe("captcha flow", () => {
     expect(removed).toEqual([]);
     expect(await kit.store.get("local", "-100", "77")).toMatchObject({
       nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.logger.entries).toEqual([]);
+  });
+
+  it("deletes the prompt when a heavier join replaces captcha", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await supersedeChallenge({
+        event: joinEvent("evt_ban"),
+        ports,
+      }),
+    ).toBe(true);
+    expect(removed).toEqual(["42"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(kit.restricted).toHaveLength(1);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries).toEqual([
+      {
+        level: "info",
+        message: "captcha_superseded",
+        fields: { eventId: "evt_ban", chatId: "-100" },
+      },
+    ]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("keeps the challenge when a heavier join cannot delete the prompt", async () => {
+    const kit = harness();
+    const ports = {
+      ...kit.ports,
+      async removePrompt() {
+        throw new Error(secret);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await supersedeChallenge({
+        event: joinEvent("evt_ban"),
+        ports,
+      }),
+    ).toBe(false);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries.map((entry) => entry.message)).toEqual([
+      "captcha_prompt_delete_failed",
+    ]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
+  it("leaves the challenge when the event is not a join", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await supersedeChallenge({
+        event: leaveEvent(),
+        ports,
+      }),
+    ).toBe(false);
+    expect(removed).toEqual([]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
       messageId: "42",
     });
     expect(kit.logger.entries).toEqual([]);
@@ -721,9 +823,9 @@ describe("captcha flow", () => {
   });
 });
 
-function joinEvent() {
+function joinEvent(id = "evt_join") {
   return parseEvent({
-    id: "evt_join",
+    id,
     tenantId: "local",
     chatId: "-100",
     kind: "chat_member",
