@@ -4338,6 +4338,83 @@ describe("link fixtures", () => {
     expect(JSON.stringify(named)).not.toContain(hidden);
   });
 
+  it("reads a capital S username draft and leaves the preview", async () => {
+    const hidden = "offer229";
+    const dotted = "slug.229";
+    const address = "203.0.113.229";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const bare = await detector.detect({
+      event: eventFor(`https://t.me/S?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    expect(bare?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(bare)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/S/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.reasons).toEqual(["short_link"]);
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=S&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain(hidden);
+    const app = await detector.detect({
+      event: eventFor(`https://t.me/S/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(app)).not.toContain(dotted);
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/S?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/S?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.229");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const lower = await detector.detect({
+      event: eventFor(`https://t.me/s?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(lower).toBeNull();
+    const preview = await detector.detect({
+      event: eventFor(`tg://resolve?domain=s&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(preview).toBeNull();
+    expect(JSON.stringify(preview)).not.toContain(hidden);
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/S/${dotted}/extra?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const thread = await detector.detect({
+      event: eventFor(`https://t.me/S/durov/shop?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(thread).toBeNull();
+    expect(JSON.stringify(thread)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

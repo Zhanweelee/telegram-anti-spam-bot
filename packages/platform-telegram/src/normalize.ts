@@ -1872,14 +1872,16 @@ function isTelegramPhoneSegment(host: string, segment: string): boolean {
   return /^\+\d{1,128}$/.test(segment);
 }
 
+/** 小写 `s` 是预览路径。大写 `S` 仍按用户名写草稿。 */
 function isPublicUsername(value: string): boolean {
   return (
     /^[A-Za-z0-9_]{1,32}$/.test(value) &&
+    value !== "s" &&
     !reservedUsernames.has(value.toLowerCase())
   );
 }
 
-const reservedUsernames = new Set(["getpremium", "s", "telegrampassport"]);
+const reservedUsernames = new Set(["getpremium", "telegrampassport"]);
 
 function isTelegramMsg(url: URL): boolean {
   if (url.protocol !== "tg:") {

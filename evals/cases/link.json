@@ -4895,5 +4895,40 @@
     "id": "getpremium-app",
     "text": "https://t.me/getpremium/slug228?text=https%3A%2F%2Fbit.ly%2Foffer228",
     "label": "ham"
+  },
+  {
+    "id": "capital-s-bare",
+    "text": "https://t.me/S?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "spam"
+  },
+  {
+    "id": "capital-s-slash",
+    "text": "https://t.me/S/?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "spam"
+  },
+  {
+    "id": "capital-s-resolve",
+    "text": "tg://resolve?domain=S&text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "spam"
+  },
+  {
+    "id": "capital-s-dot",
+    "text": "https://t.me/S/slug.229?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "spam"
+  },
+  {
+    "id": "capital-s-www",
+    "text": "https://www.telegram.dog/S?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "spam"
+  },
+  {
+    "id": "lowercase-s-bare",
+    "text": "https://t.me/s?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "ham"
+  },
+  {
+    "id": "capital-s-extra",
+    "text": "https://t.me/S/slug.229/extra?text=https%3A%2F%2Fbit.ly%2Foffer229",
+    "label": "ham"
   }
 ]

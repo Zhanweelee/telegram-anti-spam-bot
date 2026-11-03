@@ -3337,6 +3337,86 @@ describe("normalizeUpdate", () => {
     expect(commandDump).not.toContain("SECRET228");
   });
 
+  it("keeps a capital S username draft and leaves the preview", async () => {
+    const hidden = "offer229";
+    const dotted = "slug.229";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78112,
+      message: {
+        message_id: 78112,
+        date: 1761955200,
+        chat: { id: -1008343, type: "supergroup" },
+        from: { id: 229 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/S?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const dumped = JSON.stringify(user.event);
+    expect(dumped).not.toContain(hidden);
+    const app = await normalize({
+      update_id: 78113,
+      message: {
+        message_id: 78113,
+        date: 1761955200,
+        chat: { id: -1008344, type: "supergroup" },
+        from: { id: 229 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/S/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(app.event)).not.toContain(dotted);
+    const preview = await normalize({
+      update_id: 78114,
+      message: {
+        message_id: 78114,
+        date: 1761955200,
+        chat: { id: -1008345, type: "supergroup" },
+        from: { id: 229 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/s?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(preview.status).toBe("event");
+    if (preview.status !== "event") {
+      return;
+    }
+    expect(preview.event.message?.hosts).toEqual(["t.me"]);
+    expect(JSON.stringify(preview.event)).not.toContain(hidden);
+    expect(JSON.stringify(preview.event)).not.toContain("bit.ly");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-229
+
+- 大写 `S` 按用户名读取 `text`。小写 `s` 没有下一段时仍不读。见 ADR 0262。
+- `t.me/S?text=`、`t.me/S/slug.229?text=` 和 `tg://resolve?domain=S&text=` 里的短链删除。`t.me/s?text=` 和 `tg://resolve?domain=s&text=` 留着。再多一段路径留着。用户名和应用名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-228
 
 - `t.me/webproxy` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0261。
