@@ -915,6 +915,25 @@ function pushOpenedQuery(value: unknown, urls: string[]): void {
   pushOpenedSpans(value, urls);
 }
 
+/** 普通链接仍停在 2048。分享、私聊预填和 Passport 回调可以到草稿上限。 */
+function withinLinkLimit(value: string): boolean {
+  if (value.length <= MAX_LINK) {
+    return true;
+  }
+  if (value.length > OPENED_DRAFT) {
+    return false;
+  }
+  let url: URL;
+  try {
+    url = new URL(/^(?:https?:|tg:)/i.test(value) ? value : `http://${value}`);
+  } catch {
+    return false;
+  }
+  return (
+    isTelegramShare(url) || isTelegramMsg(url) || isTelegramPassport(value, url)
+  );
+}
+
 function hostFromUrl(
   value: unknown,
   unwrap = true,
@@ -926,7 +945,7 @@ function hostFromUrl(
   if (
     typeof value !== "string" ||
     value.length === 0 ||
-    value.length > MAX_LINK
+    !withinLinkLimit(value)
   ) {
     return null;
   }
@@ -1039,8 +1058,8 @@ function wrappedExtras(
     return [];
   }
   const found: { host: string; invite: boolean }[] = [];
-  const embedded = queryValue(source, "url");
-  if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
+  const embedded = openedDraft(queryValue(source, "url"));
+  if (embedded !== null) {
     for (const raw of queryUrls(embedded)) {
       pushClosedUrl(raw, found);
     }
@@ -1063,8 +1082,8 @@ function msgTextExtras(
     return [];
   }
   const found: { host: string; invite: boolean }[] = [];
-  const embedded = queryValue(source, "url");
-  if (embedded !== null && embedded.length > 0 && embedded.length <= MAX_LINK) {
+  const embedded = openedDraft(queryValue(source, "url"));
+  if (embedded !== null) {
     for (const raw of queryUrls(embedded)) {
       pushClosedUrl(raw, found);
     }
@@ -1100,15 +1119,7 @@ function passportCallback(raw: string, url: URL, source = raw): string | null {
   if (!isTelegramPassport(raw, url)) {
     return null;
   }
-  const callback = queryValue(source, "callback_url");
-  if (
-    callback === null ||
-    callback.length === 0 ||
-    callback.length > MAX_LINK
-  ) {
-    return null;
-  }
-  return callback;
+  return openedDraft(queryValue(source, "callback_url"));
 }
 
 function isTelegramPassport(raw: string, url: URL): boolean {
@@ -1916,6 +1927,16 @@ function searchParam(url: URL, name: string): string | null {
     }
   }
   return null;
+}
+
+/** Android 把分享草稿截到 4096 × 4。再往后的字不再打开。 */
+const OPENED_DRAFT = 4096 * 4;
+
+function openedDraft(value: string | null): string | null {
+  if (value === null || value.length === 0) {
+    return null;
+  }
+  return value.length > OPENED_DRAFT ? value.slice(0, OPENED_DRAFT) : value;
 }
 
 /** 查询里的 `+` 是空格。不完整的 `%` 留下。非法 UTF-8 换成替换字符。`%2B` 仍是加号。 */

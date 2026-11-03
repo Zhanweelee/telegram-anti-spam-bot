@@ -12409,4 +12409,68 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(kept.decision)).not.toContain(path);
     expect(JSON.stringify(kept.decision)).not.toContain("bit.ly");
   });
+
+  it("reads a short link in a long share url", async () => {
+    const path = "offer232";
+    const padding = "a".repeat(2100);
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2383,
+        message: {
+          message_id: 2383,
+          date: 1761955200,
+          chat: { id: -1008354, type: "supergroup", title: "机密群名" },
+          from: { id: 232, first_name: "Ada" },
+          text: `https://t.me/share/url?url=http://bit.ly/${path}%20${padding}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const result = await screenTelegramEvent(opened.event, {
+      logger,
+      moderator: createMemoryModerator(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("机密群名");
+
+    const later = await normalizeUpdate({
+      update: {
+        update_id: 2384,
+        message: {
+          message_id: 2384,
+          date: 1761955200,
+          chat: { id: -1008355, type: "supergroup", title: "机密群名" },
+          from: { id: 232, first_name: "Ada" },
+          text: `https://t.me/share/url?url=${padding}%20http://bit.ly/${path}`,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    const tail = await screenTelegramEvent(later.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(tail.decision.action).toBe("delete");
+    expect(tail.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(tail.decision)).not.toContain(path);
+  });
 });

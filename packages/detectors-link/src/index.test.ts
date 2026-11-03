@@ -5,6 +5,7 @@ import { createMemoryLogger, type Event, parseEvent } from "@tasb/core";
 import { describe, expect, it } from "vitest";
 import {
   createLinkDetector,
+  extractHosts,
   type ReputationSource,
   type ReputationVerdict,
 } from "./index.js";
@@ -4464,6 +4465,59 @@ describe("link fixtures", () => {
     });
     expect(glued).toBeNull();
     expect(JSON.stringify(glued)).not.toContain(path);
+  });
+
+  it("reads a short link in a long share url", async () => {
+    const detector = createLinkDetector();
+    const path = "offer232";
+    const padding = "a".repeat(2100);
+    const opened = await detector.detect({
+      event: eventFor(
+        `https://t.me/share/url?url=http://bit.ly/${path}%20${padding}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(opened?.reasons).toEqual(["short_link"]);
+    expect(opened?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:bit.ly",
+    ]);
+    expect(JSON.stringify(opened)).not.toContain(path);
+    const later = await detector.detect({
+      event: eventFor(
+        `https://t.me/share/url?url=${padding}%20http://bit.ly/${path}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(later?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(later)).not.toContain(path);
+    const msg = await detector.detect({
+      event: eventFor(`tg://msg_url?url=${padding}%20http://bit.ly/${path}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(msg?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(msg)).not.toContain(path);
+    const callback = await detector.detect({
+      event: eventFor(
+        `https://t.me/telegrampassport?callback_url=http://bit.ly/${path}%20${padding}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(callback?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(callback)).not.toContain(path);
+    const kept = extractHosts(
+      `https://t.me/share/url?url=${"b".repeat(16360)}%20http://bit.ly/${path}`,
+    );
+    expect(kept).toContain("bit.ly");
+    expect(JSON.stringify(kept)).not.toContain(path);
+    const cut = extractHosts(
+      `https://t.me/share/url?url=${"b".repeat(16384)}%20http://bit.ly/${path}`,
+    );
+    expect(cut).not.toContain("bit.ly");
+    expect(JSON.stringify(cut)).not.toContain(path);
   });
 
   it("reads a capital S username draft and leaves the preview", async () => {

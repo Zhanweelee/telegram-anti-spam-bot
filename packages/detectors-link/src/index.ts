@@ -662,13 +662,10 @@ function telegramWrapped(
   if (!isTelegramShare(url)) {
     return null;
   }
-  const embedded = queryValue(raw, "url");
+  const embedded = openedDraft(queryValue(raw, "url"));
   const text = queryValue(raw, "text");
   return {
-    url:
-      embedded !== null && embedded.length > 0 && embedded.length <= 2048
-        ? embedded
-        : null,
+    url: embedded,
     text: text !== null && text.length > 0 && text.length <= 4096 ? text : null,
   };
 }
@@ -724,11 +721,7 @@ function telegramMsgUrl(raw: string): string | null {
   if (!isTelegramMsgRaw(raw)) {
     return null;
   }
-  const embedded = queryValue(raw, "url");
-  if (embedded === null || embedded.length === 0 || embedded.length > 2048) {
-    return null;
-  }
-  return embedded;
+  return openedDraft(queryValue(raw, "url"));
 }
 
 function pushUsernameDraftHosts(
@@ -804,11 +797,7 @@ function passportCallback(raw: string): string | null {
   if (!isTelegramPassport(raw, url)) {
     return null;
   }
-  const callback = queryValue(raw, "callback_url");
-  if (callback === null || callback.length === 0 || callback.length > 2048) {
-    return null;
-  }
-  return callback;
+  return openedDraft(queryValue(raw, "callback_url"));
 }
 
 function isTelegramPassport(raw: string, url: URL): boolean {
@@ -1583,6 +1572,16 @@ function searchParam(url: URL, name: string): string | null {
     }
   }
   return null;
+}
+
+/** Android 把分享草稿截到 4096 × 4。再往后的字不再打开。 */
+const OPENED_DRAFT = 4096 * 4;
+
+function openedDraft(value: string | null): string | null {
+  if (value === null || value.length === 0) {
+    return null;
+  }
+  return value.length > OPENED_DRAFT ? value.slice(0, OPENED_DRAFT) : value;
 }
 
 /** 查询里的 `+` 是空格。不完整的 `%` 留下。非法 UTF-8 换成替换字符。`%2B` 仍是加号。 */

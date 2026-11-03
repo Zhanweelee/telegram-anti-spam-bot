@@ -36,3 +36,4 @@ Android `Uri.getQueryParameter` 和桌面端 `QUrl::fromPercentEncoding` 遇到�
 - `https://example.com/%2http://bit.ly/…` 留着。
 - `%2B` 编码的加号仍粘住后面的网址。
 - 正文里的百分号仍按 ADR 0197 处理。这条只改查询值。
+- 这些查询超过 2048 时后来仍留下主机名。见 ADR 0265。

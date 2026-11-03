@@ -3552,6 +3552,83 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(stuck.event)).not.toContain("bit.ly");
   });
 
+  it("keeps a short link in a long share url", async () => {
+    const path = "offer232";
+    const padding = "a".repeat(2100);
+    const opened = await normalize({
+      update_id: 78123,
+      message: {
+        message_id: 78123,
+        date: 1761955200,
+        chat: { id: -1008354, type: "supergroup" },
+        from: { id: 232 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://bit.ly/${path}%20${padding}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+    const later = await normalize({
+      update_id: 78124,
+      message: {
+        message_id: 78124,
+        date: 1761955200,
+        chat: { id: -1008355, type: "supergroup" },
+        from: { id: 232 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=${padding}%20http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(later.event)).not.toContain(path);
+    const plain = await normalize({
+      update_id: 78125,
+      message: {
+        message_id: 78125,
+        date: 1761955200,
+        chat: { id: -1008356, type: "supergroup" },
+        from: { id: 232 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://bit.ly/${path}/${padding}`,
+          },
+        ],
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
