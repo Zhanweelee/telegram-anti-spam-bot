@@ -1937,6 +1937,13 @@ function openBareEnd(text: string): string {
       index = domain + unicodeTail.length;
       continue;
     }
+    const joinedTail = unicodeJoinRewrite(rest);
+    if (joinedTail !== null) {
+      out += text.slice(index, domain);
+      out += joinedTail.replacement;
+      index = domain + joinedTail.length;
+      continue;
+    }
     const label = bareLabelSkip(rest);
     if (label > 0) {
       out += `${text.slice(index, domain)} `;
@@ -2337,6 +2344,97 @@ function draftAsciiWord(code: number): boolean {
     (code >= 0x61 && code <= 0x7a) ||
     code === 0x5f
   );
+}
+
+/** 句号或点状间隔号后面是含标签字的域名时，收成一个点并写成 ASCII。 */
+function unicodeJoinRewrite(
+  rest: string,
+): { replacement: string; length: number } | null {
+  const first = rest.codePointAt(0);
+  let run = 0;
+  if (
+    first !== undefined &&
+    first !== 0x3002 &&
+    !DRAFT_DOT_LOOKALIKE.has(first)
+  ) {
+    run = labelRunLength(rest);
+  }
+  let index = run;
+  const stopStart = index;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (
+      code === undefined ||
+      (code !== 0x3002 && !DRAFT_DOT_LOOKALIKE.has(code))
+    ) {
+      break;
+    }
+    index += String.fromCodePoint(code).length;
+  }
+  if (index === stopStart) {
+    return null;
+  }
+  const tail = rest.slice(index);
+  if (!hasDraftNonAscii(tail) || !joinUnicodeDomain(tail)) {
+    return null;
+  }
+  const head = /^[^/?#\s]+/.exec(tail)?.[0] ?? "";
+  const encoded = head
+    .split(".")
+    .map((label) =>
+      label.length === 0 || !hasDraftNonAscii(label)
+        ? label
+        : punycodeLabel(label),
+    )
+    .join(".");
+  return {
+    replacement: `${run > 0 ? "x." : "."}${encoded}`,
+    length: index + head.length,
+  };
+}
+
+/** 间隔号后面的域名含 Android 标签字，而且中间还有一个点。单独的顶级域不算。 */
+function joinUnicodeDomain(rest: string): boolean {
+  if (!rest.includes(".")) {
+    return false;
+  }
+  let index = 0;
+  let labelStart = 0;
+  let last = 0;
+  let sawDot = false;
+  while (index < rest.length) {
+    const code = rest.codePointAt(index);
+    if (code === undefined) {
+      break;
+    }
+    if (code === 0x2e) {
+      if (index === labelStart) {
+        return false;
+      }
+      if (sawDot && isStrictTld(rest.slice(labelStart, index))) {
+        return true;
+      }
+      sawDot = true;
+      index += 1;
+      labelStart = index;
+      last = 0x2e;
+      continue;
+    }
+    if (!draftDomainLabelCode(code)) {
+      break;
+    }
+    if (
+      sawDot &&
+      index > labelStart &&
+      draftWordBoundary(last, code) &&
+      isStrictTld(rest.slice(labelStart, index))
+    ) {
+      return true;
+    }
+    last = code;
+    index += String.fromCodePoint(code).length;
+  }
+  return sawDot && isStrictTld(rest.slice(labelStart, index));
 }
 
 /** 一段句号或点状间隔号后面是 ASCII 域名时留下。否则在这里结束主机名。 */
