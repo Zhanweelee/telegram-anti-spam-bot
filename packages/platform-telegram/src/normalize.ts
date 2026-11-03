@@ -1283,6 +1283,9 @@ function isUsernameDraft(url: URL): boolean {
   if (aiStyleReplacesDraft(host, parts)) {
     return false;
   }
+  if (invoiceReplacesDraft(host, parts)) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -1436,6 +1439,23 @@ function aiStyleReplacesDraft(host: string, parts: readonly string[]): boolean {
   return parts[0]?.toLowerCase() === "addstyle" && parts.length >= 2;
 }
 
+/** 第二段是账单短码。字符集之外时桌面端仍按应用名写草稿。没有这段时 `invoice` 仍是用户名。 */
+function invoiceReplacesDraft(host: string, parts: readonly string[]): boolean {
+  if (host === "invoice.t.me") {
+    return parts.length === 1 && /^[A-Za-z0-9_-]+$/.test(parts[0] ?? "");
+  }
+  if (!isExactDraftHost(host)) {
+    return false;
+  }
+  const slug = parts[1];
+  return (
+    parts[0]?.toLowerCase() === "invoice" &&
+    parts.length === 2 &&
+    slug !== undefined &&
+    /^[A-Za-z0-9_-]+$/.test(slug)
+  );
+}
+
 /** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
 function isGroupCallPath(host: string, pathname: string): boolean {
   return isExactDraftHost(host) && pathname.startsWith("/call/");
@@ -1525,7 +1545,6 @@ const reservedUsernames = new Set([
   "contact",
   "folder",
   "getpremium",
-  "invoice",
   "iv",
   "joinchat",
   "login",

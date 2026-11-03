@@ -3500,5 +3500,35 @@
     "id": "addstyle-subdomain-post",
     "text": "https://addstyle.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer201",
     "label": "ham"
+  },
+  {
+    "id": "invoice-username",
+    "text": "https://t.me/invoice?text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "spam"
+  },
+  {
+    "id": "invoice-resolve",
+    "text": "tg://resolve?domain=invoice&text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "spam"
+  },
+  {
+    "id": "invoice-prefix",
+    "text": "https://invoice.t.me?text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "spam"
+  },
+  {
+    "id": "invoice-dotted-app",
+    "text": "https://t.me/invoice/pay.now?text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "spam"
+  },
+  {
+    "id": "invoice-slug",
+    "text": "https://t.me/invoice/pay202?text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "ham"
+  },
+  {
+    "id": "invoice-subdomain-post",
+    "text": "https://invoice.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer202",
+    "label": "ham"
   }
 ]

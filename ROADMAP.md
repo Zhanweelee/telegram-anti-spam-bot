@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-202 账单短码不读 text — done
+
+验收：`t.me/invoice?text=`、`t.me/invoice/?text=`、`invoice.t.me?text=`、`tg://resolve?domain=invoice&text=` 和 `t.me/invoice/pay.now?text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/invoice/pay202`、`Invoice/pay_now`、`www.telegram.dog/invoice/短码` 和 `invoice.t.me/数字` 留着。用户名和短码不进证据。默认名单仍是 ADR 0026。
+
 ### P3-201 文风短码不读 text — done
 
 验收：`t.me/addstyle?text=`、`t.me/addstyle/?text=`、`addstyle.t.me?text=` 和 `tg://resolve?domain=addstyle&text=` 的 `text` 是短链时删除。证据只有主机名。`t.me/addstyle/短码`、`AddStyle/短码`、`www.telegram.dog/addstyle/短码` 和 `addstyle.t.me/数字` 留着。用户名和短码不进证据。默认名单仍是 ADR 0026。
@@ -2433,6 +2437,12 @@
 
 - 做了什么：带协议的主机名里，非间距标记写在标签末尾且后面还能接上点、路径、查询或端口时，这个标记留在标签里。后面的希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 Android 仍算进这条链接时留下。选择写在 ADR 0229。
 - 学到什么：`http://bit͏.lyα/…` 在 Android 上是一条主机名，地址解析器给出的名字不是 `bit.ly`。非间距标记不能当词边界，原先会在点号前面把标签截断。`http://bit.lỳ/…` 的组合附加符号也留在标签里，点开的主机名不是短链。没有协议的 `bit͏.lyα/…` 仍只打开短链。`#`、`@` 和空格也会退回短链。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
+
+### 2026-11-03 P3-202
+
+- 做了什么：`t.me/invoice` 仍从 `text` 抽主机名。后面是账单短码时不读。带点的第二段仍读。选择写在 ADR 0235。
+- 学到什么：Android 在 `invoice` 后面还有一段时打开付款单。桌面端只认 `[A-Za-z0-9_-]+`。`invoice/pay.now` 在桌面端是应用名，仍写草稿。`invoice.t.me/数字` 收成账单短码。
 - 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。
 
 ### 2026-11-03 P3-201

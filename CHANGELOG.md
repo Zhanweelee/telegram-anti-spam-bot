@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-202
+
+- `t.me/invoice` 仍按用户名读取。后面是账单短码时打开付款，不读 `text`。见 ADR 0235。
+- `t.me/invoice?text=` 和 `t.me/invoice/pay.now?text=` 里的短链仍删除。`t.me/invoice/短码?text=` 和 `invoice.t.me/数字?text=` 留着。用户名和短码不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-201
 
 - `t.me/addstyle` 仍按用户名读取。后面有短码时打开文风，不读 `text`。见 ADR 0234。

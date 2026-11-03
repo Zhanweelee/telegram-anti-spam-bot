@@ -1422,6 +1422,92 @@ describe("link fixtures", () => {
     expect(JSON.stringify(numeric)).not.toContain(hidden);
   });
 
+  it("reads an invoice username draft and leaves an invoice slug", async () => {
+    const hidden = "offer202";
+    const slug = "pay202";
+    const address = "203.0.113.202";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await detector.detect({
+      event: eventFor(`https://t.me/invoice?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/invoice/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(`https://invoice.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=invoice&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain("invoice");
+    const dotted = await detector.detect({
+      event: eventFor(`https://t.me/invoice/pay.now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dotted?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(dotted)).not.toContain(hidden);
+    const payment = await detector.detect({
+      event: eventFor(`https://t.me/invoice/${slug}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(payment).toBeNull();
+    expect(JSON.stringify(payment)).not.toContain(hidden);
+    expect(JSON.stringify(payment)).not.toContain(slug);
+    const underscored = await detector.detect({
+      event: eventFor(`https://t.me/invoice/pay_now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(underscored).toBeNull();
+    const hyphenated = await detector.detect({
+      event: eventFor(`https://t.me/invoice/pay-now?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hyphenated).toBeNull();
+    const capital = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/Invoice/${slug}/?text=${draft}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/invoice/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    expect(JSON.stringify(me)).not.toContain(address);
+    const numeric = await detector.detect({
+      event: eventFor(`https://invoice.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    expect(JSON.stringify(numeric)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
