@@ -521,6 +521,170 @@ describe("screenTelegramEvent", () => {
     expect(cleanModerator.declined).toEqual([]);
   });
 
+  it("answers a guarded join request and queues a clean one", async () => {
+    const phrase = "请免费领取礼品";
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 6891,
+        chat_join_request: {
+          chat: { id: -1006891, type: "supergroup", title: "机密群名" },
+          from: { id: 83, first_name: phrase },
+          date: 1761955200,
+          bio: "https://example.com/ok89",
+          query_id: "query89",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    const cleanModerator = createMemoryModerator();
+    const cleanResult = await screenTelegramEvent(clean.event, {
+      logger: createMemoryLogger(),
+      moderator: cleanModerator,
+    });
+    expect(cleanResult.decision.action).toBe("allow");
+    expect(cleanModerator.declined).toEqual([]);
+    expect(cleanModerator.deferred).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-1006891",
+        actorId: "83",
+        queryId: "query89",
+      },
+    ]);
+
+    const spam = await normalizeUpdate({
+      update: {
+        update_id: 6892,
+        chat_join_request: {
+          chat: { id: -1006892, type: "supergroup", title: "机密群名" },
+          from: { id: 83, first_name: "Ada" },
+          date: 1761955200,
+          bio: `${phrase} https://bit.ly/bio89`,
+          query_id: "query90",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(spam.status).toBe("event");
+    if (spam.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(spam.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("decline");
+    expect(moderator.declined).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-1006892",
+        actorId: "83",
+        queryId: "query90",
+      },
+    ]);
+    expect(moderator.deferred).toEqual([]);
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("bio89");
+    expect(dumped).not.toContain("query90");
+    expect(dumped).not.toContain("机密群名");
+
+    const runtime = createMemoryRuntimeStore();
+    await runtime.setDryRun("local", "-1006893", true);
+    const dryModerator = createMemoryModerator();
+    const dryResult = await screenTelegramEvent(
+      { ...spam.event, id: "tg_6893", chatId: "-1006893" },
+      {
+        logger: createMemoryLogger(),
+        moderator: dryModerator,
+        runtime,
+      },
+    );
+    expect(dryResult.dryRun).toBe(true);
+    expect(dryResult.decision.action).toBe("decline");
+    expect(dryModerator.declined).toEqual([]);
+    expect(dryModerator.deferred).toEqual([]);
+
+    const admin = await normalizeUpdate({
+      update: {
+        update_id: 6894,
+        chat_join_request: {
+          chat: { id: -1006894, type: "supergroup" },
+          from: { id: 83, first_name: "Ada" },
+          date: 1761955200,
+          bio: phrase,
+          query_id: "query91",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: ["83"],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(admin.status).toBe("event");
+    if (admin.status !== "event") {
+      return;
+    }
+    const adminModerator = createMemoryModerator();
+    const adminResult = await screenTelegramEvent(admin.event, {
+      logger: createMemoryLogger(),
+      moderator: adminModerator,
+    });
+    expect(adminResult.outcome).toBe("exempt");
+    expect(adminModerator.declined).toEqual([]);
+    expect(adminModerator.deferred).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-1006894",
+        actorId: "83",
+        queryId: "query91",
+      },
+    ]);
+
+    const failedModerator = createMemoryModerator();
+    const failed = await screenTelegramEvent(
+      { ...spam.event, id: "tg_6895", chatId: "-1006895" },
+      {
+        logger: createMemoryLogger(),
+        moderator: {
+          ...failedModerator,
+          async declineJoin() {
+            throw new Error("decline_failed");
+          },
+        },
+      },
+    );
+    expect(failed.decision.action).toBe("decline");
+    expect(failedModerator.deferred).toEqual([]);
+
+    const warnLogger = createMemoryLogger();
+    const warnModerator = createMemoryModerator();
+    const warned = await screenTelegramEvent(clean.event, {
+      logger: warnLogger,
+      moderator: {
+        ...warnModerator,
+        async deferJoin() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(warned.decision.action).toBe("allow");
+    expect(warnModerator.deferred).toEqual([]);
+    const warnedDump = JSON.stringify(warnLogger.entries);
+    expect(warnedDump).toContain("join_query_defer_failed");
+    expect(warnedDump).not.toContain(phrase);
+    expect(warnedDump).not.toContain("query89");
+  });
+
   it("bans a bot added from outside and drops its username", async () => {
     const name = "广告机器人";
     const outcome = await normalizeUpdate({

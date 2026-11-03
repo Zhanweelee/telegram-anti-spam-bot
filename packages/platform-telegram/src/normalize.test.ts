@@ -20372,11 +20372,11 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message).toBeUndefined();
     expect(labeled.event.profile?.text).toBe(bio);
     expect(labeled.event.profile?.textSha256).toBe(await sha256Hex(bio));
+    expect(labeled.event.joinQueryId).toBe("query83");
     const labeledDump = JSON.stringify(labeled.event);
     expect(labeledDump).not.toContain("name83");
     expect(labeledDump).not.toContain("grp83");
     expect(labeledDump).not.toContain("inv83");
-    expect(labeledDump).not.toContain("query83");
     expect(labeledDump).not.toContain("83001");
     expect(labeledDump).not.toContain("cutt.ly");
     expect(labeledDump).not.toContain("tinyurl.com");
@@ -20424,6 +20424,27 @@ describe("normalizeUpdate", () => {
     expect(emptyDump).not.toContain(phrase);
     expect(emptyDump).not.toContain(code);
     expect(emptyDump).not.toContain("t.me");
+    expect(empty.event.joinQueryId).toBeUndefined();
+
+    const unsafe = await normalize({
+      update_id: 5413,
+      chat_join_request: {
+        chat: { id: -101083, type: "supergroup" },
+        from: { id: 83, first_name: "Ada" },
+        date: 1761955200,
+        bio: "今天站会",
+        query_id: ` ${phrase} `,
+      },
+    });
+    expect(unsafe.status).toBe("event");
+    if (unsafe.status !== "event") {
+      return;
+    }
+    expect(unsafe.event.joinQueryId).toBeUndefined();
+    expect(unsafe.event.profile?.text).toBe("今天站会");
+    const unsafeDump = JSON.stringify(unsafe.event);
+    expect(unsafeDump).not.toContain(phrase);
+    expect(unsafeDump).not.toContain("query_id");
   });
 
   it("keeps a join service message name and drops the sender name", async () => {

@@ -395,6 +395,12 @@ export async function screenTelegramEvent(
       })),
     ],
   });
+  const moderator =
+    deps.moderator ??
+    moderatorFor({
+      token: deps.botToken,
+      fetchImpl: deps.fetchImpl,
+    });
   const result = await runPipeline({
     event,
     rules,
@@ -403,14 +409,30 @@ export async function screenTelegramEvent(
     detectors,
     actions,
     storage: deps.storage ?? workerStorage,
-    moderator:
-      deps.moderator ??
-      moderatorFor({
-        token: deps.botToken,
-        fetchImpl: deps.fetchImpl,
-      }),
+    moderator,
     logger,
   });
+  const joinQueryId = event.joinQueryId;
+  if (
+    !dryRun &&
+    event.kind === "join_request" &&
+    joinQueryId &&
+    result.decision.action !== "decline"
+  ) {
+    try {
+      await moderator.deferJoin({
+        tenantId: event.tenantId,
+        chatId: event.chatId,
+        actorId: event.actor.id,
+        queryId: joinQueryId,
+      });
+    } catch {
+      logger.warn("join_query_defer_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+  }
   logger.info("webhook_screened", {
     eventId: result.eventId,
     chatId: event.chatId,

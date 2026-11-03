@@ -8,6 +8,7 @@ import {
   captchaChallengeSchema,
   type DeleteTarget,
   isExpired,
+  type JoinTarget,
   MAX_RULE_SWITCHES,
   type ModerationPort,
   type MuteTarget,
@@ -109,14 +110,16 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
-  readonly declined: readonly BanTarget[];
+  readonly declined: readonly JoinTarget[];
+  readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
   readonly released: readonly BanTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
-  const declined: BanTarget[] = [];
+  const declined: JoinTarget[] = [];
+  const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
   const released: BanTarget[] = [];
   return {
@@ -124,6 +127,7 @@ export function createMemoryModerator(): ModerationPort & {
     muted,
     banned,
     declined,
+    deferred,
     restricted,
     released,
     async deleteMessage(target) {
@@ -136,7 +140,28 @@ export function createMemoryModerator(): ModerationPort & {
       banned.push({ ...target });
     },
     async declineJoin(target) {
-      declined.push({ ...target });
+      declined.push(
+        target.queryId === undefined
+          ? {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              actorId: target.actorId,
+            }
+          : {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              actorId: target.actorId,
+              queryId: target.queryId,
+            },
+      );
+    },
+    async deferJoin(target) {
+      deferred.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        actorId: target.actorId,
+        queryId: target.queryId,
+      });
     },
     async restrictActor(target) {
       restricted.push({ ...target });

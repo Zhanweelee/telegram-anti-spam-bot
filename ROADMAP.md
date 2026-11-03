@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-327 守卫 bot 的入群查询当场答复 — done
+
+验收：`query_id` 匹配 `^[A-Za-z0-9_-]{1,128}$` 时进入 `joinQueryId`。短语和空白丢掉，日志不含这段字。命中时 `answerChatJoinRequestQuery` 的结果是 `decline`，不再同时调用 `declineChatJoinRequest`。未命中、管理员豁免时结果是 `queue`。决定已是 `decline` 时，动作失败也不改答 `queue`。dry-run 不请求 Telegram。没有查询号时仍只在拒绝时调用 `declineChatJoinRequest`。不自动通过。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-326 群里改成员标签也封禁 — done
 
 验收：人还在群里，`tag` 去掉首尾空白后和旧标签不同时，新标签进入 `profile`，不带昵称，也不带 `membership`。默认 `join_name` 因此封禁，不发验证按钮。标签没变、被清空、离群和 bot 不带 `profile`。日志不含标签和昵称。规则、白名单、额度和 30 天保留期不动。
@@ -1540,6 +1544,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-327
+
+- 做了什么：带安全查询号的入群申请在当次请求里答复。广告简介拒绝，其余交给其他管理员。
+- 学到什么：守卫 bot 的 `query_id` 有 10 秒时限。只在命中时调用 `declineChatJoinRequest`，干净的查询会超时。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-326
 

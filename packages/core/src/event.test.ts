@@ -350,4 +350,39 @@ describe("event schema", () => {
       }),
     ).toThrow();
   });
+
+  it("keeps a safe join query id and rejects a phrase", () => {
+    const event = parseEvent({
+      id: "evt_join",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "83", isAdmin: false },
+      joinQueryId: "query83",
+    });
+    expect(event.joinQueryId).toBe("query83");
+    expect(() =>
+      parseEvent({
+        id: "evt_join",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "join_request",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "83", isAdmin: false },
+        joinQueryId: "请免费领取礼品",
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_join",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "join_request",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "83", isAdmin: false },
+        joinQueryId: "",
+      }),
+    ).toThrow();
+  });
 });

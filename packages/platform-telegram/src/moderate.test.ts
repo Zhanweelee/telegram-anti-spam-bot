@@ -227,6 +227,49 @@ describe("telegram captcha transport", () => {
     expect(body).not.toContain(token);
   });
 
+  it("answers a guarded join query and leaves a clean one queued", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token,
+      fetchImpl: async (input, init) => {
+        calls.push({
+          method: String(input),
+          body: String(init?.body ?? ""),
+        });
+        return new Response("ok", { status: 200 });
+      },
+    });
+    await moderator.declineJoin({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "83",
+      queryId: "query83",
+    });
+    await moderator.deferJoin({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "83",
+      queryId: "query84",
+    });
+    expect(calls[0]?.method).toBe(
+      `https://api.telegram.org/bot${token}/answerChatJoinRequestQuery`,
+    );
+    expect(calls[0]?.body).toContain('"chat_join_request_query_id":"query83"');
+    expect(calls[0]?.body).toContain('"result":"decline"');
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    expect(calls[0]?.body).not.toContain("declineChatJoinRequest");
+    expect(calls[1]?.method).toBe(
+      `https://api.telegram.org/bot${token}/answerChatJoinRequestQuery`,
+    );
+    expect(calls[1]?.body).toContain('"chat_join_request_query_id":"query84"');
+    expect(calls[1]?.body).toContain('"result":"queue"');
+    expect(calls[1]?.body).not.toContain('"result":"approve"');
+    expect(calls[1]?.body).not.toContain(phrase);
+  });
+
   it("keeps restrictions inside Telegram's temporary range", async () => {
     const bodies: string[] = [];
     const day = 24 * 60 * 60;

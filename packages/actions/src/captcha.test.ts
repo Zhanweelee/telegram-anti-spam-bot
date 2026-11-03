@@ -75,6 +75,7 @@ function moderator(
     async muteActor() {},
     async banActor() {},
     async declineJoin() {},
+    async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {
         await restrict(target);

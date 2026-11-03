@@ -12,9 +12,9 @@
 ## 决策
 
 - `chat_join_request` 收成 `kind: "join_request"`。主体是 `from`。简介去掉首尾空白后放进 `profile`，最长 256 字符，并带 sha256。没有简介就不带 `profile`。
-- 不读取邀请链接、姓名、用户名、`user_chat_id` 和 `query_id`。
-- 默认规则 `join_request` 使用现有的关键词和链接检测器。聚合仍是 max，所以两边有一边命中就够。动作是 `decline`，调用 `declineChatJoinRequest`。
-- 没有命中时不调用 `approveChatJoinRequest`。申请继续留给管理员。
+- 不读取邀请链接、姓名、用户名和 `user_chat_id`。符合 `^[A-Za-z0-9_-]{1,128}$` 的 `query_id` 记成 `joinQueryId`。其它查询号丢掉。见 ADR 0360。
+- 默认规则 `join_request` 使用现有的关键词和链接检测器。聚合仍是 max，所以两边有一边命中就够。动作是 `decline`。没有 `joinQueryId` 时调用 `declineChatJoinRequest`。带了就改答 `answerChatJoinRequestQuery`，结果是 `decline`。
+- 没有命中时不调用 `approveChatJoinRequest`。没有查询号的申请继续留给管理员。带查询号时由 ADR 0360 答复 `queue`。
 - 不新增检测器。不改 ADR 0026 的默认次数、周期和基础检测器名单。
 - 部署要重新 `setWebhook`，把 `chat_join_request` 放进 `allowed_updates`。
 - `chats.json` 整份替换的群不会自动带上 `join_request`。
@@ -33,5 +33,5 @@
 - 简介里的默认关键词、短链或邀请会被拒绝。路径和邀请码不进事件。
 - 普通网址、没有简介、只有邀请链接或只有姓名的申请仍然留下。
 - 已经设过 webhook 的部署要重设一次，否则申请不会送到 bot。
-- 带 `query_id` 的守卫 bot 查询这次不应答。
+- 带安全 `query_id` 的守卫 bot 查询由 ADR 0360 在当次请求里答复。不安全的查询号仍丢掉，这次无法代答。
 - 申请里的姓名仍不读。真正入群后，名字里的短链或邀请由 ADR 0117 封禁。
