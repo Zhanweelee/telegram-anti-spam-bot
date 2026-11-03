@@ -22,6 +22,7 @@ export const messageKeys = [
   "command.whitelist.usage",
   "command.whitelist.body",
   "command.allow.empty",
+  "command.whitelist.more",
   "command.logs.usage",
   "command.logs.empty",
   "command.logs.line",
@@ -114,6 +115,7 @@ const zh = {
   "command.whitelist.body":
     "whitelist {chatId}\nexemptAdmins {exemptAdmins}\nallow {allow}",
   "command.allow.empty": "none",
+  "command.whitelist.more": "还有 {count} 个",
   "command.logs.usage": "用法：/logs [chatId]",
   "command.logs.empty": "no audits",
   "command.logs.line":
@@ -182,6 +184,7 @@ const en = {
   "command.whitelist.body":
     "allowlist {chatId}\nexemptAdmins {exemptAdmins}\nallow {allow}",
   "command.allow.empty": "none",
+  "command.whitelist.more": "{count} more",
   "command.logs.usage": "Usage: /logs [chatId]",
   "command.logs.empty": "No audits",
   "command.logs.line":
