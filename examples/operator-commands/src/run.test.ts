@@ -22,6 +22,7 @@ describe("operator command example", () => {
     expect(help).toContain("/packs");
     expect(help).toContain("/quota");
     expect(help).toContain("/delete");
+    expect(help).toContain("/deletes");
     expect(help).toContain("/decline");
     expect(help).toContain("/approve");
     expect(help).toContain("/bansender");
@@ -76,6 +77,12 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(deleted).toBe("已删除 -100 88");
+    const deletedMany = await runPrivateCommand({
+      text: "/deletes -100 88 89",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(deletedMany).toBe("已请求删除 -100 的 2 条。找不到的会跳过");
     expect(help).toContain("/member");
     const standing = await runPrivateCommand({
       text: "/member -100 77",

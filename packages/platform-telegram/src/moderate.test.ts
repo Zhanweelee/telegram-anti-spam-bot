@@ -330,6 +330,71 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("unmute_unavailable");
   });
 
+  it("deletes several messages in one call", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.deleteMessages({
+      tenantId: "local",
+      chatId: "-100",
+      messageIds: ["88", "89"],
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/deleteMessages`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      message_ids?: number[];
+      message_id?: number;
+    };
+    expect(body.message_ids).toEqual([88, 89]);
+    expect(body.message_id).toBeUndefined();
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).not.toContain("receiver_user_id");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      moderator.deleteMessages({
+        tenantId: "local",
+        chatId: "-100",
+        messageIds: [],
+      }),
+    ).rejects.toThrow("deletes_failed");
+    await expect(
+      moderator.deleteMessages({
+        tenantId: "local",
+        chatId: "-100",
+        messageIds: Array.from({ length: 101 }, (_, index) =>
+          String(index + 1),
+        ),
+      }),
+    ).rejects.toThrow("deletes_failed");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl,
+      }).deleteMessages({
+        tenantId: "local",
+        chatId: "-100",
+        messageIds: ["88"],
+      }),
+    ).rejects.toThrow("deletes_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("deletes, mutes, and bans with one call each and drops the response body", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

@@ -67,6 +67,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/delete <chatId> <messageId>` 调用 `deleteMessage`，不带 `audienceId`。配了 token 时使用 `deleteMessage`，不调用 `deleteEphemeralMessage`。消息号要是没有前导零的正安全整数。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经删除。不改黑名单、封禁或禁言。见 ADR 0367。
 
+`/deletes <chatId> <messageId> [messageId...]` 调用 `deleteMessages`。配了 token 时一次提交 1 到 100 个消息号。找不到的会跳过。没有 token、重复、超过 100 条或调用失败时回复「参数无效」，不把内存记录当成已经删除。不改黑名单、封禁或禁言。见 ADR 0374。
+
 `/decline <chatId> <actorId>` 调用 `declineJoin`，不带查询号。配了 token 时使用 `declineChatJoinRequest`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经拒绝。不改黑名单、封禁或禁言。见 ADR 0368。
 
 `/approve <chatId> <actorId>` 调用 `approveJoin`，不带查询号。配了 token 时使用 `approveChatJoinRequest`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经批准。不改黑名单、封禁或禁言。见 ADR 0369。
