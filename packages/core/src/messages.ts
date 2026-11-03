@@ -90,6 +90,8 @@ export const messageKeys = [
   "command.approve.done",
   "command.bansender.usage",
   "command.bansender.done",
+  "command.unbansender.usage",
+  "command.unbansender.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -131,6 +133,7 @@ const syntax = [
   "/decline <chatId> <actorId>",
   "/approve <chatId> <actorId>",
   "/bansender <chatId> <senderChatId>",
+  "/unbansender <chatId> <senderChatId>",
 ].join("\n");
 
 const zh = {
@@ -228,6 +231,8 @@ const zh = {
   "command.bansender.usage": "用法：/bansender <chatId> <senderChatId>",
   "command.bansender.done":
     "已禁止 {senderChatId} 在 {chatId} 代发。频道主人的其它频道也会被挡住，直到解除",
+  "command.unbansender.usage": "用法：/unbansender <chatId> <senderChatId>",
+  "command.unbansender.done": "已解除 {senderChatId} 在 {chatId} 的代发禁止",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -334,6 +339,9 @@ const en = {
   "command.bansender.usage": "Usage: /bansender <chatId> <senderChatId>",
   "command.bansender.done":
     "Blocked sender chat {senderChatId} in {chatId}. The owner cannot post as their other channels until this is lifted.",
+  "command.unbansender.usage": "Usage: /unbansender <chatId> <senderChatId>",
+  "command.unbansender.done":
+    "Lifted the block on sender chat {senderChatId} in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

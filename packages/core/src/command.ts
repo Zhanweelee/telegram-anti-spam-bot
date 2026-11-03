@@ -76,6 +76,7 @@ const COMMAND_NAMES = [
   "decline",
   "approve",
   "bansender",
+  "unbansender",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -115,6 +116,7 @@ export interface OperatorCommandInput {
       | "muteActor"
       | "readMember"
       | "unbanActor"
+      | "unbanSenderChat"
       | "unmuteActor"
     >
   >;
@@ -237,6 +239,8 @@ async function dispatch(
       return approveRequest(input, args);
     case "bansender":
       return banSender(input, args);
+    case "unbansender":
+      return unbanSender(input, args);
   }
 }
 
@@ -934,6 +938,53 @@ function rejectSender(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "bansender",
+  });
+}
+
+async function unbanSender(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.unbansender.usage");
+  }
+  const chatId = args[0];
+  const senderChatId = args[1];
+  if (
+    chatId === undefined ||
+    senderChatId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(senderChatId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const lift = input.moderator?.unbanSenderChat;
+  if (!lift) {
+    rejectSenderLift(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await lift({
+      tenantId: input.event.tenantId,
+      chatId,
+      senderChatId,
+    });
+  } catch {
+    rejectSenderLift(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unbansender.done", { chatId, senderChatId });
+}
+
+function rejectSenderLift(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unbansender",
   });
 }
 

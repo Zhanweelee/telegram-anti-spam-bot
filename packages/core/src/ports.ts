@@ -106,6 +106,7 @@ export interface ModerationPort {
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;
+  unbanSenderChat(target: SenderChatTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;

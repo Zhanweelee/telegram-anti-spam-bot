@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-339
+
+- 私聊 `/unbansender` 按频道号调用 `unbanChatSenderChat`，不解封用户。
+- 没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经解除。见 ADR 0371。
+- 30 天保留期没有改。另一条频道禁止仍留着。
+
 ### P3-338
 
 - 私聊 `/bansender` 按频道号调用 `banChatSenderChat`，不封用户。
