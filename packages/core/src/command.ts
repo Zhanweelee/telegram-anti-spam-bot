@@ -90,6 +90,7 @@ const COMMAND_NAMES = [
   "revoke",
   "unpin",
   "admins",
+  "untopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -140,6 +141,7 @@ export interface OperatorCommandInput {
       | "unmuteActor"
       | "unlockChat"
       | "unpinChat"
+      | "unpinTopic"
     >
   >;
   readonly scope?: CommandScope;
@@ -279,6 +281,8 @@ async function dispatch(
       return unpinAll(input, args);
     case "admins":
       return showAdministrators(input, args);
+    case "untopic":
+      return clearTopicPins(input, args);
   }
 }
 
@@ -1311,6 +1315,58 @@ function rejectUnpin(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "unpin",
+  });
+}
+
+async function clearTopicPins(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1 && args.length !== 2) {
+    return say(input, "command.untopic.usage");
+  }
+  const chatId = args[0];
+  const threadId = args[1];
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    (threadId !== undefined && !isMessageId(threadId))
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const unpin = input.moderator?.unpinTopic;
+  if (!unpin) {
+    rejectTopic(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await unpin({
+      tenantId: input.event.tenantId,
+      chatId,
+      ...(threadId === undefined ? {} : { threadId }),
+    });
+  } catch {
+    rejectTopic(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    threadId === undefined
+      ? "command.untopic.done"
+      : "command.untopic.done.thread",
+    { chatId, threadId: threadId ?? "" },
+  );
+}
+
+function rejectTopic(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "untopic",
   });
 }
 

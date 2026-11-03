@@ -28,6 +28,7 @@ import {
   type RuntimeStore,
   type SenderChatTarget,
   type Storage,
+  type TopicPinTarget,
 } from "@tasb/core";
 
 export function createMemoryStorage(options?: {
@@ -129,6 +130,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly reactionsCleared: readonly ReactionActorTarget[];
   readonly invitesRevoked: readonly ChatTarget[];
   readonly unpinned: readonly ChatTarget[];
+  readonly topicsUnpinned: readonly TopicPinTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -148,6 +150,7 @@ export function createMemoryModerator(): ModerationPort & {
   const reactionsCleared: ReactionActorTarget[] = [];
   const invitesRevoked: ChatTarget[] = [];
   const unpinned: ChatTarget[] = [];
+  const topicsUnpinned: TopicPinTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -167,6 +170,7 @@ export function createMemoryModerator(): ModerationPort & {
     reactionsCleared,
     invitesRevoked,
     unpinned,
+    topicsUnpinned,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -281,6 +285,17 @@ export function createMemoryModerator(): ModerationPort & {
         tenantId: target.tenantId,
         chatId: target.chatId,
       });
+    },
+    async unpinTopic(target) {
+      topicsUnpinned.push(
+        target.threadId === undefined
+          ? { tenantId: target.tenantId, chatId: target.chatId }
+          : {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              threadId: target.threadId,
+            },
+      );
     },
   };
 }

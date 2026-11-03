@@ -161,6 +161,12 @@ export interface InviteLinkTarget {
   readonly inviteLink: string;
 }
 
+export interface TopicPinTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly threadId?: string;
+}
+
 export type UnmuteResult = "lifted" | "absent";
 
 export type MemberStanding =
@@ -198,6 +204,7 @@ export interface ModerationPort {
   lockChat(target: ChatTarget): Promise<void>;
   unlockChat(target: ChatTarget): Promise<void>;
   unpinChat(target: ChatTarget): Promise<void>;
+  unpinTopic(target: TopicPinTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

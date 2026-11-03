@@ -148,6 +148,9 @@ export const messageKeys = [
   "command.admins.manage_direct_messages",
   "command.admins.manage_tags",
   "command.admins.send_welcome_messages",
+  "command.untopic.usage",
+  "command.untopic.done",
+  "command.untopic.done.thread",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -198,6 +201,7 @@ const syntax = [
   "/revoke <chatId> <inviteLink>",
   "/unpin <chatId>",
   "/admins <chatId>",
+  "/untopic <chatId> [threadId]",
 ].join("\n");
 
 const zh = {
@@ -358,6 +362,11 @@ const zh = {
   "command.admins.manage_direct_messages": "私信",
   "command.admins.manage_tags": "标签",
   "command.admins.send_welcome_messages": "欢迎",
+  "command.untopic.usage": "用法：/untopic <chatId> [threadId]",
+  "command.untopic.done":
+    "已请求撤下 {chatId} 通用话题的全部置顶。消息还在。其它话题不在这次里",
+  "command.untopic.done.thread":
+    "已请求撤下 {chatId} 话题 {threadId} 的全部置顶。消息还在",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -530,6 +539,11 @@ const en = {
   "command.admins.manage_direct_messages": "direct",
   "command.admins.manage_tags": "tags",
   "command.admins.send_welcome_messages": "welcome",
+  "command.untopic.usage": "Usage: /untopic <chatId> [threadId]",
+  "command.untopic.done":
+    "Asked to clear every pin in the General topic of {chatId}. The messages stay. Other topics are not part of this call.",
+  "command.untopic.done.thread":
+    "Asked to clear every pin in topic {threadId} of {chatId}. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

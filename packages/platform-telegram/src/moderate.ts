@@ -359,6 +359,25 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async unpinTopic(target) {
+      const threadId = target.threadId;
+      await postTelegram({
+        token: input.token,
+        method:
+          threadId === undefined
+            ? "unpinAllGeneralForumTopicMessages"
+            : "unpinAllForumTopicMessages",
+        fetchImpl: input.fetchImpl,
+        missing: "untopic_unavailable",
+        failed: "untopic_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          ...(threadId === undefined
+            ? {}
+            : { message_thread_id: telegramId(threadId) }),
+        },
+      });
+    },
   };
 }
 
