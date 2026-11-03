@@ -160,6 +160,16 @@ export async function cancelChallenge(input: {
   return dropStoredChallenge(input.event, input.ports, "captcha_left");
 }
 
+export async function promoteChallenge(input: {
+  readonly event: Event;
+  readonly ports: CaptchaPorts;
+}): Promise<boolean> {
+  if (input.event.membership !== "promote") {
+    return false;
+  }
+  return dropStoredChallenge(input.event, input.ports, "captcha_promoted");
+}
+
 export async function supersedeChallenge(input: {
   readonly event: Event;
   readonly ports: CaptchaPorts;
@@ -173,7 +183,7 @@ export async function supersedeChallenge(input: {
 async function dropStoredChallenge(
   event: Event,
   ports: CaptchaPorts,
-  reason: "captcha_left" | "captcha_superseded",
+  reason: "captcha_left" | "captcha_promoted" | "captcha_superseded",
 ): Promise<boolean> {
   const challenge = await ports.store.get(
     event.tenantId,

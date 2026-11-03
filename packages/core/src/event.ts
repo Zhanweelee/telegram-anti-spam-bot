@@ -100,8 +100,8 @@ export const eventSchema = z.strictObject({
   direct: z.boolean().optional(),
   /** True when this message replaces an earlier one. */
   edited: z.literal(true).optional(),
-  /** Present when a member joined from outside the chat, or left it. */
-  membership: z.enum(["join", "leave"]).optional(),
+  /** Present when a member joined from outside the chat, left it, or was promoted. */
+  membership: z.enum(["join", "leave", "promote"]).optional(),
   /** Bot admin state. Chat titles stay out of the event. */
   bot: botStateSchema.optional(),
   /** Button answer. The nonce is not message text. */

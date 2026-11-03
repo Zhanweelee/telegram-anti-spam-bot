@@ -16724,6 +16724,77 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.actor).toEqual({ id: "77", isAdmin: true });
   });
 
+  it("marks a restricted member who becomes an admin", async () => {
+    const name = "广告员免费领取礼品";
+    const promoted = await normalize({
+      update_id: 2046,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "restricted" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "administrator",
+        },
+      },
+    });
+    expect(promoted.status).toBe("event");
+    if (promoted.status !== "event") {
+      return;
+    }
+    expect(promoted.event.membership).toBe("promote");
+    expect(promoted.event.actor).toEqual({ id: "77", isAdmin: true });
+    expect(promoted.event.profile).toBeUndefined();
+    expect(JSON.stringify(promoted.event)).not.toContain(name);
+    const memberCreator = await normalize({
+      update_id: 2047,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: { user: { id: 77 }, status: "creator" },
+      },
+    });
+    expect(memberCreator.status).toBe("event");
+    if (memberCreator.status === "event") {
+      expect(memberCreator.event.membership).toBe("promote");
+      expect(memberCreator.event.profile).toBeUndefined();
+    }
+    const joinedAdmin = await normalize({
+      update_id: 2048,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: { user: { id: 77 }, status: "administrator" },
+      },
+    });
+    expect(joinedAdmin.status).toBe("event");
+    if (joinedAdmin.status === "event") {
+      expect(joinedAdmin.event.membership).toBeUndefined();
+      expect(joinedAdmin.event.actor.isAdmin).toBe(true);
+    }
+    const botPromoted = await normalize({
+      update_id: 2049,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "restricted",
+        },
+        new_chat_member: {
+          user: { id: 78, is_bot: true },
+          status: "administrator",
+        },
+      },
+    });
+    expect(botPromoted.status).toBe("event");
+    if (botPromoted.status === "event") {
+      expect(botPromoted.event.membership).toBeUndefined();
+    }
+  });
+
   it("marks a configured admin id on a membership change", async () => {
     const outcome = await normalize(
       {

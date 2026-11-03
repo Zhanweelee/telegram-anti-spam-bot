@@ -8,6 +8,7 @@ import {
   expireChallenges,
   isExpired,
   parseCaptchaChallenge,
+  promoteChallenge,
   resolveChallenge,
   supersedeChallenge,
 } from "./captcha.js";
@@ -233,6 +234,49 @@ describe("captcha flow", () => {
         fields: { eventId: "evt_leave", chatId: "-100" },
       },
     ]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("deletes the prompt and the challenge when the member is promoted", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await promoteChallenge({
+        event: promoteEvent(),
+        ports,
+      }),
+    ).toBe(true);
+    expect(removed).toEqual(["42"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries).toEqual([
+      {
+        level: "info",
+        message: "captcha_promoted",
+        fields: { eventId: "evt_promote", chatId: "-100" },
+      },
+    ]);
+    expect(
+      await promoteChallenge({
+        event: joinEvent(),
+        ports,
+      }),
+    ).toBe(false);
     expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
     expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
   });
@@ -1079,6 +1123,18 @@ function joinEvent(id = "evt_join") {
     occurredAt: "2026-11-01T00:00:00.000Z",
     actor: { id: "77", isAdmin: false },
     membership: "join",
+  });
+}
+
+function promoteEvent(id = "evt_promote", actorId = "77") {
+  return parseEvent({
+    id,
+    tenantId: "local",
+    chatId: "-100",
+    kind: "chat_member",
+    occurredAt: "2026-11-01T00:00:10.000Z",
+    actor: { id: actorId, isAdmin: true },
+    membership: "promote",
   });
 }
 

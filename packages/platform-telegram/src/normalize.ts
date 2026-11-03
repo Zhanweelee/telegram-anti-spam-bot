@@ -377,14 +377,36 @@ function joiningBot(value: Record<string, unknown>): boolean {
 
 function memberChange(
   value: Record<string, unknown>,
-): "join" | "leave" | undefined {
+): "join" | "leave" | "promote" | undefined {
   if (joiningMember(value)) {
     return "join";
   }
   if (leavingMember(value)) {
     return "leave";
   }
+  if (promotingMember(value)) {
+    return "promote";
+  }
   return undefined;
+}
+
+function promotingMember(value: Record<string, unknown>): boolean {
+  if (!isRecord(value.new_chat_member)) {
+    return false;
+  }
+  const user = value.new_chat_member.user;
+  if (isRecord(user) && user.is_bot === true) {
+    return false;
+  }
+  const status = value.new_chat_member.status;
+  if (status !== "administrator" && status !== "creator") {
+    return false;
+  }
+  if (!isRecord(value.old_chat_member)) {
+    return false;
+  }
+  const previous = value.old_chat_member.status;
+  return previous === "member" || previous === "restricted";
 }
 
 function leavingMember(value: Record<string, unknown>): boolean {
