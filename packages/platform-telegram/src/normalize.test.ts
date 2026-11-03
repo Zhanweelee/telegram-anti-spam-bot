@@ -4082,6 +4082,367 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(buried.event)).not.toContain("bit.ly");
   });
 
+  it("keeps a short link after a label that does not fit", async () => {
+    const path = "offer238";
+    const over = "a".repeat(59);
+    const opened = await normalize({
+      update_id: 78143,
+      message: {
+        message_id: 78143,
+        date: 1761955200,
+        chat: { id: -1008375, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${over}-http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    expect(opened.event.message?.hosts).toContain("t.me");
+    expect(opened.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(opened.event)).not.toContain(path);
+
+    const fitted = "a".repeat(58);
+    const within = await normalize({
+      update_id: 78144,
+      message: {
+        message_id: 78144,
+        date: 1761955200,
+        chat: { id: -1008376, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${fitted}-http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(within.status).toBe("event");
+    if (within.status !== "event") {
+      return;
+    }
+    expect(within.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(within.event)).not.toContain(path);
+    expect(JSON.stringify(within.event)).not.toContain("bit.ly");
+
+    const bare = await normalize({
+      update_id: 78145,
+      message: {
+        message_id: 78145,
+        date: 1761955200,
+        chat: { id: -1008377, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(60)}-bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(bare.status).toBe("event");
+    if (bare.status !== "event") {
+      return;
+    }
+    expect(bare.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(bare.event)).not.toContain(path);
+
+    const fittedBare = await normalize({
+      update_id: 78146,
+      message: {
+        message_id: 78146,
+        date: 1761955200,
+        chat: { id: -1008378, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(59)}-bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(fittedBare.status).toBe("event");
+    if (fittedBare.status !== "event") {
+      return;
+    }
+    expect(fittedBare.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(fittedBare.event)).not.toContain(path);
+
+    const dotted = await normalize({
+      update_id: 78147,
+      message: {
+        message_id: 78147,
+        date: 1761955200,
+        chat: { id: -1008379, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(64)}.http://t.co/${path}`,
+          },
+        ],
+      },
+    });
+    expect(dotted.status).toBe("event");
+    if (dotted.status !== "event") {
+      return;
+    }
+    expect(dotted.event.message?.hosts).toContain("t.co");
+    expect(JSON.stringify(dotted.event)).not.toContain(path);
+
+    const fittedDot = await normalize({
+      update_id: 78148,
+      message: {
+        message_id: 78148,
+        date: 1761955200,
+        chat: { id: -1008380, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(63)}.http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(fittedDot.status).toBe("event");
+    if (fittedDot.status !== "event") {
+      return;
+    }
+    expect(fittedDot.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(fittedDot.event)).not.toContain(path);
+    expect(JSON.stringify(fittedDot.event)).not.toContain("bit.ly");
+
+    const glued = await normalize({
+      update_id: 78149,
+      message: {
+        message_id: 78149,
+        date: 1761955200,
+        chat: { id: -1008381, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(65)}http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(glued.status).toBe("event");
+    if (glued.status !== "event") {
+      return;
+    }
+    expect(glued.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(glued.event)).not.toContain("bit.ly");
+
+    const underscored = await normalize({
+      update_id: 78150,
+      message: {
+        message_id: 78150,
+        date: 1761955200,
+        chat: { id: -1008382, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(62)}_http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(underscored.status).toBe("event");
+    if (underscored.status !== "event") {
+      return;
+    }
+    expect(underscored.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(underscored.event)).not.toContain("bit.ly");
+
+    const inPath = await normalize({
+      update_id: 78151,
+      message: {
+        message_id: 78151,
+        date: 1761955200,
+        chat: { id: -1008383, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://example.com/${"a".repeat(70)}-http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(inPath.status).toBe("event");
+    if (inPath.status !== "event") {
+      return;
+    }
+    expect(inPath.event.message?.hosts).toEqual(["t.me", "example.com"]);
+    expect(JSON.stringify(inPath.event)).not.toContain(path);
+    expect(JSON.stringify(inPath.event)).not.toContain("bit.ly");
+
+    const repeated = await normalize({
+      update_id: 78152,
+      message: {
+        message_id: 78152,
+        date: 1761955200,
+        chat: { id: -1008384, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a-".repeat(40)}http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(repeated.status).toBe("event");
+    if (repeated.status !== "event") {
+      return;
+    }
+    expect(repeated.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(repeated.event)).not.toContain(path);
+
+    const code = "CODE238";
+    const invite = await normalize({
+      update_id: 78153,
+      message: {
+        message_id: 78153,
+        date: 1761955200,
+        chat: { id: -1008385, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(63)}-https://t.me/%2B${code}`,
+          },
+        ],
+      },
+    });
+    expect(invite.status).toBe("event");
+    if (invite.status !== "event") {
+      return;
+    }
+    expect(invite.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(invite.event)).not.toContain(code);
+
+    const stuck = await normalize({
+      update_id: 78154,
+      message: {
+        message_id: 78154,
+        date: 1761955200,
+        chat: { id: -1008386, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=https://t.me-${"a".repeat(63)}/%2B${code}`,
+          },
+        ],
+      },
+    });
+    expect(stuck.status).toBe("event");
+    if (stuck.status !== "event") {
+      return;
+    }
+    expect(stuck.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(stuck.event)).not.toContain(code);
+
+    const embedded = await normalize({
+      update_id: 78155,
+      message: {
+        message_id: 78155,
+        date: 1761955200,
+        chat: { id: -1008387, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://${over}-http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+
+    const address = "203.0.113.238";
+    const ip = await normalize({
+      update_id: 78156,
+      message: {
+        message_id: 78156,
+        date: 1761955200,
+        chat: { id: -1008388, type: "supergroup" },
+        from: { id: 238 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?text=http://${"a".repeat(60)}-http://${address}/x`,
+          },
+        ],
+      },
+    });
+    expect(ip.status).toBe("event");
+    if (ip.status !== "event") {
+      return;
+    }
+    expect(ip.event.message?.hosts).toContain(address);
+    expect(JSON.stringify(ip.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

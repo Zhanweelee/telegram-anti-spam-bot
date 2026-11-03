@@ -517,7 +517,10 @@ const DRAFT_STOP_CHAR = new RegExp(
 
 function openedDraftUrls(text: string): string[] {
   const source = `${COPY_URL.source}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
-  return scanUrls(openLongUserinfo(openDraftStops(text)), source);
+  return scanUrls(
+    openLongLabel(openLongUserinfo(openDraftStops(text))),
+    source,
+  );
 }
 
 /** 用户名超过 64 或密码超过 25 时，Android 从 `@` 后面另开网址。放得下的仍是一条。 */
@@ -601,6 +604,73 @@ function userCharSize(text: string, index: number): number {
     return 1;
   }
   return 0;
+}
+
+const DRAFT_LABEL = "(?:[A-Za-z0-9](?:[A-Za-z0-9_-]{0,61}[A-Za-z0-9])?)";
+const DRAFT_HOST = `(?:${DRAFT_LABEL}(?:\\.${DRAFT_LABEL})*)`;
+const DRAFT_HOST_END = new RegExp(`^${DRAFT_HOST}(?![A-Za-z0-9_])`);
+
+/** 标签超过 63，或连字符让标签放不下时，Android 另开后面的网址。放得下的仍是一条。 */
+function openLongLabel(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const scheme = schemeAt(text, index);
+    if (scheme === 0) {
+      out += text.charAt(index);
+      index += 1;
+      continue;
+    }
+    const authority = text.slice(index + scheme);
+    const host = draftHostLength(authority);
+    if (host === null) {
+      const later = schemeAfterHostRun(authority);
+      if (later !== null) {
+        out += " ";
+        index += scheme + later;
+        continue;
+      }
+    } else {
+      const rest = authority.slice(host);
+      if (labelEndsUrl(rest)) {
+        out += `${text.slice(index, index + scheme + host)} `;
+        index += scheme + host + 1;
+        continue;
+      }
+    }
+    const end = text.slice(index).search(/\s/);
+    const next = end === -1 ? text.length : index + end;
+    out += text.slice(index, next);
+    index = next;
+  }
+  return out;
+}
+
+function draftHostLength(authority: string): number | null {
+  const match = DRAFT_HOST_END.exec(authority);
+  return match ? match[0].length : null;
+}
+
+function labelEndsUrl(rest: string): boolean {
+  if (rest.startsWith("-")) {
+    return true;
+  }
+  return rest.startsWith(".") && !/^[:/?]/.test(rest.charAt(1));
+}
+
+function schemeAfterHostRun(authority: string): number | null {
+  if (!/[A-Za-z0-9.-]/.test(authority.charAt(0))) {
+    return null;
+  }
+  for (let index = 1; index < authority.length; index += 1) {
+    if (schemeAt(authority, index) > 0) {
+      return index;
+    }
+    if (!/[A-Za-z0-9.-]/.test(authority.charAt(index))) {
+      return null;
+    }
+  }
+  return null;
 }
 
 /** 停住的字符改成空格，后面的网址另算一条。紧挨着协议的 `%` 也停住。`%2http` 仍粘住。 */
@@ -1377,7 +1447,7 @@ function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
 ): void {
-  const opened = openLongUserinfo(raw);
+  const opened = openLongLabel(openLongUserinfo(raw));
   if (opened !== raw) {
     for (const part of queryUrls(opened)) {
       pushClosedUrl(part, found);
