@@ -33,3 +33,4 @@ Android 先把 `@` 前面当成用户信息。`@` 后面能接上主机名、路
 - `t.me/share/url?text=http://bit.ly@.…` 和 `http://bit.ly@!` 删除。证据仍只有主机名。
 - 分享 `url` 里同样的短链，以及 `@.` 前面的裸 IP，同样删除。
 - `bit.ly@example.com`、`bit.ly@/…`、`bit.ly@:80/…`、单独的 `bit.ly@`、`bit.ly@_…` 和 `user@bit.ly` 留着。`example.com@.…` 留着。`t.me@.…/+…` 不改记成邀请。
+- 主机名后面的标点再打开的短链，后来同样留下。见 ADR 0273。

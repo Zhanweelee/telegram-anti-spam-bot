@@ -637,7 +637,7 @@ function openLongLabel(text: string): string {
         index = skipUnfinishedAt(text, index + scheme + host + 1);
         continue;
       }
-      if (labelEndsUrl(rest)) {
+      if (labelEndsUrl(rest) || hostPunctEnds(rest)) {
         out += `${text.slice(index, index + scheme + host)} `;
         index += scheme + host + 1;
         continue;
@@ -656,11 +656,37 @@ function draftHostLength(authority: string): number | null {
   return match ? match[0].length : null;
 }
 
+const HOST_PUNCT = "!#$&()*+,;=~";
+
 function labelEndsUrl(rest: string): boolean {
   if (rest.startsWith("-")) {
     return true;
   }
   return rest.startsWith(".") && !/^[:/?]/.test(rest.charAt(1));
+}
+
+/** 路径还没开始时，这些标点结束主机名。端口和 `user:pass@` 仍属于这一条。 */
+function hostPunctEnds(rest: string): boolean {
+  if (rest.startsWith("://") || isPort(rest) || passwordUserinfo(rest)) {
+    return false;
+  }
+  if (rest.startsWith(":")) {
+    return true;
+  }
+  return rest.length > 0 && HOST_PUNCT.includes(rest.charAt(0));
+}
+
+function isPort(rest: string): boolean {
+  return /^:\d{1,5}(?!\d)/.test(rest);
+}
+
+function passwordUserinfo(rest: string): boolean {
+  const password =
+    /^:(?:%[0-9A-Fa-f]{2}|[A-Za-z0-9$._+!*'(),;?&=-]){1,25}@/.exec(rest);
+  if (!password?.[0]) {
+    return false;
+  }
+  return atCanFinish(rest.slice(password[0].length - 1));
 }
 
 /** `@` 后面能接上主机名、路径、端口或 `_` 时，用户信息才成立。 */
