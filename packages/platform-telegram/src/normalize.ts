@@ -818,12 +818,18 @@ function draftHostLength(authority: string): number | null {
 }
 
 const HOST_PUNCT = "!#$&()*+,;=~";
+const DRAFT_DOT_LOOKALIKE = new Set([
+  0x00b7, 0x2022, 0x2027, 0x2219, 0x22c5, 0x30fb, 0xff0e, 0xfe52, 0xff61,
+]);
 
 function labelEndsUrl(rest: string): boolean {
   if (rest.startsWith("-")) {
     return true;
   }
-  return rest.startsWith(".") && !/^[:/?_]/.test(rest.charAt(1));
+  if (!rest.startsWith(".") || DRAFT_DOT_LOOKALIKE.has(rest.charCodeAt(1))) {
+    return false;
+  }
+  return !/^[:/?_]/.test(rest.charAt(1));
 }
 
 /** 路径还没开始时，这些标点结束主机名。端口和 `user:pass@` 仍属于这一条。 */
@@ -936,6 +942,12 @@ function openBareEnd(text: string): string {
     if (dotted > 0) {
       out += `${text.slice(index, domain)} `;
       index = domain + dotted;
+      continue;
+    }
+    const lookalike = bareLookalikeDotSkip(rest);
+    if (lookalike > 0) {
+      out += `${text.slice(index, domain)} `;
+      index = domain + lookalike;
       continue;
     }
     const letter = bareLetterSkip(rest);
@@ -1122,6 +1134,36 @@ function bareDotSkip(rest: string): number {
     }
   }
   return skip;
+}
+
+/** 裸域名和 `www.` 在 ASCII 点后的点状字符前结束。后面的网址另开。 */
+function bareLookalikeDotSkip(rest: string): number {
+  if (!rest.startsWith(".")) {
+    return 0;
+  }
+  let index = 1;
+  while (DRAFT_DOT_LOOKALIKE.has(rest.charCodeAt(index))) {
+    index += 1;
+  }
+  if (index === 1) {
+    return 0;
+  }
+  const after = rest.slice(index);
+  if (schemeAt(after, 0) > 0) {
+    return index;
+  }
+  if (!after.startsWith("/") && !after.startsWith("?")) {
+    return 0;
+  }
+  const body = after.slice(1);
+  if (
+    schemeAt(body, 0) > 0 ||
+    strictBareEnd(body, 0) !== null ||
+    bareIpAt(body)
+  ) {
+    return index + 1;
+  }
+  return 0;
 }
 
 /** 已结束的裸主机名不把后面的非 ASCII 字母留在这一段。字母后面的网址另开。 */

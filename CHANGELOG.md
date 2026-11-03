@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-253
+
+- 隐藏草稿在带协议的主机名里把 ASCII 点后面的点状字符留在这一段。见 ADR 0286。
+- `t.me/share/url?text=www.example.com.．http://bit.ly/…` 删除。`http://example.com.．http://bit.ly/…` 留着。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-252
 
 - 隐藏草稿在没有协议的主机名后面遇到这类字母时，仍留下后面的短链。见 ADR 0285。
