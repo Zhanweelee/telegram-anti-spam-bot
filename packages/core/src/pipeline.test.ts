@@ -142,6 +142,7 @@ function harness(options?: { failStorage?: boolean }) {
     async deleteMessage(target) {
       deleted.push(target);
     },
+    async deleteMessages() {},
     async muteActor() {},
     async banActor() {},
     async banSenderChat() {},

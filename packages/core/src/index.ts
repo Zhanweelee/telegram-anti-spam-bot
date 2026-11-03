@@ -170,6 +170,7 @@ export {
   auditScopeSchema,
   type BanTarget,
   type ChatTarget,
+  type DeleteMessagesTarget,
   type DeleteTarget,
   fitAuditExportDocument,
   type JoinTarget,

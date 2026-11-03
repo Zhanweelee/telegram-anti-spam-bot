@@ -72,6 +72,7 @@ function moderator(
         messageId: target.messageId,
       });
     },
+    async deleteMessages() {},
     async muteActor() {},
     async banActor() {},
     async banSenderChat() {},

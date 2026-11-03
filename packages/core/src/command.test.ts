@@ -1965,6 +1965,169 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("deletes several messages in one request", async () => {
+    const deps = kit();
+    const batches: { chatId: string; messageIds: readonly string[] }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 89", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async deleteMessages(target) {
+          batches.push({
+            chatId: target.chatId,
+            messageIds: target.messageIds,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求删除 -100 的 2 条。找不到的会跳过",
+    });
+    expect(batches).toEqual([{ chatId: "-100", messageIds: ["88", "89"] }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain(
+        "/deletes <chatId> <messageId> [messageId...]",
+      );
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 89", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async deleteMessages() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to delete 2 messages in -100. Missing ones are skipped.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 89", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/deletes -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/deletes <chatId> <messageId> [messageId...]",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/deletes -100 88 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const repeated = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 88", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(repeated).toMatchObject({ text: "参数无效" });
+    const full = Array.from({ length: 100 }, (_, index) => String(index + 1));
+    const accepted = await runOperatorCommand({
+      event: event({
+        text: `/deletes -100 ${full.join(" ")}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages(target) {
+          batches.push({
+            chatId: target.chatId,
+            messageIds: target.messageIds,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(accepted).toMatchObject({
+      text: "已请求删除 -100 的 100 条。找不到的会跳过",
+    });
+    expect(batches[1]?.messageIds).toEqual(full);
+    const over = await runOperatorCommand({
+      event: event({
+        text: `/deletes -100 ${full.join(" ")} 101`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(over).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 89", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/deletes -100 88 89", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessages() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"deletes"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/deletes -200 88 89",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteMessages() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("deletes one message in a managed chat", async () => {
     const deps = kit();
     const deleted: {

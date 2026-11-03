@@ -73,6 +73,7 @@ const COMMAND_NAMES = [
   "mute",
   "member",
   "delete",
+  "deletes",
   "decline",
   "approve",
   "bansender",
@@ -87,6 +88,7 @@ const DEFAULT_MUTE_SECONDS = 60 * 60;
 const MIN_MUTE_SECONDS = 30;
 const MAX_MUTE_SECONDS = 366 * 24 * 60 * 60;
 const TOKEN_LIMIT = 80;
+const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
 
 export interface OperatorCommandInput {
@@ -115,6 +117,7 @@ export interface OperatorCommandInput {
       | "banSenderChat"
       | "declineJoin"
       | "deleteMessage"
+      | "deleteMessages"
       | "lockChat"
       | "muteActor"
       | "readMember"
@@ -237,6 +240,8 @@ async function dispatch(
       return showMember(input, args);
     case "delete":
       return deleteOne(input, args);
+    case "deletes":
+      return deleteMany(input, args);
     case "decline":
       return declineRequest(input, args);
     case "approve":
@@ -747,6 +752,69 @@ function rejectDelete(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "delete",
+  });
+}
+
+async function deleteMany(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.deletes.usage");
+  }
+  const chatId = args[0];
+  const messageIds = args.slice(1);
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageIdList(messageIds)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deleteMessages;
+  if (!remove) {
+    rejectDeletes(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageIds,
+    });
+  } catch {
+    rejectDeletes(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.deletes.done", {
+    chatId,
+    count: messageIds.length,
+  });
+}
+
+function isMessageIdList(values: readonly string[]): boolean {
+  if (values.length < 1 || values.length > MAX_DELETE_MESSAGES) {
+    return false;
+  }
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (!isMessageId(value) || seen.has(value)) {
+      return false;
+    }
+    seen.add(value);
+  }
+  return true;
+}
+
+function rejectDeletes(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "deletes",
   });
 }
 

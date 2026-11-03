@@ -20,6 +20,7 @@ function createOpenModerator(): ModerationPort {
   const memory = createMemoryModerator();
   return {
     deleteMessage: (target) => memory.deleteMessage(target),
+    deleteMessages: (target) => memory.deleteMessages(target),
     muteActor: (target) => memory.muteActor(target),
     banActor: (target) => memory.banActor(target),
     banSenderChat: (target) => memory.banSenderChat(target),

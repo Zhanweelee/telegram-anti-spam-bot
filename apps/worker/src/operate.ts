@@ -73,6 +73,9 @@ function commandModerator(
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },
+    async deleteMessages() {
+      throw new Error("deletes_unavailable");
+    },
     async declineJoin() {
       throw new Error("decline_unavailable");
     },

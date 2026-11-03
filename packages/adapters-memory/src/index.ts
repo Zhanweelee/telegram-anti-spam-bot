@@ -7,6 +7,7 @@ import {
   type CaptchaStore,
   type ChatTarget,
   captchaChallengeSchema,
+  type DeleteMessagesTarget,
   type DeleteTarget,
   isExpired,
   type JoinTarget,
@@ -110,6 +111,7 @@ export function createMemoryStorage(options?: {
 
 export function createMemoryModerator(): ModerationPort & {
   readonly deleted: readonly DeleteTarget[];
+  readonly deletedMessages: readonly DeleteMessagesTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
   readonly senderBanned: readonly SenderChatTarget[];
@@ -125,6 +127,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly unlocked: readonly ChatTarget[];
 } {
   const deleted: DeleteTarget[] = [];
+  const deletedMessages: DeleteMessagesTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
   const senderBanned: SenderChatTarget[] = [];
@@ -140,6 +143,7 @@ export function createMemoryModerator(): ModerationPort & {
   const unlocked: ChatTarget[] = [];
   return {
     deleted,
+    deletedMessages,
     muted,
     banned,
     senderBanned,
@@ -155,6 +159,13 @@ export function createMemoryModerator(): ModerationPort & {
     unlocked,
     async deleteMessage(target) {
       deleted.push({ ...target });
+    },
+    async deleteMessages(target) {
+      deletedMessages.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageIds: [...target.messageIds],
+      });
     },
     async muteActor(target) {
       muted.push({ ...target });

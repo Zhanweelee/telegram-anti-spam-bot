@@ -59,6 +59,12 @@ export interface Storage {
   putRuleSet(tenantId: string, chatId: string, rules: RuleSet): Promise<void>;
 }
 
+export interface DeleteMessagesTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly messageIds: readonly string[];
+}
+
 export interface DeleteTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -108,6 +114,7 @@ export interface JoinTarget extends BanTarget {
 
 export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
+  deleteMessages(target: DeleteMessagesTarget): Promise<void>;
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;

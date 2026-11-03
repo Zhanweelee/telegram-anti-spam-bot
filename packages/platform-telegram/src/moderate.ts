@@ -73,6 +73,24 @@ export function createTelegramModerator(input: {
             },
       });
     },
+    async deleteMessages(target) {
+      if (target.messageIds.length < 1 || target.messageIds.length > 100) {
+        throw new Error("deletes_failed");
+      }
+      await postTelegram({
+        token: input.token,
+        method: "deleteMessages",
+        fetchImpl: input.fetchImpl,
+        missing: "deletes_unavailable",
+        failed: "deletes_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_ids: target.messageIds.map((messageId) =>
+            telegramId(messageId),
+          ),
+        },
+      });
+    },
     async muteActor(target) {
       await postTelegram({
         token: input.token,
