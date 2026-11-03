@@ -1,6 +1,7 @@
 import {
   createMemoryBlocklistStore,
   createMemoryCache,
+  createMemoryModerator,
   createMemoryPolicyStore,
   createMemoryReviewQueue,
   createMemoryRuleSubscriptionStore,
@@ -70,6 +71,7 @@ export async function runPrivateCommand(input: {
     storage: input.storage ?? createMemoryStorage(),
     logger: createMemoryLogger(),
     blocklist: createMemoryBlocklistStore(),
+    moderator: createMemoryModerator(),
     review: input.review ?? createMemoryReviewQueue(),
     rulePacks: input.rulePacks ?? createMemoryRuleSubscriptionStore(),
     ...(input.rulePackSource && input.rulePackArchive

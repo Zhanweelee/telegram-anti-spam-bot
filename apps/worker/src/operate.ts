@@ -211,6 +211,7 @@ export async function handleIncomingEvent(
         }
       : {}),
     ...(chats ? { chats } : {}),
+    moderator,
   });
   if (outcome.status === "reply") {
     await sendReply(event, outcome.text, outcome.command, deps.reply, logger);

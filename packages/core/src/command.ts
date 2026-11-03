@@ -21,6 +21,7 @@ import {
   type AuditScope,
   auditExportDocument,
   fitAuditExportDocument,
+  type ModerationPort,
   minimumAuditExportLength,
   type Storage,
 } from "./ports.js";
@@ -65,6 +66,7 @@ const COMMAND_NAMES = [
   "packs",
   "quota",
   "chats",
+  "unban",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -90,6 +92,7 @@ export interface OperatorCommandInput {
   readonly rulePackArchive?: RulePackArchive;
   readonly quota?: QuotaReader;
   readonly chats?: ChatDirectory;
+  readonly moderator?: Pick<ModerationPort, "unbanActor">;
   readonly scope?: CommandScope;
 }
 
@@ -191,6 +194,8 @@ async function dispatch(
       return showQuota(input, args);
     case "chats":
       return showChats(input, args);
+    case "unban":
+      return unbanMember(input, args);
   }
 }
 
@@ -540,6 +545,53 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function unbanMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.unban.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const moderator = input.moderator;
+  if (!moderator) {
+    rejectUnban(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await moderator.unbanActor({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+  } catch {
+    rejectUnban(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unban.done", { chatId, actorId });
+}
+
+function rejectUnban(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unban",
   });
 }
 

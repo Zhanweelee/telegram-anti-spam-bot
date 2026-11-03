@@ -84,6 +84,7 @@ function moderator(
       restricted.push({ ...target });
     },
     async releaseActor() {},
+    async unbanActor() {},
   };
 }
 

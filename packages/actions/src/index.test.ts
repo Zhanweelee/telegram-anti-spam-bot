@@ -72,6 +72,7 @@ describe("delete action", () => {
           async deferJoin() {},
           async restrictActor() {},
           async releaseActor() {},
+          async unbanActor() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -122,6 +123,7 @@ describe("delete action", () => {
         async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
+        async unbanActor() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -174,6 +176,7 @@ describe("delete action", () => {
         async deferJoin() {},
         async restrictActor() {},
         async releaseActor() {},
+        async unbanActor() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -228,6 +231,7 @@ function ports(): ModerationPort & {
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
+    async unbanActor() {},
   };
 }
 
