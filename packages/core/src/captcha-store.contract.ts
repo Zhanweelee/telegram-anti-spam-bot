@@ -73,5 +73,30 @@ export function bindCaptchaStoreContract(create: () => CaptchaStore): void {
       ]);
       expect(await store.listExpired("2026-11-01T00:04:00.000Z")).toEqual([]);
     });
+
+    it("takes one matching nonce and leaves a different nonce", async () => {
+      const store = create();
+      const challenge = {
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+        actorId: "user_1",
+        nonce: "ab".repeat(8),
+        expiresAt: "2026-11-01T00:05:00.000Z",
+      };
+      await store.put(challenge);
+      expect(
+        await store.take("tenant_a", "chat_1", "user_1", "cd".repeat(8)),
+      ).toBeNull();
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toEqual(
+        challenge,
+      );
+      expect(
+        await store.take("tenant_a", "chat_1", "user_1", challenge.nonce),
+      ).toEqual(challenge);
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toBeNull();
+      expect(
+        await store.take("tenant_a", "chat_1", "user_1", challenge.nonce),
+      ).toBeNull();
+    });
   });
 }

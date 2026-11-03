@@ -36,6 +36,14 @@ function createReferenceStore(): CaptchaStore {
         values.delete(key(parsed.tenantId, parsed.chatId, parsed.actorId));
       }
     },
+    async take(tenantId, chatId, actorId, nonce) {
+      const current = values.get(key(tenantId, chatId, actorId));
+      if (current === undefined || current.nonce !== nonce) {
+        return null;
+      }
+      values.delete(key(tenantId, chatId, actorId));
+      return current;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
@@ -82,6 +90,89 @@ describe("captcha flow", () => {
     expect(JSON.stringify(kit.records)).not.toContain(secret);
     expect(JSON.stringify(kit.records)).not.toContain('"text"');
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
+  });
+
+  it("lets only the first overlapping answer release the member", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    const read = kit.store.get.bind(kit.store);
+    let nested = false;
+    kit.store.get = async (tenantId, chatId, actorId) => {
+      const challenge = await read(tenantId, chatId, actorId);
+      if (!nested && challenge !== null) {
+        nested = true;
+        expect(
+          await resolveChallenge({
+            event: answerEvent("ab".repeat(8)),
+            ports: kit.ports,
+          }),
+        ).toBe("passed");
+      }
+      return challenge;
+    };
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8)),
+        ports: kit.ports,
+      }),
+    ).toBe("ignored");
+    expect(kit.released).toHaveLength(1);
+    expect(kit.records).toHaveLength(1);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+  });
+
+  it("puts the challenge back when release fails", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    kit.ports.release = () => Promise.reject(new Error("release_failed"));
+    await expect(
+      resolveChallenge({
+        event: answerEvent("ab".repeat(8)),
+        ports: kit.ports,
+      }),
+    ).rejects.toThrow("release_failed");
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+    });
+  });
+
+  it("keeps a newer challenge when release fails", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    const newer = {
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce: "cd".repeat(8),
+      expiresAt: "2026-11-01T00:10:00.000Z",
+    };
+    kit.ports.release = async () => {
+      await kit.store.put(newer);
+      throw new Error("release_failed");
+    };
+    await expect(
+      resolveChallenge({
+        event: answerEvent("ab".repeat(8)),
+        ports: kit.ports,
+      }),
+    ).rejects.toThrow("release_failed");
+    expect(await kit.store.get("local", "-100", "77")).toEqual(newer);
+    expect(kit.records).toEqual([]);
   });
 
   it("audits a timeout without releasing the member", async () => {

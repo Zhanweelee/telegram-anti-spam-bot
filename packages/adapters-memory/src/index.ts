@@ -170,6 +170,14 @@ export function createMemoryCaptchaStore(): CaptchaStore {
         );
       }
     },
+    async take(tenantId, chatId, actorId, nonce) {
+      const current = values.get(captchaKey(tenantId, chatId, actorId));
+      if (current === undefined || current.nonce !== nonce) {
+        return null;
+      }
+      values.delete(captchaKey(tenantId, chatId, actorId));
+      return current;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
