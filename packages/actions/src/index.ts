@@ -43,6 +43,13 @@ export function createDeleteAction(): Action {
           detail: "missing_message",
         };
       }
+      if (ctx.event.message?.paid === true) {
+        return {
+          actionId: "delete",
+          status: "skipped",
+          detail: "paid_post",
+        };
+      }
       const audienceId = ctx.event.message?.audienceId;
       await ctx.moderator.deleteMessage({
         tenantId: ctx.event.tenantId,

@@ -155,6 +155,7 @@ async function messageEvent(
       ...(links.invites.length > 0 ? { invites: links.invites } : {}),
       ...(isRecord(message.contact) ? { contact: true as const } : {}),
       ...(isRecord(message.via_bot) ? { via: true as const } : {}),
+      ...(message.is_paid_post === true ? { paid: true as const } : {}),
       ...(media ? { media: media.kind } : {}),
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
     },

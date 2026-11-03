@@ -35,7 +35,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 }
 ```
 
-动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。不足 30 秒或超过 366 天的限制先收到这个区间，避免被当成永久限制。见 ADR 0354。
+动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。不足 30 秒或超过 366 天的限制先收到这个区间，避免被当成永久限制。见 ADR 0354。付费帖不删除。见 ADR 0356。
 
 `log` 只写标识、分数和 reason。`report` 把同一份通知交给 `Notifier`。没有通知端口时返回 `report_unavailable`。见 ADR 0021。
 

@@ -301,6 +301,38 @@ describe("event schema", () => {
       },
     });
     expect(event.message?.via).toBe(true);
+    expect(event.message?.paid).toBeUndefined();
+    const paid = parseEvent({
+      id: "evt_paid",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        paid: true,
+      },
+    });
+    expect(paid.message?.paid).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_paid",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          paid: false,
+        },
+      }),
+    ).toThrow();
     expect(() =>
       parseEvent({
         id: "evt_1",

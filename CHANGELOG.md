@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-323
+
+- `is_paid_post` 正好为 true 时，消息带 `paid: true`。删除动作返回 `paid_post`，不调用删除。
+- 星星数量不进事件。禁言和封禁仍执行。见 ADR 0356。
+- 30 天保留期没有改。
+
 ### P3-322
 
 - 人还在群里、新状态仍是 `restricted` 且 `is_member` 为 false 时带 `membership: "leave"`，并清掉验证按钮。
