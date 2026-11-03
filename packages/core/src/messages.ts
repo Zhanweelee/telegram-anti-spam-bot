@@ -82,6 +82,8 @@ export const messageKeys = [
   "command.member.restricted.until",
   "command.member.restricted.away",
   "command.member.restricted.away.until",
+  "command.delete.usage",
+  "command.delete.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -119,6 +121,7 @@ const syntax = [
   "/ban <chatId> <actorId>",
   "/mute <chatId> <actorId> [seconds]",
   "/member <chatId> <actorId>",
+  "/delete <chatId> <messageId>",
 ].join("\n");
 
 const zh = {
@@ -207,6 +210,8 @@ const zh = {
   "command.member.restricted.away": "{chatId} {actorId} 禁言中，人不在群里",
   "command.member.restricted.away.until":
     "{chatId} {actorId} 禁言中，人不在群里，直到 {until}",
+  "command.delete.usage": "用法：/delete <chatId> <messageId>",
+  "command.delete.done": "已删除 {chatId} {messageId}",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -304,6 +309,8 @@ const en = {
     "{actorId} is muted in {chatId} and is outside the chat",
   "command.member.restricted.away.until":
     "{actorId} is muted in {chatId} until {until} and is outside the chat",
+  "command.delete.usage": "Usage: /delete <chatId> <messageId>",
+  "command.delete.done": "Deleted {messageId} in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

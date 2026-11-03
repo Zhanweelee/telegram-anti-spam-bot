@@ -58,6 +58,9 @@ function commandModerator(
     async readMember() {
       throw new Error("member_unavailable");
     },
+    async deleteMessage() {
+      throw new Error("delete_unavailable");
+    },
   };
 }
 

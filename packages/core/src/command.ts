@@ -72,6 +72,7 @@ const COMMAND_NAMES = [
   "ban",
   "mute",
   "member",
+  "delete",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -103,7 +104,12 @@ export interface OperatorCommandInput {
   readonly moderator?: Partial<
     Pick<
       ModerationPort,
-      "banActor" | "muteActor" | "readMember" | "unbanActor" | "unmuteActor"
+      | "banActor"
+      | "deleteMessage"
+      | "muteActor"
+      | "readMember"
+      | "unbanActor"
+      | "unmuteActor"
     >
   >;
   readonly scope?: CommandScope;
@@ -217,6 +223,8 @@ async function dispatch(
       return muteMember(input, args);
     case "member":
       return showMember(input, args);
+    case "delete":
+      return deleteOne(input, args);
   }
 }
 
@@ -566,6 +574,61 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function deleteOne(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.delete.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deleteMessage;
+  if (!remove) {
+    rejectDelete(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+    });
+  } catch {
+    rejectDelete(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.delete.done", { chatId, messageId });
+}
+
+function isMessageId(value: string): boolean {
+  if (!/^[1-9]\d{0,15}$/.test(value)) {
+    return false;
+  }
+  const numeric = Number(value);
+  return Number.isSafeInteger(numeric) && numeric > 0;
+}
+
+function rejectDelete(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "delete",
   });
 }
 
