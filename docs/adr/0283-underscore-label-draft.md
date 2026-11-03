@@ -34,3 +34,4 @@ Android 没有协议时，标签以字母或数字开头和结尾，下划线只
 - `foo_.com/http://bit.ly/…`、`_foo.com/http://bit.ly/…` 和 `foo-.com/http://bit.ly/…` 删除。证据仍只有主机名。
 - `example.com_http://bit.ly/…` 和 `foo_http://bit.ly/…` 留着。
 - `点击bit.ly/…` 仍按短链删除。
+- 连字符或下划线把汉字和拉丁字母接在同一个裸标签里时，后面的网址后来仍不另开。见 ADR 0284。

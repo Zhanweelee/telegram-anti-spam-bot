@@ -6270,6 +6270,162 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(embedded.event)).not.toContain(path);
   });
 
+  it("keeps a bridged bare label in a hidden draft", async () => {
+    const path = "offer251";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 251 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const bridged = await draft(
+      78277,
+      -1008509,
+      `例_foo.com/http://bit.ly/${path}`,
+    );
+    expect(bridged.status).toBe("event");
+    if (bridged.status !== "event") {
+      return;
+    }
+    expect(bridged.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(bridged.event)).not.toContain(path);
+
+    const hyphen = await draft(
+      78278,
+      -1008510,
+      `foo-例.com/http://bit.ly/${path}`,
+    );
+    expect(hyphen.status).toBe("event");
+    if (hyphen.status !== "event") {
+      return;
+    }
+    expect(hyphen.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(hyphen.event)).not.toContain(path);
+
+    const marked = await draft(
+      78279,
+      -1008511,
+      `www.例_foo.com/http://bit.ly/${path}`,
+    );
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(marked.event)).not.toContain(path);
+
+    const joined = await draft(78280, -1008512, `点击_bit.ly/${path}`);
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(joined.event)).not.toContain(path);
+
+    const tail = await draft(78281, -1008513, `例_.com/http://bit.ly/${path}`);
+    expect(tail.status).toBe("event");
+    if (tail.status !== "event") {
+      return;
+    }
+    expect(tail.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(tail.event)).not.toContain(path);
+
+    const dotted = await draft(
+      78282,
+      -1008514,
+      `例_foo.com./http://bit.ly/${path}`,
+    );
+    expect(dotted.status).toBe("event");
+    if (dotted.status !== "event") {
+      return;
+    }
+    expect(dotted.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(dotted.event)).not.toContain(path);
+
+    const fake = await draft(
+      78283,
+      -1008515,
+      `例_foo.example/http://bit.ly/${path}`,
+    );
+    expect(fake.status).toBe("event");
+    if (fake.status !== "event") {
+      return;
+    }
+    expect(fake.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(fake.event)).not.toContain(path);
+
+    const spaced = await draft(
+      78284,
+      -1008516,
+      `见 例_foo.com/http://bit.ly/${path}`,
+    );
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(spaced.event)).not.toContain(path);
+
+    const han = await draft(78285, -1008517, `点击bit.ly/${path}`);
+    expect(han.status).toBe("event");
+    if (han.status !== "event") {
+      return;
+    }
+    expect(han.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(han.event)).not.toContain(path);
+
+    const prefixed = await draft(
+      78286,
+      -1008518,
+      `见例_foo.com/http://bit.ly/${path}`,
+    );
+    expect(prefixed.status).toBe("event");
+    if (prefixed.status !== "event") {
+      return;
+    }
+    expect(prefixed.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(prefixed.event)).not.toContain(path);
+
+    const embedded = await normalize({
+      update_id: 78287,
+      message: {
+        message_id: 78287,
+        date: 1761955200,
+        chat: { id: -1008519, type: "supergroup" },
+        from: { id: 251 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=例_foo.com/http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

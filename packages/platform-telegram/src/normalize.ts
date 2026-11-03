@@ -494,7 +494,11 @@ const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
 const DRAFT_IP_TAIL = '(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?';
 const DRAFT_ASCII_LABEL = "[a-z0-9](?:[a-z0-9_-]{0,61}[a-z0-9])?";
-const DRAFT_BARE = `(?<!:\\/\\/)\\b(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})(?![a-z0-9_-])(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?`;
+const DRAFT_ATOM =
+  "(?:[A-Za-z0-9]|[^\\t\\n\\v\\f\\r \\u00A0\\u2000-\\u200A\\u2028\\u2029\\u202F\\u3000\\u0000-\\u007F\\u0080-\\u009F\\uD800-\\uDFFF\\uE000-\\uF8FF\\uFDD0-\\uFDEF\\uFFF0-\\uFFFF])";
+const DRAFT_BRIDGED = `(?=[^.]{0,62}[_-])${DRAFT_ATOM}(?:${DRAFT_ATOM}|[_-]){0,61}${DRAFT_ATOM}`;
+const DRAFT_NAME = `(?:${DRAFT_BRIDGED}|${DRAFT_ASCII_LABEL})`;
+const DRAFT_BARE = `(?<!:\\/\\/)(?:^|\\b)(?:${DRAFT_NAME}\\.)+(?:${androidStrictTld})(?![A-Za-z0-9_-])(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>"]*)?`;
 const STRICT_TLD_LABEL = new RegExp(`^(?:${androidStrictTld})$`, "i");
 const DRAFT_URL = `(?<![A-Za-z0-9_])(?:https?:\\/\\/|tg:(?:\\/\\/)?)[^\\s<>"']+|www\\.[^\\s<>"']+|${DRAFT_BARE}`;
 
