@@ -1535,7 +1535,7 @@ describe("runOperatorCommand", () => {
         score: 1,
         reasons: ["keyword_match"],
         ruleIds: ["spam_keywords"],
-        createdAt: "2026-11-01T00:00:00.000Z",
+        createdAt: `2026-11-01T00:00:00.${String(index).padStart(3, "0")}Z`,
       });
     }
     const longExport = await runOperatorCommand({
@@ -1544,17 +1544,63 @@ describe("runOperatorCommand", () => {
       review,
       ...deps,
     });
-    expect(longExport).toMatchObject({ text: "评测样本 40 条，超过私聊长度" });
-    expect(JSON.stringify(longExport)).not.toContain(phrase);
+    expect(longExport.status).toBe("reply");
+    if (longExport.status !== "reply") {
+      return;
+    }
+    expect(longExport.text.length).toBeLessThanOrEqual(3500);
+    const doc = JSON.parse(longExport.text) as {
+      omitted: number;
+      cases: { id: string }[];
+    };
+    expect(doc.omitted).toBeGreaterThan(0);
+    expect(doc.omitted + doc.cases.length).toBe(40);
+    expect(doc.cases.at(-1)?.id).toBe("evt_39");
+    expect(doc.cases[0]?.id).not.toBe("evt_0");
+    expect(longExport.text).not.toContain(phrase);
+    expect(longExport.text).not.toContain('"text"');
     const english = await runOperatorCommand({
-      event: event({ text: "/evals", direct: true }),
+      event: event({ text: "/evals -100", direct: true }),
       adminActorIds: ["42"],
       locale: "en",
       review,
       ...deps,
     });
-    expect(english).toMatchObject({
-      text: "40 cases, longer than a private message",
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    expect(JSON.parse(english.text)).toEqual(JSON.parse(longExport.text));
+
+    const packed = createMemoryReviewQueue();
+    await packed.enqueue({
+      tenantId: "local",
+      chatId: "-100",
+      eventId: "evt_packed",
+      label: "confirmed",
+      textSha256: "cd".repeat(32),
+      action: "delete",
+      score: 1,
+      reasons: Array.from({ length: 16 }, () => "\\".repeat(80)),
+      ruleIds: Array.from({ length: 16 }, () => "\\".repeat(64)),
+      createdAt: "2026-11-01T00:00:00.000Z",
+    });
+    const over = await runOperatorCommand({
+      event: event({ text: "/evals -100", direct: true }),
+      adminActorIds: ["42"],
+      review: packed,
+      ...deps,
+    });
+    expect(over).toMatchObject({ text: "评测样本 1 条，超过私聊长度" });
+    const overEnglish = await runOperatorCommand({
+      event: event({ text: "/evals -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      review: packed,
+      ...deps,
+    });
+    expect(overEnglish).toMatchObject({
+      text: "1 cases, longer than a private message",
     });
   });
 

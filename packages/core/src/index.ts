@@ -87,6 +87,7 @@ export {
   feedbackLabelFromReview,
   feedbackLabelSchema,
   feedbackLabels,
+  fitFeedbackEvalDocument,
   parseFeedbackCase,
 } from "./feedback-eval.js";
 export type { LlmClassifier, LlmVerdict } from "./llm.js";
