@@ -219,7 +219,7 @@ async function chatMemberEvent(
   const membership = memberChange(value);
   const profile =
     membership === "join" && isRecord(value.new_chat_member.user)
-      ? await joinProfile(value.new_chat_member.user)
+      ? await joinProfile(value.new_chat_member.user, value.new_chat_member.tag)
       : undefined;
   const configured = admins.has(actor);
   return finish({
@@ -284,6 +284,7 @@ async function requestBio(
 
 async function joinProfile(
   user: Record<string, unknown>,
+  tag: unknown,
 ): Promise<{ readonly text: string; readonly textSha256: string } | undefined> {
   const parts: string[] = [];
   for (const key of ["first_name", "last_name", "username"]) {
@@ -292,6 +293,12 @@ async function joinProfile(
       continue;
     }
     const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      parts.push(trimmed);
+    }
+  }
+  if (typeof tag === "string") {
+    const trimmed = tag.trim();
     if (trimmed.length > 0) {
       parts.push(trimmed);
     }

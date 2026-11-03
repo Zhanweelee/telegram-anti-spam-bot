@@ -17553,6 +17553,108 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("screens a joining member tag with the visible name", async () => {
+    const name = "广告员";
+    const tag = "免费领取礼品";
+    const joined = await normalize({
+      update_id: 2069,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup", title: tag },
+        from: { id: 1, first_name: tag },
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+          tag,
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status === "event") {
+      expect(joined.event.membership).toBe("join");
+      expect(joined.event.profile?.text).toBe(`${name} ${tag}`);
+      expect(JSON.stringify(joined.event)).not.toContain("机密");
+    }
+    const tagOnly = await normalize({
+      update_id: 2070,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: {
+          user: { id: 77 },
+          status: "restricted",
+          is_member: false,
+        },
+        new_chat_member: {
+          user: { id: 77 },
+          status: "member",
+          tag: "  https://bit.ly/tag84  ",
+        },
+      },
+    });
+    expect(tagOnly.status).toBe("event");
+    if (tagOnly.status === "event") {
+      expect(tagOnly.event.membership).toBe("join");
+      expect(tagOnly.event.profile?.text).toBe("https://bit.ly/tag84");
+    }
+    const blank = await normalize({
+      update_id: 2071,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+          tag: "   ",
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status === "event") {
+      expect(blank.event.profile?.text).toBe(name);
+    }
+    const stayed = await normalize({
+      update_id: 2072,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "restricted",
+          is_member: true,
+          tag,
+        },
+      },
+    });
+    expect(stayed.status).toBe("event");
+    if (stayed.status === "event") {
+      expect(stayed.event.membership).toBeUndefined();
+      expect(stayed.event.profile).toBeUndefined();
+      expect(JSON.stringify(stayed.event)).not.toContain(tag);
+    }
+    const bot = await normalize({
+      update_id: 2073,
+      chat_member: {
+        chat: { id: -100588, type: "supergroup" },
+        from: { id: 1 },
+        old_chat_member: { user: { id: 88, is_bot: true }, status: "left" },
+        new_chat_member: {
+          user: { id: 88, is_bot: true, username: tag },
+          status: "member",
+          tag,
+        },
+      },
+    });
+    expect(bot.status).toBe("event");
+    if (bot.status === "event") {
+      expect(bot.event.actor.bot).toBe(true);
+      expect(bot.event.profile).toBeUndefined();
+      expect(JSON.stringify(bot.event)).not.toContain(tag);
+    }
+  });
+
   it("records a group admin grant without the chat title", async () => {
     const title = "机密群名";
     const granted = await normalize({
