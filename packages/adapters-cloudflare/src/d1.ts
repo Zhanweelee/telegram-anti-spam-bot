@@ -198,6 +198,9 @@ WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 const deleteCaptchaSql = `DELETE FROM captcha_challenges
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 
+const deleteCaptchaNonceSql = `DELETE FROM captcha_challenges
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?`;
+
 const takeCaptchaSql = `DELETE FROM captcha_challenges
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?
 RETURNING tenant_id, chat_id, actor_id, nonce, expires_at`;
@@ -260,6 +263,35 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
         .bind(tenantId, chatId, actorId, nonce)
         .all();
       return readCaptcha(rows.results?.[0]);
+    },
+    async takeMany(challenges) {
+      if (challenges.length === 0) {
+        return [];
+      }
+      await migrationsFor(db);
+      const parsed = challenges.map((challenge) =>
+        parseCaptchaChallenge(challenge),
+      );
+      const results = await db.batch(
+        parsed.map((challenge) =>
+          db
+            .prepare(deleteCaptchaNonceSql)
+            .bind(
+              challenge.tenantId,
+              challenge.chatId,
+              challenge.actorId,
+              challenge.nonce,
+            ),
+        ),
+      );
+      const taken: CaptchaChallenge[] = [];
+      for (let index = 0; index < parsed.length; index += 1) {
+        const challenge = parsed[index];
+        if (challenge !== undefined && readChanges(results[index]) >= 1) {
+          taken.push(challenge);
+        }
+      }
+      return taken;
     },
     async listExpired(nowIso) {
       await migrationsFor(db);

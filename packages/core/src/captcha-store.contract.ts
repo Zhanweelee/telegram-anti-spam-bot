@@ -98,5 +98,30 @@ export function bindCaptchaStoreContract(create: () => CaptchaStore): void {
         await store.take("tenant_a", "chat_1", "user_1", challenge.nonce),
       ).toBeNull();
     });
+
+    it("takes many matching nonces and leaves a replaced one", async () => {
+      const store = create();
+      const first = {
+        tenantId: "tenant_a",
+        chatId: "chat_1",
+        actorId: "user_1",
+        nonce: "ab".repeat(8),
+        expiresAt: "2026-11-01T00:05:00.000Z",
+      };
+      const other = {
+        ...first,
+        actorId: "user_2",
+        nonce: "cd".repeat(8),
+      };
+      await store.put(first);
+      await store.put(other);
+      await store.put({ ...first, nonce: "ef".repeat(8) });
+      expect(await store.takeMany([])).toEqual([]);
+      expect(await store.takeMany([first, other])).toEqual([other]);
+      expect(await store.get("tenant_a", "chat_1", "user_1")).toMatchObject({
+        nonce: "ef".repeat(8),
+      });
+      expect(await store.get("tenant_a", "chat_1", "user_2")).toBeNull();
+    });
   });
 }

@@ -44,6 +44,9 @@ export interface CaptchaStore {
     actorId: string,
     nonce: string,
   ): Promise<CaptchaChallenge | null>;
+  takeMany(
+    challenges: readonly CaptchaChallenge[],
+  ): Promise<readonly CaptchaChallenge[]>;
   listExpired(nowIso: string): Promise<readonly CaptchaChallenge[]>;
 }
 
@@ -128,7 +131,16 @@ export async function resolveChallenge(input: {
   }
   const nowIso = input.ports.clock.nowIso();
   if (isExpired(challenge.expiresAt, nowIso)) {
-    await expireOne(challenge, input.ports, nowIso, input.event.id);
+    const taken = await input.ports.store.take(
+      challenge.tenantId,
+      challenge.chatId,
+      challenge.actorId,
+      challenge.nonce,
+    );
+    if (!taken) {
+      return "ignored";
+    }
+    await expireTaken(taken, input.ports, nowIso, input.event.id);
     return "expired";
   }
   if (challenge.nonce !== nonce) {
@@ -185,22 +197,25 @@ export async function expireChallenges(ports: CaptchaPorts): Promise<number> {
   if (due.length === 0) {
     return 0;
   }
+  const taken = await ports.store.takeMany(due);
+  if (taken.length === 0) {
+    return 0;
+  }
   await ports.storage.putAuditsIfAbsent(
-    due.map((challenge) =>
+    taken.map((challenge) =>
       expiryAudit(challenge, nowIso, expiredEventId(challenge)),
     ),
   );
-  await ports.store.deleteMany(due);
-  for (const challenge of due) {
+  for (const challenge of taken) {
     ports.logger.info("captcha_expired", {
       eventId: expiredEventId(challenge),
       chatId: challenge.chatId,
     });
   }
-  return due.length;
+  return taken.length;
 }
 
-async function expireOne(
+async function expireTaken(
   challenge: CaptchaChallenge,
   ports: CaptchaPorts,
   nowIso: string,
@@ -209,11 +224,6 @@ async function expireOne(
   await ports.storage.putAuditsIfAbsent([
     expiryAudit(challenge, nowIso, eventId),
   ]);
-  await ports.store.delete(
-    challenge.tenantId,
-    challenge.chatId,
-    challenge.actorId,
-  );
   ports.logger.info("captcha_expired", {
     eventId,
     chatId: challenge.chatId,
