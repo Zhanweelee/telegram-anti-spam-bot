@@ -654,6 +654,12 @@ function openLongLabel(text: string): string {
           continue;
         }
       }
+      const dotted = /^\.:\d{1,5}(?!\d)/.exec(rest);
+      if (dotted?.[0] && portTailSplits(rest.slice(dotted[0].length))) {
+        out += `${text.slice(index, index + scheme + host + dotted[0].length)} `;
+        index += scheme + host + dotted[0].length + 1;
+        continue;
+      }
     }
     const end = text.slice(index).search(/\s/);
     const next = end === -1 ? text.length : index + end;
@@ -674,7 +680,7 @@ function labelEndsUrl(rest: string): boolean {
   if (rest.startsWith("-")) {
     return true;
   }
-  return rest.startsWith(".") && !/^[:/?]/.test(rest.charAt(1));
+  return rest.startsWith(".") && !/^[:/?_]/.test(rest.charAt(1));
 }
 
 /** 路径还没开始时，这些标点结束主机名。端口和 `user:pass@` 仍属于这一条。 */
@@ -690,6 +696,15 @@ function hostPunctEnds(rest: string): boolean {
 
 function isPort(rest: string): boolean {
   return /^:\d{1,5}(?!\d)/.test(rest);
+}
+
+/** 点号后面的端口仍属于这一条。端口后再遇标点，才另开后面的网址。 */
+function portTailSplits(after: string): boolean {
+  return (
+    hostPunctEnds(after) ||
+    after.startsWith("-") ||
+    (after.startsWith(".") && schemeAt(after, 1) > 0)
+  );
 }
 
 function passwordUserinfo(rest: string): boolean {
@@ -1406,7 +1421,7 @@ function hostFromUrl(
     }
     return packHost(first.host, first.invite, wrapped.slice(1));
   }
-  const host = url.hostname.toLowerCase();
+  const host = url.hostname.toLowerCase().replace(/\.$/, "");
   if (
     host.length === 0 ||
     host.length > 253 ||

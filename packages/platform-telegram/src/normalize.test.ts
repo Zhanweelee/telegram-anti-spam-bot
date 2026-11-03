@@ -4941,6 +4941,107 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(embedded.event)).not.toContain(path);
   });
 
+  it("keeps a short link after a dot that does not start a label", async () => {
+    const path = "offer242";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 242 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+
+    const port = await draft(
+      78192,
+      -1008424,
+      `http://example.com.:80!http://bit.ly/${path}`,
+    );
+    expect(port.status).toBe("event");
+    if (port.status !== "event") {
+      return;
+    }
+    expect(port.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(port.event)).not.toContain(path);
+
+    const underscored = await draft(
+      78193,
+      -1008425,
+      `http://example.com._http://bit.ly/${path}`,
+    );
+    expect(underscored.status).toBe("event");
+    if (underscored.status !== "event") {
+      return;
+    }
+    expect(underscored.event.message?.hosts ?? []).not.toContain("bit.ly");
+    expect(JSON.stringify(underscored.event)).not.toContain(path);
+
+    const code = "CODE242";
+    const dotted = await draft(78194, -1008426, `https://t.me./%2B${code}`);
+    expect(dotted.status).toBe("event");
+    if (dotted.status !== "event") {
+      return;
+    }
+    expect(dotted.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(dotted.event)).not.toContain(code);
+
+    const doubled = await draft(78195, -1008427, `https://t.me../%2B${code}`);
+    expect(doubled.status).toBe("event");
+    if (doubled.status !== "event") {
+      return;
+    }
+    expect(doubled.event.message?.invites).toBeUndefined();
+    expect(JSON.stringify(doubled.event)).not.toContain(code);
+
+    const dots = await draft(
+      78196,
+      -1008428,
+      `http://example.com..http://bit.ly/${path}`,
+    );
+    expect(dots.status).toBe("event");
+    if (dots.status !== "event") {
+      return;
+    }
+    expect(dots.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(dots.event)).not.toContain(path);
+
+    const embedded = await normalize({
+      update_id: 78197,
+      message: {
+        message_id: 78197,
+        date: 1761955200,
+        chat: { id: -1008429, type: "supergroup" },
+        from: { id: 242 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/share/url?url=http://example.com.:80!http://bit.ly/${path}`,
+          },
+        ],
+      },
+    });
+    expect(embedded.status).toBe("event");
+    if (embedded.status !== "event") {
+      return;
+    }
+    expect(embedded.event.message?.hosts).toContain("bit.ly");
+    expect(JSON.stringify(embedded.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";

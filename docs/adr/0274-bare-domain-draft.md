@@ -38,3 +38,4 @@ Android 读没有协议的域名和 `www.` 开头的域名时，停在最后一�
 - `www.example.com/!http://bit.ly` 和 `www.example.com?http://bit.ly` 留着。`www.bit.ly/…` 仍按短链删除。
 - `http://example.com` 后接 U+00A1 再接短链，以及 `http://example.com.http://bit.ly`，留着。
 - `www.example.com-https://t.me/+…` 按邀请删除。`www.t.me.evil.example/+…` 不改记成邀请。路径不进证据。
+- 点号接不上标签时，后面的短链后来同样留下。见 ADR 0275。
