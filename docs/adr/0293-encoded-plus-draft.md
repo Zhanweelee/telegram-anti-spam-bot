@@ -35,3 +35,4 @@ Android 不会在匹配前把 `%2B` 收成加号。`%2Bbit.ly/…` 打开的是 
 - `example.com%2Bwww.bit.ly/…` 按短链删除。证据是 `2bwww.bit.ly`。路径不进证据。
 - `example.com+bit.ly/…`，以及换行、空格、制表符或斜杠隔开的 `%2B`，仍按短链删除。`t.me/%2B…` 仍按邀请删除。
 - `203.0.113.164%2Bbit.ly/…` 仍按裸 IP 删除。证据是这个地址。`example.com%2B203.0.113.165` 留着。
+- 贴在 `www.bit.ly` 前面的 `%2F` 仍把主机名收成 `arpa`，短链不再以 `.bit.ly` 结尾。见 ADR 0294。

@@ -7742,6 +7742,137 @@ describe("normalizeUpdate", () => {
     expect(hiddenIp.event.message?.hosts ?? []).not.toContain("203.0.113.165");
   });
 
+  it("leaves a short link glued on by a percent-encoded slash host", async () => {
+    const path = "offer261";
+    const draft = async (updateId: number, chatId: number, text: string) =>
+      normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chatId, type: "supergroup" },
+          from: { id: 261 },
+          text: "点这里",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: `https://t.me/share/url?text=${text}`,
+            },
+          ],
+        },
+      });
+    const short = (hosts: readonly string[] | undefined) =>
+      (hosts ?? []).filter(
+        (host) => host === "bit.ly" || host.endsWith(".bit.ly"),
+      );
+    const glued = [
+      [78444, -1008676, `%252Fbit.ly/${path}`],
+      [78445, -1008677, `%252fbit.ly/${path}`],
+      [78446, -1008678, `see%252Fbit.ly/${path}`],
+      [78447, -1008679, `see%20%252Fbit.ly/${path}`],
+      [78448, -1008680, `(%252Fbit.ly/${path}`],
+      [78449, -1008681, `!%252Fbit.ly/${path}`],
+      [78450, -1008682, `www%252Fbit.ly/${path}`],
+      [78451, -1008683, `example.com%252Fbit.ly/${path}`],
+      [78452, -1008684, `%252Fexample.com/bit.ly/${path}`],
+      [78453, -1008685, `%252Fexample.com/http://bit.ly/${path}`],
+      [78454, -1008686, `%25252Fbit.ly/${path}`],
+      [78455, -1008687, `%252Fhttp://bit.ly/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of glued) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(short(hit.event.message?.hosts), text).toEqual([]);
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const hiddenAddress = await draft(
+      78456,
+      -1008688,
+      `%252F203.0.113.166/${path}`,
+    );
+    expect(hiddenAddress.status).toBe("event");
+    if (hiddenAddress.status !== "event") {
+      return;
+    }
+    expect(hiddenAddress.event.message?.hosts ?? []).not.toContain(
+      "203.0.113.166",
+    );
+    expect(JSON.stringify(hiddenAddress.event)).not.toContain(path);
+
+    const kept = await draft(78457, -1008689, "t.me%252F%2BCODE261");
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.invites).toEqual(["t.me"]);
+    expect(JSON.stringify(kept.event)).not.toContain("CODE261");
+
+    const opened = [
+      [78458, -1008690, `/bit.ly/${path}`],
+      [78459, -1008691, `example.com%252F%0Abit.ly/${path}`],
+      [78460, -1008692, `example.com%252F%20bit.ly/${path}`],
+      [78461, -1008693, `example.com%252F/bit.ly/${path}`],
+      [78462, -1008694, `example.com%252F%09bit.ly/${path}`],
+      [78463, -1008695, `http:%252F/bit.ly/${path}`],
+      [78464, -1008696, `https://bit.ly%252F${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of opened) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(hit.event.message?.hosts, text).toContain("bit.ly");
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const prefixed = [
+      [78465, -1008697, `example.com%252Fwww.bit.ly/${path}`],
+      [78466, -1008698, `%252Fwww.bit.ly/${path}`],
+    ] as const;
+    for (const [updateId, chatId, text] of prefixed) {
+      const hit = await draft(updateId, chatId, text);
+      expect(hit.status, text).toBe("event");
+      if (hit.status !== "event") {
+        continue;
+      }
+      expect(hit.event.message?.hosts, text).toContain("2fwww.bit.ly");
+      expect(JSON.stringify(hit.event), text).not.toContain(path);
+    }
+
+    const stopped = await draft(
+      78467,
+      -1008699,
+      `https://bit.ly%252Fhttp://t.co/${path}`,
+    );
+    expect(stopped.status).toBe("event");
+    if (stopped.status !== "event") {
+      return;
+    }
+    expect(stopped.event.message?.hosts).toContain("bit.ly");
+    expect(stopped.event.message?.hosts ?? []).not.toContain("t.co");
+    expect(JSON.stringify(stopped.event)).not.toContain(path);
+
+    const addressed = await draft(
+      78468,
+      -1008700,
+      `203.0.113.166%252Fbit.ly/${path}`,
+    );
+    expect(addressed.status).toBe("event");
+    if (addressed.status !== "event") {
+      return;
+    }
+    expect(addressed.event.message?.hosts).toContain("203.0.113.166");
+    expect(short(addressed.event.message?.hosts)).toEqual([]);
+    expect(JSON.stringify(addressed.event)).not.toContain(path);
+  });
+
   it("keeps a capital S username draft and leaves the preview", async () => {
     const hidden = "offer229";
     const dotted = "slug.229";
