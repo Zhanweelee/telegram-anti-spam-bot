@@ -369,11 +369,19 @@ function joiningBot(value: Record<string, unknown>): boolean {
   ) {
     return false;
   }
+  if (restrictedOutside(value.new_chat_member)) {
+    return false;
+  }
   if (!isRecord(value.old_chat_member)) {
     return true;
   }
   const previous = value.old_chat_member.status;
-  return previous === "left" || previous === "kicked" || previous === undefined;
+  return (
+    previous === "left" ||
+    previous === "kicked" ||
+    previous === undefined ||
+    restrictedOutside(value.old_chat_member)
+  );
 }
 
 function memberChange(

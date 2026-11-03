@@ -31,3 +31,4 @@
 - 云模式超过当月次数后，这条规则会停，直到 `QUOTA_BASIC` 写上 `bot`。
 - `chats.json` 整份替换的群要自己加上 `bot_join`。
 - 本 bot 被设为管理员时仍只记接入，不会封禁自己。
+- 旧状态是 `restricted` 且 `is_member` 为 false 时，也算从群外回来。见 ADR 0357。
