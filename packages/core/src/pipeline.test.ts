@@ -106,6 +106,9 @@ function harness(options?: { failStorage?: boolean }) {
     async exportAudits() {
       return records.slice();
     },
+    async countAudits() {
+      return records.length;
+    },
     async deleteAudits() {
       const removed = records.length;
       records.splice(0, records.length);

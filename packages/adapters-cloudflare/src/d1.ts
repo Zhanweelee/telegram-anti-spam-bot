@@ -104,6 +104,12 @@ const getAuditSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha25
 FROM audits
 WHERE tenant_id = ? AND chat_id = ? AND event_id = ?`;
 
+const countAuditsSql =
+  "SELECT COUNT(*) AS total FROM audits WHERE tenant_id = ?";
+
+const countAuditsInChatSql =
+  "SELECT COUNT(*) AS total FROM audits WHERE tenant_id = ? AND chat_id = ?";
+
 const deleteAuditsSql = "DELETE FROM audits WHERE tenant_id = ?";
 
 const deleteAuditsInChatSql =
@@ -302,6 +308,18 @@ export function createD1Storage(db: SqlDatabase): Storage {
     async exportAudits(scope) {
       await migrationsFor(db);
       return exportMatching(db, scope);
+    },
+    async countAudits(scope) {
+      await migrationsFor(db);
+      const parsed = parseAuditScope(scope);
+      const rows =
+        parsed.chatId === undefined
+          ? await db.prepare(countAuditsSql).bind(parsed.tenantId).all()
+          : await db
+              .prepare(countAuditsInChatSql)
+              .bind(parsed.tenantId, parsed.chatId)
+              .all();
+      return readAuditCount(rows.results?.[0]);
     },
     async deleteAudits(scope) {
       await migrationsFor(db);
@@ -544,6 +562,25 @@ function readChanges(result: unknown): number {
     }
   }
   throw new Error("delete_changes_missing");
+}
+
+function readAuditCount(row: Record<string, unknown> | undefined): number {
+  const value = row?.total;
+  if (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    Number.isSafeInteger(value)
+  ) {
+    return value;
+  }
+  if (typeof value === "bigint" && value >= 0n) {
+    const asNumber = Number(value);
+    if (Number.isSafeInteger(asNumber)) {
+      return asNumber;
+    }
+  }
+  throw new Error("audit_count_missing");
 }
 
 function readCount(row: Record<string, unknown> | undefined): number {

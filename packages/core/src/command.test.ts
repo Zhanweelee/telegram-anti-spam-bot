@@ -153,6 +153,13 @@ function storage(): Storage & {
           (scope.chatId === undefined || record.chatId === scope.chatId),
       );
     },
+    async countAudits(scope) {
+      return records.filter(
+        (record) =>
+          record.tenantId === scope.tenantId &&
+          (scope.chatId === undefined || record.chatId === scope.chatId),
+      ).length;
+    },
     async deleteAudits(scope) {
       let removed = 0;
       for (let index = records.length - 1; index >= 0; index -= 1) {
@@ -723,6 +730,20 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(again).toMatchObject({ text: "已删除 0 条" });
+  });
+
+  it("reports an overlong export without reading the audit rows", async () => {
+    const deps = kit();
+    deps.storage.countAudits = async () => 4000;
+    deps.storage.exportAudits = () => Promise.reject(new Error(phrase));
+    const exported = await runOperatorCommand({
+      event: event({ text: "/export", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(exported).toMatchObject({ text: "导出 4000 条，超过私聊长度" });
+    expect(JSON.stringify(exported)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
   it("forgets a chat without reading the audit rows", async () => {

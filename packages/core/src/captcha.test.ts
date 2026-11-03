@@ -214,6 +214,9 @@ function harness() {
     async exportAudits() {
       return records;
     },
+    async countAudits() {
+      return records.length;
+    },
     async deleteAudits() {
       return 0;
     },

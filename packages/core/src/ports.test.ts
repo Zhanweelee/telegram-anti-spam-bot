@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   auditExportDocument,
+  minimumAuditExportLength,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
@@ -42,6 +43,36 @@ describe("audit schema", () => {
     ).toBe(10);
     expect(() => parseAuditScope({ tenantId: "" })).toThrow();
     expect(parseAuditScope({ tenantId: "t", chatId: "c" }).chatId).toBe("c");
+    const scope = { tenantId: "t" };
+    const shortest = {
+      tenantId: "t",
+      chatId: "c",
+      eventId: "e",
+      action: "log" as const,
+      score: 0,
+      reasons: [],
+      evidence: [],
+      ruleIds: [],
+      createdAt: "2026-11-01T00:00:00Z",
+    };
+    expect(minimumAuditExportLength(scope, 0)).toBe(
+      auditExportDocument(scope, []).length,
+    );
+    expect(minimumAuditExportLength(scope, 2)).toBe(
+      auditExportDocument(scope, [shortest, shortest]).length,
+    );
+    expect(minimumAuditExportLength(scope, 4000)).toBeGreaterThan(3500);
+    expect(minimumAuditExportLength(scope, Number.MAX_SAFE_INTEGER)).toBe(
+      Number.MAX_SAFE_INTEGER,
+    );
+    expect(() => minimumAuditExportLength(scope, -1)).toThrow(
+      "audit_count_invalid",
+    );
+    expect(minimumAuditExportLength({ tenantId: "t", chatId: "room" }, 1)).toBe(
+      auditExportDocument({ tenantId: "t", chatId: "room" }, [
+        { ...shortest, chatId: "room" },
+      ]).length,
+    );
     const json = auditExportDocument({ tenantId: "t" }, []);
     expect(JSON.parse(json)).toEqual({ tenantId: "t", audits: [] });
     expect(() =>

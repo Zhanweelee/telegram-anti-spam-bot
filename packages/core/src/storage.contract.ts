@@ -164,6 +164,11 @@ export function bindStorageContract(create: () => Storage): void {
         chatId: "chat_1",
       });
       expect(chatExport).toEqual([record]);
+      expect(
+        await storage.countAudits({ tenantId: "tenant_a", chatId: "chat_1" }),
+      ).toBe(1);
+      expect(await storage.countAudits({ tenantId: "tenant_a" })).toBe(2);
+      expect(await storage.countAudits({ tenantId: "tenant_b" })).toBe(1);
       const json = auditExportDocument(
         { tenantId: "tenant_a", chatId: "chat_1" },
         chatExport,
@@ -194,6 +199,7 @@ export function bindStorageContract(create: () => Storage): void {
       expect(await storage.getRuleSet("tenant_a", "chat_1")).toEqual(rules);
       expect(await storage.deleteAudits({ tenantId: "tenant_a" })).toBe(1);
       expect(await storage.exportAudits({ tenantId: "tenant_a" })).toEqual([]);
+      expect(await storage.countAudits({ tenantId: "tenant_a" })).toBe(0);
       expect(await storage.exportAudits({ tenantId: "tenant_b" })).toEqual([
         { ...record, tenantId: "tenant_b", eventId: "evt_b" },
       ]);
