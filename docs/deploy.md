@@ -69,7 +69,7 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 哪些可见字段会进检测，写在 [message-surface.md](message-surface.md)。
 
-洪泛和重复默认在 isolate 内存里计数。要跨 isolate 累加时，在自己的 `wrangler.jsonc` 里加 Durable Object，绑定名是 `RATE_WINDOW`，类名是 `RateWindowObject`，迁移用 `new_sqlite_classes`。提交的配置不加这个绑定。对象调用失败时这条检测放过。Webhook 预算仍在内存。见 ADR 0010 和 ADR 0050。
+洪泛和重复默认在 isolate 内存里计数。同一条事件 id 在这个 key 最近 32 次里只计一次。要跨 isolate 累加时，在自己的 `wrangler.jsonc` 里加 Durable Object，绑定名是 `RATE_WINDOW`，类名是 `RateWindowObject`，迁移用 `new_sqlite_classes`。提交的配置不加这个绑定。对象调用失败时这条检测放过。Webhook 预算仍在内存。见 ADR 0010 和 ADR 0050。
 
 `/blocklist <chatId> on|off`、`add` 和 `remove` 只改这个租户的共享名单。状态行带 `shared` 和条目数，这是整个租户的条数，不列出标识。`remove` 删一条 actor id 或哈希，回复不回显这条标识。名单里没有它时不写。查看条数也不写。没配 `POLICY_KV` 时，开关和条目在 isolate 内存里，最多 128 个群、256 条，重启后清空。配了之后每个租户一个键，只在真的变化时写，重启还在。热路径用本 isolate 的 60 秒缓存。发出关闭的那次请求之后，下一条消息不再读名单。不新增绑定。见 ADR 0012、ADR 0047 和 ADR 0048。
 

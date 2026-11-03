@@ -41,7 +41,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `captcha` 只处理 `kind: "chat_member"` 且 `membership: "join"` 的事件。它调用 `beginChallenge`：先写入挑战，再 `restrictActor`。限制失败就删掉挑战并返回 `failed` / `captcha_unavailable`。结果里不要放 nonce。按钮文案和 `restrictChatMember` 留在 `platform-telegram`。没配 `DB` 时挑战留在 isolate 内存。配了之后写入 D1，另一个 isolate 的按钮仍能对上。见 ADR 0009 和 ADR 0051。入群检测器在 `packages/detectors-join`，`membership !== "join"` 时返回 null，并带 fixtures。`decline` 只处理 `kind: "join_request"`，调用 `declineChatJoinRequest`。没有命中时申请仍留给管理员。见 ADR 0116。默认规则 `join_link` 用现有链接检测器看入群昵称。短链或邀请就封禁，普通网址仍只验证。见 ADR 0117。
 
-洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。见 ADR 0010、ADR 0050、ADR 0052 和 `docs/limits.md` 的 KV、Durable Objects 两节。
+洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。同一条事件 id 在这个 key 最近 32 次计数里只计一次。见 ADR 0010、ADR 0050、ADR 0052、ADR 0338 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 
 链接检测在 `packages/detectors-link`。默认只认短链域名、denylist 和 IPv4 主机。`ReputationSource` 不传就不会发请求。本地已命中时也不调用它。超时或抛错记 `reputation_failed`，返回 null。证据里只留主机名。抽主机名之前的折叠，以及每种字段怎么留下主机名，见 [message-surface.md](message-surface.md)。`tg://join?invite=` 和 `tg://addlist?slug=` 记成 `t.me` 邀请。`tg://resolve` 仍当公开用户名。邀请码不进证据。见 ADR 0102。
 

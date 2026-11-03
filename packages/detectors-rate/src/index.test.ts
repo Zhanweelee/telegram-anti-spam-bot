@@ -237,6 +237,195 @@ describe("rate window budget", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(phrase);
   });
 
+  it("counts one event id once and still counts a missing id", async () => {
+    const window = createMemoryRateWindow();
+    const key = "f\ntenant_demo\nchat_demo\nuser_1";
+    const longId = "x".repeat(129);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 0,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 1_000,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 2_000,
+        windowMs: 10_000,
+        eventId: "tg_1",
+      }),
+    ).toBe(2);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 2_100,
+        windowMs: 10_000,
+        eventId: longId,
+      }),
+    ).toBe(3);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 2_200,
+        windowMs: 10_000,
+        eventId: longId,
+      }),
+    ).toBe(4);
+    expect(await window.observe({ key, nowMs: 3_000, windowMs: 10_000 })).toBe(
+      5,
+    );
+    expect(await window.observe({ key, nowMs: 3_100, windowMs: 10_000 })).toBe(
+      6,
+    );
+    expect(
+      await window.observe({
+        key: "r\ntenant_demo\nchat_demo\nab",
+        nowMs: 3_100,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+  });
+
+  it("counts an event id again after it leaves the recent samples", async () => {
+    const window = createMemoryRateWindow({ maxSamples: 2 });
+    const key = "f\ntenant_demo\nchat_demo\nuser_1";
+    expect(
+      await window.observe({
+        key,
+        nowMs: 0,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 1_000,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 2_000,
+        windowMs: 10_000,
+        eventId: "tg_1",
+      }),
+    ).toBe(2);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 3_000,
+        windowMs: 10_000,
+        eventId: "tg_2",
+      }),
+    ).toBe(2);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 9_000,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(2);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 12_500,
+        windowMs: 10_000,
+        eventId: "tg_2",
+      }),
+    ).toBe(2);
+  });
+
+  it("does not put an expired retry back into the window", async () => {
+    const window = createMemoryRateWindow();
+    const key = "f\ntenant_demo\nchat_demo\nuser_1";
+    expect(
+      await window.observe({
+        key,
+        nowMs: 0,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(1);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 20_000,
+        windowMs: 10_000,
+        eventId: "tg_0",
+      }),
+    ).toBe(0);
+    expect(
+      await window.observe({
+        key,
+        nowMs: 20_000,
+        windowMs: 10_000,
+        eventId: "tg_1",
+      }),
+    ).toBe(1);
+  });
+
+  it("does not let one retry trip flood or repeat", async () => {
+    const window = createMemoryRateWindow();
+    const logger = createMemoryLogger();
+    const flood = createFloodDetector({
+      window,
+      windowSeconds: 10,
+      threshold: 2,
+    });
+    const repeat = createRepeatDetector({
+      window,
+      windowSeconds: 60,
+      threshold: 3,
+    });
+    const first = messageEvent({
+      id: "tg_1",
+      actorId: "user_1",
+      text: phrase,
+      textSha256: HASH,
+      occurredAt: isoAt(0),
+    });
+    const second = messageEvent({
+      id: "tg_2",
+      actorId: "user_1",
+      text: phrase,
+      textSha256: HASH,
+      occurredAt: isoAt(1_000),
+    });
+    const third = messageEvent({
+      id: "tg_3",
+      actorId: "user_1",
+      text: phrase,
+      textSha256: HASH,
+      occurredAt: isoAt(2_000),
+    });
+    expect(await flood.detect({ event: first, logger, signal })).toBeNull();
+    expect(await flood.detect({ event: first, logger, signal })).toBeNull();
+    expect(await flood.detect({ event: second, logger, signal })).toMatchObject(
+      { evidence: [{ summary: "flood:2" }] },
+    );
+    expect(await repeat.detect({ event: first, logger, signal })).toBeNull();
+    expect(await repeat.detect({ event: first, logger, signal })).toBeNull();
+    expect(await repeat.detect({ event: second, logger, signal })).toBeNull();
+    expect(await repeat.detect({ event: third, logger, signal })).toMatchObject(
+      { evidence: [{ summary: "repeat:3" }] },
+    );
+  });
+
   it("does not count a join", async () => {
     const detector = createFloodDetector({
       window: createMemoryRateWindow(),
