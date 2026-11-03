@@ -58,6 +58,9 @@ function commandModerator(
     async unbanSenderChat() {
       throw new Error("unban_sender_unavailable");
     },
+    async lockChat() {
+      throw new Error("lock_unavailable");
+    },
     async muteActor() {
       throw new Error("mute_unavailable");
     },

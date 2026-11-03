@@ -1253,6 +1253,119 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("closes default speaking permissions for one chat", async () => {
+    const deps = kit();
+    const locked: string[] = [];
+    const muted: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/lock -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async muteActor(target) {
+          muted.push(target.actorId);
+        },
+        async lockChat(target) {
+          locked.push(target.chatId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已关闭 -100 的默认发言权限。管理员仍可发言。此状态会保持到重新设置权限",
+    });
+    expect(muted).toEqual([]);
+    expect(locked).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/lock <chatId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/lock -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async lockChat() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Closed default speaking permissions in -100. Administrators can still speak. This stays until permissions are set again.",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/lock -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async lockChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/lock", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/lock <chatId>" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/lock ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async lockChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/lock -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/lock -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async lockChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain('"command":"lock"');
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/lock -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async lockChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("lifts a sender-chat block without unbanning a user", async () => {
     const deps = kit();
     const users: string[] = [];

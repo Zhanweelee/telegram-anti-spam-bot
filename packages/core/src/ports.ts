@@ -80,6 +80,11 @@ export interface BanTarget {
   readonly actorId: string;
 }
 
+export interface ChatTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+}
+
 export interface SenderChatTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -115,6 +120,7 @@ export interface ModerationPort {
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
   restrictActor(target: MuteTarget): Promise<void>;
   releaseActor(target: BanTarget): Promise<void>;
+  lockChat(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

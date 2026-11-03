@@ -26,6 +26,15 @@ describe("operator command example", () => {
     expect(help).toContain("/approve");
     expect(help).toContain("/bansender");
     expect(help).toContain("/unbansender");
+    expect(help).toContain("/lock");
+    const locked = await runPrivateCommand({
+      text: "/lock -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(locked).toBe(
+      "已关闭 -100 的默认发言权限。管理员仍可发言。此状态会保持到重新设置权限",
+    );
     const lifted = await runPrivateCommand({
       text: "/unbansender -100 -1005",
       actorId: "42",

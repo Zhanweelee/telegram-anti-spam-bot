@@ -169,6 +169,7 @@ export {
   auditRecordSchema,
   auditScopeSchema,
   type BanTarget,
+  type ChatTarget,
   type DeleteTarget,
   fitAuditExportDocument,
   type JoinTarget,

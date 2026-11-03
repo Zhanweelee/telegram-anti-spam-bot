@@ -5,6 +5,7 @@ import {
   type Cache,
   type CaptchaChallenge,
   type CaptchaStore,
+  type ChatTarget,
   captchaChallengeSchema,
   type DeleteTarget,
   isExpired,
@@ -120,6 +121,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly released: readonly BanTarget[];
   readonly unbanned: readonly BanTarget[];
   readonly unmuted: readonly BanTarget[];
+  readonly locked: readonly ChatTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
@@ -133,6 +135,7 @@ export function createMemoryModerator(): ModerationPort & {
   const released: BanTarget[] = [];
   const unbanned: BanTarget[] = [];
   const unmuted: BanTarget[] = [];
+  const locked: ChatTarget[] = [];
   return {
     deleted,
     muted,
@@ -146,6 +149,7 @@ export function createMemoryModerator(): ModerationPort & {
     released,
     unbanned,
     unmuted,
+    locked,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -205,6 +209,12 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async releaseActor(target) {
       released.push({ ...target });
+    },
+    async lockChat(target) {
+      locked.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+      });
     },
     async unbanActor(target) {
       unbanned.push({ ...target });
