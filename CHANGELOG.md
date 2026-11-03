@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-203
+
+- `t.me/addemoji` 仍按用户名读取。后面是表情包短名时打开表情包，不读 `text`。见 ADR 0236。
+- `t.me/addemoji?text=`、`t.me/addemoji/pack-now?text=` 和 `t.me/AddEmoji/短名?text=` 里的短链仍删除。`t.me/addemoji/短名?text=` 和 `addemoji.t.me/数字?text=` 留着。用户名和短名不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-202
 
 - `t.me/invoice` 仍按用户名读取。后面是账单短码时打开付款，不读 `text`。见 ADR 0235。

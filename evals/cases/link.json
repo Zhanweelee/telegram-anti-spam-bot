@@ -3530,5 +3530,50 @@
     "id": "invoice-subdomain-post",
     "text": "https://invoice.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer202",
     "label": "ham"
+  },
+  {
+    "id": "addemoji-username",
+    "text": "https://t.me/addemoji?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-resolve",
+    "text": "tg://resolve?domain=addemoji&text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-prefix",
+    "text": "https://addemoji.t.me?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-hyphen",
+    "text": "https://t.me/addemoji/pack-now?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-capital",
+    "text": "https://t.me/AddEmoji/pack203?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-trailing-slash",
+    "text": "https://t.me/addemoji/pack203/?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "spam"
+  },
+  {
+    "id": "addemoji-set",
+    "text": "https://t.me/addemoji/pack203?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "ham"
+  },
+  {
+    "id": "addemoji-dotted",
+    "text": "https://t.me/addemoji/pack.now?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "ham"
+  },
+  {
+    "id": "addemoji-subdomain-post",
+    "text": "https://addemoji.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer203",
+    "label": "ham"
   }
 ]
