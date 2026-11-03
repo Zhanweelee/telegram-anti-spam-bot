@@ -182,6 +182,7 @@ export {
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
+  type ReactionActorTarget,
   type SenderChatTarget,
   type Storage,
   type UnmuteResult,

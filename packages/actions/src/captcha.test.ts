@@ -100,6 +100,7 @@ function moderator(
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async clearReactions() {},
   };
 }
 

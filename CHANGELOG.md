@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-344
+
+- 私聊 `/clearreact` 用 `deleteAllMessageReactions` 清除一个用户或频道的最近反应。
+- 一万条以前的可能还在。没有 token 或调用失败时回复「参数无效」。见 ADR 0376。
+- 30 天保留期没有改。
+
 ### P3-343
 
 - 私聊 `/perms` 用 `getChat` 回报一个群的十六项默认发言权限。

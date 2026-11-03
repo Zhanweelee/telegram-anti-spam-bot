@@ -1965,6 +1965,143 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("clears recent reactions from one actor", async () => {
+    const deps = kit();
+    const cleared: { chatId: string; actorId: string; kind: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async banActor() {
+          throw new Error("called");
+        },
+        async clearReactions(target) {
+          cleared.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            kind: target.kind,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求清除 77 在 -100 的最近反应。一万条以前的可能还在",
+    });
+    expect(cleared).toEqual([{ chatId: "-100", actorId: "77", kind: "user" }]);
+    const channel = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async clearReactions(target) {
+          cleared.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            kind: target.kind,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(channel).toMatchObject({
+      text: "已请求清除 -1005 在 -100 的最近反应。一万条以前的可能还在",
+    });
+    expect(cleared[1]).toEqual({
+      chatId: "-100",
+      actorId: "-1005",
+      kind: "chat",
+    });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/clearreact <chatId> <actorId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async clearReactions() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to clear recent reactions by 77 in -100. Ones older than the latest 10000 may remain.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async clearReactions() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/clearreact -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/clearreact <chatId> <actorId>",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/clearreact -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async clearReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/clearreact -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async clearReactions() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"clearreact"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/clearreact -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async clearReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

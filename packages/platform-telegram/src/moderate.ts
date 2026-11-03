@@ -247,6 +247,21 @@ export function createTelegramModerator(input: {
       });
       return readDefaultPermissions(chat);
     },
+    async clearReactions(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteAllMessageReactions",
+        fetchImpl: input.fetchImpl,
+        missing: "reactions_unavailable",
+        failed: "reactions_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          ...(target.kind === "user"
+            ? { user_id: telegramId(target.actorId) }
+            : { actor_chat_id: telegramId(target.actorId) }),
+        },
+      });
+    },
     async restrictActor(target) {
       await postTelegram({
         token: input.token,

@@ -83,6 +83,7 @@ const COMMAND_NAMES = [
   "lock",
   "unlock",
   "perms",
+  "clearreact",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -118,6 +119,7 @@ export interface OperatorCommandInput {
       | "approveJoin"
       | "banActor"
       | "banSenderChat"
+      | "clearReactions"
       | "declineJoin"
       | "deleteMessage"
       | "deleteMessages"
@@ -260,6 +262,8 @@ async function dispatch(
       return openChat(input, args);
     case "perms":
       return showPermissions(input, args);
+    case "clearreact":
+      return clearActorReactions(input, args);
   }
 }
 
@@ -994,6 +998,60 @@ function rejectPermissions(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "perms",
+  });
+}
+
+async function clearActorReactions(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.clearreact.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (chatId === undefined || actorId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const kind = reactionKind(actorId);
+  if (kind === undefined) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const clear = input.moderator?.clearReactions;
+  if (!clear) {
+    rejectReactions(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await clear({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+      kind,
+    });
+  } catch {
+    rejectReactions(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.clearreact.done", { chatId, actorId });
+}
+
+function reactionKind(actorId: string): "user" | "chat" | undefined {
+  if (!isTargetId(actorId)) {
+    return undefined;
+  }
+  return actorId.startsWith("-") ? "chat" : "user";
+}
+
+function rejectReactions(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "clearreact",
   });
 }
 

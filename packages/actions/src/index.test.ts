@@ -88,6 +88,7 @@ describe("delete action", () => {
           async readPermissions() {
             throw new Error("perms_unavailable");
           },
+          async clearReactions() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -154,6 +155,7 @@ describe("delete action", () => {
         async readPermissions() {
           throw new Error("perms_unavailable");
         },
+        async clearReactions() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -222,6 +224,7 @@ describe("delete action", () => {
         async readPermissions() {
           throw new Error("perms_unavailable");
         },
+        async clearReactions() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -292,6 +295,7 @@ function ports(): ModerationPort & {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async clearReactions() {},
   };
 }
 

@@ -48,5 +48,6 @@ function createOpenModerator(): ModerationPort {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    clearReactions: (target) => memory.clearReactions(target),
   };
 }
