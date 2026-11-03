@@ -20,6 +20,28 @@ describe("createWebhookBudget", () => {
     ).toBe("allow");
   });
 
+  it("counts one event id once and still counts an unusable id", async () => {
+    const budget = createWebhookBudget(createMemoryRateWindow(), 1);
+    const chat = {
+      tenantId: "local",
+      chatId: "-100584",
+      nowMs: now,
+      eventId: "tg_9",
+    };
+    expect(await budget.allow(chat)).toBe("allow");
+    expect(await budget.allow(chat)).toBe("allow");
+    expect(await budget.allow({ ...chat, eventId: "tg_10" })).toBe("limited");
+    const longId = "x".repeat(129);
+    const other = {
+      tenantId: "local",
+      chatId: "-100585",
+      nowMs: now,
+      eventId: longId,
+    };
+    expect(await budget.allow(other)).toBe("allow");
+    expect(await budget.allow(other)).toBe("limited");
+  });
+
   it("opens the window again after it expires", async () => {
     const budget = createWebhookBudget(createMemoryRateWindow(), 1);
     const first = { tenantId: "local", chatId: "-100582", nowMs: now };
