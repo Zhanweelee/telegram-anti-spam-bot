@@ -18611,6 +18611,123 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("tinyurl.com");
   });
 
+  it("keeps a managed bot name and drops the sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INV289";
+    const visible = `${phrase} https://bit.ly/name289 https://t.me/+${code}.`;
+    const labeled = await normalize({
+      update_id: 79014,
+      message: {
+        message_id: 79014,
+        date: 1761955200,
+        chat: {
+          id: -1009254,
+          type: "private",
+          title: "https://cutt.ly/grp289",
+        },
+        from: { id: 289, first_name: "https://tinyurl.com/from289" },
+        text: "今天站会",
+        managed_bot_created: {
+          bot: {
+            id: 289001,
+            is_bot: true,
+            first_name: visible,
+            last_name: "https://ow.ly/last289",
+            username: "user289",
+            language_code: "zh",
+            token: "123456:SECRET289",
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("name289");
+    expect(labeledDump).not.toContain("last289");
+    expect(labeledDump).not.toContain("user289");
+    expect(labeledDump).not.toContain("from289");
+    expect(labeledDump).not.toContain("grp289");
+    expect(labeledDump).not.toContain("289001");
+    expect(labeledDump).not.toContain("SECRET289");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const ordinary = await normalize({
+      update_id: 79015,
+      message: {
+        message_id: 79015,
+        date: 1761955200,
+        chat: {
+          id: -1009255,
+          type: "private",
+          title: "https://bit.ly/kept289",
+        },
+        from: { id: 289, first_name: phrase },
+        text: "今天站会",
+        managed_bot_created: {
+          bot: {
+            id: 289002,
+            is_bot: true,
+            first_name: "https://example.com/ok289",
+          },
+        },
+      },
+    });
+    expect(ordinary.status).toBe("event");
+    if (ordinary.status !== "event") {
+      return;
+    }
+    expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
+    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinaryDump).not.toContain("ok289");
+    expect(ordinaryDump).not.toContain("kept289");
+    expect(ordinaryDump).not.toContain(phrase);
+    expect(ordinaryDump).not.toContain("bit.ly");
+    expect(ordinaryDump).not.toContain("289002");
+
+    const names = "Ada https://bit.ly/body289 skip289";
+    const alone = await normalize({
+      update_id: 79016,
+      message: {
+        message_id: 79016,
+        date: 1761955200,
+        chat: { id: -1009256, type: "private", title: phrase },
+        from: { id: 289, first_name: "https://tinyurl.com/from289b" },
+        managed_bot_created: {
+          bot: {
+            id: 289003,
+            is_bot: true,
+            first_name: "Ada",
+            last_name: "https://bit.ly/body289",
+            username: "skip289",
+          },
+        },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe(names);
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain(phrase);
+    expect(aloneDump).not.toContain("from289b");
+    expect(aloneDump).not.toContain("289003");
+    expect(aloneDump).not.toContain("tinyurl.com");
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";

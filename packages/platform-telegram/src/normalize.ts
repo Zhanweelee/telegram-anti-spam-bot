@@ -3079,6 +3079,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(sharedChat.username, urls);
   }
   pushPlainUrls(sharedUserNames(message), urls);
+  pushPlainUrls(managedBotNames(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -5127,6 +5128,10 @@ function messageText(
   if (shared.length > 0) {
     return shared;
   }
+  const managed = managedBotNames(message);
+  if (managed.length > 0) {
+    return managed;
+  }
   return "";
 }
 
@@ -5160,6 +5165,19 @@ function sharedUserNames(message: Record<string, unknown>): string {
   }
   const parts: string[] = [];
   pushUserLabels(shared.users, parts);
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function managedBotNames(message: Record<string, unknown>): string {
+  const created = message.managed_bot_created;
+  if (!isRecord(created)) {
+    return "";
+  }
+  const parts: string[] = [];
+  pushUserLabels([created.bot], parts);
   if (parts.length === 0) {
     return "";
   }
