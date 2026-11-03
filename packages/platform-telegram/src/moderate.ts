@@ -12,6 +12,8 @@ const silenced = {
   can_send_polls: false,
   can_send_other_messages: false,
   can_add_web_page_previews: false,
+  can_react_to_messages: false,
+  can_edit_tag: false,
   can_change_info: false,
   can_invite_users: false,
   can_pin_messages: false,
@@ -29,7 +31,12 @@ const speaking = {
   can_send_polls: true,
   can_send_other_messages: true,
   can_add_web_page_previews: true,
+  can_react_to_messages: true,
+  can_edit_tag: true,
+  can_change_info: true,
   can_invite_users: true,
+  can_pin_messages: true,
+  can_manage_topics: true,
 };
 
 export const captchaPrompt = "请点击按钮，确认你不是机器人。";

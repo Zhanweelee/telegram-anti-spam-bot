@@ -30,6 +30,8 @@ describe("telegram captcha transport", () => {
     expect(url).toBe(`https://api.telegram.org/bot${token}/restrictChatMember`);
     expect(body).toContain('"until_date":1700000300');
     expect(body).toContain('"can_send_messages":false');
+    expect(body).toContain('"can_react_to_messages":false');
+    expect(body).toContain('"can_edit_tag":false');
     expect("restrict_failed").not.toContain(token);
   });
 
@@ -128,6 +130,8 @@ describe("telegram captcha transport", () => {
     expect(calls[3]?.body).not.toContain(phrase);
     expect(calls[1]?.body).toContain('"until_date":1700003600');
     expect(calls[1]?.body).toContain('"can_send_messages":false');
+    expect(calls[1]?.body).toContain('"can_react_to_messages":false');
+    expect(calls[1]?.body).toContain('"can_edit_tag":false');
     expect(calls[2]?.body).toContain('"revoke_messages":false');
     expect(calls[2]?.body).not.toContain("message_id");
     await expect(
@@ -167,6 +171,11 @@ describe("telegram captcha transport", () => {
       actorId: "77",
     });
     expect(bodies[1]).toContain('"can_send_messages":true');
+    expect(bodies[1]).toContain('"can_manage_topics":true');
+    expect(bodies[1]).toContain('"can_pin_messages":true');
+    expect(bodies[1]).toContain('"can_change_info":true');
+    expect(bodies[1]).toContain('"can_react_to_messages":true');
+    expect(bodies[1]).toContain('"can_edit_tag":true');
     expect(bodies[1]).not.toContain("until_date");
   });
 
