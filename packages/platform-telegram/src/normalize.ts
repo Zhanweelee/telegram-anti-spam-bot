@@ -3030,6 +3030,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(value.text, urls);
     pushTextLinks(value.entities, urls);
   }
+  pushPlainUrls(uniqueGiftLabels(message), urls);
+  pushPlainUrls(giftPublisherNames(message), urls);
   for (const field of ["forum_topic_created", "forum_topic_edited"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -5097,6 +5099,10 @@ function messageText(
   if (gift.length > 0) {
     return gift;
   }
+  const uniqueGift = uniqueGiftLabels(message);
+  if (uniqueGift.length > 0) {
+    return uniqueGift;
+  }
   const topic = topicName(message);
   if (topic.length > 0) {
     return topic;
@@ -5333,6 +5339,58 @@ function giftText(message: Record<string, unknown>): string {
     }
   }
   return "";
+}
+
+/** 独特礼物卡片上的收藏名。有附言时型号、符号和背景不出现。 */
+function uniqueGiftLabels(message: Record<string, unknown>): string {
+  const info = message.unique_gift;
+  if (!isRecord(info) || !isRecord(info.gift)) {
+    return "";
+  }
+  const parts: string[] = [];
+  pushTrimmed(info.gift.base_name, parts);
+  const text = info.text;
+  if (typeof text !== "string" || text.length === 0) {
+    for (const key of ["model", "symbol", "backdrop"]) {
+      const attribute = info.gift[key];
+      if (isRecord(attribute)) {
+        pushTrimmed(attribute.name, parts);
+      }
+    }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/** 普通礼物上画出的发布者用户名。标题不读。 */
+function giftPublisherNames(message: Record<string, unknown>): string {
+  const parts: string[] = [];
+  for (const field of ["gift", "gift_upgrade_sent"]) {
+    const info = message[field];
+    if (!isRecord(info) || !isRecord(info.gift)) {
+      continue;
+    }
+    const chat = info.gift.publisher_chat;
+    if (isRecord(chat)) {
+      pushTrimmed(chat.username, parts);
+    }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function pushTrimmed(value: unknown, parts: string[]): void {
+  if (typeof value !== "string") {
+    return;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > 0) {
+    parts.push(trimmed);
+  }
 }
 
 function buttonLabel(message: Record<string, unknown>): string {
