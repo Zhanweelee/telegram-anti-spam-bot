@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-346
+
+- 私聊 `/unpin` 用 `unpinAllChatMessages` 撤下一群的全部置顶。
+- 消息还在。话题里的置顶不在这次里。没有 token 或调用失败时回复「参数无效」。见 ADR 0378。
+- 30 天保留期没有改。
+
 ### P3-345
 
 - 私聊 `/revoke` 用 `revokeChatInviteLink` 撤销一条机器人自己创建的邀请链接。

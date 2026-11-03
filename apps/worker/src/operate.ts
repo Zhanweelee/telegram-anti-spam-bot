@@ -79,6 +79,9 @@ function commandModerator(
     async revokeInvite() {
       throw new Error("revoke_unavailable");
     },
+    async unpinChat() {
+      throw new Error("unpin_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

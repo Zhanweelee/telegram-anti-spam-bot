@@ -85,6 +85,7 @@ const COMMAND_NAMES = [
   "perms",
   "clearreact",
   "revoke",
+  "unpin",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -133,6 +134,7 @@ export interface OperatorCommandInput {
       | "unbanSenderChat"
       | "unmuteActor"
       | "unlockChat"
+      | "unpinChat"
     >
   >;
   readonly scope?: CommandScope;
@@ -268,6 +270,8 @@ async function dispatch(
       return clearActorReactions(input, args);
     case "revoke":
       return revokeChatInvite(input, args);
+    case "unpin":
+      return unpinAll(input, args);
   }
 }
 
@@ -1136,6 +1140,46 @@ function rejectInvite(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "revoke",
+  });
+}
+
+async function unpinAll(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.unpin.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const unpin = input.moderator?.unpinChat;
+  if (!unpin) {
+    rejectUnpin(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await unpin({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectUnpin(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unpin.done", { chatId });
+}
+
+function rejectUnpin(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unpin",
   });
 }
 

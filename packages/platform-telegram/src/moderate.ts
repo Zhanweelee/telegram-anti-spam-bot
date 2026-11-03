@@ -331,6 +331,18 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async unpinChat(target) {
+      await postTelegram({
+        token: input.token,
+        method: "unpinAllChatMessages",
+        fetchImpl: input.fetchImpl,
+        missing: "unpin_unavailable",
+        failed: "unpin_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+    },
   };
 }
 

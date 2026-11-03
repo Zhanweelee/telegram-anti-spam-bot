@@ -32,6 +32,15 @@ describe("operator command example", () => {
     expect(help).toContain("/perms");
     expect(help).toContain("/clearreact");
     expect(help).toContain("/revoke");
+    expect(help).toContain("/unpin");
+    const unpinned = await runPrivateCommand({
+      text: "/unpin -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(unpinned).toBe(
+      "已请求撤下 -100 的全部置顶。消息还在。话题里的置顶不在这次里",
+    );
     const code = "AbCdEfGhIjKlMnOp";
     const revoked = await runPrivateCommand({
       text: `/revoke -100 https://t.me/+${code}`,

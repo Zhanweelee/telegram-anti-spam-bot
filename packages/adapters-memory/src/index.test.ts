@@ -175,4 +175,11 @@ describe("memory adapter", () => {
     expect(moderator.invitesRevoked).toEqual([{ tenantId: "t", chatId: "c" }]);
     expect(JSON.stringify(moderator.invitesRevoked)).not.toContain(code);
   });
+
+  it("records an unpin without a message id", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.unpinChat({ tenantId: "t", chatId: "c" });
+    expect(moderator.unpinned).toEqual([{ tenantId: "t", chatId: "c" }]);
+    expect(JSON.stringify(moderator.unpinned)).not.toContain("message");
+  });
 });
