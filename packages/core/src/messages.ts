@@ -25,6 +25,7 @@ export const messageKeys = [
   "command.logs.usage",
   "command.logs.empty",
   "command.logs.line",
+  "command.logs.more",
   "command.export.usage",
   "command.export.too_long",
   "command.forget.usage",
@@ -117,6 +118,7 @@ const zh = {
   "command.logs.empty": "no audits",
   "command.logs.line":
     "{createdAt} {eventId} {action} score {score} rules {rules} reasons {reasons}",
+  "command.logs.more": "还有更早的审计，用 /export 导出",
   "command.export.usage": "用法：/export [chatId]",
   "command.export.too_long": "导出 {count} 条，超过私聊长度",
   "command.forget.usage": "用法：/forget [chatId]",
@@ -184,6 +186,7 @@ const en = {
   "command.logs.empty": "No audits",
   "command.logs.line":
     "{createdAt} {eventId} {action} score {score} rules {rules} reasons {reasons}",
+  "command.logs.more": "Older audits are in /export",
   "command.export.usage": "Usage: /export [chatId]",
   "command.export.too_long": "{count} rows, longer than a private message",
   "command.forget.usage": "Usage: /forget [chatId]",

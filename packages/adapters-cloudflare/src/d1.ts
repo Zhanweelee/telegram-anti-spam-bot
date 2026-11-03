@@ -91,17 +91,27 @@ ON CONFLICT(tenant_id, chat_id, event_id) DO NOTHING`;
 
 const listAuditsSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha256,
   action, score, reasons, evidence, rule_ids, created_at
-FROM audits
-WHERE tenant_id = ?
-ORDER BY rowid ASC
-LIMIT ?`;
+FROM (
+  SELECT rowid, tenant_id, chat_id, event_id, message_id, text_sha256,
+    action, score, reasons, evidence, rule_ids, created_at
+  FROM audits
+  WHERE tenant_id = ?
+  ORDER BY rowid DESC
+  LIMIT ?
+)
+ORDER BY rowid ASC`;
 
 const listAuditsInChatSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha256,
   action, score, reasons, evidence, rule_ids, created_at
-FROM audits
-WHERE tenant_id = ? AND chat_id = ?
-ORDER BY rowid ASC
-LIMIT ?`;
+FROM (
+  SELECT rowid, tenant_id, chat_id, event_id, message_id, text_sha256,
+    action, score, reasons, evidence, rule_ids, created_at
+  FROM audits
+  WHERE tenant_id = ? AND chat_id = ?
+  ORDER BY rowid DESC
+  LIMIT ?
+)
+ORDER BY rowid ASC`;
 
 const getAuditSql = `SELECT tenant_id, chat_id, event_id, message_id, text_sha256,
   action, score, reasons, evidence, rule_ids, created_at

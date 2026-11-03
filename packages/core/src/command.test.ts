@@ -128,13 +128,12 @@ function storage(): Storage & {
       records.push(parseAuditRecord(record));
     },
     async listAudits(query) {
-      return records
-        .filter(
-          (record) =>
-            record.tenantId === query.tenantId &&
-            (query.chatId === undefined || record.chatId === query.chatId),
-        )
-        .slice(0, query.limit);
+      const matched = records.filter(
+        (record) =>
+          record.tenantId === query.tenantId &&
+          (query.chatId === undefined || record.chatId === query.chatId),
+      );
+      return matched.slice(Math.max(0, matched.length - query.limit));
     },
     async getAudit(tenantId, chatId, eventId) {
       return (
@@ -424,6 +423,77 @@ describe("runOperatorCommand", () => {
     expect(result.text).toContain("redacted");
     expect(result.text).not.toContain(phrase);
     expect(result.text).not.toContain('"text"');
+    expect(result.text).not.toContain("还有更早的审计");
+  });
+
+  it("lists the newest ten audits and points at export", async () => {
+    const deps = kit();
+    for (let index = 0; index < 12; index += 1) {
+      await deps.storage.appendAudit({
+        tenantId: "local",
+        chatId: "-100",
+        eventId: `evt_${index}`,
+        action: "log",
+        score: 0,
+        reasons: [],
+        evidence: [],
+        ruleIds: [],
+        createdAt: "2026-11-01T00:00:00Z",
+      });
+    }
+    const result = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(result.status).toBe("reply");
+    if (result.status !== "reply") {
+      return;
+    }
+    const ids = result.text
+      .split("\n")
+      .slice(0, -1)
+      .map((line) => line.split(" ")[1]);
+    expect(ids).toEqual([
+      "evt_2",
+      "evt_3",
+      "evt_4",
+      "evt_5",
+      "evt_6",
+      "evt_7",
+      "evt_8",
+      "evt_9",
+      "evt_10",
+      "evt_11",
+    ]);
+    expect(result.text.endsWith("还有更早的审计，用 /export 导出")).toBe(true);
+
+    const exact = kit();
+    for (let index = 0; index < 10; index += 1) {
+      await exact.storage.appendAudit({
+        tenantId: "local",
+        chatId: "-100",
+        eventId: `evt_${index}`,
+        action: "log",
+        score: 0,
+        reasons: [],
+        evidence: [],
+        ruleIds: [],
+        createdAt: "2026-11-01T00:00:00Z",
+      });
+    }
+    const fullPage = await runOperatorCommand({
+      event: event({ text: "/logs -100", direct: true }),
+      adminActorIds: ["42"],
+      ...exact,
+    });
+    expect(fullPage.status).toBe("reply");
+    if (fullPage.status !== "reply") {
+      return;
+    }
+    expect(fullPage.text.split(" ")[1]).toBe("evt_0");
+    expect(fullPage.text).toContain("evt_9");
+    expect(fullPage.text).not.toContain("还有更早的审计");
   });
 
   it("turns dry-run on and off for one chat", async () => {
