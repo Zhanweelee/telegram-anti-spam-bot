@@ -1965,6 +1965,182 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("reports default speaking permissions without the chat title", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const text = [
+      "perms -100",
+      "发言 on",
+      "音频 off",
+      "文件 未知",
+      "图片 off",
+      "视频 off",
+      "视频留言 off",
+      "语音 off",
+      "投票 off",
+      "其他 off",
+      "预览 off",
+      "反应 off",
+      "标签 off",
+      "资料 off",
+      "邀请 off",
+      "置顶 off",
+      "话题 off",
+    ].join("\n");
+    const done = await runOperatorCommand({
+      event: event({ text: "/perms -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPermissions(target) {
+          seen.push(target.chatId);
+          return {
+            sendMessages: "on",
+            sendAudios: "off",
+            sendDocuments: "unknown",
+            sendPhotos: "off",
+            sendVideos: "off",
+            sendVideoNotes: "off",
+            sendVoiceNotes: "off",
+            sendPolls: "off",
+            sendOtherMessages: "off",
+            addWebPagePreviews: "off",
+            reactToMessages: "off",
+            editTag: "off",
+            changeInfo: "off",
+            inviteUsers: "off",
+            pinMessages: "off",
+            manageTopics: "off",
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text });
+    expect(seen).toEqual(["-100"]);
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/perms <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/perms -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readPermissions() {
+          return {
+            sendMessages: "on",
+            sendAudios: "off",
+            sendDocuments: "unknown",
+            sendPhotos: "off",
+            sendVideos: "off",
+            sendVideoNotes: "off",
+            sendVoiceNotes: "off",
+            sendPolls: "off",
+            sendOtherMessages: "off",
+            addWebPagePreviews: "off",
+            reactToMessages: "off",
+            editTag: "off",
+            changeInfo: "off",
+            inviteUsers: "off",
+            pinMessages: "off",
+            manageTopics: "off",
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: [
+        "perms -100",
+        "messages on",
+        "audios off",
+        "documents unknown",
+        "photos off",
+        "videos off",
+        "video notes off",
+        "voice notes off",
+        "polls off",
+        "other off",
+        "previews off",
+        "reactions off",
+        "tag off",
+        "info off",
+        "invite off",
+        "pin off",
+        "topics off",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/perms -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPermissions() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/perms", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/perms <chatId>" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/perms ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPermissions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/perms -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/perms -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPermissions() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"perms"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/perms -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readPermissions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("deletes several messages in one request", async () => {
     const deps = kit();
     const batches: { chatId: string; messageIds: readonly string[] }[] = [];

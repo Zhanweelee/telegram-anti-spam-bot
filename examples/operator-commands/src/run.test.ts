@@ -29,6 +29,13 @@ describe("operator command example", () => {
     expect(help).toContain("/unbansender");
     expect(help).toContain("/lock");
     expect(help).toContain("/unlock");
+    expect(help).toContain("/perms");
+    const perms = await runPrivateCommand({
+      text: "/perms -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(perms).toBe("参数无效");
     const opened = await runPrivateCommand({
       text: "/unlock -100",
       actorId: "42",

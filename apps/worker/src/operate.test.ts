@@ -519,6 +519,115 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("reports default speaking permissions without the chat title", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const locked = {
+      can_send_messages: false,
+      can_send_audios: false,
+      can_send_documents: false,
+      can_send_photos: false,
+      can_send_videos: false,
+      can_send_video_notes: false,
+      can_send_voice_notes: false,
+      can_send_polls: false,
+      can_send_other_messages: false,
+      can_add_web_page_previews: false,
+      can_react_to_messages: false,
+      can_edit_tag: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_pin_messages: false,
+      can_manage_topics: false,
+    };
+    await handleIncomingEvent(
+      await incoming({ text: "/perms -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                description: phrase,
+                bio: phrase,
+                invite_link: phrase,
+                permissions: locked,
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      [
+        "perms -100",
+        "发言 off",
+        "音频 off",
+        "文件 off",
+        "图片 off",
+        "视频 off",
+        "视频留言 off",
+        "语音 off",
+        "投票 off",
+        "其他 off",
+        "预览 off",
+        "反应 off",
+        "标签 off",
+        "资料 off",
+        "邀请 off",
+        "置顶 off",
+        "话题 off",
+      ].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      user_id?: number;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.user_id).toBeUndefined();
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/perms -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/perms -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("deletes several messages in one request", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

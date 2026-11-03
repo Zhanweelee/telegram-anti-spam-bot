@@ -70,6 +70,9 @@ function commandModerator(
     async readMember() {
       throw new Error("member_unavailable");
     },
+    async readPermissions() {
+      throw new Error("perms_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

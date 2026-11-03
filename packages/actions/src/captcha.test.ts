@@ -97,6 +97,9 @@ function moderator(
     async readMember() {
       return { status: "member" as const };
     },
+    async readPermissions() {
+      throw new Error("perms_unavailable");
+    },
   };
 }
 
