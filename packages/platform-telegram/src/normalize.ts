@@ -1298,7 +1298,8 @@ function openedDraftUrls(text: string): string[] {
 
 /**
  * 带协议的主机名后面，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 `@` 前会被收掉。
- * 收掉之后 `@` 会变成用户信息。这里先换成空格，前面的短链仍单独打开。
+ * 点号后面新起的这类标签也一样。收掉之后 `@` 会变成用户信息。
+ * 这里先换成空格，前面的短链仍单独打开。
  */
 function openSchemedScript(text: string): string {
   let out = "";
@@ -1312,9 +1313,8 @@ function openSchemedScript(text: string): string {
     }
     const hostStart = schemedUserinfoEnd(text, index + scheme);
     const hostEnd = schemedStrictHostEnd(text, hostStart);
-    const runEnd =
-      hostEnd === null ? hostStart : draftScriptRunEnd(text, hostEnd);
-    if (hostEnd === null || runEnd === hostEnd || text.charAt(runEnd) !== "@") {
+    const runEnd = hostEnd === null ? null : schemedScriptBreak(text, hostEnd);
+    if (hostEnd === null || runEnd === null) {
       const end = text.slice(index).search(/\s/);
       const next = end === -1 ? text.length : index + end;
       out += text.slice(index, next);
@@ -1325,6 +1325,20 @@ function openSchemedScript(text: string): string {
     index = runEnd;
   }
   return out;
+}
+
+function schemedScriptBreak(text: string, hostEnd: number): number | null {
+  if (text.charAt(hostEnd) === ".") {
+    const dotted = draftScriptRunEnd(text, hostEnd + 1);
+    if (dotted > hostEnd + 1 && text.charAt(dotted) === "@") {
+      return dotted;
+    }
+  }
+  const runEnd = draftScriptRunEnd(text, hostEnd);
+  if (runEnd > hostEnd && text.charAt(runEnd) === "@") {
+    return runEnd;
+  }
+  return null;
 }
 
 function draftScriptRunEnd(text: string, index: number): number {
