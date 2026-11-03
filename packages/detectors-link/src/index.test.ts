@@ -1080,6 +1080,110 @@ describe("link fixtures", () => {
     expect(wrapped).toBeNull();
   });
 
+  it("reads a call username draft and leaves a group call slug", async () => {
+    const hidden = "offer198";
+    const slug = "room198";
+    const code = "CODE198";
+    const address = "203.0.113.198";
+    const detector = createLinkDetector();
+    const user = await detector.detect({
+      event: eventFor(
+        `https://t.me/call?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(user?.reasons).toEqual(["short_link"]);
+    expect(user?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(user)).not.toContain(hidden);
+    const deep = await detector.detect({
+      event: eventFor(
+        `tg://resolve?domain=call&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const prefixed = await detector.detect({
+      event: eventFor(
+        `https://call.t.me?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const capital = await detector.detect({
+      event: eventFor(
+        `https://t.me/Call/${slug}?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(capital)).not.toContain(slug);
+    const call = await detector.detect({
+      event: eventFor(
+        `https://t.me/call/${slug}?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(call).toBeNull();
+    expect(JSON.stringify(call)).not.toContain(hidden);
+    expect(JSON.stringify(call)).not.toContain(slug);
+    const dog = await detector.detect({
+      event: eventFor(
+        `https://www.telegram.dog/call/${slug}/?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog).toBeNull();
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/call/${slug}?text=${encodeURIComponent(`https://t.me/+${code}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me).toBeNull();
+    expect(JSON.stringify(me)).not.toContain(code);
+    const slash = await detector.detect({
+      event: eventFor(
+        `https://t.me/call/?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash).toBeNull();
+    expect(JSON.stringify(slash)).not.toContain(address);
+    const numeric = await detector.detect({
+      event: eventFor(
+        `https://t.me/call/123?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric).toBeNull();
+    const sub = await detector.detect({
+      event: eventFor(
+        `https://call.t.me/${slug}?text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(sub).toBeNull();
+    const digits = await detector.detect({
+      event: eventFor(
+        `https://call.t.me/123?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(digits).toBeNull();
+    expect(JSON.stringify(digits)).not.toContain(address);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

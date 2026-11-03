@@ -39,5 +39,6 @@ ADR 0139 不读 `t.me/用户名/app` 上的 `text`。当时把这段路径都当
 - `t.me/用户名/shop`、`telegram.dog/用户名/Shop` 和 `tg://resolve?domain=用户名&appname=shop` 的 `text` 是裸 IP、默认短链或邀请时，现有链接规则删除这条消息。证据仍只有主机名。
 - 真正的 bot 小程序如果带了同样的 `text`，也会被删。客户端对 bot 不写这段草稿。
 - `用户名.t.me/shop`、`t.me/用户名/shop/more`、`t.me/用户名/12/34`、`t.me/proxy/shop` 和其它网站留着。
+- 小写 `t.me/call/短码` 后来由 ADR 0231 不读 `text`。`t.me/call` 仍读。
 - 再套一层预填链接仍放行。用户名和应用名不进证据。
 - 应用名后来由 ADR 0147 去掉 128 的上限。全数字的第二段仍是帖子，位数也不再停在 16。

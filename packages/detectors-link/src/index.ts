@@ -919,6 +919,12 @@ function isUsernameDraft(url: URL): boolean {
     return false;
   }
   const parts = url.pathname.split("/").filter((part) => part.length > 0);
+  if (isGroupCallPath(host, url.pathname)) {
+    return false;
+  }
+  if (host === "call.t.me" && parts.length > 0) {
+    return false;
+  }
   if (isUserSubdomain(host) && isUserSubdomainPath(parts)) {
     return true;
   }
@@ -976,6 +982,11 @@ function androidDraftRest(
     return parts.slice(1);
   }
   return null;
+}
+
+/** 小写 `call/` 打开群通话，不把 `text` 写进输入框。`call.t.me/后面` 先收成同一条。 */
+function isGroupCallPath(host: string, pathname: string): boolean {
+  return isExactDraftHost(host) && pathname.startsWith("/call/");
 }
 
 function isExactDraftHost(host: string): boolean {
@@ -1059,7 +1070,6 @@ const reservedUsernames = new Set([
   "bg",
   "boost",
   "c",
-  "call",
   "confirmphone",
   "contact",
   "folder",

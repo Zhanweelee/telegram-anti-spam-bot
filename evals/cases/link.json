@@ -3400,5 +3400,30 @@
     "id": "hyphen-label-suffix",
     "text": "http://bit.ly-\u03B1.bit.ly/offer197",
     "label": "spam"
+  },
+  {
+    "id": "call-username-draft",
+    "text": "https://t.me/call?text=https%3A%2F%2Fbit.ly%2Foffer198",
+    "label": "spam"
+  },
+  {
+    "id": "call-resolve-draft",
+    "text": "tg://resolve?domain=call&text=https%3A%2F%2Fbit.ly%2Foffer198",
+    "label": "spam"
+  },
+  {
+    "id": "call-prefix-draft",
+    "text": "https://call.t.me?text=https%3A%2F%2Fbit.ly%2Foffer198",
+    "label": "spam"
+  },
+  {
+    "id": "group-call-slug",
+    "text": "https://t.me/call/room198?text=https%3A%2F%2Fbit.ly%2Foffer198",
+    "label": "ham"
+  },
+  {
+    "id": "group-call-prefix",
+    "text": "https://call.t.me/room198?text=https%3A%2F%2Fbit.ly%2Foffer198",
+    "label": "ham"
   }
 ]

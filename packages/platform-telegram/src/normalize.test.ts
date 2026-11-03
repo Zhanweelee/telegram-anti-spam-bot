@@ -1250,6 +1250,67 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(sub.event)).not.toContain(hidden);
   });
 
+  it("keeps a call username draft and leaves a group call slug", async () => {
+    const hidden = "offer198";
+    const slug = "room198";
+    const address = "203.0.113.198";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const outcome = await normalize({
+      update_id: 78040,
+      message: {
+        message_id: 78040,
+        date: 1761955200,
+        chat: { id: -1008271, type: "supergroup" },
+        from: { id: 198 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/call?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(hidden);
+    const call = await normalize({
+      update_id: 78041,
+      message: {
+        message_id: 78041,
+        date: 1761955200,
+        chat: { id: -1008272, type: "supergroup" },
+        from: { id: 198 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/call/${slug}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+          },
+        ],
+      },
+    });
+    expect(call.status).toBe("event");
+    if (call.status !== "event") {
+      return;
+    }
+    expect(call.event.message?.hosts).toEqual(["t.me"]);
+    expect(call.event.message?.invites).toBeUndefined();
+    const callDump = JSON.stringify(call.event);
+    expect(callDump).not.toContain(address);
+    expect(callDump).not.toContain(hidden);
+    expect(callDump).not.toContain(slug);
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
