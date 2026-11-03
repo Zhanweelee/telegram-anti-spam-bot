@@ -55,5 +55,6 @@ function createOpenModerator(): ModerationPort {
     revokeInvite: (target) => memory.revokeInvite(target),
     unpinChat: (target) => memory.unpinChat(target),
     unpinTopic: (target) => memory.unpinTopic(target),
+    closeTopic: (target) => memory.closeTopic(target),
   };
 }

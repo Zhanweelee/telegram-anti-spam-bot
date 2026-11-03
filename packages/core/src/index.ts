@@ -176,6 +176,7 @@ export {
   type DefaultChatPermissions,
   type DeleteMessagesTarget,
   type DeleteTarget,
+  type ForumTopicTarget,
   fitAuditExportDocument,
   type InviteLinkTarget,
   type JoinTarget,

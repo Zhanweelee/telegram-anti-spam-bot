@@ -9,6 +9,7 @@ import {
   captchaChallengeSchema,
   type DeleteMessagesTarget,
   type DeleteTarget,
+  type ForumTopicTarget,
   isExpired,
   type JoinTarget,
   MAX_RULE_SWITCHES,
@@ -131,6 +132,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly invitesRevoked: readonly ChatTarget[];
   readonly unpinned: readonly ChatTarget[];
   readonly topicsUnpinned: readonly TopicPinTarget[];
+  readonly topicsClosed: readonly ForumTopicTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -151,6 +153,7 @@ export function createMemoryModerator(): ModerationPort & {
   const invitesRevoked: ChatTarget[] = [];
   const unpinned: ChatTarget[] = [];
   const topicsUnpinned: TopicPinTarget[] = [];
+  const topicsClosed: ForumTopicTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -171,6 +174,7 @@ export function createMemoryModerator(): ModerationPort & {
     invitesRevoked,
     unpinned,
     topicsUnpinned,
+    topicsClosed,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -288,6 +292,17 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async unpinTopic(target) {
       topicsUnpinned.push(
+        target.threadId === undefined
+          ? { tenantId: target.tenantId, chatId: target.chatId }
+          : {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              threadId: target.threadId,
+            },
+      );
+    },
+    async closeTopic(target) {
+      topicsClosed.push(
         target.threadId === undefined
           ? { tenantId: target.tenantId, chatId: target.chatId }
           : {

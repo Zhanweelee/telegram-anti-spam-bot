@@ -107,6 +107,7 @@ function moderator(
     async revokeInvite() {},
     async unpinChat() {},
     async unpinTopic() {},
+    async closeTopic() {},
   };
 }
 

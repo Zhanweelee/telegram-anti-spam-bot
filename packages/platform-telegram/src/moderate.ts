@@ -378,6 +378,23 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async closeTopic(target) {
+      const threadId = target.threadId;
+      await postTelegram({
+        token: input.token,
+        method:
+          threadId === undefined ? "closeGeneralForumTopic" : "closeForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "closetopic_unavailable",
+        failed: "closetopic_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          ...(threadId === undefined
+            ? {}
+            : { message_thread_id: telegramId(threadId) }),
+        },
+      });
+    },
   };
 }
 

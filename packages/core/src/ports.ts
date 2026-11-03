@@ -161,11 +161,13 @@ export interface InviteLinkTarget {
   readonly inviteLink: string;
 }
 
-export interface TopicPinTarget {
+export interface ForumTopicTarget {
   readonly tenantId: string;
   readonly chatId: string;
   readonly threadId?: string;
 }
+
+export type TopicPinTarget = ForumTopicTarget;
 
 export type UnmuteResult = "lifted" | "absent";
 
@@ -205,6 +207,7 @@ export interface ModerationPort {
   unlockChat(target: ChatTarget): Promise<void>;
   unpinChat(target: ChatTarget): Promise<void>;
   unpinTopic(target: TopicPinTarget): Promise<void>;
+  closeTopic(target: ForumTopicTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

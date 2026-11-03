@@ -88,6 +88,9 @@ function commandModerator(
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },
+    async closeTopic() {
+      throw new Error("closetopic_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

@@ -91,6 +91,7 @@ const COMMAND_NAMES = [
   "unpin",
   "admins",
   "untopic",
+  "closetopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -127,6 +128,7 @@ export interface OperatorCommandInput {
       | "banActor"
       | "banSenderChat"
       | "clearReactions"
+      | "closeTopic"
       | "declineJoin"
       | "deleteMessage"
       | "deleteMessages"
@@ -283,6 +285,8 @@ async function dispatch(
       return showAdministrators(input, args);
     case "untopic":
       return clearTopicPins(input, args);
+    case "closetopic":
+      return closeForum(input, args);
   }
 }
 
@@ -1367,6 +1371,58 @@ function rejectTopic(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "untopic",
+  });
+}
+
+async function closeForum(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1 && args.length !== 2) {
+    return say(input, "command.closetopic.usage");
+  }
+  const chatId = args[0];
+  const threadId = args[1];
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    (threadId !== undefined && !isMessageId(threadId))
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const close = input.moderator?.closeTopic;
+  if (!close) {
+    rejectClose(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await close({
+      tenantId: input.event.tenantId,
+      chatId,
+      ...(threadId === undefined ? {} : { threadId }),
+    });
+  } catch {
+    rejectClose(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    threadId === undefined
+      ? "command.closetopic.done"
+      : "command.closetopic.done.thread",
+    { chatId, threadId: threadId ?? "" },
+  );
+}
+
+function rejectClose(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "closetopic",
   });
 }
 
