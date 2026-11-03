@@ -1912,6 +1912,18 @@ function openBareEnd(text: string): string {
       index = domain + lookalike;
       continue;
     }
+    const glued = gluedMappedScheme(rest);
+    if (glued > 0) {
+      const scheme = schemeAt(rest, glued);
+      const end = text.slice(index).search(/\s/);
+      const next = end === -1 ? text.length : index + end;
+      const schemeAtIndex = domain + glued;
+      out += text.slice(index, schemeAtIndex);
+      out += `${text.slice(schemeAtIndex, schemeAtIndex + scheme - 3)}:x`;
+      out += text.slice(schemeAtIndex + scheme, next);
+      index = next;
+      continue;
+    }
     const letter = bareLetterSkip(rest);
     if (letter > 0) {
       out += `${text.slice(index, domain)} `;
@@ -2138,14 +2150,48 @@ function bareLookalikeDotSkip(rest: string): number {
   return 0;
 }
 
-/** 已结束的裸主机名不把后面的非 ASCII 字母留在这一段。字母后面的网址另开。 */
-/** 没有协议的主机名在 Android 留在标签里的字前面结束。 */
+/** 没有协议的主机名在 Android 留在标签里的字前面结束。后面还有域名时，映射字母仍留在这一段。 */
 function bareLabelSkip(rest: string): number {
   const code = rest.codePointAt(0);
   if (code === undefined || !draftLabelCode(code) || boundaryMark(code)) {
     return 0;
   }
+  const after = rest.slice(String.fromCodePoint(code).length);
+  if (
+    draftMappedTail(code) &&
+    (draftDomainContinues(after) || schemeAt(after, 0) > 0)
+  ) {
+    return 0;
+  }
   return String.fromCodePoint(code).length;
+}
+
+/** 写完的主机名后面紧挨协议时，映射字母不另开后面的网址。 */
+function gluedMappedScheme(rest: string): number {
+  const code = rest.codePointAt(0);
+  if (code === undefined || !draftMappedTail(code)) {
+    return 0;
+  }
+  const size = String.fromCodePoint(code).length;
+  return schemeAt(rest, size) > 0 ? size : 0;
+}
+
+function draftDomainContinues(rest: string): boolean {
+  return /^[A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,63}(?![A-Za-z0-9-])/.test(
+    rest,
+  );
+}
+
+function draftMappedTail(code: number): boolean {
+  if (code <= 0x7f) {
+    return false;
+  }
+  const sample = `b${String.fromCodePoint(code)}t`;
+  return (
+    foldMappedLatin(sample) !== sample ||
+    foldCyrillicLookalikes(sample) !== sample ||
+    foldFullwidthLatin(sample) !== sample
+  );
 }
 
 function bareLetterSkip(rest: string): number {
@@ -2159,6 +2205,9 @@ function bareLetterSkip(rest: string): number {
   }
   const after = rest.slice(index + String.fromCodePoint(code).length);
   if (schemeAt(after, 0) > 0) {
+    if (draftMappedTail(code)) {
+      return 0;
+    }
     return rest.length - after.length;
   }
   if (!after.startsWith("/") && !after.startsWith("?")) {
