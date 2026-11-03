@@ -61,6 +61,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/ban <chatId> <actorId>` 调用 `banActor`。配了 token 时使用 `banChatMember`，`revoke_messages` 为 false，不带 `until_date`。没有 token 或调用失败时回复「参数无效」，不把内存里的记录当成已经封禁。不改黑名单，也不解除禁言。见 ADR 0364。
 
+`/mute <chatId> <actorId> [seconds]` 调用 `muteActor`。不写秒数时用 3600。写出的秒数要是 30 到 366 天里的整数。配了 token 时仍把每一项权限关掉，并带上 `until_date`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经禁言。见 ADR 0365。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-333
+
+- 私聊 `/mute` 不写秒数时禁言 3600 秒。写出的秒数要落在 30 秒到 366 天。
+- 没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经禁言。见 ADR 0365。
+- 30 天保留期没有改。
+
 ### P3-332
 
 - 私聊 `/ban` 调用 `banChatMember`，`revoke_messages` 为 false，不带 `until_date`。

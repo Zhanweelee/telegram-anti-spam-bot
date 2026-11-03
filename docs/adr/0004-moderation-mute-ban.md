@@ -26,5 +26,5 @@ P0-04 要在删除之外支持禁言和封禁。处罚必须走端口，core 和
 ## 后果
 
 - 所有 `ModerationPort` 的实现都要实现这两个方法。测试用的空实现可以什么都不做。
-- Worker 注册 mute 时使用 3600 秒。要改时长就改动作配置，不是改规则 JSON。
+- Worker 注册 mute 时使用 3600 秒。要改时长就改动作配置，不是改规则 JSON。私聊 `/mute` 的默认值也是 3600 秒，见 ADR 0365。改动作配置不会改这条命令的默认值。
 - 真正调用 `restrictChatMember` / `banChatMember` 由 ADR 0020 接上。每次处罚一次子请求，并遵守 `docs/limits.md`。P1-01 的验证限制见 ADR 0009。

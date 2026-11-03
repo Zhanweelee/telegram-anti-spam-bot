@@ -69,10 +69,14 @@ const COMMAND_NAMES = [
   "unban",
   "unmute",
   "ban",
+  "mute",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
 const LOG_LIMIT = 10;
+const DEFAULT_MUTE_SECONDS = 60 * 60;
+const MIN_MUTE_SECONDS = 30;
+const MAX_MUTE_SECONDS = 366 * 24 * 60 * 60;
 const TOKEN_LIMIT = 80;
 const EXPORT_REPLY_LIMIT = 3500;
 
@@ -95,7 +99,10 @@ export interface OperatorCommandInput {
   readonly quota?: QuotaReader;
   readonly chats?: ChatDirectory;
   readonly moderator?: Partial<
-    Pick<ModerationPort, "banActor" | "unbanActor" | "unmuteActor">
+    Pick<
+      ModerationPort,
+      "banActor" | "muteActor" | "unbanActor" | "unmuteActor"
+    >
   >;
   readonly scope?: CommandScope;
 }
@@ -204,6 +211,8 @@ async function dispatch(
       return unmuteMember(input, args);
     case "ban":
       return banMember(input, args);
+    case "mute":
+      return muteMember(input, args);
   }
 }
 
@@ -553,6 +562,70 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function muteMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2 && args.length !== 3) {
+    return say(input, "command.mute.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  const seconds = muteSeconds(args[2]);
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    seconds === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const mute = input.moderator?.muteActor;
+  if (!mute) {
+    rejectMute(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await mute({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+      durationSeconds: seconds,
+    });
+  } catch {
+    rejectMute(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.mute.done", { chatId, actorId, seconds });
+}
+
+function muteSeconds(value: string | undefined): number | undefined {
+  if (value === undefined) {
+    return DEFAULT_MUTE_SECONDS;
+  }
+  if (!/^[1-9]\d{0,7}$/.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (seconds < MIN_MUTE_SECONDS || seconds > MAX_MUTE_SECONDS) {
+    return undefined;
+  }
+  return seconds;
+}
+
+function rejectMute(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "mute",
   });
 }
 
