@@ -1253,6 +1253,133 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
+  it("deletes one message in a managed chat", async () => {
+    const deps = kit();
+    const deleted: {
+      chatId: string;
+      messageId: string;
+      audienceId?: string;
+    }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/delete -100 88", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage(target) {
+          deleted.push({
+            chatId: target.chatId,
+            messageId: target.messageId,
+            ...(target.audienceId ? { audienceId: target.audienceId } : {}),
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已删除 -100 88" });
+    expect(deleted).toEqual([{ chatId: "-100", messageId: "88" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/delete <chatId> <messageId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/delete -100 88", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async deleteMessage() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "Deleted 88 in -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/delete -100 88", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/delete -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/delete <chatId> <messageId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/delete -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const rejectedIds: string[] = [];
+    const padded = await runOperatorCommand({
+      event: event({ text: "/delete -100 08", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage(target) {
+          rejectedIds.push(target.messageId);
+        },
+      },
+      ...kit(),
+    });
+    expect(padded).toMatchObject({ text: "参数无效" });
+    expect(rejectedIds).toEqual([]);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/delete -100 88", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/delete -100 88", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/delete -200 88", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports a member standing without a display name", async () => {
     const deps = kit();
     const seen: string[] = [];
