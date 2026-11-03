@@ -624,6 +624,11 @@ function markInsideAuthority(raw: string): boolean {
   return false;
 }
 
+/** `%2F` 后面的字面斜杠仍分开下一段。两道编码斜杠留在一起。 */
+function openEncodedSlashBoundary(text: string): string {
+  return text.replace(/%2F(?=\/)/gi, (mark) => `${mark} `);
+}
+
 /** 已经结束的主机名后面，`%2E` 不再收成点。紧挨协议的 `%2E` 仍交给粘连扫描。 */
 function openFinishedEncodedDot(text: string): string {
   let out = "";
@@ -696,7 +701,9 @@ function openedDraftUrls(text: string): string[] {
                 openLongUserinfo(
                   openDraftStops(
                     openStoppingSpace(
-                      openFinishedEncodedDot(foldBoundaryMark(text)),
+                      openFinishedEncodedDot(
+                        openEncodedSlashBoundary(foldBoundaryMark(text)),
+                      ),
                     ),
                   ),
                 ),

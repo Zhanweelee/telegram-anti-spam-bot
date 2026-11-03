@@ -33,3 +33,4 @@ Android 不会在匹配前把 `%2E` 收成点。`example.com%2Ehttp://bit.ly/…
 - `http://bit.ly%2Eevil.example/…` 按短链删除。证据仍是 `bit.ly`。路径不进证据。
 - `example.com.http://bit.ly/…`、换行或斜杠隔开的 `%2E`，以及 `bit%2Ely`，仍按短链删除。
 - `203.0.113.159%2Ehttp://bit.ly/…` 仍按裸 IP 删除。证据是这个地址。
+- `%2F` 后面再写一条斜杠时，隐藏草稿仍把后面的网址收进前一段。见 ADR 0292。
