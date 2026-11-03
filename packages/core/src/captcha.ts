@@ -34,6 +34,16 @@ export interface CaptchaStore {
   put(challenge: CaptchaChallenge): Promise<void>;
   delete(tenantId: string, chatId: string, actorId: string): Promise<void>;
   deleteMany(challenges: readonly CaptchaChallenge[]): Promise<void>;
+  /**
+   * Removes the challenge when the nonce still matches.
+   * `null` means another caller already took it, or the nonce differs.
+   */
+  take(
+    tenantId: string,
+    chatId: string,
+    actorId: string,
+    nonce: string,
+  ): Promise<CaptchaChallenge | null>;
   listExpired(nowIso: string): Promise<readonly CaptchaChallenge[]>;
 }
 
@@ -128,19 +138,35 @@ export async function resolveChallenge(input: {
     });
     return "ignored";
   }
-  await input.ports.release({
-    tenantId: challenge.tenantId,
-    chatId: challenge.chatId,
-    actorId: challenge.actorId,
-  });
-  await input.ports.store.delete(
+  const taken = await input.ports.store.take(
     challenge.tenantId,
     challenge.chatId,
     challenge.actorId,
+    challenge.nonce,
   );
+  if (!taken) {
+    return "ignored";
+  }
+  try {
+    await input.ports.release({
+      tenantId: taken.tenantId,
+      chatId: taken.chatId,
+      actorId: taken.actorId,
+    });
+  } catch (error) {
+    const current = await input.ports.store.get(
+      taken.tenantId,
+      taken.chatId,
+      taken.actorId,
+    );
+    if (current === null) {
+      await input.ports.store.put(taken);
+    }
+    throw error;
+  }
   await writeAudit(input.ports.storage, {
-    tenantId: challenge.tenantId,
-    chatId: challenge.chatId,
+    tenantId: taken.tenantId,
+    chatId: taken.chatId,
     eventId: input.event.id,
     reason: "captcha_passed",
     summary: "captcha:passed",

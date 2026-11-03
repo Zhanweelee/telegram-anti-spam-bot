@@ -198,6 +198,10 @@ WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 const deleteCaptchaSql = `DELETE FROM captcha_challenges
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 
+const takeCaptchaSql = `DELETE FROM captcha_challenges
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?
+RETURNING tenant_id, chat_id, actor_id, nonce, expires_at`;
+
 const listDueCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at
 FROM captcha_challenges
 WHERE expires_at <= ?
@@ -248,6 +252,14 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
             .bind(parsed.tenantId, parsed.chatId, parsed.actorId);
         }),
       );
+    },
+    async take(tenantId, chatId, actorId, nonce) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(takeCaptchaSql)
+        .bind(tenantId, chatId, actorId, nonce)
+        .all();
+      return readCaptcha(rows.results?.[0]);
     },
     async listExpired(nowIso) {
       await migrationsFor(db);
