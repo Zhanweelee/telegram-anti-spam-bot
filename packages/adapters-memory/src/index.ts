@@ -211,6 +211,18 @@ export function createMemoryCaptchaStore(): CaptchaStore {
       values.set(captchaKey(tenantId, chatId, actorId), parsed.data);
       return true;
     },
+    async findByNonce(tenantId, chatId, nonce) {
+      for (const challenge of values.values()) {
+        if (
+          challenge.tenantId === tenantId &&
+          challenge.chatId === chatId &&
+          challenge.nonce === nonce
+        ) {
+          return challenge;
+        }
+      }
+      return null;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),

@@ -60,6 +60,15 @@ export interface CaptchaStore {
     nonce: string,
     messageId: string,
   ): Promise<boolean>;
+  /**
+   * Returns the challenge in this chat whose nonce matches.
+   * `null` means this tenant and chat have no row with that nonce.
+   */
+  findByNonce(
+    tenantId: string,
+    chatId: string,
+    nonce: string,
+  ): Promise<CaptchaChallenge | null>;
   listExpired(nowIso: string): Promise<readonly CaptchaChallenge[]>;
 }
 
@@ -356,6 +365,17 @@ async function forgetClicked(
   const messageId = event.challenge?.messageId;
   if (!messageId || messageId === storedId) {
     return;
+  }
+  const nonce = event.challenge?.nonce;
+  if (nonce) {
+    const holder = await ports.store.findByNonce(
+      event.tenantId,
+      event.chatId,
+      nonce,
+    );
+    if (holder && holder.actorId !== event.actor.id) {
+      return;
+    }
   }
   await forgetMessage(ports, event.id, {
     tenantId: event.tenantId,

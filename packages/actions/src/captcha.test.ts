@@ -45,6 +45,9 @@ function store(): CaptchaStore {
     async attachPrompt() {
       return false;
     },
+    async findByNonce() {
+      return null;
+    },
     async listExpired() {
       return [];
     },

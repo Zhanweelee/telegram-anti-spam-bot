@@ -211,6 +211,11 @@ const attachCaptchaSql = `UPDATE captcha_challenges
 SET message_id = ?
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ? AND nonce = ?`;
 
+const findCaptchaNonceSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at, message_id
+FROM captcha_challenges
+WHERE tenant_id = ? AND chat_id = ? AND nonce = ?
+LIMIT 1`;
+
 const listDueCaptchaSql = `SELECT tenant_id, chat_id, actor_id, nonce, expires_at, message_id
 FROM captcha_challenges
 WHERE expires_at <= ?
@@ -318,6 +323,14 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
         .bind(parsed.data, tenantId, chatId, actorId, nonce)
         .run();
       return readChanges(result) >= 1;
+    },
+    async findByNonce(tenantId, chatId, nonce) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(findCaptchaNonceSql)
+        .bind(tenantId, chatId, nonce)
+        .all();
+      return readCaptcha(rows.results?.[0]);
     },
     async listExpired(nowIso) {
       await migrationsFor(db);
