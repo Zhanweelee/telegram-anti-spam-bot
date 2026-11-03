@@ -629,6 +629,112 @@ function openEncodedSlashBoundary(text: string): string {
   return text.replace(/%2F(?=\/)/gi, (mark) => `${mark} `);
 }
 
+/** 粘连扫描会吃掉的间隔。普通空格留下，字面主机名仍能打开。 */
+const DRAFT_HOST_GAP =
+  /[\t\n\v\f\r\u00A0\u00AD\u061C\u1680\u180E\u2000-\u200F\u2028-\u202E\u202F\u205F\u2060-\u2064\u2066-\u2069\u3000\uFEFF]/;
+
+/** 贴在编码主机名前面的 `%2B`、`%2F`、`%2D` 和 `%252D` 在百分号处停下。 */
+function openEncodedHostBody(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const percent = encodedHostBodyPercent(text, index);
+    if (percent >= 0) {
+      out += `${text.slice(index, percent)} `;
+      index = percent + 1;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
+
+function encodedHostBodyPercent(text: string, index: number): number {
+  const marker = encodedHostBodyMarker(text, index);
+  if (marker === 0 || encodedHostBodyInPath(text, index)) {
+    return -1;
+  }
+  let cursor = index + marker;
+  while (DRAFT_HOST_GAP.test(text.charAt(cursor))) {
+    cursor += 1;
+  }
+  const scheme = text.slice(cursor, cursor + 8).toLowerCase();
+  if (scheme.startsWith("https://") || scheme.startsWith("http://")) {
+    return -1;
+  }
+  while (cursor < text.length) {
+    const char = text.charAt(cursor);
+    if (char === "%") {
+      const rest = text.slice(cursor + 1);
+      if (
+        /^[0-9A-Fa-f]{2}/.test(rest) &&
+        (encodedBodyHost(rest) || encodedBodyIp(rest))
+      ) {
+        return cursor;
+      }
+      const unit = encodedBodyUnit(text, cursor);
+      if (unit === 0) {
+        return -1;
+      }
+      cursor += unit;
+      continue;
+    }
+    if (/[A-Za-z0-9._-]/.test(char)) {
+      cursor += 1;
+      continue;
+    }
+    return -1;
+  }
+  return -1;
+}
+
+function encodedHostBodyMarker(text: string, index: number): number {
+  if (text.slice(index, index + 5).toLowerCase() === "%252d") {
+    return 5;
+  }
+  const three = text.slice(index, index + 3).toLowerCase();
+  if (three === "%2b" || three === "%2f" || three === "%2d") {
+    return 3;
+  }
+  return 0;
+}
+
+function encodedHostBodyInPath(text: string, index: number): boolean {
+  if (text.charAt(index - 1) === "/") {
+    return true;
+  }
+  return text.slice(index - 3, index).toLowerCase() === "%2f";
+}
+
+function encodedBodyHost(rest: string): boolean {
+  return new RegExp(
+    `^(?:${DRAFT_ASCII_LABEL}\\.)+(?:${androidStrictTld})(?![A-Za-z0-9_-])`,
+    "i",
+  ).test(rest);
+}
+
+function encodedBodyIp(rest: string): boolean {
+  return new RegExp(`^(?:${DRAFT_IP})(?![0-9.])`, "i").test(rest);
+}
+
+function encodedBodyUnit(text: string, index: number): number {
+  for (const marker of ["%25", "%"] as const) {
+    if (text.slice(index, index + marker.length).toLowerCase() !== marker) {
+      continue;
+    }
+    const hex = text.slice(index + marker.length, index + marker.length + 2);
+    if (!/^[0-9A-Fa-f]{2}$/.test(hex)) {
+      continue;
+    }
+    const char = String.fromCharCode(Number.parseInt(hex, 16));
+    if (/[A-Za-z0-9_-]/.test(char)) {
+      return marker.length + 2;
+    }
+  }
+  return 0;
+}
+
 /** 不在路径里的 `%2D` 和 `%252D` 留下十六进制，后面的主机名仍能以短链结尾。 */
 function openEncodedHyphenHost(text: string): string {
   let out = "";
@@ -831,7 +937,9 @@ function openedDraftUrls(text: string): string[] {
                         openEncodedSlashBoundary(
                           openEncodedSlashHost(
                             openEncodedHyphenHost(
-                              openEncodedPlusHost(foldBoundaryMark(text)),
+                              openEncodedPlusHost(
+                                openEncodedHostBody(foldBoundaryMark(text)),
+                              ),
                             ),
                           ),
                         ),
