@@ -1068,7 +1068,9 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(reserved).toBeNull();
+    expect(reserved?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(reserved)).not.toContain(hidden);
+    expect(JSON.stringify(reserved)).not.toContain("shop");
     const nested = encodeURIComponent(
       `https://t.me/durov/shop?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
     );
@@ -3944,6 +3946,130 @@ describe("link fixtures", () => {
     expect(JSON.stringify(named)).not.toContain(phone);
   });
 
+  it("reads a proxy username draft and keeps the server check", async () => {
+    const hidden = "offer226";
+    const dotted = "slug.226";
+    const code = "slug226";
+    const address = "203.0.113.226";
+    const detector = createLinkDetector();
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const app = await detector.detect({
+      event: eventFor(`https://t.me/proxy/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(app?.reasons).toEqual(["short_link"]);
+    expect(app?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(app)).not.toContain(code);
+    expect(JSON.stringify(app)).not.toContain(hidden);
+    const bare = await detector.detect({
+      event: eventFor(`https://t.me/proxy?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(bare?.reasons).toEqual(["short_link"]);
+    const slash = await detector.detect({
+      event: eventFor(`https://t.me/proxy/?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(slash?.reasons).toEqual(["short_link"]);
+    const deep = await detector.detect({
+      event: eventFor(`tg://resolve?domain=proxy&text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(deep?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(deep)).not.toContain(hidden);
+    const capital = await detector.detect({
+      event: eventFor(`https://t.me/Proxy/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(capital?.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(capital)).not.toContain(dotted);
+    const post = await detector.detect({
+      event: eventFor(`https://t.me/proxy/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(post?.reasons).toEqual(["short_link"]);
+    const dog = await detector.detect({
+      event: eventFor(`https://www.telegram.dog/Proxy/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(dog?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const me = await detector.detect({
+      event: eventFor(
+        `https://telegram.me/Proxy/${dotted}?text=${encodeURIComponent(`http://${address}/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(me?.evidence[0]?.summary).toBe("ip_host:203.0.113.226");
+    expect(JSON.stringify(me)).not.toContain(hidden);
+    const prefixed = await detector.detect({
+      event: eventFor(`https://proxy.t.me?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(prefixed?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const numeric = await detector.detect({
+      event: eventFor(`https://proxy.t.me/5?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numeric?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    const command = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&secret=SECRET226`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(command?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(command)).not.toContain("SECRET226");
+    expect(JSON.stringify(command)).not.toContain(hidden);
+    const serverOnly = await detector.detect({
+      event: eventFor(
+        `https://t.me/proxy/${code}?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(serverOnly).toBeNull();
+    expect(JSON.stringify(serverOnly)).not.toContain(hidden);
+    const socks = await detector.detect({
+      event: eventFor(`https://t.me/socks/${code}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(socks).toBeNull();
+    const local = await detector.detect({
+      event: eventFor(
+        `tg://proxy?server=example.com&text=${encodeURIComponent(`https://bit.ly/${hidden}`)}`,
+      ),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(local).toBeNull();
+    expect(JSON.stringify(local)).not.toContain(hidden);
+    const extra = await detector.detect({
+      event: eventFor(`https://t.me/proxy/${dotted}/extra?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(extra).toBeNull();
+    const named = await detector.detect({
+      event: eventFor(`https://proxy.t.me/${dotted}?text=${draft}`),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(named).toBeNull();
+    expect(JSON.stringify(named)).not.toContain(hidden);
+  });
+
   it("reads drafts and passport callbacks on long desktop path segments", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";
@@ -4625,7 +4751,8 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(reserved).toBeNull();
+    expect(reserved?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(reserved)).not.toContain("proxy");
     const extra = await detector.detect({
       event: eventFor(`https://t.me/s/durov/shop/more?text=${draft}`),
       logger: createMemoryLogger(),
@@ -4685,7 +4812,8 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(reserved).toBeNull();
+    expect(reserved?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(reserved)).not.toContain(hidden);
     const otherHost = await detector.detect({
       event: eventFor(`https://s.telegram.me/durov?text=${draft}`),
       logger: createMemoryLogger(),
@@ -4757,7 +4885,8 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(reserved).toBeNull();
+    expect(reserved?.evidence[0]?.summary).toBe(`ip_host:${address}`);
+    expect(JSON.stringify(reserved)).not.toContain(hidden);
     const empty = await detector.detect({
       event: eventFor(`tg://resolve?domain=s&text=${draft}`),
       logger: createMemoryLogger(),
@@ -4852,7 +4981,10 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(proxy).toBeNull();
+    expect(proxy?.reasons).toEqual(["short_link"]);
+    expect(proxy?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(proxy)).not.toContain("name106");
+    expect(JSON.stringify(proxy)).not.toContain("example.com");
 
     const passport = await detector.detect({
       event: eventFor(
@@ -4958,7 +5090,9 @@ describe("link fixtures", () => {
       logger: createMemoryLogger(),
       signal,
     });
-    expect(reserved).toBeNull();
+    expect(reserved?.reasons).toEqual(["short_link"]);
+    expect(reserved?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(reserved)).not.toContain("name108");
 
     const single = await detector.detect({
       event: eventFor("https://a.t.me/?text=https%3A%2F%2Fbit.ly%2Fname108"),

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-226
+
+- `t.me/proxy` 仍按用户名读取。没有短名时 Android 仍写草稿，所以也读 `text`。见 ADR 0259。
+- `t.me/proxy/slug226?text=`、`t.me/proxy?text=` 和 `tg://resolve?domain=proxy&text=` 里的短链删除。代理命令仍只读 `server`。短名路径上的 `server` 不读。再多一段路径和 `proxy.t.me/短名` 留着。用户名和 `secret` 不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-225
 
 - `t.me/confirmphone/短名` 仍按用户名读取。大写命令在一边仍写草稿，所以也读 `text`。见 ADR 0258。

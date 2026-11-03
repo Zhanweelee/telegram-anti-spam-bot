@@ -3087,6 +3087,89 @@ describe("normalizeUpdate", () => {
     expect(phoneDump).not.toContain("bit.ly");
   });
 
+  it("keeps a proxy username draft and the server check", async () => {
+    const hidden = "offer226";
+    const dotted = "slug.226";
+    const code = "slug226";
+    const draft = encodeURIComponent(`https://bit.ly/${hidden}`);
+    const user = await normalize({
+      update_id: 78103,
+      message: {
+        message_id: 78103,
+        date: 1761955200,
+        chat: { id: -1008334, type: "supergroup" },
+        from: { id: 226 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/proxy/${code}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const dumped = JSON.stringify(user.event);
+    expect(dumped).not.toContain(hidden);
+    expect(dumped).not.toContain(code);
+    const app = await normalize({
+      update_id: 78104,
+      message: {
+        message_id: 78104,
+        date: 1761955200,
+        chat: { id: -1008335, type: "supergroup" },
+        from: { id: 226 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/Proxy/${dotted}?text=${draft}`,
+          },
+        ],
+      },
+    });
+    expect(app.status).toBe("event");
+    if (app.status !== "event") {
+      return;
+    }
+    expect(app.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    expect(JSON.stringify(app.event)).not.toContain(dotted);
+    const command = await normalize({
+      update_id: 78105,
+      message: {
+        message_id: 78105,
+        date: 1761955200,
+        chat: { id: -1008336, type: "supergroup" },
+        from: { id: 226 },
+        text: "点这里",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 3,
+            url: `https://t.me/proxy?server=${encodeURIComponent(`https://bit.ly/${hidden}`)}&secret=SECRET226`,
+          },
+        ],
+      },
+    });
+    expect(command.status).toBe("event");
+    if (command.status !== "event") {
+      return;
+    }
+    expect(command.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
+    const commandDump = JSON.stringify(command.event);
+    expect(commandDump).not.toContain(hidden);
+    expect(commandDump).not.toContain("SECRET226");
+  });
+
   it("keeps a hostname from a long desktop path segment", async () => {
     const address = "203.0.113.115";
     const hidden = "hidden115";

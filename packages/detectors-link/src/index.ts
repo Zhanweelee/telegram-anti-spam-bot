@@ -1529,7 +1529,6 @@ function isPublicUsername(value: string): boolean {
 
 const reservedUsernames = new Set([
   "getpremium",
-  "proxy",
   "s",
   "socks",
   "telegrampassport",

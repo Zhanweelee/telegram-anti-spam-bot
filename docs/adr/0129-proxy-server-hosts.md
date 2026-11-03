@@ -33,3 +33,4 @@ ADR 0102 把其它 `tg:` 命令留在邀请和主机名之外。这条不把命�
 - `proxy.example.com` 留着。`example.com/proxy?server=` 仍按外层主机名判断。
 - 正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
 - 分享链接和即时预览的 `url` 后来由 ADR 0130 按普通链接处理。路径和 `rhash` 仍不进证据。
+- `t.me/proxy/短名` 后来由 ADR 0259 按用户名读取 `text`。没有短名时也读。路径正好是 `/proxy` 时仍只读 `server`。短名路径上的 `server` 不读。`tg://proxy` 的 `text` 仍不读。

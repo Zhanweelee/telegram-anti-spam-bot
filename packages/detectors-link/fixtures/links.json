@@ -313,7 +313,8 @@
   {
     "name": "android-s-label-reserved",
     "text": "https://s.t.me/proxy?text=http%3A%2F%2F203.0.113.117%2Fx",
-    "expect": "miss"
+    "expect": "hit",
+    "reason": "ip_host"
   },
   {
     "name": "android-share-label",

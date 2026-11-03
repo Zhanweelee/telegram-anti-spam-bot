@@ -519,7 +519,7 @@
   {
     "id": "tg-reserved-subdomain-text",
     "text": "https://proxy.t.me/?text=https%3A%2F%2Fbit.ly%2Foffer",
-    "label": "ham"
+    "label": "spam"
   },
   {
     "id": "tg-passport-text",
@@ -844,7 +844,7 @@
   {
     "id": "android-s-label-reserved",
     "text": "https://s.t.me/proxy?text=http%3A%2F%2F203.0.113.117%2Fx",
-    "label": "ham"
+    "label": "spam"
   },
   {
     "id": "android-share-label",
@@ -4709,6 +4709,71 @@
   {
     "id": "confirmphone-subdomain-name",
     "text": "https://confirmphone.t.me/slug.225?text=https%3A%2F%2Fbit.ly%2Foffer225",
+    "label": "ham"
+  },
+  {
+    "id": "proxy-app",
+    "text": "https://t.me/proxy/slug226?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-bare",
+    "text": "https://t.me/proxy?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-slash",
+    "text": "https://t.me/proxy/?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-resolve",
+    "text": "tg://resolve?domain=proxy&text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-capital",
+    "text": "https://t.me/Proxy/slug.226?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-post",
+    "text": "https://t.me/proxy/5?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-prefix",
+    "text": "https://proxy.t.me?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-prefix-post",
+    "text": "https://proxy.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "spam"
+  },
+  {
+    "id": "proxy-app-server",
+    "text": "https://t.me/proxy/slug226?server=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "ham"
+  },
+  {
+    "id": "proxy-local",
+    "text": "tg://proxy?server=example.com&text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "ham"
+  },
+  {
+    "id": "proxy-extra",
+    "text": "https://t.me/proxy/slug.226/extra?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "ham"
+  },
+  {
+    "id": "proxy-subdomain-name",
+    "text": "https://proxy.t.me/slug.226?text=https%3A%2F%2Fbit.ly%2Foffer226",
+    "label": "ham"
+  },
+  {
+    "id": "socks-app",
+    "text": "https://t.me/socks/slug226?text=https%3A%2F%2Fbit.ly%2Foffer226",
     "label": "ham"
   }
 ]
