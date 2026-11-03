@@ -2,6 +2,8 @@ export interface RateObservation {
   readonly key: string;
   readonly nowMs: number;
   readonly windowMs: number;
+  /** When set, a repeat of this id does not add another sample. */
+  readonly eventId?: string;
 }
 
 /**
@@ -14,10 +16,12 @@ export interface RateWindow {
 
 interface Bucket {
   samples: number[];
+  seen: string[];
   windowMs: number;
 }
 
 const maxWindowMs = 300_000;
+const seenEventIdPattern = /^[A-Za-z0-9_.:-]{1,128}$/;
 
 export function createMemoryRateWindow(options?: {
   readonly maxKeys?: number;
@@ -45,7 +49,7 @@ export function createMemoryRateWindow(options?: {
         if (buckets.size >= maxKeys) {
           return null;
         }
-        bucket = { samples: [], windowMs };
+        bucket = { samples: [], seen: [], windowMs };
         buckets.set(input.key, bucket);
       }
       bucket.windowMs = windowMs;
@@ -61,13 +65,39 @@ export function createMemoryRateWindow(options?: {
       if (index > 0) {
         bucket.samples.splice(0, index);
       }
+      const eventId = rememberedEventId(input.eventId);
+      if (eventId !== null && bucket.seen.includes(eventId)) {
+        return bucket.samples.length;
+      }
       if (bucket.samples.length >= maxSamples) {
         bucket.samples.shift();
       }
       bucket.samples.push(input.nowMs);
+      rememberEvent(bucket, eventId, maxSamples);
       return bucket.samples.length;
     },
   };
+}
+
+function rememberedEventId(value: string | undefined): string | null {
+  if (value === undefined || !seenEventIdPattern.test(value)) {
+    return null;
+  }
+  return value;
+}
+
+function rememberEvent(
+  bucket: Bucket,
+  eventId: string | null,
+  limit: number,
+): void {
+  if (eventId === null) {
+    return;
+  }
+  bucket.seen.push(eventId);
+  if (bucket.seen.length > limit) {
+    bucket.seen.shift();
+  }
 }
 
 function sweep(buckets: Map<string, Bucket>, nowMs: number): void {

@@ -57,6 +57,7 @@ function createRateDetector(
           key,
           nowMs: Date.parse(ctx.event.occurredAt),
           windowMs: parsed.windowSeconds * 1000,
+          eventId: ctx.event.id,
         });
       } catch {
         ctx.logger.warn("rate_window_failed", {

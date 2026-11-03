@@ -121,6 +121,37 @@ describe("durable rate window", () => {
     }
   });
 
+  it("counts one event id once across two callers", async () => {
+    const namespace = sharedNamespace();
+    const first = createDurableRateWindow(namespace);
+    const second = createDurableRateWindow(namespace);
+    const key = "f\nlocal\n-100\n5";
+    expect(
+      await first.observe({
+        key,
+        nowMs: 1_000,
+        windowMs: 10_000,
+        eventId: "tg_9",
+      }),
+    ).toBe(1);
+    expect(
+      await second.observe({
+        key,
+        nowMs: 1_100,
+        windowMs: 10_000,
+        eventId: "tg_9",
+      }),
+    ).toBe(1);
+    expect(
+      await second.observe({
+        key,
+        nowMs: 1_200,
+        windowMs: 10_000,
+        eventId: "tg_10",
+      }),
+    ).toBe(2);
+  });
+
   it("counts inside one object without a binding", async () => {
     const object = new RateWindowObject({} as DurableObjectState, {});
     const key = "f\nlocal\n-100\n5";
