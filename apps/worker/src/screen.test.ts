@@ -16264,6 +16264,78 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(result.decision)).not.toContain(path);
   });
 
+  it("keeps a shared user name and drops the sender name", async () => {
+    const path = "offer288";
+    const kept = await normalizeUpdate({
+      update: {
+        update_id: 2497,
+        message: {
+          message_id: 2497,
+          date: 1761955200,
+          chat: { id: -1009252, type: "supergroup", title: "机密群名" },
+          from: { id: 288, first_name: "Ada" },
+          users_shared: {
+            request_id: 288291,
+            users: [
+              { user_id: 288005, first_name: `https://example.com/${path}` },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const allowed = await screenTelegramEvent(kept.event, {
+      logger,
+      moderator: createMemoryModerator(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const keptDump = JSON.stringify({ allowed, logs: logger.entries });
+    expect(keptDump).not.toContain("bit.ly");
+    expect(keptDump).not.toContain(path);
+    expect(keptDump).not.toContain("机密群名");
+
+    const opened = await normalizeUpdate({
+      update: {
+        update_id: 2498,
+        message: {
+          message_id: 2498,
+          date: 1761955200,
+          chat: { id: -1009253, type: "supergroup", title: "机密群名" },
+          from: { id: 288, first_name: "Ada" },
+          text: "今天站会",
+          users_shared: {
+            request_id: 288292,
+            users: [{ user_id: 288006, first_name: `https://bit.ly/${path}` }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(opened.status).toBe("event");
+    if (opened.status !== "event") {
+      return;
+    }
+    const result = await screenTelegramEvent(opened.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toEqual(["short_link"]);
+    expect(JSON.stringify(result.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(result.decision)).not.toContain(path);
+  });
+
   it("keeps a script letter after a schemed hyphen in a draft", async () => {
     const path = "offer284";
     const greek = "\u03B1";

@@ -3078,6 +3078,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(sharedChat.title, urls);
     pushPlainUrls(sharedChat.username, urls);
   }
+  pushPlainUrls(sharedUserNames(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -5122,6 +5123,10 @@ function messageText(
   if (members.length > 0) {
     return members;
   }
+  const shared = sharedUserNames(message);
+  if (shared.length > 0) {
+    return shared;
+  }
   return "";
 }
 
@@ -5142,6 +5147,19 @@ function memberNames(message: Record<string, unknown>): string {
   if (isRecord(proximity)) {
     pushUserLabels([proximity.traveler, proximity.watcher], parts);
   }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function sharedUserNames(message: Record<string, unknown>): string {
+  const shared = message.users_shared;
+  if (!isRecord(shared)) {
+    return "";
+  }
+  const parts: string[] = [];
+  pushUserLabels(shared.users, parts);
   if (parts.length === 0) {
     return "";
   }
