@@ -114,6 +114,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
   readonly released: readonly BanTarget[];
+  readonly unbanned: readonly BanTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const muted: MuteTarget[] = [];
@@ -122,6 +123,7 @@ export function createMemoryModerator(): ModerationPort & {
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
   const released: BanTarget[] = [];
+  const unbanned: BanTarget[] = [];
   return {
     deleted,
     muted,
@@ -130,6 +132,7 @@ export function createMemoryModerator(): ModerationPort & {
     deferred,
     restricted,
     released,
+    unbanned,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -168,6 +171,9 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async releaseActor(target) {
       released.push({ ...target });
+    },
+    async unbanActor(target) {
+      unbanned.push({ ...target });
     },
   };
 }

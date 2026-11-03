@@ -78,6 +78,39 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("unbans only a user who is already banned", async () => {
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        calls.push({
+          method: url.slice(url.lastIndexOf("/") + 1),
+          body: String(init?.body ?? ""),
+        });
+        return new Response("ok", { status: 200 });
+      },
+    });
+    await moderator.unbanActor({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.method).toBe("unbanChatMember");
+    expect(calls[0]?.body).toContain('"chat_id":-100');
+    expect(calls[0]?.body).toContain('"user_id":77');
+    expect(calls[0]?.body).toContain('"only_if_banned":true');
+    expect(calls[0]?.body).not.toContain("revoke_messages");
+    await expect(
+      createTelegramModerator({ token: "  " }).unbanActor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("unban_unavailable");
+  });
+
   it("deletes, mutes, and bans with one call each and drops the response body", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

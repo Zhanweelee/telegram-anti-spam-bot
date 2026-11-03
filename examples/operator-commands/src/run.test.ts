@@ -21,6 +21,13 @@ describe("operator command example", () => {
     expect(help).toContain("/evals");
     expect(help).toContain("/packs");
     expect(help).toContain("/quota");
+    expect(help).toContain("/unban");
+    const unbanned = await runPrivateCommand({
+      text: "/unban -100 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(unbanned).toBe("已解除封禁 -100 77");
     const quota = await runPrivateCommand({
       text: "/quota -100",
       actorId: "42",

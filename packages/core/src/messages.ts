@@ -62,6 +62,8 @@ export const messageKeys = [
   "command.quota.basic",
   "command.quota.full",
   "command.chats.usage",
+  "command.unban.usage",
+  "command.unban.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -94,6 +96,7 @@ const syntax = [
   "/packs <chatId> [packId|off]",
   "/quota <chatId>",
   "/chats",
+  "/unban <chatId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -161,6 +164,8 @@ const zh = {
   "command.quota.basic": "basic",
   "command.quota.full": "full",
   "command.chats.usage": "用法：/chats",
+  "command.unban.usage": "用法：/unban <chatId> <actorId>",
+  "command.unban.done": "已解除封禁 {chatId} {actorId}",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -234,6 +239,8 @@ const en = {
   "command.quota.basic": "basic",
   "command.quota.full": "full",
   "command.chats.usage": "Usage: /chats",
+  "command.unban.usage": "Usage: /unban <chatId> <actorId>",
+  "command.unban.done": "Unbanned {actorId} in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-330
+
+- 私聊 `/unban` 对已经封禁的人调用 `unbanChatMember`，`only_if_banned` 为 true。
+- 没有 token 或调用失败时回复「参数无效」。不改黑名单，也不解除禁言。见 ADR 0362。
+- 30 天保留期没有改。
+
 ### P3-329
 
 - D1 的 `/forget` 每次最多删除 1000 行，一次命令最多 32 页。

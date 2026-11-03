@@ -148,6 +148,7 @@ function harness(options?: { failStorage?: boolean }) {
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
+    async unbanActor() {},
   };
   return {
     records,
