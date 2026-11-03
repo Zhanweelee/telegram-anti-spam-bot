@@ -127,6 +127,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly locked: readonly ChatTarget[];
   readonly unlocked: readonly ChatTarget[];
   readonly reactionsCleared: readonly ReactionActorTarget[];
+  readonly invitesRevoked: readonly ChatTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -144,6 +145,7 @@ export function createMemoryModerator(): ModerationPort & {
   const locked: ChatTarget[] = [];
   const unlocked: ChatTarget[] = [];
   const reactionsCleared: ReactionActorTarget[] = [];
+  const invitesRevoked: ChatTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -161,6 +163,7 @@ export function createMemoryModerator(): ModerationPort & {
     locked,
     unlocked,
     reactionsCleared,
+    invitesRevoked,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -259,6 +262,12 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
         kind: target.kind,
+      });
+    },
+    async revokeInvite(target) {
+      invitesRevoked.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
       });
     },
   };

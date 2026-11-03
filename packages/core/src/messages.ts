@@ -119,6 +119,8 @@ export const messageKeys = [
   "command.perms.unknown",
   "command.clearreact.usage",
   "command.clearreact.done",
+  "command.revoke.usage",
+  "command.revoke.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -166,6 +168,7 @@ const syntax = [
   "/unlock <chatId>",
   "/perms <chatId>",
   "/clearreact <chatId> <actorId>",
+  "/revoke <chatId> <inviteLink>",
 ].join("\n");
 
 const zh = {
@@ -295,6 +298,9 @@ const zh = {
   "command.clearreact.usage": "用法：/clearreact <chatId> <actorId>",
   "command.clearreact.done":
     "已请求清除 {actorId} 在 {chatId} 的最近反应。一万条以前的可能还在",
+  "command.revoke.usage": "用法：/revoke <chatId> <inviteLink>",
+  "command.revoke.done":
+    "已请求撤销 {chatId} 里机器人自己发的邀请链接。别人发的撤不掉，新的主链接也不在这里",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -436,6 +442,9 @@ const en = {
   "command.clearreact.usage": "Usage: /clearreact <chatId> <actorId>",
   "command.clearreact.done":
     "Asked to clear recent reactions by {actorId} in {chatId}. Ones older than the latest 10000 may remain.",
+  "command.revoke.usage": "Usage: /revoke <chatId> <inviteLink>",
+  "command.revoke.done":
+    "Asked to revoke a bot-created invite link in {chatId}. Other admins' links stay, and a new primary link is not shown here.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -49,5 +49,6 @@ function createOpenModerator(): ModerationPort {
       throw new Error("perms_unavailable");
     },
     clearReactions: (target) => memory.clearReactions(target),
+    revokeInvite: (target) => memory.revokeInvite(target),
   };
 }

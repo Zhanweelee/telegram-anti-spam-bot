@@ -393,6 +393,74 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("revokes one bot invite link and drops the returned link", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const code = "AbCdEfGhIjKlMnOp";
+    const link = `https://t.me/+${code}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            invite_link: link,
+            name: phrase,
+            creator: { id: 1, is_bot: false, first_name: phrase },
+            is_primary: true,
+            is_revoked: true,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.revokeInvite({
+        tenantId: "local",
+        chatId: "-100",
+        inviteLink: link,
+      }),
+    ).resolves.toBeUndefined();
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/revokeChatInviteLink`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      invite_link?: string;
+      name?: string;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.invite_link).toBe(link);
+    expect(body.name).toBeUndefined();
+    expect(calls[0]?.body).not.toContain("user_id");
+    expect(calls[0]?.body).not.toContain(token);
+    expect(calls[0]?.body).not.toContain(phrase);
+    called = false;
+    await expect(
+      createTelegramModerator({ token, fetchImpl }).revokeInvite({
+        tenantId: "local",
+        chatId: "-100",
+        inviteLink: phrase,
+      }),
+    ).rejects.toThrow("revoke_failed");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).revokeInvite({
+        tenantId: "local",
+        chatId: "-100",
+        inviteLink: link,
+      }),
+    ).rejects.toThrow("revoke_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

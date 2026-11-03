@@ -262,6 +262,22 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async revokeInvite(target) {
+      if (!acceptedInvite(target.inviteLink)) {
+        throw new Error("revoke_failed");
+      }
+      await postTelegram({
+        token: input.token,
+        method: "revokeChatInviteLink",
+        fetchImpl: input.fetchImpl,
+        missing: "revoke_unavailable",
+        failed: "revoke_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          invite_link: target.inviteLink,
+        },
+      });
+    },
     async restrictActor(target) {
       await postTelegram({
         token: input.token,
@@ -401,6 +417,15 @@ async function answerJoinQuery(
       result,
     },
   });
+}
+
+function acceptedInvite(value: string): boolean {
+  const match =
+    /^https:\/\/(t\.me|telegram\.me|telegram\.dog)\/(?:\+([A-Za-z0-9_-]{16,128})|joinchat\/([A-Za-z0-9_-]{16,128}))$/.exec(
+      value,
+    );
+  const code = match?.[2] ?? match?.[3];
+  return code !== undefined && !/^\d+$/.test(code);
 }
 
 async function postTelegram(input: {

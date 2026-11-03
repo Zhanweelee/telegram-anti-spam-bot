@@ -101,6 +101,7 @@ function moderator(
       throw new Error("perms_unavailable");
     },
     async clearReactions() {},
+    async revokeInvite() {},
   };
 }
 

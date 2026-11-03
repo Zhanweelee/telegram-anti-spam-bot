@@ -84,6 +84,7 @@ const COMMAND_NAMES = [
   "unlock",
   "perms",
   "clearreact",
+  "revoke",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -127,6 +128,7 @@ export interface OperatorCommandInput {
       | "muteActor"
       | "readMember"
       | "readPermissions"
+      | "revokeInvite"
       | "unbanActor"
       | "unbanSenderChat"
       | "unmuteActor"
@@ -264,6 +266,8 @@ async function dispatch(
       return showPermissions(input, args);
     case "clearreact":
       return clearActorReactions(input, args);
+    case "revoke":
+      return revokeChatInvite(input, args);
   }
 }
 
@@ -1052,6 +1056,86 @@ function rejectReactions(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "clearreact",
+  });
+}
+
+async function revokeChatInvite(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.revoke.usage");
+  }
+  const chatId = args[0];
+  const rawLink = args[1];
+  const inviteLink =
+    chatId !== undefined && rawLink !== undefined
+      ? canonicalInvite(rawLink)
+      : undefined;
+  if (chatId === undefined || !isTargetId(chatId) || inviteLink === undefined) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const revoke = input.moderator?.revokeInvite;
+  if (!revoke) {
+    rejectInvite(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await revoke({
+      tenantId: input.event.tenantId,
+      chatId,
+      inviteLink,
+    });
+  } catch {
+    rejectInvite(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.revoke.done", { chatId });
+}
+
+function canonicalInvite(raw: string): string | undefined {
+  const match =
+    /^(?:https?:\/\/)?(?:www\.)?(joinchat\.)?(t\.me|telegram\.me|telegram\.dog)\/(?:\+([A-Za-z0-9_-]{16,128})|joinchat\/([A-Za-z0-9_-]{16,128})|([A-Za-z0-9_-]{16,128}))$/i.exec(
+      raw,
+    );
+  if (!match) {
+    return undefined;
+  }
+  const prefixed = match[1] !== undefined;
+  const host = match[2]?.toLowerCase();
+  const plus = match[3];
+  const joined = match[4];
+  const bare = match[5];
+  if (host === undefined) {
+    return undefined;
+  }
+  if (plus !== undefined) {
+    if (prefixed || /^\d+$/.test(plus)) {
+      return undefined;
+    }
+    return `https://${host}/+${plus}`;
+  }
+  const code = joined ?? bare;
+  if (
+    code === undefined ||
+    /^\d+$/.test(code) ||
+    (bare !== undefined && !prefixed) ||
+    (joined !== undefined && prefixed)
+  ) {
+    return undefined;
+  }
+  return `https://${host}/joinchat/${code}`;
+}
+
+function rejectInvite(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "revoke",
   });
 }
 

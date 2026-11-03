@@ -76,6 +76,9 @@ function commandModerator(
     async clearReactions() {
       throw new Error("reactions_unavailable");
     },
+    async revokeInvite() {
+      throw new Error("revoke_unavailable");
+    },
     async deleteMessage() {
       throw new Error("delete_unavailable");
     },

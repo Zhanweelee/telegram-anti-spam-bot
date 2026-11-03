@@ -2102,6 +2102,220 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("revokes one bot invite link without echoing it", async () => {
+    const code = "AbCdEfGhIjKlMnOp";
+    const link = `https://t.me/+${code}`;
+    const deps = kit();
+    const seen: { chatId: string; inviteLink: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${link}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async revokeInvite(target) {
+          seen.push({
+            chatId: target.chatId,
+            inviteLink: target.inviteLink,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求撤销 -100 里机器人自己发的邀请链接。别人发的撤不掉，新的主链接也不在这里",
+    });
+    expect(JSON.stringify(done)).not.toContain(code);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(code);
+    expect(seen).toEqual([{ chatId: "-100", inviteLink: link }]);
+    const shaped = await runOperatorCommand({
+      event: event({
+        text: `/revoke -100 HTTP://WWW.T.ME/+${code}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite(target) {
+          seen.push({
+            chatId: target.chatId,
+            inviteLink: target.inviteLink,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(JSON.stringify(shaped)).not.toContain(code);
+    expect(seen[1]).toEqual({ chatId: "-100", inviteLink: link });
+    const joined = await runOperatorCommand({
+      event: event({
+        text: `/revoke -100 telegram.dog/joinchat/${code}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite(target) {
+          seen.push({
+            chatId: target.chatId,
+            inviteLink: target.inviteLink,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(JSON.stringify(joined)).not.toContain(code);
+    expect(seen[2]).toEqual({
+      chatId: "-100",
+      inviteLink: `https://telegram.dog/joinchat/${code}`,
+    });
+    const prefixed = await runOperatorCommand({
+      event: event({
+        text: `/revoke -100 https://joinchat.t.me/${code}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite(target) {
+          seen.push({
+            chatId: target.chatId,
+            inviteLink: target.inviteLink,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(JSON.stringify(prefixed)).not.toContain(code);
+    expect(seen[3]).toEqual({
+      chatId: "-100",
+      inviteLink: `https://t.me/joinchat/${code}`,
+    });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/revoke <chatId> <inviteLink>");
+      expect(help.text).not.toContain(code);
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${link}`, direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async revokeInvite() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to revoke a bot-created invite link in -100. Other admins' links stay, and a new primary link is not shown here.",
+    });
+    expect(JSON.stringify(english)).not.toContain(code);
+    const skipped = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${link}`, chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite() {
+          throw new Error(code);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/revoke -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/revoke <chatId> <inviteLink>",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const phone = await runOperatorCommand({
+      event: event({
+        text: "/revoke -100 https://t.me/+7999000111222333",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(phone).toMatchObject({ text: "参数无效" });
+    const folder = await runOperatorCommand({
+      event: event({
+        text: `/revoke -100 https://t.me/addlist/${code}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(folder).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(4);
+    const missing = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${link}`, direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(missing)).not.toContain(code);
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/revoke -100 ${link}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async revokeInvite() {
+          throw new Error(`${phrase} ${code}`);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(hidden)).not.toContain(code);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(code);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"revoke"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: `/revoke -200 ${link}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async revokeInvite() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(foreign)).not.toContain(code);
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

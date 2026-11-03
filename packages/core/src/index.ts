@@ -174,6 +174,7 @@ export {
   type DeleteMessagesTarget,
   type DeleteTarget,
   fitAuditExportDocument,
+  type InviteLinkTarget,
   type JoinTarget,
   type MemberStanding,
   type ModerationPort,

@@ -163,4 +163,16 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", messageId: "m" },
     ]);
   });
+
+  it("records a revoked invite without the link", async () => {
+    const moderator = createMemoryModerator();
+    const code = "AbCdEfGhIjKlMnOp";
+    await moderator.revokeInvite({
+      tenantId: "t",
+      chatId: "c",
+      inviteLink: `https://t.me/+${code}`,
+    });
+    expect(moderator.invitesRevoked).toEqual([{ tenantId: "t", chatId: "c" }]);
+    expect(JSON.stringify(moderator.invitesRevoked)).not.toContain(code);
+  });
 });

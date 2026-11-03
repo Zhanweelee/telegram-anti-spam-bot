@@ -125,6 +125,12 @@ export interface ReactionActorTarget {
   readonly kind: "user" | "chat";
 }
 
+export interface InviteLinkTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly inviteLink: string;
+}
+
 export type UnmuteResult = "lifted" | "absent";
 
 export type MemberStanding =
@@ -147,6 +153,7 @@ export interface ModerationPort {
   banActor(target: BanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;
   clearReactions(target: ReactionActorTarget): Promise<void>;
+  revokeInvite(target: InviteLinkTarget): Promise<void>;
   unbanSenderChat(target: SenderChatTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
