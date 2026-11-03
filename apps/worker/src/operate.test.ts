@@ -508,6 +508,173 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
   });
 
+  it("deletes the captcha button when the member leaves", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    let prompts = 0;
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () => {
+        prompts += 1;
+        return Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        });
+      },
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_leave_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_leave",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "leave",
+      }),
+      options,
+    );
+    expect(prompts).toBe(1);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toBeNull();
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
+  it("keeps the challenge when leaving cannot drop the row", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore: {
+        ...captchaStore,
+        async delete() {
+          throw new Error(phrase);
+        },
+      },
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        }),
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_leave_keep_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_leave_keep",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "leave",
+      }),
+      options,
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100123", messageId: "42" },
+    ]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+      messageId: "42",
+    });
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(kit.logger.entries.map((entry) => entry.message)).toContain(
+      "captcha_leave_failed",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+  });
+
+  it("keeps the captcha button when the member is only restricted", async () => {
+    const kit = deps();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    const options = {
+      ...kit,
+      moderator,
+      captchaStore,
+      createNonce: () => nonce,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        Response.json({
+          ok: true,
+          result: { message_id: 42 },
+        }),
+    };
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_restrict_join",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      }),
+      options,
+    );
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_restrict",
+        tenantId: "local",
+        chatId: "-100123",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:10.000Z",
+        actor: { id: "77", isAdmin: false },
+      }),
+      options,
+    );
+    expect(moderator.deleted).toEqual([]);
+    expect(await captchaStore.get("local", "-100123", "77")).toMatchObject({
+      nonce,
+      messageId: "42",
+    });
+    expect(moderator.restricted).toHaveLength(1);
+    expect(moderator.released).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+  });
+
   it("stops reading the shared blocklist as soon as the chat turns it off", async () => {
     const kit = deps();
     const blocklist = createMemoryBlocklistStore();

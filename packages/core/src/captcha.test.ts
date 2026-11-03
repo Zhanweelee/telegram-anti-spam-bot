@@ -3,6 +3,7 @@ import {
   addSeconds,
   beginChallenge,
   type CaptchaStore,
+  cancelChallenge,
   captchaChallengeSchema,
   expireChallenges,
   isExpired,
@@ -184,6 +185,161 @@ describe("captcha flow", () => {
         (entry) => entry.message === "captcha_prompt_delete_failed",
       ),
     ).toBe(true);
+  });
+
+  it("deletes the prompt and the challenge when the member leaves", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await cancelChallenge({
+        event: leaveEvent(),
+        ports,
+      }),
+    ).toBe(true);
+    expect(removed).toEqual(["42"]);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries).toEqual([
+      {
+        level: "info",
+        message: "captcha_left",
+        fields: { eventId: "evt_leave", chatId: "-100" },
+      },
+    ]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("ab".repeat(8));
+  });
+
+  it("keeps the challenge when the leave cannot delete the prompt", async () => {
+    const kit = harness();
+    const ports = {
+      ...kit.ports,
+      async removePrompt() {
+        throw new Error(secret);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await cancelChallenge({
+        event: leaveEvent(),
+        ports,
+      }),
+    ).toBe(false);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+    expect(kit.logger.entries.map((entry) => entry.message)).toEqual([
+      "captcha_prompt_delete_failed",
+    ]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("42");
+  });
+
+  it("keeps a stored prompt when leave has no delete port", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await cancelChallenge({
+        event: leaveEvent(),
+        ports: kit.ports,
+      }),
+    ).toBe(false);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      messageId: "42",
+    });
+    expect(kit.logger.entries).toEqual([]);
+  });
+
+  it("drops a prompt-less challenge when the member leaves", async () => {
+    const kit = harness();
+    let calls = 0;
+    const ports = {
+      ...kit.ports,
+      async removePrompt() {
+        calls += 1;
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    expect(
+      await cancelChallenge({
+        event: leaveEvent(),
+        ports,
+      }),
+    ).toBe(true);
+    expect(calls).toBe(0);
+    expect(await kit.store.get("local", "-100", "77")).toBeNull();
+    expect(kit.released).toEqual([]);
+    expect(kit.records).toEqual([]);
+  });
+
+  it("leaves the row in place when the member is still in the chat", async () => {
+    const kit = harness();
+    const removed: string[] = [];
+    const ports = {
+      ...kit.ports,
+      async removePrompt(target: { messageId: string }) {
+        removed.push(target.messageId);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 300,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    await kit.store.attachPrompt("local", "-100", "77", "ab".repeat(8), "42");
+    expect(
+      await cancelChallenge({
+        event: joinEvent(),
+        ports,
+      }),
+    ).toBe(false);
+    expect(
+      await cancelChallenge({
+        event: leaveEvent("evt_other", "88"),
+        ports,
+      }),
+    ).toBe(false);
+    expect(removed).toEqual([]);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "ab".repeat(8),
+      messageId: "42",
+    });
+    expect(kit.logger.entries).toEqual([]);
   });
 
   it("deletes the old prompt when the replacement restrict fails", async () => {
@@ -574,6 +730,18 @@ function joinEvent() {
     occurredAt: "2026-11-01T00:00:00.000Z",
     actor: { id: "77", isAdmin: false },
     membership: "join",
+  });
+}
+
+function leaveEvent(id = "evt_leave", actorId = "77") {
+  return parseEvent({
+    id,
+    tenantId: "local",
+    chatId: "-100",
+    kind: "chat_member",
+    occurredAt: "2026-11-01T00:00:10.000Z",
+    actor: { id: actorId, isAdmin: false },
+    membership: "leave",
   });
 }
 
