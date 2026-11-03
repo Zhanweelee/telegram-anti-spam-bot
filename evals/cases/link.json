@@ -4130,5 +4130,60 @@
     "id": "boost-channel-id",
     "text": "https://t.me/boost?c=215&text=https%3A%2F%2Fbit.ly%2Foffer215",
     "label": "ham"
+  },
+  {
+    "id": "web-username",
+    "text": "https://t.me/web?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-resolve",
+    "text": "tg://resolve?domain=web&text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-prefix",
+    "text": "https://web.t.me?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-capital",
+    "text": "https://t.me/Web/slug216?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-slash",
+    "text": "https://t.me/web/?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-app",
+    "text": "https://t.me/web/slug216?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-post",
+    "text": "https://t.me/web/5?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-subdomain-post",
+    "text": "https://web.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-server",
+    "text": "https://t.me/web?server=203.0.113.216&text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "spam"
+  },
+  {
+    "id": "web-extra",
+    "text": "https://t.me/web/slug216/extra?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "ham"
+  },
+  {
+    "id": "web-subdomain-name",
+    "text": "https://web.t.me/slug216?text=https%3A%2F%2Fbit.ly%2Foffer216",
+    "label": "ham"
   }
 ]

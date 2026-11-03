@@ -1427,7 +1427,6 @@ const reservedUsernames = new Set([
   "share",
   "socks",
   "telegrampassport",
-  "web",
   "webproxy",
 ]);
 

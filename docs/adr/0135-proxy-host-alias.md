@@ -29,6 +29,7 @@ Android 客户端解析 `t.me/proxy`、`t.me/socks`、`t.me/webproxy` 以及对�
 
 - 代理链接的 `host` 是裸 IP 或默认短链，且没有 `server` 时，现有链接规则删除这条消息。证据仍只有主机名。
 - `proxy.example.com` 留着。`example.com/proxy?host=` 和 `t.me/web?host=` 仍按外层主机名判断。
+- `t.me/web?text=` 后来由 ADR 0249 按用户名读取。`host` 仍不是代理地址。
 - 正文就是这条链接时，链接原文仍在 `message.text`。按钮和隐藏链接只留下主机名。
 - 网页代理上长度为 0 的 `server` 后来由 ADR 0136 改读 `host`。SOCKS、MTProto 和只含空白的 `server` 仍不改读。
 - `server` 和 `host` 后来由 ADR 0140 不区分大小写，取第一次出现的值。空的 `SERVER` 仍算空。
