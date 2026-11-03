@@ -1298,8 +1298,8 @@ function openedDraftUrls(text: string): string[] {
 
 /**
  * 带协议的主机名后面，希腊文、西里尔文、亚美尼亚文和非 ASCII 拉丁字母在 `@` 前会被收掉。
- * 点号后面新起的这类标签也一样。收掉之后 `@` 会变成用户信息。
- * 这里先换成空格，前面的短链仍单独打开。
+ * 点号后面新起的这类标签也一样。中间被地址解析忽略的标记同样会先被收掉。
+ * 收掉之后 `@` 会变成用户信息。这里先换成空格，前面的短链仍单独打开。
  */
 function openSchemedScript(text: string): string {
   let out = "";
@@ -1329,16 +1329,73 @@ function openSchemedScript(text: string): string {
 
 function schemedScriptBreak(text: string, hostEnd: number): number | null {
   if (text.charAt(hostEnd) === ".") {
-    const dotted = draftScriptRunEnd(text, hostEnd + 1);
-    if (dotted > hostEnd + 1 && text.charAt(dotted) === "@") {
+    const afterDot = draftIgnoredMarkEnd(text, hostEnd + 1);
+    const dotted = draftScriptRunEnd(text, afterDot);
+    if (dotted > afterDot && text.charAt(dotted) === "@") {
       return dotted;
     }
   }
-  const runEnd = draftScriptRunEnd(text, hostEnd);
-  if (runEnd > hostEnd && text.charAt(runEnd) === "@") {
+  const marked = draftIgnoredMarkEnd(text, hostEnd);
+  const runEnd = draftScriptRunEnd(text, marked);
+  if (runEnd > marked && text.charAt(runEnd) === "@") {
     return runEnd;
   }
   return null;
+}
+
+/**
+ * 地址解析会忽略、Android 仍算进标签的标记。
+ * 制表符、换行和不换行空格不算。
+ */
+function draftIgnoredMarkEnd(text: string, index: number): number {
+  let end = index;
+  while (end < text.length) {
+    const code = text.codePointAt(end);
+    if (code === undefined || !draftIgnoredMark(code)) {
+      break;
+    }
+    end += String.fromCodePoint(code).length;
+  }
+  return end;
+}
+
+function draftIgnoredMark(code: number): boolean {
+  if (code === 0x034f) {
+    return true;
+  }
+  if (!draftAndroidLabelCode(code)) {
+    return false;
+  }
+  return foldMatchText(String.fromCodePoint(code)) === "";
+}
+
+function draftAndroidLabelCode(code: number): boolean {
+  if (
+    code === 0x00a0 ||
+    (code >= 0x2000 && code <= 0x200a) ||
+    code === 0x2028 ||
+    code === 0x2029 ||
+    code === 0x202f ||
+    code === 0x3000
+  ) {
+    return false;
+  }
+  if (code >= 0x00a0 && code <= 0xd7ff) {
+    return true;
+  }
+  if (code >= 0xf900 && code <= 0xfdcf) {
+    return true;
+  }
+  if (code >= 0xfdf0 && code <= 0xffef) {
+    return true;
+  }
+  if (code >= 0x20000 && code <= 0xdfffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  if (code >= 0xe1000 && code <= 0xefffd) {
+    return (code & 0xffff) <= 0xfffd;
+  }
+  return false;
 }
 
 function draftScriptRunEnd(text: string, index: number): number {
