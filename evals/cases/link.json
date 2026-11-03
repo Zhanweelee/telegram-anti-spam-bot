@@ -4185,5 +4185,55 @@
     "id": "web-subdomain-name",
     "text": "https://web.t.me/slug216?text=https%3A%2F%2Fbit.ly%2Foffer216",
     "label": "ham"
+  },
+  {
+    "id": "msg-username",
+    "text": "https://t.me/msg?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-resolve",
+    "text": "tg://resolve?domain=msg&text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-prefix",
+    "text": "https://msg.t.me?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-capital",
+    "text": "https://t.me/Msg/slug217?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-slash",
+    "text": "https://t.me/msg/?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-app",
+    "text": "https://t.me/msg/slug217?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-post",
+    "text": "https://t.me/msg/5?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-subdomain-post",
+    "text": "https://msg.t.me/5?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "spam"
+  },
+  {
+    "id": "msg-extra",
+    "text": "https://t.me/msg/slug217/extra?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "ham"
+  },
+  {
+    "id": "msg-subdomain-name",
+    "text": "https://msg.t.me/slug217?text=https%3A%2F%2Fbit.ly%2Foffer217",
+    "label": "ham"
   }
 ]
