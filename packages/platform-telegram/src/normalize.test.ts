@@ -18306,6 +18306,96 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(hidden.event)).not.toContain(path);
   });
 
+  it("keeps the hostname from the website a user logged in on", async () => {
+    const path = "offer286";
+    const labeled = await normalize({
+      update_id: 79004,
+      message: {
+        message_id: 79004,
+        date: 1761955200,
+        chat: {
+          id: -1009238,
+          type: "supergroup",
+          title: "https://cutt.ly/old286",
+        },
+        from: { id: 286, first_name: "https://tinyurl.com/name286" },
+        text: "今天站会",
+        connected_website: `https://bit.ly/${path}`,
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(labeled.event.message?.invites).toBeUndefined();
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("old286");
+    expect(labeledDump).not.toContain("name286");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const domain = await normalize({
+      update_id: 79005,
+      message: {
+        message_id: 79005,
+        date: 1761955200,
+        chat: { id: -1009239, type: "private" },
+        from: { id: 286 },
+        text: "今天站会",
+        connected_website: "bit.ly",
+      },
+    });
+    expect(domain.status).toBe("event");
+    if (domain.status !== "event") {
+      return;
+    }
+    expect(domain.event.message?.text).toBe("今天站会");
+    expect(domain.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(domain.event.message?.invites).toBeUndefined();
+
+    const plain = await normalize({
+      update_id: 79006,
+      message: {
+        message_id: 79006,
+        date: 1761955200,
+        chat: { id: -1009240, type: "private" },
+        from: { id: 286 },
+        connected_website: "example.com",
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("");
+    expect(plain.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    expect(JSON.stringify(plain.event)).not.toContain(path);
+
+    const site = await normalize({
+      update_id: 79007,
+      message: {
+        message_id: 79007,
+        date: 1761955200,
+        chat: { id: -1009241, type: "private" },
+        from: { id: 286 },
+        text: "今天站会",
+        connected_website: "t.me",
+      },
+    });
+    expect(site.status).toBe("event");
+    if (site.status !== "event") {
+      return;
+    }
+    expect(site.event.message?.text).toBe("今天站会");
+    expect(site.event.message?.hosts).toEqual(["t.me"]);
+    expect(site.event.message?.invites).toBeUndefined();
+  });
+
   it("keeps hostnames from a declined suggested post comment", async () => {
     const phrase = "请免费领取礼品";
     const code = "CMT80";

@@ -3072,6 +3072,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(webApp.data, urls);
     pushPlainUrls(webApp.button_text, urls);
   }
+  pushPlainUrls(message.connected_website, urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
