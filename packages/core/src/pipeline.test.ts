@@ -12,11 +12,12 @@ import {
   defineAction,
   defineDetector,
 } from "./plugin.js";
-import type {
-  AuditRecord,
-  DeleteTarget,
-  ModerationPort,
-  Storage,
+import {
+  type AuditRecord,
+  type DeleteTarget,
+  type ModerationPort,
+  parseAuditRecord,
+  type Storage,
 } from "./ports.js";
 import { parseRuleSet, type RuleSet } from "./rule.js";
 
@@ -89,10 +90,24 @@ function harness(options?: { failStorage?: boolean }) {
   const storage: Storage = {
     async putAuditsIfAbsent() {},
     async appendAudit(record) {
+      records.push(record);
+    },
+    async claimAudit(record) {
       if (options?.failStorage) {
         throw new Error("请免费领取礼品");
       }
-      records.push(record);
+      const parsed = parseAuditRecord(record);
+      const exists = records.some(
+        (item) =>
+          item.tenantId === parsed.tenantId &&
+          item.chatId === parsed.chatId &&
+          item.eventId === parsed.eventId,
+      );
+      if (exists) {
+        return false;
+      }
+      records.push(parsed);
+      return true;
     },
     async listAudits(query) {
       return records.slice(0, query.limit);
@@ -282,7 +297,32 @@ describe("runPipeline", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("点击免费领取");
   });
 
-  it("still punishes when the audit lookup fails", async () => {
+  it("writes the audit before the action runs", async () => {
+    const kit = harness();
+    let stored = false;
+    await runPipeline({
+      event: event(),
+      rules: rules(),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [detector("keyword", async () => hit("keyword"))],
+      actions: [
+        action("delete", async () => {
+          stored =
+            (await kit.storage.getAudit("tenant_1", "chat_1", "evt_1")) !==
+            null;
+          return { actionId: "delete", status: "executed" };
+        }),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(stored).toBe(true);
+    expect(kit.records).toHaveLength(1);
+  });
+
+  it("still punishes when the audit claim fails", async () => {
     const kit = harness();
     const phrase = "请免费领取礼品";
     let called = 0;
@@ -299,7 +339,7 @@ describe("runPipeline", () => {
       ],
       storage: {
         ...kit.storage,
-        async getAudit() {
+        async claimAudit() {
           throw new Error(phrase);
         },
       },
@@ -311,18 +351,18 @@ describe("runPipeline", () => {
       { actionId: "delete", status: "executed" },
     ]);
     expect(called).toBe(1);
-    expect(kit.records).toHaveLength(1);
+    expect(kit.records).toHaveLength(0);
     expect(
       kit.logger.entries.some(
         (entry) =>
-          entry.message === "audit_lookup_failed" &&
+          entry.message === "audit_claim_failed" &&
           entry.fields.code === "storage_failed",
       ),
     ).toBe(true);
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
   });
 
-  it("does not look up an audit for an allow decision", async () => {
+  it("does not claim an audit for an allow decision", async () => {
     const kit = harness();
     let lookups = 0;
     await runPipeline({
@@ -338,9 +378,9 @@ describe("runPipeline", () => {
       ],
       storage: {
         ...kit.storage,
-        async getAudit(tenantId, chatId, eventId) {
+        async claimAudit(record) {
           lookups += 1;
-          return kit.storage.getAudit(tenantId, chatId, eventId);
+          return kit.storage.claimAudit(record);
         },
       },
       moderator: kit.moderator,
@@ -622,7 +662,7 @@ describe("runPipeline", () => {
     expect(
       kit.logger.entries.some(
         (entry) =>
-          entry.message === "audit_failed" &&
+          entry.message === "audit_claim_failed" &&
           entry.fields.code === "storage_failed",
       ),
     ).toBe(true);

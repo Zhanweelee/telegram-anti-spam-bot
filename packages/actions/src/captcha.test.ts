@@ -68,6 +68,9 @@ function moderator(
 function storage(): Storage {
   return {
     async appendAudit() {},
+    async claimAudit() {
+      return false;
+    },
     async putAuditsIfAbsent() {},
     async listAudits() {
       return [];

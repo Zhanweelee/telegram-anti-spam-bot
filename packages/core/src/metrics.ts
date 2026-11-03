@@ -115,7 +115,8 @@ function isStorageFailure(entry: LogEntry): boolean {
   }
   return (
     (entry.message === "audit_failed" ||
-      entry.message === "audit_lookup_failed") &&
+      entry.message === "audit_lookup_failed" ||
+      entry.message === "audit_claim_failed") &&
     entry.fields.code === "storage_failed"
   );
 }

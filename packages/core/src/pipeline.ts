@@ -9,7 +9,7 @@ import {
 import { PipelineConfigError, RawContentError } from "./errors.js";
 import { type Event, parseEvent } from "./event.js";
 import type { Evidence } from "./evidence.js";
-import { type LogFields, type Logger, wrapLogger } from "./logger.js";
+import { type Logger, wrapLogger } from "./logger.js";
 import type { Action, ActionResult, CancelSignal, Detector } from "./plugin.js";
 import {
   type ModerationPort,
@@ -173,13 +173,17 @@ export async function runPipeline(
 
   const decision = buildDecision(fired, hitsById);
   const planned = plannedActionIds(fired.map((item) => item.rule));
-  const duplicate = await findDuplicateAudit({
-    event,
-    decision,
-    dryRun,
-    storage: input.storage,
-    logger,
-  });
+  const duplicate =
+    !dryRun &&
+    decision.action !== "allow" &&
+    !(await claimDecision({
+      event,
+      decision,
+      storage: input.storage,
+      logger,
+      createdAt: clock.nowIso(),
+      rawTexts,
+    }));
   const actionResults = duplicate
     ? planned.map((actionId) => ({
         actionId,
@@ -195,17 +199,6 @@ export async function runPipeline(
         moderator: input.moderator,
         logger,
       });
-
-  if (!duplicate && !dryRun && decision.action !== "allow") {
-    await persistAudit({
-      event,
-      decision,
-      storage: input.storage,
-      logger,
-      createdAt: clock.nowIso(),
-      rawTexts,
-    });
-  }
 
   logger.info("pipeline_completed", {
     eventId: event.id,
@@ -421,39 +414,57 @@ function plannedActionIds(rules: readonly Rule[]): string[] {
   return uniqueIds(rules.flatMap((rule) => [...rule.actions]));
 }
 
-async function findDuplicateAudit(input: {
+async function claimDecision(input: {
   event: Event;
   decision: Decision;
-  dryRun: boolean;
   storage: Storage;
   logger: Logger;
+  createdAt: string;
+  rawTexts: readonly string[];
 }): Promise<boolean> {
-  if (input.dryRun || input.decision.action === "allow") {
-    return false;
-  }
   try {
-    const existing = await input.storage.getAudit(
-      input.event.tenantId,
-      input.event.chatId,
-      input.event.id,
-    );
-    if (!existing) {
-      return false;
+    const record = parseAuditRecord({
+      tenantId: input.event.tenantId,
+      chatId: input.event.chatId,
+      eventId: input.event.id,
+      ...(input.event.message
+        ? {
+            messageId: input.event.message.id,
+            textSha256: input.event.message.textSha256,
+          }
+        : input.event.profile
+          ? { textSha256: input.event.profile.textSha256 }
+          : {}),
+      action: input.decision.action,
+      score: input.decision.score,
+      reasons: input.decision.reasons,
+      evidence: input.decision.evidence,
+      ruleIds: input.decision.ruleIds,
+      createdAt: input.createdAt,
+    });
+    for (const text of input.rawTexts) {
+      assertNoRawContent(record, text);
     }
-    input.logger.info("audit_duplicate", {
+    const claimed = await input.storage.claimAudit(record);
+    if (!claimed) {
+      input.logger.info("audit_duplicate", {
+        eventId: input.event.id,
+        tenantId: input.event.tenantId,
+        chatId: input.event.chatId,
+      });
+    }
+    return claimed;
+  } catch (error) {
+    input.logger.error("audit_claim_failed", {
       eventId: input.event.id,
       tenantId: input.event.tenantId,
       chatId: input.event.chatId,
+      code:
+        error instanceof RawContentError
+          ? "raw_content_rejected"
+          : "storage_failed",
     });
     return true;
-  } catch {
-    input.logger.error("audit_lookup_failed", {
-      eventId: input.event.id,
-      tenantId: input.event.tenantId,
-      chatId: input.event.chatId,
-      code: "storage_failed",
-    });
-    return false;
   }
 }
 
@@ -504,50 +515,4 @@ async function executeActions(input: {
     }
   }
   return results;
-}
-
-async function persistAudit(input: {
-  event: Event;
-  decision: Decision;
-  storage: Storage;
-  logger: Logger;
-  createdAt: string;
-  rawTexts: readonly string[];
-}): Promise<void> {
-  try {
-    const record = parseAuditRecord({
-      tenantId: input.event.tenantId,
-      chatId: input.event.chatId,
-      eventId: input.event.id,
-      ...(input.event.message
-        ? {
-            messageId: input.event.message.id,
-            textSha256: input.event.message.textSha256,
-          }
-        : input.event.profile
-          ? { textSha256: input.event.profile.textSha256 }
-          : {}),
-      action: input.decision.action,
-      score: input.decision.score,
-      reasons: input.decision.reasons,
-      evidence: input.decision.evidence,
-      ruleIds: input.decision.ruleIds,
-      createdAt: input.createdAt,
-    });
-    for (const text of input.rawTexts) {
-      assertNoRawContent(record, text);
-    }
-    await input.storage.appendAudit(record);
-  } catch (error) {
-    const fields: LogFields = {
-      eventId: input.event.id,
-      tenantId: input.event.tenantId,
-      chatId: input.event.chatId,
-      code:
-        error instanceof RawContentError
-          ? "raw_content_rejected"
-          : "storage_failed",
-    };
-    input.logger.error("audit_failed", fields);
-  }
 }

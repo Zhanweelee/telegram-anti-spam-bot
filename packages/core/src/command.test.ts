@@ -127,6 +127,20 @@ function storage(): Storage & {
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
     },
+    async claimAudit(record) {
+      const parsed = parseAuditRecord(record);
+      const exists = records.some(
+        (item) =>
+          item.tenantId === parsed.tenantId &&
+          item.chatId === parsed.chatId &&
+          item.eventId === parsed.eventId,
+      );
+      if (exists) {
+        return false;
+      }
+      records.push(parsed);
+      return true;
+    },
     async listAudits(query) {
       const matched = records.filter(
         (record) =>

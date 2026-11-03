@@ -37,6 +37,16 @@ export function createMemoryStorage(options?: {
       records.push(parseAuditRecord(record));
       trimAudits(records, options?.maxAudits);
     },
+    async claimAudit(record) {
+      const parsed = parseAuditRecord(record);
+      const id = auditKey(parsed);
+      if (records.some((item) => auditKey(item) === id)) {
+        return false;
+      }
+      records.push(parsed);
+      trimAudits(records, options?.maxAudits);
+      return true;
+    },
     async putAuditsIfAbsent(input) {
       const seen = new Set(records.map(auditKey));
       for (const record of input) {

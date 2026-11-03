@@ -238,6 +238,20 @@ function harness() {
     async appendAudit(record) {
       records.push(parseAuditRecord(record));
     },
+    async claimAudit(record) {
+      const parsed = parseAuditRecord(record);
+      const exists = records.some(
+        (item) =>
+          item.tenantId === parsed.tenantId &&
+          item.chatId === parsed.chatId &&
+          item.eventId === parsed.eventId,
+      );
+      if (exists) {
+        return false;
+      }
+      records.push(parsed);
+      return true;
+    },
     async putAuditsIfAbsent(input) {
       for (const record of input) {
         const parsed = parseAuditRecord(record);

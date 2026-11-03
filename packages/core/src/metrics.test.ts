@@ -115,7 +115,7 @@ describe("aggregateMetrics", () => {
         dryRun: false,
         duplicate: true,
       }),
-      entry("audit_lookup_failed", {
+      entry("audit_claim_failed", {
         tenantId: "tenant_a",
         chatId: "-100",
         code: "storage_failed",
