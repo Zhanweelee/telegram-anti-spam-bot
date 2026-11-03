@@ -423,6 +423,84 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(result)).not.toContain("hello");
   });
 
+  it("fits a long rule list without cutting a line", async () => {
+    const deps = kit();
+    const actions = [
+      "log",
+      "report",
+      "captcha",
+      "decline",
+      "delete",
+      "mute",
+      "ban",
+    ];
+    const ids = Array.from(
+      { length: 80 },
+      (_, index) => `r${String(index).padStart(2, "0")}_${"a".repeat(60)}`,
+    );
+    const doc = {
+      version: 1,
+      aggregate: "max" as const,
+      rules: ids.map((id) => ({
+        id,
+        enabled: true,
+        detectorIds: ["keyword"],
+        threshold: 100,
+        actions,
+      })),
+    };
+    const shown = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source: {
+        async loadChat() {
+          return null;
+        },
+        async loadDefault() {
+          return doc;
+        },
+      },
+    });
+    expect(shown.status).toBe("reply");
+    if (shown.status !== "reply") {
+      return;
+    }
+    expect(shown.text.length).toBeLessThanOrEqual(3500);
+    const lines = shown.text.split("\n");
+    expect(lines[0]).toBe("rules -100");
+    const listed = lines.slice(1, -1);
+    const omitted = Number(/^还有 (\d+) 条$/.exec(lines.at(-1) ?? "")?.[1]);
+    expect(listed.length + omitted).toBe(80);
+    expect(listed[0]).toContain(ids[0]);
+    expect(shown.text).not.toContain(ids[79]);
+    expect(listed.every((line) => !line.endsWith(" "))).toBe(true);
+    const english = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+      source: {
+        async loadChat() {
+          return null;
+        },
+        async loadDefault() {
+          return doc;
+        },
+      },
+    });
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    const englishLines = english.text.split("\n");
+    const englishOmitted = Number(
+      /^(\d+) more$/.exec(englishLines.at(-1) ?? "")?.[1],
+    );
+    expect(englishLines.slice(1, -1).length + englishOmitted).toBe(80);
+    expect(english.text.length).toBeLessThanOrEqual(3500);
+  });
+
   it("shows rules and help without echoing extra text", async () => {
     const deps = kit();
     const rules = await runOperatorCommand({
