@@ -989,7 +989,7 @@ function encodedPlusSplitsHost(text: string, index: number): boolean {
   ).test(rest);
 }
 
-/** 已经结束的主机名后面，`%2E` 不再收成点。紧挨协议的 `%2E` 仍交给粘连扫描。 */
+/** 已经结束的主机名后面，`%2E` 留下两位十六进制。紧挨协议的 `%2E` 仍交给粘连扫描。 */
 function openFinishedEncodedDot(text: string): string {
   let out = "";
   let index = 0;
@@ -999,7 +999,7 @@ function openFinishedEncodedDot(text: string): string {
       !encodedDotBeforeScheme(text, index + 3) &&
       encodedDotAfterHost(out)
     ) {
-      out += " ";
+      out += ` ${text.slice(index + 1, index + 3)}`;
       index += 3;
       continue;
     }

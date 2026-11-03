@@ -38,3 +38,4 @@ Android 不会在匹配前删掉百分号编码的换行、制表符、不换行
 - `bit%E2%80%8B.ly`、`b%0Ait.ly`、真正的换行和 `http:%0A//bit.ly/…` 仍按短链删除。
 - `http://bit.ly%0Aevil.com/…` 仍按短链删除。证据是 `bit.ly`。`http://203.0.113.169%0Aevil.com/…` 仍按裸 IP 删除。
 - `t.me/+` 中间的零宽编码仍按邀请删除。
+- 已经结束的主机名后面把 `%2E` 收成空格时，`example.com%2Ebit.ly` 会另开 `bit.ly`。见 ADR 0298。
