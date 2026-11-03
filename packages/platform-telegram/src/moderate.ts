@@ -1,4 +1,9 @@
-import type { BanTarget, ModerationPort, MuteTarget } from "@tasb/core";
+import type {
+  BanTarget,
+  ModerationPort,
+  MuteTarget,
+  UnmuteResult,
+} from "@tasb/core";
 import { telegramId } from "./ids.js";
 
 const silenced = {
@@ -124,6 +129,36 @@ export function createTelegramModerator(input: {
           only_if_banned: true,
         },
       });
+    },
+    async unmuteActor(target): Promise<UnmuteResult> {
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "unmute_unavailable",
+        failed: "unmute_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      if (memberStatus(member) !== "restricted") {
+        return "absent";
+      }
+      await postTelegram({
+        token: input.token,
+        method: "restrictChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "unmute_unavailable",
+        failed: "unmute_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+          permissions: speaking,
+          use_independent_chat_permissions: true,
+        },
+      });
+      return "lifted";
     },
     async restrictActor(target) {
       await postTelegram({
@@ -307,6 +342,23 @@ function silencedUntil(
     until_date: nowSeconds() + restrictionSeconds(target.durationSeconds),
     use_independent_chat_permissions: true,
   };
+}
+
+function memberStatus(body: unknown): "restricted" | "open" {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("unmute_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || !("status" in result)) {
+    throw new Error("unmute_failed");
+  }
+  if (result.status === "restricted") {
+    return "restricted";
+  }
+  if (typeof result.status === "string" && result.status.length > 0) {
+    return "open";
+  }
+  throw new Error("unmute_failed");
 }
 
 function unixSeconds(): number {

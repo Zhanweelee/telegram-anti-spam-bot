@@ -1356,6 +1356,114 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("lifts a mute and leaves an unrestricted member unchanged", async () => {
+    const deps = kit();
+    const unmuted: { chatId: string; actorId: string }[] = [];
+    const lifted = await runOperatorCommand({
+      event: event({ text: "/unmute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unmuteActor(target) {
+          unmuted.push({ chatId: target.chatId, actorId: target.actorId });
+          return "lifted";
+        },
+      },
+      ...deps,
+    });
+    expect(lifted).toMatchObject({ text: "已解除禁言 -100 77" });
+    expect(unmuted).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/unmute <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/unmute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unmuteActor() {
+          return "absent";
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "77 is not muted in -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/unmute -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unmuteActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/unmute -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/unmute <chatId> <actorId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/unmute -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unmuteActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/unmute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/unmute -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unmuteActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/unmute -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async unmuteActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("forgets a chat without reading the audit rows", async () => {
     const deps = kit();
     await deps.storage.appendAudit({

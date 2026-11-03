@@ -149,6 +149,9 @@ function harness(options?: { failStorage?: boolean }) {
     async restrictActor() {},
     async releaseActor() {},
     async unbanActor() {},
+    async unmuteActor() {
+      return "lifted" as const;
+    },
   };
   return {
     records,

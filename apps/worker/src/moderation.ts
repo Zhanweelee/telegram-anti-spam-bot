@@ -33,5 +33,8 @@ function createOpenModerator(): ModerationPort {
     async unbanActor() {
       throw new Error("unban_unavailable");
     },
+    async unmuteActor() {
+      throw new Error("unmute_unavailable");
+    },
   };
 }

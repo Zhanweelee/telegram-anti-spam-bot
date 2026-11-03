@@ -178,6 +178,7 @@ export {
   parseAuditRecord,
   parseAuditScope,
   type Storage,
+  type UnmuteResult,
 } from "./ports.js";
 export {
   type ExemptReason,

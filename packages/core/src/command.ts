@@ -67,6 +67,7 @@ const COMMAND_NAMES = [
   "quota",
   "chats",
   "unban",
+  "unmute",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -92,7 +93,9 @@ export interface OperatorCommandInput {
   readonly rulePackArchive?: RulePackArchive;
   readonly quota?: QuotaReader;
   readonly chats?: ChatDirectory;
-  readonly moderator?: Pick<ModerationPort, "unbanActor">;
+  readonly moderator?: Partial<
+    Pick<ModerationPort, "unbanActor" | "unmuteActor">
+  >;
   readonly scope?: CommandScope;
 }
 
@@ -196,6 +199,8 @@ async function dispatch(
       return showChats(input, args);
     case "unban":
       return unbanMember(input, args);
+    case "unmute":
+      return unmuteMember(input, args);
   }
 }
 
@@ -569,13 +574,13 @@ async function unbanMember(
   if (refused) {
     return refused;
   }
-  const moderator = input.moderator;
-  if (!moderator) {
+  const unban = input.moderator?.unbanActor;
+  if (!unban) {
     rejectUnban(input);
     return say(input, "command.invalid");
   }
   try {
-    await moderator.unbanActor({
+    await unban({
       tenantId: input.event.tenantId,
       chatId,
       actorId,
@@ -585,6 +590,56 @@ async function unbanMember(
     return say(input, "command.invalid");
   }
   return say(input, "command.unban.done", { chatId, actorId });
+}
+
+async function unmuteMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.unmute.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const unmute = input.moderator?.unmuteActor;
+  if (!unmute) {
+    rejectUnmute(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const result = await unmute({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    if (result === "absent") {
+      return say(input, "command.unmute.absent", { chatId, actorId });
+    }
+    return say(input, "command.unmute.done", { chatId, actorId });
+  } catch {
+    rejectUnmute(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function rejectUnmute(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unmute",
+  });
 }
 
 function rejectUnban(input: OperatorCommandInput): void {

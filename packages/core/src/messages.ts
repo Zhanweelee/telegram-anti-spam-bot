@@ -64,6 +64,9 @@ export const messageKeys = [
   "command.chats.usage",
   "command.unban.usage",
   "command.unban.done",
+  "command.unmute.usage",
+  "command.unmute.done",
+  "command.unmute.absent",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -97,6 +100,7 @@ const syntax = [
   "/quota <chatId>",
   "/chats",
   "/unban <chatId> <actorId>",
+  "/unmute <chatId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -166,6 +170,9 @@ const zh = {
   "command.chats.usage": "用法：/chats",
   "command.unban.usage": "用法：/unban <chatId> <actorId>",
   "command.unban.done": "已解除封禁 {chatId} {actorId}",
+  "command.unmute.usage": "用法：/unmute <chatId> <actorId>",
+  "command.unmute.done": "已解除禁言 {chatId} {actorId}",
+  "command.unmute.absent": "{chatId} {actorId} 没有禁言",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -241,6 +248,9 @@ const en = {
   "command.chats.usage": "Usage: /chats",
   "command.unban.usage": "Usage: /unban <chatId> <actorId>",
   "command.unban.done": "Unbanned {actorId} in {chatId}",
+  "command.unmute.usage": "Usage: /unmute <chatId> <actorId>",
+  "command.unmute.done": "Unmuted {actorId} in {chatId}",
+  "command.unmute.absent": "{actorId} is not muted in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
