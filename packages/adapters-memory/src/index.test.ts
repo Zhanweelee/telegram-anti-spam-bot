@@ -192,4 +192,14 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", threadId: "55" },
     ]);
   });
+
+  it("records a closed topic with the thread id only when one was given", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.closeTopic({ tenantId: "t", chatId: "c" });
+    await moderator.closeTopic({ tenantId: "t", chatId: "c", threadId: "1" });
+    expect(moderator.topicsClosed).toEqual([
+      { tenantId: "t", chatId: "c" },
+      { tenantId: "t", chatId: "c", threadId: "1" },
+    ]);
+  });
 });

@@ -171,6 +171,7 @@ function harness(options?: { failStorage?: boolean }) {
     async revokeInvite() {},
     async unpinChat() {},
     async unpinTopic() {},
+    async closeTopic() {},
   };
   return {
     records,

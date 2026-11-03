@@ -93,6 +93,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/untopic <chatId> [threadId]` 调用 `unpinTopic`。不带话题号时使用 `unpinAllGeneralForumTopicMessages`。带上话题号时使用 `unpinAllForumTopicMessages`，并只带这个话题号。消息还在。没有 token、话题号不合法或调用失败时回复「参数无效」，不把内存记录当成已经撤下。不调用 `unpinAllChatMessages`，也不改黑名单、封禁或禁言。见 ADR 0380。
 
+`/closetopic <chatId> [threadId]` 调用 `closeTopic`。不带话题号时使用 `closeGeneralForumTopic`。带上话题号时使用 `closeForumTopic`，并只带这个话题号。话题号 `1` 不改写成通用话题。消息还在。没有 token、话题号不合法或调用失败时回复「参数无效」，不把内存记录当成已经关闭。不调用 `hideGeneralForumTopic` 或 `deleteForumTopic`，也不改黑名单、封禁或禁言。见 ADR 0381。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

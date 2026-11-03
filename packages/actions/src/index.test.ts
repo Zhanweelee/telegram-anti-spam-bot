@@ -95,6 +95,7 @@ describe("delete action", () => {
           async revokeInvite() {},
           async unpinChat() {},
           async unpinTopic() {},
+          async closeTopic() {},
         },
         logger: { info() {}, warn() {}, error() {} },
         signal: new AbortController().signal,
@@ -168,6 +169,7 @@ describe("delete action", () => {
         async revokeInvite() {},
         async unpinChat() {},
         async unpinTopic() {},
+        async closeTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -243,6 +245,7 @@ describe("delete action", () => {
         async revokeInvite() {},
         async unpinChat() {},
         async unpinTopic() {},
+        async closeTopic() {},
       },
       logger: { info() {}, warn() {}, error() {} },
       signal: new AbortController().signal,
@@ -320,6 +323,7 @@ function ports(): ModerationPort & {
     async revokeInvite() {},
     async unpinChat() {},
     async unpinTopic() {},
+    async closeTopic() {},
   };
 }
 
