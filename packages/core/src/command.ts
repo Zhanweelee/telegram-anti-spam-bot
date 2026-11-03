@@ -20,6 +20,7 @@ import {
   type AuditRecord,
   type AuditScope,
   auditExportDocument,
+  fitAuditExportDocument,
   minimumAuditExportLength,
   type Storage,
 } from "./ports.js";
@@ -447,11 +448,30 @@ async function exportAudits(
       return auditExportDocument(scope, []);
     }
     if (minimumAuditExportLength(scope, total) > EXPORT_REPLY_LIMIT) {
-      return say(input, "command.export.too_long", { count: total });
+      const page = await input.storage.listAudits({
+        tenantId: scope.tenantId,
+        ...(scope.chatId === undefined ? {} : { chatId: scope.chatId }),
+        limit: Math.min(total, 100),
+      });
+      const fitted = fitAuditExportDocument(
+        scope,
+        page,
+        total,
+        EXPORT_REPLY_LIMIT,
+      );
+      if (fitted === null) {
+        return say(input, "command.export.too_long", { count: total });
+      }
+      return fitted;
     }
     const records = await input.storage.exportAudits(scope);
-    const json = auditExportDocument(scope, records);
-    if (json.length > EXPORT_REPLY_LIMIT) {
+    const json = fitAuditExportDocument(
+      scope,
+      records,
+      records.length,
+      EXPORT_REPLY_LIMIT,
+    );
+    if (json === null) {
       return say(input, "command.export.too_long", { count: records.length });
     }
     return json;

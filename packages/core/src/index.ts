@@ -166,6 +166,7 @@ export {
   auditScopeSchema,
   type BanTarget,
   type DeleteTarget,
+  fitAuditExportDocument,
   type ModerationPort,
   type MuteTarget,
   parseAuditQuery,

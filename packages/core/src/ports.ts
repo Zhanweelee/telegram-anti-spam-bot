@@ -103,15 +103,48 @@ export function parseAuditScope(input: unknown): AuditScope {
 export function auditExportDocument(
   scope: AuditScope,
   audits: readonly AuditRecord[],
+  omitted?: number,
 ): string {
   const parsedScope = parseAuditScope(scope);
   const document = {
     tenantId: parsedScope.tenantId,
     ...(parsedScope.chatId === undefined ? {} : { chatId: parsedScope.chatId }),
+    ...(omitted === undefined || omitted <= 0 ? {} : { omitted }),
     audits: audits.map((record) => parseAuditRecord(record)),
   };
   assertNoRawContent(document);
   return JSON.stringify(document);
+}
+
+/** Newest audits whose JSON fits in `limit`. `null` when one audit is already longer. */
+export function fitAuditExportDocument(
+  scope: AuditScope,
+  audits: readonly AuditRecord[],
+  total: number,
+  limit: number,
+): string | null {
+  if (audits.length === 0) {
+    return null;
+  }
+  const safeTotal = Math.max(total, audits.length);
+  let best: string | null = null;
+  let low = 1;
+  let high = audits.length;
+  while (low <= high) {
+    const count = Math.floor((low + high) / 2);
+    const json = auditExportDocument(
+      scope,
+      audits.slice(audits.length - count),
+      safeTotal - count,
+    );
+    if (json.length <= limit) {
+      best = json;
+      low = count + 1;
+    } else {
+      high = count - 1;
+    }
+  }
+  return best;
 }
 
 /** Shortest JSON length of `count` audits in this scope. */
