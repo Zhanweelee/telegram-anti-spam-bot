@@ -492,6 +492,9 @@ const DRAFT_IP_MID = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)";
 const DRAFT_IP_LAST = "(?:25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[0-9])";
 const DRAFT_IP = `${DRAFT_IP_HEAD}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_MID}\\.${DRAFT_IP_LAST}`;
 const DRAFT_IP_TAIL = "(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>\"']*)?";
+const DRAFT_BARE =
+  "\\b(?:[a-z0-9-]+\\.)+[a-z]{2,}(?::\\d{1,5}(?!\\d))?(?:[/?][^\\s<>\"']*)?";
+const DRAFT_URL = `(?:https?:\\/\\/|tg:(?:\\/\\/)?|www\\.)[^\\s<>"']+|${DRAFT_BARE}`;
 
 function urlsInText(text: string): string[] {
   return scanUrls(text, COPY_URL.source);
@@ -516,7 +519,7 @@ const DRAFT_STOP_CHAR = new RegExp(
 );
 
 function openedDraftUrls(text: string): string[] {
-  const source = `${COPY_URL.source}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
+  const source = `${DRAFT_URL}|\\b(?:${DRAFT_IP})\\b${DRAFT_IP_TAIL}`;
   return scanUrls(
     openBareEnd(openLongLabel(openLongUserinfo(openDraftStops(text)))),
     source,
@@ -1648,6 +1651,13 @@ function closedIpUrl(raw: string): string {
   return `http://${raw}`;
 }
 
+function closedBareUrl(raw: string): string {
+  if (!new RegExp(`^${DRAFT_BARE}$`, "i").test(raw)) {
+    return "";
+  }
+  return `http://${raw}`;
+}
+
 function pushClosedUrl(
   raw: string,
   found: { host: string; invite: boolean }[],
@@ -1659,7 +1669,10 @@ function pushClosedUrl(
     }
     return;
   }
-  const inner = hostFromUrl(raw, false) ?? hostFromUrl(closedIpUrl(raw), false);
+  const inner =
+    hostFromUrl(raw, false) ??
+    hostFromUrl(closedIpUrl(raw), false) ??
+    hostFromUrl(closedBareUrl(raw), false);
   if (!inner) {
     return;
   }

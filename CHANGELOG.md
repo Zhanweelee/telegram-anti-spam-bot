@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-243
+
+- 隐藏草稿里的裸域名和裸 IP 把问号留在这一段。见 ADR 0276。
+- `t.me/share/url?text=example.com?http://bit.ly/…` 留着。`bit.ly?http://t.co/…` 仍按短链删除，证据只有 `bit.ly`。路径不进证据。
+- 云额度的基础检测器名单没有改。
+
 ### P3-242
 
 - 隐藏草稿在点号接不上标签时停住，仍留下后面的主机名。见 ADR 0275。

@@ -32,3 +32,4 @@ Android 读带协议的主机名时，点号只有在后面是标签字符时才
 - 分享 `url` 里的同样写法同样删除。
 - `http://example.com._http://bit.ly/…` 留着。`http://example.com..http://bit.ly/…` 仍按短链删除。
 - `https://t.me./+…` 按邀请删除。`https://t.me../+…` 不改记成邀请。路径不进证据。
+- 裸域名和裸 IP 的问号后来同样留在这一段。见 ADR 0276。
