@@ -74,6 +74,7 @@ const COMMAND_NAMES = [
   "member",
   "delete",
   "decline",
+  "approve",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -105,6 +106,7 @@ export interface OperatorCommandInput {
   readonly moderator?: Partial<
     Pick<
       ModerationPort,
+      | "approveJoin"
       | "banActor"
       | "declineJoin"
       | "deleteMessage"
@@ -229,6 +231,8 @@ async function dispatch(
       return deleteOne(input, args);
     case "decline":
       return declineRequest(input, args);
+    case "approve":
+      return approveRequest(input, args);
   }
 }
 
@@ -578,6 +582,53 @@ function rejectEvals(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "evals",
+  });
+}
+
+async function approveRequest(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.approve.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const approve = input.moderator?.approveJoin;
+  if (!approve) {
+    rejectApprove(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await approve({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+  } catch {
+    rejectApprove(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.approve.done", { chatId, actorId });
+}
+
+function rejectApprove(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "approve",
   });
 }
 

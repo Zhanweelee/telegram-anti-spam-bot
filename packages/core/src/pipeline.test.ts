@@ -144,6 +144,7 @@ function harness(options?: { failStorage?: boolean }) {
     },
     async muteActor() {},
     async banActor() {},
+    async approveJoin() {},
     async declineJoin() {},
     async deferJoin() {},
     async restrictActor() {},

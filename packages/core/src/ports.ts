@@ -103,6 +103,7 @@ export interface ModerationPort {
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
   declineJoin(target: JoinTarget): Promise<void>;
+  approveJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
   restrictActor(target: MuteTarget): Promise<void>;
   releaseActor(target: BanTarget): Promise<void>;

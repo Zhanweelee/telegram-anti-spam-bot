@@ -86,6 +86,8 @@ export const messageKeys = [
   "command.delete.done",
   "command.decline.usage",
   "command.decline.done",
+  "command.approve.usage",
+  "command.approve.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -125,6 +127,7 @@ const syntax = [
   "/member <chatId> <actorId>",
   "/delete <chatId> <messageId>",
   "/decline <chatId> <actorId>",
+  "/approve <chatId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -217,6 +220,8 @@ const zh = {
   "command.delete.done": "已删除 {chatId} {messageId}",
   "command.decline.usage": "用法：/decline <chatId> <actorId>",
   "command.decline.done": "已拒绝 {chatId} {actorId}",
+  "command.approve.usage": "用法：/approve <chatId> <actorId>",
+  "command.approve.done": "已批准 {chatId} {actorId}",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -318,6 +323,8 @@ const en = {
   "command.delete.done": "Deleted {messageId} in {chatId}",
   "command.decline.usage": "Usage: /decline <chatId> <actorId>",
   "command.decline.done": "Declined {actorId} in {chatId}",
+  "command.approve.usage": "Usage: /approve <chatId> <actorId>",
+  "command.approve.done": "Approved {actorId} in {chatId}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

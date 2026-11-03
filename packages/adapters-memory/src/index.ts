@@ -111,6 +111,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
   readonly declined: readonly JoinTarget[];
+  readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
   readonly released: readonly BanTarget[];
@@ -121,6 +122,7 @@ export function createMemoryModerator(): ModerationPort & {
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
   const declined: JoinTarget[] = [];
+  const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
   const released: BanTarget[] = [];
@@ -131,6 +133,7 @@ export function createMemoryModerator(): ModerationPort & {
     muted,
     banned,
     declined,
+    approved,
     deferred,
     restricted,
     released,
@@ -144,6 +147,13 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async banActor(target) {
       banned.push({ ...target });
+    },
+    async approveJoin(target) {
+      approved.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        actorId: target.actorId,
+      });
     },
     async declineJoin(target) {
       declined.push(
