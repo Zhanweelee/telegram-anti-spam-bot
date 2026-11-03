@@ -259,6 +259,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async readAdministrators() {
+      throw new Error("admins_unavailable");
+    },
     async clearReactions(target) {
       reactionsCleared.push({
         tenantId: target.tenantId,

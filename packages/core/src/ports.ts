@@ -91,6 +91,36 @@ export interface ChatTarget {
   readonly chatId: string;
 }
 
+export const administratorRights = [
+  "manageChat",
+  "deleteMessages",
+  "manageVideoChats",
+  "restrictMembers",
+  "promoteMembers",
+  "changeInfo",
+  "inviteUsers",
+  "postStories",
+  "editStories",
+  "deleteStories",
+  "postMessages",
+  "editMessages",
+  "pinMessages",
+  "manageTopics",
+  "manageDirectMessages",
+  "manageTags",
+  "sendWelcomeMessages",
+] as const;
+
+export type AdministratorRight = (typeof administratorRights)[number];
+
+export interface ChatAdministrator {
+  readonly actorId: string;
+  readonly bot: boolean;
+  readonly role: "creator" | "administrator";
+  readonly anonymous: boolean;
+  readonly rights: readonly AdministratorRight[];
+}
+
 export type PermissionState = "on" | "off" | "unknown";
 
 export interface DefaultChatPermissions {
@@ -159,6 +189,7 @@ export interface ModerationPort {
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
+  readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   approveJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;

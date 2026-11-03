@@ -48,6 +48,9 @@ function createOpenModerator(): ModerationPort {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async readAdministrators() {
+      throw new Error("admins_unavailable");
+    },
     clearReactions: (target) => memory.clearReactions(target),
     revokeInvite: (target) => memory.revokeInvite(target),
     unpinChat: (target) => memory.unpinChat(target),

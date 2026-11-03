@@ -161,14 +161,17 @@ export {
 } from "./policy-load.js";
 export type { PolicyStore } from "./policy-store.js";
 export {
+  type AdministratorRight,
   type AuditQuery,
   type AuditRecord,
   type AuditScope,
+  administratorRights,
   auditExportDocument,
   auditQuerySchema,
   auditRecordSchema,
   auditScopeSchema,
   type BanTarget,
+  type ChatAdministrator,
   type ChatTarget,
   type DefaultChatPermissions,
   type DeleteMessagesTarget,

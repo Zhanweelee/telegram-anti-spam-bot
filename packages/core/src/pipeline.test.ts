@@ -164,6 +164,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readPermissions() {
       throw new Error("perms_unavailable");
     },
+    async readAdministrators() {
+      throw new Error("admins_unavailable");
+    },
     async clearReactions() {},
     async revokeInvite() {},
     async unpinChat() {},
