@@ -39,6 +39,9 @@ function store(): CaptchaStore {
     async take() {
       return null;
     },
+    async takeMany() {
+      return [];
+    },
     async listExpired() {
       return [];
     },

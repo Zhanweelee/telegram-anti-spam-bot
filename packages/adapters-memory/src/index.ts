@@ -178,6 +178,23 @@ export function createMemoryCaptchaStore(): CaptchaStore {
       values.delete(captchaKey(tenantId, chatId, actorId));
       return current;
     },
+    async takeMany(challenges) {
+      const taken: CaptchaChallenge[] = [];
+      for (const challenge of challenges) {
+        const parsed = parseCaptchaChallenge(challenge);
+        const current = values.get(
+          captchaKey(parsed.tenantId, parsed.chatId, parsed.actorId),
+        );
+        if (current === undefined || current.nonce !== parsed.nonce) {
+          continue;
+        }
+        values.delete(
+          captchaKey(parsed.tenantId, parsed.chatId, parsed.actorId),
+        );
+        taken.push(current);
+      }
+      return taken;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),

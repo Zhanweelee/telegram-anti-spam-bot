@@ -44,6 +44,21 @@ function createReferenceStore(): CaptchaStore {
       values.delete(key(tenantId, chatId, actorId));
       return current;
     },
+    async takeMany(challenges) {
+      const taken: ReturnType<typeof parseCaptchaChallenge>[] = [];
+      for (const challenge of challenges) {
+        const parsed = parseCaptchaChallenge(challenge);
+        const current = values.get(
+          key(parsed.tenantId, parsed.chatId, parsed.actorId),
+        );
+        if (current === undefined || current.nonce !== parsed.nonce) {
+          continue;
+        }
+        values.delete(key(parsed.tenantId, parsed.chatId, parsed.actorId));
+        taken.push(current);
+      }
+      return taken;
+    },
     async listExpired(nowIso) {
       return [...values.values()].filter((challenge) =>
         isExpired(challenge.expiresAt, nowIso),
@@ -209,7 +224,7 @@ describe("captcha flow", () => {
     expect(kit.released).toEqual([]);
   });
 
-  it("retries an expiry when the bulk delete fails", async () => {
+  it("retries an expiry when the take fails", async () => {
     const kit = harness();
     await beginChallenge({
       event: joinEvent(),
@@ -218,22 +233,89 @@ describe("captcha flow", () => {
       ports: kit.ports,
     });
     kit.clock.iso = "2026-11-01T00:02:00.000Z";
-    const deleteMany = kit.store.deleteMany.bind(kit.store);
+    const takeMany = kit.store.takeMany.bind(kit.store);
     let fail = true;
-    kit.store.deleteMany = (challenges) => {
+    kit.store.takeMany = (challenges) => {
       if (fail) {
         fail = false;
         return Promise.reject(new Error(secret));
       }
-      return deleteMany(challenges);
+      return takeMany(challenges);
     };
     await expect(expireChallenges(kit.ports)).rejects.toThrow(secret);
-    expect(kit.records).toHaveLength(1);
+    expect(kit.records).toHaveLength(0);
     expect(await kit.store.get("local", "-100", "77")).not.toBeNull();
     expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
     expect(await expireChallenges(kit.ports)).toBe(1);
     expect(kit.records).toHaveLength(1);
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
+  });
+
+  it("leaves a newer challenge when an older nonce expires", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 60,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    kit.clock.iso = "2026-11-01T00:02:00.000Z";
+    const listExpired = kit.store.listExpired.bind(kit.store);
+    kit.store.listExpired = async (nowIso) => {
+      const due = await listExpired(nowIso);
+      await kit.store.put({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        nonce: "cd".repeat(8),
+        expiresAt: "2026-11-01T00:10:00.000Z",
+      });
+      return due;
+    };
+    expect(await expireChallenges(kit.ports)).toBe(0);
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "cd".repeat(8),
+    });
+    expect(kit.records).toEqual([]);
+    expect(kit.released).toEqual([]);
+  });
+
+  it("leaves a newer challenge when a late button sees the old nonce", async () => {
+    const kit = harness();
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 60,
+      nonce: "ab".repeat(8),
+      ports: kit.ports,
+    });
+    kit.clock.iso = "2026-11-01T00:02:00.000Z";
+    const read = kit.store.get.bind(kit.store);
+    let nested = false;
+    kit.store.get = async (tenantId, chatId, actorId) => {
+      const challenge = await read(tenantId, chatId, actorId);
+      if (!nested && challenge !== null) {
+        nested = true;
+        await kit.store.put({
+          tenantId: "local",
+          chatId: "-100",
+          actorId: "77",
+          nonce: "cd".repeat(8),
+          expiresAt: "2026-11-01T00:10:00.000Z",
+        });
+      }
+      return challenge;
+    };
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ab".repeat(8)),
+        ports: kit.ports,
+      }),
+    ).toBe("ignored");
+    expect(await kit.store.get("local", "-100", "77")).toMatchObject({
+      nonce: "cd".repeat(8),
+    });
+    expect(kit.records).toEqual([]);
+    expect(kit.released).toEqual([]);
   });
 
   it("ignores a wrong button and does not log the nonce", async () => {
