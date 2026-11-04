@@ -123,6 +123,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `rich_command` 也在 `packages/detectors-rich`。只在 `message.asRichCommand` 为 true 时返回 score 1。证据是 `rich:command`。命令不进证据。看得见的字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。按标识提及仍由 `rich_text_mention` 决定。见 ADR 0507。
 
+`rich_hashtag` 也在 `packages/detectors-rich`。只在 `message.asRichHashtag` 为 true 时返回 score 1。证据是 `rich:hashtag`。标签不进证据。看得见的字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。机器人命令仍由 `rich_command` 决定。见 ADR 0508。
+
 洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。同一条事件 id 在这个 key 最近 32 次计数里只计一次。见 ADR 0010、ADR 0050、ADR 0052、ADR 0338 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 
 链接检测在 `packages/detectors-link`。默认只认短链域名、denylist 和 IPv4 主机。`ReputationSource` 不传就不会发请求。本地已命中时也不调用它。超时或抛错记 `reputation_failed`，返回 null。证据里只留主机名。抽主机名之前的折叠，以及每种字段怎么留下主机名，见 [message-surface.md](message-surface.md)。`tg://join?invite=` 和 `tg://addlist?slug=` 记成 `t.me` 邀请。`tg://resolve` 仍当公开用户名。邀请码不进证据。见 ADR 0102。

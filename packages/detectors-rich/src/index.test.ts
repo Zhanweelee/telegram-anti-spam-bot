@@ -10,6 +10,7 @@ function eventFor(input: {
   asRichMention?: true;
   asRichTextMention?: true;
   asRichCommand?: true;
+  asRichHashtag?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -33,6 +34,7 @@ function eventFor(input: {
               ? { asRichTextMention: true as const }
               : {}),
             ...(input.asRichCommand ? { asRichCommand: true as const } : {}),
+            ...(input.asRichHashtag ? { asRichHashtag: true as const } : {}),
           },
         }
       : {}),
@@ -253,6 +255,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichCommand: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich hashtag and leaves the tag out of the hit", async () => {
+    const tag = createRichDetector("hashtag");
+    const hit = await tag.detect({
+      event: eventFor({ asRichHashtag: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_hashtag",
+      score: 1,
+      reasons: ["rich_hashtag"],
+      evidence: [{ kind: "feature", summary: "rich:hashtag" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90224");
+    expect(
+      await tag.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await tag.detect({
+        event: eventFor({ kind: "chat_member", asRichHashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await tag.detect({
+        event: eventFor({ asRichCommand: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichHashtag: true }),
         logger,
         signal,
       }),

@@ -20939,6 +20939,219 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich hashtag and leaves the tag out", async () => {
+    const hashtag = "#tag90224";
+    const actor = "发话题的人";
+    const marked = await normalize({
+      update_id: 4810,
+      message: {
+        message_id: 850,
+        date: 1761955200,
+        chat: { id: -100499810, type: "supergroup" },
+        from: { id: 117, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "hashtag",
+                  text: "话题广告",
+                  hashtag,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichHashtag).toBe(true);
+    expect(marked.event.message?.asRichCommand).toBeUndefined();
+    expect(marked.event.message?.text).toBe("话题广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(hashtag);
+    expect(markedDump).not.toContain("90224");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4811,
+      message: {
+        message_id: 851,
+        date: 1761955200,
+        chat: { id: -100499811, type: "supergroup" },
+        from: { id: 117 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "hashtag",
+                text: "话题广告",
+                hashtag,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichHashtag).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(hashtag);
+
+    const nested = await normalize({
+      update_id: 4812,
+      message: {
+        message_id: 852,
+        date: 1761955200,
+        chat: { id: -100499812, type: "supergroup" },
+        from: { id: 117 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "hashtag",
+                    text: "嵌套话题",
+                    hashtag,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichHashtag).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套话题");
+    expect(JSON.stringify(nested.event)).not.toContain("90224");
+
+    const blank = await normalize({
+      update_id: 4813,
+      message: {
+        message_id: 853,
+        date: 1761955200,
+        chat: { id: -100499813, type: "supergroup" },
+        from: { id: 117 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "hashtag",
+                text: "空话题",
+                hashtag: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空话题");
+    expect(blank.event.message?.asRichHashtag).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4814,
+      message: {
+        message_id: 854,
+        date: 1761955200,
+        chat: { id: -100499814, type: "supergroup" },
+        from: { id: 117 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "hashtag",
+                text: "布尔话题",
+                hashtag: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔话题");
+    expect(flag.event.message?.asRichHashtag).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4815,
+      message: {
+        message_id: 855,
+        date: 1761955200,
+        chat: { id: -100499815, type: "supergroup" },
+        from: { id: 117 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: { type: "hashtag", text: "缺话题" },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺话题");
+    expect(missing.event.message?.asRichHashtag).toBeUndefined();
+
+    const cash = await normalize({
+      update_id: 4816,
+      message: {
+        message_id: 856,
+        date: 1761955200,
+        chat: { id: -100499816, type: "supergroup" },
+        from: { id: 117 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "cashtag",
+                text: "行情留下",
+                cashtag: "$stay90225",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(cash.status).toBe("event");
+    if (cash.status !== "event") {
+      return;
+    }
+    expect(cash.event.message?.text).toBe("行情留下");
+    expect(cash.event.message?.asRichHashtag).toBeUndefined();
+    expect(JSON.stringify(cash.event)).not.toContain("90225");
+  });
+
   it("marks a rich command and leaves the command out", async () => {
     const command = "/go90223";
     const actor = "发命令的人";
