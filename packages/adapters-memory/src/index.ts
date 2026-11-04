@@ -1,4 +1,5 @@
 import {
+  type AdminTitleTarget,
   type AuditQuery,
   type AuditRecord,
   type BanTarget,
@@ -154,6 +155,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly photosDeleted: readonly ChatTarget[];
   readonly chatsLeft: readonly ChatTarget[];
   readonly memberTagsSet: readonly MemberTagTarget[];
+  readonly adminTitlesSet: readonly AdminTitleTarget[];
   readonly stickerSetsDeleted: readonly ChatTarget[];
   readonly stickerSetsSet: readonly ChatStickerSetTarget[];
   readonly reactionsSet: readonly ReactionChoice[];
@@ -192,6 +194,7 @@ export function createMemoryModerator(): ModerationPort & {
   const photosDeleted: ChatTarget[] = [];
   const chatsLeft: ChatTarget[] = [];
   const memberTagsSet: MemberTagTarget[] = [];
+  const adminTitlesSet: AdminTitleTarget[] = [];
   const stickerSetsDeleted: ChatTarget[] = [];
   const stickerSetsSet: ChatStickerSetTarget[] = [];
   const reactionsSet: ReactionChoice[] = [];
@@ -230,6 +233,7 @@ export function createMemoryModerator(): ModerationPort & {
     photosDeleted,
     chatsLeft,
     memberTagsSet,
+    adminTitlesSet,
     stickerSetsDeleted,
     stickerSetsSet,
     reactionsSet,
@@ -402,6 +406,14 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
         tag: target.tag,
+      });
+    },
+    async setAdminTitle(target) {
+      adminTitlesSet.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        actorId: target.actorId,
+        title: target.title,
       });
     },
     async deleteStickerSet(target) {

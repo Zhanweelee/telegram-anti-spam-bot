@@ -112,6 +112,9 @@ function commandModerator(
     async setMemberTag() {
       throw new Error("tag_unavailable");
     },
+    async setAdminTitle() {
+      throw new Error("admintitle_unavailable");
+    },
     async deleteStickerSet() {
       throw new Error("delstickers_unavailable");
     },

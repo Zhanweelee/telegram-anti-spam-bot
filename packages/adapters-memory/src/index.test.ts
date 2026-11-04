@@ -344,6 +344,27 @@ describe("memory adapter", () => {
     expect(JSON.stringify(moderator.stickerSetsSet)).not.toContain("file_id");
   });
 
+  it("records one admin title including an empty one", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setAdminTitle({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "77",
+      title: "ops",
+    });
+    await moderator.setAdminTitle({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "77",
+      title: "",
+    });
+    expect(moderator.adminTitlesSet).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "77", title: "ops" },
+      { tenantId: "t", chatId: "c", actorId: "77", title: "" },
+    ]);
+    expect(JSON.stringify(moderator.adminTitlesSet)).not.toContain("promote");
+  });
+
   it("records a member tag including an empty one", async () => {
     const moderator = createMemoryModerator();
     await moderator.setMemberTag({

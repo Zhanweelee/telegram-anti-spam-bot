@@ -121,6 +121,7 @@ function moderator(
     async deletePhoto() {},
     async leaveChat() {},
     async setMemberTag() {},
+    async setAdminTitle() {},
     async deleteStickerSet() {},
     async setReaction() {},
     async setStickerSet() {},

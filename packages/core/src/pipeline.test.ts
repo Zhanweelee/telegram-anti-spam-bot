@@ -185,6 +185,7 @@ function harness(options?: { failStorage?: boolean }) {
     async deletePhoto() {},
     async leaveChat() {},
     async setMemberTag() {},
+    async setAdminTitle() {},
     async deleteStickerSet() {},
     async setReaction() {},
     async setStickerSet() {},

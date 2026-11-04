@@ -56,6 +56,7 @@ describe("operator command example", () => {
     expect(help).toContain("/rentopic <chatId> <threadId> <name>");
     expect(help).toContain("/rengeneral <chatId> <name>");
     expect(help).toContain("/stickers <chatId> <name>");
+    expect(help).toContain("/admintitle <chatId> <userId> [title]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -229,6 +230,13 @@ describe("operator command example", () => {
     });
     expect(chosen).toBe("已请求设置 -100 的群贴纸包。消息还在。");
     expect(chosen).not.toContain("Animals_by_SomeBot");
+    const adminTitle = await runPrivateCommand({
+      text: "/admintitle -100 77 ops",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(adminTitle).toBe("已请求设置 -100 里 77 的管理员头衔。权限还在。");
+    expect(adminTitle).not.toContain("ops");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

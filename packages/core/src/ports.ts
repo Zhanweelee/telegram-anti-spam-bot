@@ -173,6 +173,13 @@ export interface ReactionActorTarget {
   readonly kind: "user" | "chat";
 }
 
+export interface AdminTitleTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+  readonly title: string;
+}
+
 export interface MemberTagTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -291,6 +298,7 @@ export interface ModerationPort {
   deletePhoto(target: ChatTarget): Promise<void>;
   leaveChat(target: ChatTarget): Promise<void>;
   setMemberTag(target: MemberTagTarget): Promise<void>;
+  setAdminTitle(target: AdminTitleTarget): Promise<void>;
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
   setStickerSet(target: ChatStickerSetTarget): Promise<void>;

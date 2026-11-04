@@ -6162,6 +6162,235 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("sets an admin title and keeps the title out of the reply", async () => {
+    const deps = kit();
+    const seen: { chatId: string; actorId: string; title: string }[] = [];
+    const remember = {
+      async setAdminTitle(target: {
+        chatId: string;
+        actorId: string;
+        title: string;
+      }) {
+        seen.push({
+          chatId: target.chatId,
+          actorId: target.actorId,
+          title: target.title,
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain("ops");
+    expect(seen).toEqual([{ chatId: "-100", actorId: "77", title: "ops" }]);
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 hello world", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+    expect(seen[1]).toEqual({
+      chatId: "-100",
+      actorId: "77",
+      title: "hello world",
+    });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/admintitle 42 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求设置 42 里 77 的管理员头衔。权限还在。",
+    });
+    expect(seen[2]).toEqual({ chatId: "42", actorId: "77", title: "ops" });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: "已请求清掉 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(seen[3]).toEqual({ chatId: "-100", actorId: "77", title: "" });
+    const emoji = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 👍", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(emoji).toMatchObject({
+      text: "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(JSON.stringify(emoji)).not.toContain("👍");
+    expect(seen[4]).toEqual({ chatId: "-100", actorId: "77", title: "👍" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/admintitle <chatId> <userId> [title]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setAdminTitle() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set the admin title of 77 in -100. The privileges stay.",
+    });
+    expect(JSON.stringify(english)).not.toContain("ops");
+    const englishClear = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setAdminTitle() {},
+      },
+      ...kit(),
+    });
+    expect(englishClear).toMatchObject({
+      text: "Asked to clear the admin title of 77 in -100. The privileges stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 ops", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setAdminTitle() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/admintitle", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/admintitle <chatId> <userId> [title]",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/admintitle -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setAdminTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/admintitle <chatId> <userId> [title]",
+    });
+    const exact = "a".repeat(16);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/admintitle -100 77 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(JSON.stringify(fitted)).not.toContain(exact);
+    expect(seen[5]?.title).toBe(exact);
+    const tooLong = "a".repeat(17);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/admintitle -100 77 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setAdminTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(6);
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/admintitle -100 77 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(hidden).toMatchObject({
+      text: "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(seen[6]?.title).toBe(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/admintitle ${phrase} 77 ops`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setAdminTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/admintitle -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setAdminTitle() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain("ops");
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"admintitle"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/admintitle -200 77 ops",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setAdminTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

@@ -197,6 +197,9 @@ export const messageKeys = [
   "command.rengeneral.done",
   "command.stickers.usage",
   "command.stickers.done",
+  "command.admintitle.usage",
+  "command.admintitle.done",
+  "command.admintitle.cleared",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -269,6 +272,7 @@ const syntax = [
   "/rentopic <chatId> <threadId> <name>",
   "/rengeneral <chatId> <name>",
   "/stickers <chatId> <name>",
+  "/admintitle <chatId> <userId> [title]",
 ].join("\n");
 
 const zh = {
@@ -494,6 +498,11 @@ const zh = {
     "已请求修改 {chatId} 的通用话题名字。其它话题还在。消息还在。",
   "command.stickers.usage": "用法：/stickers <chatId> <name>",
   "command.stickers.done": "已请求设置 {chatId} 的群贴纸包。消息还在。",
+  "command.admintitle.usage": "用法：/admintitle <chatId> <userId> [title]",
+  "command.admintitle.done":
+    "已请求设置 {chatId} 里 {actorId} 的管理员头衔。权限还在。",
+  "command.admintitle.cleared":
+    "已请求清掉 {chatId} 里 {actorId} 的管理员头衔。权限还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -740,6 +749,11 @@ const en = {
   "command.stickers.usage": "Usage: /stickers <chatId> <name>",
   "command.stickers.done":
     "Asked to set the group sticker set of {chatId}. The messages stay.",
+  "command.admintitle.usage": "Usage: /admintitle <chatId> <userId> [title]",
+  "command.admintitle.done":
+    "Asked to set the admin title of {actorId} in {chatId}. The privileges stay.",
+  "command.admintitle.cleared":
+    "Asked to clear the admin title of {actorId} in {chatId}. The privileges stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

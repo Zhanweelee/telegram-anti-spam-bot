@@ -135,6 +135,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/stickers <chatId> <name>` 调用 `setStickerSet`。配了 token 时使用 `setChatStickerSet`，带群号和贴纸包短名。短名是 1 到 64 个英文字母、数字和下划线，以字母开头，不能有连续下划线，并且以 `_by_` 加 bot 用户名结尾。回复不重复短名，消息还在。不合这个形状、多出来的参数或超过 64 个字符都不发出请求。没有 token、群号不合法或调用失败时回复「参数无效」，不把内存记录当成已经设置。不调用 `deleteChatStickerSet`、`getChat` 或 `getStickerSet`，也不改黑名单、封禁或禁言。见 ADR 0401。
 
+`/admintitle <chatId> <userId> [title]` 调用 `setAdminTitle`。配了 token 时使用 `setChatAdministratorCustomTitle`，带群号、用户号和 `custom_title`。不写头衔时送出空字符串，长度 0 到 16。回复不重复头衔，权限还在。超过 16 个字符不发出请求。没有 token、编号不合法或调用失败时回复「参数无效」，不把内存记录当成已经设置。不在本地判断 emoji。不调用 `promoteChatMember`、`setChatMemberTag` 或 `getChat`，也不改黑名单、封禁或禁言。见 ADR 0402。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

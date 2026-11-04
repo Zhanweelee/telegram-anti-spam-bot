@@ -162,6 +162,7 @@ export {
 export type { PolicyStore } from "./policy-store.js";
 export {
   type AdministratorRight,
+  type AdminTitleTarget,
   type AuditQuery,
   type AuditRecord,
   type AuditScope,
