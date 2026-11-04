@@ -5675,6 +5675,143 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("copies saved settings when a group becomes a supergroup", async () => {
+    const keyword = "迁移专属词";
+    const runtime = createMemoryRuntimeStore();
+    const policyStore = createMemoryPolicyStore();
+    await runtime.addKeyword("local", "-1001046", keyword);
+    await runtime.setFloodPolicy("local", "-1001046", {
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    await policyStore.put("local", "-1001046", {
+      exemptAdmins: false,
+      allowActorIds: ["user_kept"],
+    });
+    const logger = createMemoryLogger();
+    const moved = await normalizeUpdate({
+      update: {
+        update_id: 10410,
+        message: {
+          message_id: 10410,
+          date: 1761955200,
+          chat: { id: -1001046, type: "group" },
+          from: { id: 98, first_name: "升级群的人" },
+          migrate_to_chat_id: -100880446,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(moved.status).toBe("event");
+    if (moved.status !== "event") {
+      return;
+    }
+    expect(moved.event.chatMove).toEqual({
+      from: "-1001046",
+      to: "-100880446",
+    });
+    const allowed = await screenTelegramEvent(moved.event, {
+      runtime,
+      policyStore,
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    expect(await runtime.listKeywords("local", "-100880446")).toEqual([
+      keyword,
+    ]);
+    expect(await runtime.listKeywords("local", "-1001046")).toEqual([keyword]);
+    expect(await runtime.getFloodPolicy("local", "-100880446")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await policyStore.get("local", "-100880446")).toEqual({
+      exemptAdmins: false,
+      allowActorIds: ["user_kept"],
+    });
+    expect(JSON.stringify(logger.entries)).toContain("chat_moved");
+    expect(JSON.stringify(logger.entries)).not.toContain(keyword);
+    expect(JSON.stringify(logger.entries)).not.toContain("升级群的人");
+    const spam = await normalizeUpdate({
+      update: {
+        update_id: 10411,
+        message: {
+          message_id: 10411,
+          date: 1761955200,
+          chat: { id: -100880446, type: "supergroup" },
+          from: { id: 99 },
+          text: keyword,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(spam.status).toBe("event");
+    if (spam.status !== "event") {
+      return;
+    }
+    const removed = await screenTelegramEvent(spam.event, {
+      runtime,
+      policyStore,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+      moderator: createMemoryModerator(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("keyword_match");
+
+    await runtime.addKeyword("local", "-100880447", "已有词");
+    await runtime.addKeyword("local", "-1001047", keyword);
+    const kept = await normalizeUpdate({
+      update: {
+        update_id: 10412,
+        message: {
+          message_id: 10412,
+          date: 1761955200,
+          chat: { id: -100880447, type: "supergroup" },
+          from: { id: 98 },
+          migrate_from_chat_id: -1001047,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    await screenTelegramEvent(kept.event, {
+      runtime,
+      policyStore,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(await runtime.listKeywords("local", "-100880447")).toEqual([
+      "已有词",
+    ]);
+    expect(await runtime.listKeywords("local", "-1001047")).toEqual([keyword]);
+
+    const broken = {
+      ...runtime,
+      async getDryRun() {
+        throw new Error("runtime_down");
+      },
+    };
+    const failedLog = createMemoryLogger();
+    const failed = await screenTelegramEvent(moved.event, {
+      runtime: broken,
+      logger: failedLog,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(failed.decision.action).toBe("allow");
+    expect(JSON.stringify(failedLog.entries)).toContain("chat_move_failed");
+    expect(JSON.stringify(failedLog.entries)).not.toContain(keyword);
+  });
+
   it("keeps a checklist notice until that chat asks", async () => {
     const title = "勾完的广告事项";
     const actor = "勾任务的人";

@@ -30,6 +30,7 @@ export {
   supersedeChallenge,
   unrestrictChallenge,
 } from "./captcha.js";
+export { copyMissingChatSettings } from "./chat-move.js";
 export {
   type ChatDirectory,
   type ChatDirectoryDocument,

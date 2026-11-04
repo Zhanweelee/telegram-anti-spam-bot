@@ -159,6 +159,7 @@ async function messageEvent(
   const priceNotice = changedPrice(message);
   const postNotice = suggestedPost(message);
   const checklistNotice = taskNotice(message);
+  const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -171,6 +172,7 @@ async function messageEvent(
       isAdmin: actorIsAdmin(message, new Set(input.adminUserIds)),
     },
     ...(direct ? { direct: true } : {}),
+    ...(chatMove === undefined ? {} : { chatMove }),
     ...(edited ? { edited: true as const } : {}),
     message: {
       id: messageId,
@@ -209,6 +211,33 @@ async function messageEvent(
       ...(checklistNotice === undefined ? {} : { checklistNotice }),
     },
   });
+}
+
+function movedChat(
+  message: Record<string, unknown>,
+  chatId: string,
+): { readonly from: string; readonly to: string } | undefined {
+  const to = migrateChatId(message.migrate_to_chat_id);
+  if (to !== null && to !== chatId) {
+    return { from: chatId, to };
+  }
+  const from = migrateChatId(message.migrate_from_chat_id);
+  if (from !== null && from !== chatId) {
+    return { from, to: chatId };
+  }
+  return undefined;
+}
+
+function migrateChatId(value: unknown): string | null {
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value === 0
+  ) {
+    return null;
+  }
+  const text = String(value);
+  return text.length <= 128 ? text : null;
 }
 
 function taskNotice(

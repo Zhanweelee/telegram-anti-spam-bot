@@ -20614,6 +20614,120 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a group migration and leaves the new id out of the text", async () => {
+    const nextId = -100880441;
+    const previousId = -100880442;
+    const moved = await normalize({
+      update_id: 4620,
+      message: {
+        message_id: 670,
+        date: 1761955200,
+        chat: { id: -100499610, type: "group" },
+        from: { id: 98, first_name: "升级群的人" },
+        migrate_to_chat_id: nextId,
+      },
+    });
+    expect(moved.status).toBe("event");
+    if (moved.status !== "event") {
+      return;
+    }
+    expect(moved.event.chatMove).toEqual({
+      from: "-100499610",
+      to: String(nextId),
+    });
+    expect(moved.event.message?.text).toBe("");
+    expect(JSON.stringify(moved.event.message)).not.toContain(String(nextId));
+    expect(JSON.stringify(moved.event)).not.toContain("升级群的人");
+
+    const arrived = await normalize({
+      update_id: 4621,
+      message: {
+        message_id: 671,
+        date: 1761955200,
+        chat: { id: nextId, type: "supergroup" },
+        from: { id: 98 },
+        text: "今天站会",
+        migrate_from_chat_id: previousId,
+      },
+    });
+    expect(arrived.status).toBe("event");
+    if (arrived.status !== "event") {
+      return;
+    }
+    expect(arrived.event.chatMove).toEqual({
+      from: String(previousId),
+      to: String(nextId),
+    });
+    expect(arrived.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(arrived.event.message)).not.toContain(
+      String(previousId),
+    );
+
+    const both = await normalize({
+      update_id: 4622,
+      message: {
+        message_id: 672,
+        date: 1761955200,
+        chat: { id: -100499612, type: "group" },
+        from: { id: 98 },
+        migrate_to_chat_id: -100880443,
+        migrate_from_chat_id: -100880444,
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.chatMove).toEqual({
+      from: "-100499612",
+      to: "-100880443",
+    });
+
+    const fallback = await normalize({
+      update_id: 4623,
+      message: {
+        message_id: 673,
+        date: 1761955200,
+        chat: { id: -100499613, type: "supergroup" },
+        from: { id: 98 },
+        migrate_to_chat_id: 0,
+        migrate_from_chat_id: -100880445,
+      },
+    });
+    expect(fallback.status).toBe("event");
+    if (fallback.status !== "event") {
+      return;
+    }
+    expect(fallback.event.chatMove).toEqual({
+      from: "-100880445",
+      to: "-100499613",
+    });
+
+    for (const [updateId, chat, field, value] of [
+      [4624, -100499614, "migrate_to_chat_id", 0],
+      [4625, -100499615, "migrate_to_chat_id", 1.5],
+      [4626, -100499616, "migrate_to_chat_id", "-100880441"],
+      [4627, -100499617, "migrate_to_chat_id", true],
+      [4628, -100499618, "migrate_to_chat_id", -100499618],
+    ] as const) {
+      const skipped = await normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: chat, type: "group" },
+          from: { id: 98 },
+          [field]: value,
+        },
+      });
+      expect(skipped.status).toBe("event");
+      if (skipped.status !== "event") {
+        return;
+      }
+      expect(skipped.event.chatMove).toBeUndefined();
+    }
+  });
+
   it("marks a checklist notice and leaves the tasks out", async () => {
     const title = "勾完的广告事项";
     const actor = "勾任务的人";

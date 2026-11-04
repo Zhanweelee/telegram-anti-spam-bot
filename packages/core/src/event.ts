@@ -181,6 +181,13 @@ export const eventSchema = z
       .optional(),
     /** Joined through a chat-folder invite. The invite link stays out. */
     folderInvite: z.literal(true).optional(),
+    /** This chat's saved settings also belong on `to`. The source stays. */
+    chatMove: z
+      .strictObject({
+        from: idSchema,
+        to: idSchema,
+      })
+      .optional(),
   })
   .refine(
     (event) =>
