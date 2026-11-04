@@ -63,6 +63,7 @@ import {
   createForwardDetector,
   defaultForwardKinds,
 } from "@tasb/detector-forward";
+import { createGiftDetector } from "@tasb/detector-gift";
 import { createGiveawayDetector } from "@tasb/detector-giveaway";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
@@ -552,6 +553,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.chatBackground,
         value: createBackgroundDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.giftCard,
+        value: createGiftDetector(),
       },
       {
         source: "builtin",

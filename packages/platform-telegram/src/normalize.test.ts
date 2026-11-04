@@ -20460,6 +20460,160 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a gift card and leaves the publisher out", async () => {
+    const title = "礼物广告标题";
+    const username = "giftposter449";
+    const fileId = "AgADgift449";
+    const giftId = "giftid449";
+    const slug = "PlushSlug449";
+    const card = await normalize({
+      update_id: 4490,
+      message: {
+        message_id: 540,
+        date: 1761955200,
+        chat: { id: -100499470, type: "supergroup" },
+        from: { id: 96 },
+        gift: {
+          gift: {
+            id: giftId,
+            star_count: 90180,
+            sticker: { file_id: fileId, file_unique_id: "uniqgift449" },
+            publisher_chat: { username, title },
+          },
+        },
+      },
+    });
+    expect(card.status).toBe("event");
+    if (card.status !== "event") {
+      return;
+    }
+    expect(card.event.message?.gift).toBe("card");
+    expect(card.event.message?.text).toBe("");
+    expect(card.event.actor).toEqual({ id: "96", isAdmin: false });
+    const cardDump = JSON.stringify(card.event);
+    expect(cardDump).not.toContain(title);
+    expect(cardDump).not.toContain(username);
+    expect(cardDump).not.toContain(fileId);
+    expect(cardDump).not.toContain(giftId);
+    expect(cardDump).not.toContain("90180");
+    expect(cardDump).not.toContain("uniqgift449");
+
+    const alongside = await normalize({
+      update_id: 4491,
+      message: {
+        message_id: 541,
+        date: 1761955200,
+        chat: { id: -100499471, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        gift: {
+          gift: {
+            id: giftId,
+            publisher_chat: { username, title },
+          },
+          text: title,
+        },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.gift).toBe("card");
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(title);
+
+    const unique = await normalize({
+      update_id: 4492,
+      message: {
+        message_id: 542,
+        date: 1761955200,
+        chat: { id: -100499472, type: "supergroup" },
+        from: { id: 96 },
+        unique_gift: {
+          gift: {
+            name: slug,
+            number: 90181,
+            base_name: "收藏广告名字",
+          },
+          origin: "upgrade",
+          owned_gift_id: "owned449",
+        },
+      },
+    });
+    expect(unique.status).toBe("event");
+    if (unique.status !== "event") {
+      return;
+    }
+    expect(unique.event.message?.gift).toBe("unique");
+    expect(unique.event.message?.text).toBe("收藏广告名字");
+    const uniqueDump = JSON.stringify(unique.event);
+    expect(uniqueDump).not.toContain(slug);
+    expect(uniqueDump).not.toContain("90181");
+    expect(uniqueDump).not.toContain("owned449");
+
+    const upgrade = await normalize({
+      update_id: 4493,
+      message: {
+        message_id: 543,
+        date: 1761955200,
+        chat: { id: -100499473, type: "supergroup" },
+        from: { id: 96 },
+        gift_upgrade_sent: {
+          gift: {
+            id: giftId,
+            star_count: 90180,
+            publisher_chat: { username },
+          },
+        },
+      },
+    });
+    expect(upgrade.status).toBe("event");
+    if (upgrade.status !== "event") {
+      return;
+    }
+    expect(upgrade.event.message?.gift).toBe("upgrade");
+    expect(upgrade.event.message?.text).toBe("");
+    expect(JSON.stringify(upgrade.event)).not.toContain(username);
+    expect(JSON.stringify(upgrade.event)).not.toContain(giftId);
+
+    const both = await normalize({
+      update_id: 4494,
+      message: {
+        message_id: 544,
+        date: 1761955200,
+        chat: { id: -100499474, type: "supergroup" },
+        from: { id: 96 },
+        gift: { gift: { id: giftId } },
+        unique_gift: { gift: { base_name: "收藏广告名字" } },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.gift).toBe("card");
+    expect(JSON.stringify(both.event)).not.toContain(giftId);
+
+    const empty = await normalize({
+      update_id: 4495,
+      message: {
+        message_id: 545,
+        date: 1761955200,
+        chat: { id: -100499475, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        gift: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.gift).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a shared user name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "INV288";

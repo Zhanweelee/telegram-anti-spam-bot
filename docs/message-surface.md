@@ -51,3 +51,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `new_chat_photo` 里至少有一个对象时，消息带 `photo: "set"`。`delete_chat_photo` 正好是 true 时带 `cleared`。同时出现时先认换头像。文件号和尺寸不进事件。空数组和 false 不带这个标记。规则 `chat_photo` 默认关闭。见 ADR 0479。
 
 `chat_background_set.type.type` 是壁纸、图案、纯色或 `chat_theme` 时，消息带 `background`。主题记成 `theme`。文件名、文件号、颜色和主题名不进事件。空对象和其它类型不带这个标记。壁纸和图案的文件名仍按 ADR 0430 只留主机名。规则 `chat_background` 默认关闭。见 ADR 0480。
+
+`gift.gift`、`unique_gift.gift` 或 `gift_upgrade_sent.gift` 是对象时，消息带 `gift`，取值是 `card`、`unique` 或 `upgrade`。同时出现时先认普通礼物。星星数量、编号、文件号和发布者名字不因这个标记进事件。空对象不带这个标记。附言和收藏名仍按 ADR 0087 和 ADR 0324 成为正文。规则 `gift_card` 默认关闭。见 ADR 0481。

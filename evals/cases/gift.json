@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gift_card",
+    "kind": "message",
+    "label": "spam",
+    "gift": "card"
+  },
+  {
+    "id": "gift_unique",
+    "kind": "message",
+    "label": "spam",
+    "gift": "unique"
+  },
+  {
+    "id": "gift_upgrade",
+    "kind": "message",
+    "label": "spam",
+    "gift": "upgrade"
+  },
+  {
+    "id": "gift_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "gift_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

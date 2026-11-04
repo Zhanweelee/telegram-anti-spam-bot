@@ -26,6 +26,7 @@
     "@tasb/detector-notice": "workspace:*",
     "@tasb/detector-photo": "workspace:*",
     "@tasb/detector-background": "workspace:*",
+    "@tasb/detector-gift": "workspace:*",
     "@tasb/detector-via": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",

@@ -150,6 +150,7 @@ async function messageEvent(
   const asSharedChat = sharedChatCard(message);
   const photo = photoNotice(message);
   const background = backgroundNotice(message);
+  const gift = giftNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -189,8 +190,28 @@ async function messageEvent(
       ...(asSharedChat ? { asSharedChat: true as const } : {}),
       ...(photo === undefined ? {} : { photo }),
       ...(background === undefined ? {} : { background }),
+      ...(gift === undefined ? {} : { gift }),
     },
   });
+}
+
+function giftNotice(
+  message: Record<string, unknown>,
+): "card" | "unique" | "upgrade" | undefined {
+  if (giftRecord(message.gift)) {
+    return "card";
+  }
+  if (giftRecord(message.unique_gift)) {
+    return "unique";
+  }
+  if (giftRecord(message.gift_upgrade_sent)) {
+    return "upgrade";
+  }
+  return undefined;
+}
+
+function giftRecord(value: unknown): boolean {
+  return isRecord(value) && isRecord(value.gift);
 }
 
 function backgroundNotice(
