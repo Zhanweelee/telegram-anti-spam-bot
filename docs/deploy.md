@@ -215,6 +215,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。
 
+`/rule <chatId> media_spoiler on` 也删富文本里盖着剧透的照片、视频和动图。文件号不进证据。说明仍参与关键词。见 ADR 0503。
+
 ## 确认
 
 ```sh

@@ -267,7 +267,32 @@ function pendingPost(message: Record<string, unknown>): boolean {
 }
 
 function coveredMedia(message: Record<string, unknown>): boolean {
-  return message.has_media_spoiler === true;
+  return (
+    message.has_media_spoiler === true || richBlockSpoiler(message.rich_message)
+  );
+}
+
+function richBlockSpoiler(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richBlockSpoiler(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (
+    (value.type === "photo" ||
+      value.type === "video" ||
+      value.type === "animation") &&
+    value.has_spoiler === true
+  ) {
+    return true;
+  }
+  for (const nested of Object.values(value)) {
+    if (richBlockSpoiler(nested)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function richContactMark(message: Record<string, unknown>): {
