@@ -2,6 +2,7 @@ import {
   createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
+  createD1WarnStore,
   createKvBlocklistStore,
   createKvChatDirectory,
   createKvPolicyStore,
@@ -22,6 +23,7 @@ import type {
   RuleSubscriptionStore,
   RuntimeStore,
   Storage,
+  WarnStore,
 } from "@tasb/core";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { workerCaptcha } from "./captcha-runtime.js";
@@ -29,6 +31,7 @@ import { workerChats } from "./chat-runtime.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
+import { workerWarns } from "./warn-runtime.js";
 
 export interface StoreSlot {
   storage?: Storage;
@@ -40,6 +43,7 @@ export interface StoreSlot {
   archive?: RulePackArchive;
   blocklist?: BlocklistStore;
   captcha?: CaptchaStore;
+  warns?: WarnStore;
   kv?: KVNamespace;
 }
 
@@ -58,12 +62,14 @@ export function resolveStores(
   readonly archive: RulePackArchive;
   readonly blocklist: BlocklistStore;
   readonly captcha: CaptchaStore;
+  readonly warns: WarnStore;
 } {
   if (env.DB !== undefined && slot.storage === undefined) {
     const sql = adaptD1(env.DB);
     slot.storage = createD1Storage(sql);
     slot.review = createD1ReviewQueue(sql);
     slot.captcha = createD1CaptchaStore(sql);
+    slot.warns = createD1WarnStore(sql);
   }
   if (env.POLICY_KV !== undefined && slot.kv !== env.POLICY_KV) {
     const kv = adaptKv(env.POLICY_KV);
@@ -112,6 +118,10 @@ export function resolveStores(
       env.DB !== undefined && slot.captcha !== undefined
         ? slot.captcha
         : workerCaptcha,
+    warns:
+      env.DB !== undefined && slot.warns !== undefined
+        ? slot.warns
+        : workerWarns,
   };
 }
 

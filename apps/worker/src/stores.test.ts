@@ -6,6 +6,7 @@ import { workerRulePacks } from "./pack-runtime.js";
 import { workerReview } from "./review-runtime.js";
 import { workerPolicyStore, workerRuntime, workerStorage } from "./screen.js";
 import { adaptD1, resolveStores, type StoreSlot } from "./stores.js";
+import { workerWarns } from "./warn-runtime.js";
 
 describe("adaptD1", () => {
   it("sends every statement in one batch", async () => {
@@ -66,6 +67,7 @@ describe("resolveStores", () => {
     expect(stores.archive).toBe(workerRulePacks.archive);
     expect(stores.blocklist).toBe(workerBlocklist);
     expect(stores.captcha).toBe(workerCaptcha);
+    expect(stores.warns).toBe(workerWarns);
   });
 
   it("uses one D1 store and one KV store for the isolate", async () => {
@@ -122,6 +124,9 @@ describe("resolveStores", () => {
     expect(first.captcha).toBeDefined();
     expect(first.captcha).toBe(second.captcha);
     expect(first.captcha).not.toBe(workerCaptcha);
+    expect(first.warns).toBeDefined();
+    expect(first.warns).toBe(second.warns);
+    expect(first.warns).not.toBe(workerWarns);
     expect(
       await first.runtime.setRuleSwitch("local", "-100", "via_inline", true),
     ).toBe(true);
@@ -206,6 +211,7 @@ describe("resolveStores", () => {
       expect.stringContaining("rule_sets"),
       expect.stringContaining("review_samples"),
       expect.stringContaining("captcha_challenges"),
+      expect.stringContaining("warn_counts"),
     ]);
   });
 });
