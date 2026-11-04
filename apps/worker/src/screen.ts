@@ -84,6 +84,7 @@ import {
   createLocationDetector,
   createMapDetector,
 } from "@tasb/detector-location";
+import { createLoginForwardDetector } from "@tasb/detector-login";
 import { createMediaDetector } from "@tasb/detector-media";
 import { createTextMentionDetector } from "@tasb/detector-mention";
 import { createNoticeDetector } from "@tasb/detector-notice";
@@ -783,6 +784,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.switchQuery,
         value: createSwitchQueryDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.loginForward,
+        value: createLoginForwardDetector(),
       },
       {
         source: "builtin",

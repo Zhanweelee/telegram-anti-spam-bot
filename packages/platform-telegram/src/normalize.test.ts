@@ -21178,6 +21178,450 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a login forward and leaves the sentence out", async () => {
+    const sentence = "口令90261";
+    const actor = "发登录的人";
+    const marked = await normalize({
+      update_id: 79060,
+      message: {
+        message_id: 79060,
+        date: 1761955200,
+        chat: { id: -100499960, type: "supergroup" },
+        from: { id: 127, first_name: actor },
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "登录广告",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: sentence,
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asLoginForward).toBe(true);
+    expect(marked.event.message?.asSwitchQuery).toBeUndefined();
+    expect(marked.event.message?.text).toBe("登录广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(sentence);
+    expect(markedDump).not.toContain("90261");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 79061,
+      message: {
+        message_id: 79061,
+        date: 1761955200,
+        chat: { id: -100499961, type: "supergroup" },
+        from: { id: 127 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "登录广告",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: sentence,
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asLoginForward).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90261");
+
+    const blank = await normalize({
+      update_id: 79062,
+      message: {
+        message_id: 79062,
+        date: 1761955200,
+        chat: { id: -100499962, type: "supergroup" },
+        from: { id: 127 },
+        text: "空登录",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "空按钮",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: "   ",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空登录");
+    expect(blank.event.message?.asLoginForward).toBeUndefined();
+
+    const empty = await normalize({
+      update_id: 79063,
+      message: {
+        message_id: 79063,
+        date: 1761955200,
+        chat: { id: -100499963, type: "supergroup" },
+        from: { id: 127 },
+        text: "空串登录",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "空串按钮",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: "",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空串登录");
+    expect(empty.event.message?.asLoginForward).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 79064,
+      message: {
+        message_id: 79064,
+        date: 1761955200,
+        chat: { id: -100499964, type: "supergroup" },
+        from: { id: 127 },
+        text: "布尔登录",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "布尔按钮",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: true,
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔登录");
+    expect(flag.event.message?.asLoginForward).toBeUndefined();
+
+    const link = await normalize({
+      update_id: 79065,
+      message: {
+        message_id: 79065,
+        date: 1761955200,
+        chat: { id: -100499965, type: "supergroup" },
+        from: { id: 127 },
+        text: "链接留下",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "打开",
+                login_url: { url: "https://example.com/keep" },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asLoginForward).toBeUndefined();
+
+    const named = await normalize({
+      update_id: 79066,
+      message: {
+        message_id: 79066,
+        date: 1761955200,
+        chat: { id: -100499966, type: "supergroup" },
+        from: { id: 127 },
+        text: "用户名留下",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "登录",
+                login_url: {
+                  url: "https://example.com/keep",
+                  bot_username: "name90262",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("用户名留下");
+    expect(named.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(named.event)).not.toContain("90262");
+
+    const callback = await normalize({
+      update_id: 79067,
+      message: {
+        message_id: 79067,
+        date: 1761955200,
+        chat: { id: -100499967, type: "supergroup" },
+        from: { id: 127 },
+        text: "回调留下",
+        reply_markup: {
+          inline_keyboard: [[{ text: "点我", callback_data: "cb90263" }]],
+        },
+      },
+    });
+    expect(callback.status).toBe("event");
+    if (callback.status !== "event") {
+      return;
+    }
+    expect(callback.event.message?.text).toBe("回调留下");
+    expect(callback.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(callback.event)).not.toContain("90263");
+
+    const keyboard = await normalize({
+      update_id: 79068,
+      message: {
+        message_id: 79068,
+        date: 1761955200,
+        chat: { id: -100499968, type: "supergroup" },
+        from: { id: 127 },
+        text: "键盘留下",
+        reply_markup: {
+          keyboard: [
+            [
+              {
+                text: "键盘按钮",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: "口令90264",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(keyboard.status).toBe("event");
+    if (keyboard.status !== "event") {
+      return;
+    }
+    expect(keyboard.event.message?.text).toBe("键盘留下");
+    expect(keyboard.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(keyboard.event)).not.toContain("90264");
+
+    const rich = await normalize({
+      update_id: 79069,
+      message: {
+        message_id: 79069,
+        date: 1761955200,
+        chat: { id: -100499969, type: "supergroup" },
+        from: { id: 127 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "buttons",
+                  buttons: [
+                    {
+                      text: "嵌套登录",
+                      login_url: {
+                        url: "https://example.com/keep",
+                        forward_text: sentence,
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("嵌套登录");
+    expect(rich.event.message?.asLoginForward).toBe(true);
+    expect(rich.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90261");
+
+    const paragraph = await normalize({
+      update_id: 79070,
+      message: {
+        message_id: 79070,
+        date: 1761955200,
+        chat: { id: -100499970, type: "supergroup" },
+        from: { id: 127 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "button",
+                button: {
+                  text: "段内登录",
+                  login_url: {
+                    url: "https://example.com/keep",
+                    forward_text: sentence,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(paragraph.status).toBe("event");
+    if (paragraph.status !== "event") {
+      return;
+    }
+    expect(paragraph.event.message?.text).toBe("段内登录");
+    expect(paragraph.event.message?.asLoginForward).toBe(true);
+    expect(JSON.stringify(paragraph.event)).not.toContain("90261");
+
+    const queried = await normalize({
+      update_id: 79071,
+      message: {
+        message_id: 79071,
+        date: 1761955200,
+        chat: { id: -100499971, type: "supergroup" },
+        from: { id: 127 },
+        text: "查询留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "查询广告", switch_inline_query: "口令90265" }],
+          ],
+        },
+      },
+    });
+    expect(queried.status).toBe("event");
+    if (queried.status !== "event") {
+      return;
+    }
+    expect(queried.event.message?.text).toBe("查询留下");
+    expect(queried.event.message?.asSwitchQuery).toBe(true);
+    expect(queried.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(queried.event)).not.toContain("90265");
+
+    const copied = await normalize({
+      update_id: 79072,
+      message: {
+        message_id: 79072,
+        date: 1761955200,
+        chat: { id: -100499972, type: "supergroup" },
+        from: { id: 127 },
+        text: "复制留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "复制广告", copy_text: { text: "口令90266" } }],
+          ],
+        },
+      },
+    });
+    expect(copied.status).toBe("event");
+    if (copied.status !== "event") {
+      return;
+    }
+    expect(copied.event.message?.text).toBe("复制留下");
+    expect(copied.event.message?.asCopyText).toBe(true);
+    expect(copied.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(copied.event)).not.toContain("90266");
+
+    const emoji = await normalize({
+      update_id: 79073,
+      message: {
+        message_id: 79073,
+        date: 1761955200,
+        chat: { id: -100499973, type: "supergroup" },
+        from: { id: 127 },
+        text: "表情留下",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji90267",
+          },
+        ],
+      },
+    });
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.text).toBe("表情留下");
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("90267");
+
+    const dated = await normalize({
+      update_id: 79074,
+      message: {
+        message_id: 79074,
+        date: 1761955200,
+        chat: { id: -100499974, type: "supergroup" },
+        from: { id: 127 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90268,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asLoginForward).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90268");
+  });
+
   it("marks a switch query and leaves the sentence out", async () => {
     const sentence = "口令90255";
     const actor = "发查询的人";

@@ -245,6 +245,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> switch_query on` 删这个群里按下后把查询插进输入框的按钮。默认关闭。查询不进证据。看得见的按钮文字仍参与关键词。复制按钮仍看 `copy_text`。见 ADR 0517。
 
+`/rule <chatId> login_forward on` 删这个群里带有转发后替换文字的登录按钮。默认关闭。替换文字不进证据。看得见的按钮文字仍参与关键词。内联查询仍看 `switch_query`。见 ADR 0518。
+
 ## 确认
 
 ```sh

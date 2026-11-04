@@ -1,0 +1,5 @@
+{
+  "detector": "login_forward",
+  "precision": 1,
+  "recall": 1
+}
