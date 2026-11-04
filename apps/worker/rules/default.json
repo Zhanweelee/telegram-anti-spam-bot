@@ -315,6 +315,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "checklist_added",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["checklist_added"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "checklist_added_spam",
+    "kind": "message",
+    "label": "spam",
+    "asChecklistAdded": true
+  },
+  {
+    "id": "checklist_added_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "checklist_added_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

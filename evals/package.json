@@ -46,6 +46,7 @@
     "@tasb/detector-owner": "workspace:*",
     "@tasb/detector-proximity": "workspace:*",
     "@tasb/detector-poll": "workspace:*",
+    "@tasb/detector-task": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

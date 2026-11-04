@@ -129,6 +129,8 @@ export const messageSchema = z
     asProximity: z.literal(true).optional(),
     /** Poll option added or deleted. The option id and the poll stay out. */
     pollNotice: z.enum(["added", "deleted"]).optional(),
+    /** Added checklist tasks. Task ids and the checklist stay out. Task text stays in the message. */
+    asChecklistAdded: z.literal(true).optional(),
   })
   .refine(
     (message) =>
