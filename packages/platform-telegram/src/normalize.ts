@@ -3355,6 +3355,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
   }
   pushPlainUrls(storyPosterNames(message), urls);
+  pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
 }
 
@@ -5691,6 +5692,36 @@ function giftPublisherNames(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/**
+ * 客座 bot 回复上画出的召唤者名字。有名时不读姓。用户名和频道用户名不读。
+ * 名字不进正文。
+ */
+function guestCallerLabel(message: Record<string, unknown>): string {
+  const user = message.guest_bot_caller_user;
+  if (isRecord(user)) {
+    if (typeof user.first_name === "string" && user.first_name.length > 0) {
+      return user.first_name.slice(0, MAX_TEXT);
+    }
+    if (
+      (user.first_name === undefined || user.first_name === "") &&
+      typeof user.last_name === "string" &&
+      user.last_name.length > 0
+    ) {
+      return user.last_name.slice(0, MAX_TEXT);
+    }
+    return "";
+  }
+  const chat = message.guest_bot_caller_chat;
+  if (
+    isRecord(chat) &&
+    typeof chat.title === "string" &&
+    chat.title.length > 0
+  ) {
+    return chat.title.slice(0, MAX_TEXT);
+  }
+  return "";
 }
 
 function storyPosterNames(message: Record<string, unknown>): string {

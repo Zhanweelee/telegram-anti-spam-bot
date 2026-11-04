@@ -22756,4 +22756,206 @@ describe("normalizeUpdate", () => {
     expect(incomplete.event.message?.audienceId).toBeUndefined();
     expect(incomplete.event.message?.text).toBe("今天站会");
   });
+
+  it("keeps hostnames from the name drawn on a guest bot reply", async () => {
+    const phrase = "请免费领取礼品";
+    const path = "call414";
+    const code = "INV414";
+    const called = await normalize({
+      update_id: 4940,
+      message: {
+        message_id: 18,
+        date: 1761955200,
+        chat: { id: -100896, type: "supergroup", title: phrase },
+        from: { id: 8916, first_name: "https://tinyurl.com/from414" },
+        text: "今天站会",
+        guest_bot_caller_user: {
+          id: 89160,
+          is_bot: false,
+          first_name: `${phrase} https://bit.ly/${path} https://t.me/+${code}.`,
+          last_name: "https://tinyurl.com/last414",
+          username: "cutt.ly",
+        },
+      },
+    });
+    expect(called.status).toBe("event");
+    if (called.status !== "event") {
+      return;
+    }
+    expect(called.event.message?.text).toBe("今天站会");
+    expect(called.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(called.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(called.event.message?.invites).toEqual(["t.me"]);
+    const calledDump = JSON.stringify(called.event);
+    expect(calledDump).not.toContain(phrase);
+    expect(calledDump).not.toContain(path);
+    expect(calledDump).not.toContain(code);
+    expect(calledDump).not.toContain("last414");
+    expect(calledDump).not.toContain("tinyurl.com");
+    expect(calledDump).not.toContain("cutt.ly");
+    expect(calledDump).not.toContain("from414");
+    expect(calledDump).not.toContain("89160");
+
+    const surname = await normalize({
+      update_id: 4941,
+      message: {
+        message_id: 19,
+        date: 1761955200,
+        chat: { id: -100897, type: "supergroup" },
+        from: { id: 8917, first_name: "https://tinyurl.com/from414b" },
+        text: "今天站会",
+        guest_bot_caller_user: {
+          id: 89170,
+          is_bot: false,
+          first_name: "",
+          last_name: `https://bit.ly/${path}b`,
+          username: "cutt.ly",
+        },
+      },
+    });
+    expect(surname.status).toBe("event");
+    if (surname.status !== "event") {
+      return;
+    }
+    expect(surname.event.message?.text).toBe("今天站会");
+    expect(surname.event.message?.hosts).toEqual(["bit.ly"]);
+    const surnameDump = JSON.stringify(surname.event);
+    expect(surnameDump).not.toContain(`${path}b`);
+    expect(surnameDump).not.toContain("cutt.ly");
+    expect(surnameDump).not.toContain("from414b");
+    expect(surnameDump).not.toContain("89170");
+
+    const spaced = await normalize({
+      update_id: 4942,
+      message: {
+        message_id: 20,
+        date: 1761955200,
+        chat: { id: -100898, type: "supergroup" },
+        from: { id: 8918 },
+        text: "今天站会",
+        guest_bot_caller_user: {
+          id: 89180,
+          is_bot: false,
+          first_name: " ",
+          last_name: "https://bit.ly/skip414",
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(spaced.event)).not.toContain("skip414");
+    expect(JSON.stringify(spaced.event)).not.toContain("bit.ly");
+
+    const room = await normalize({
+      update_id: 4943,
+      message: {
+        message_id: 21,
+        date: 1761955200,
+        chat: { id: -100899, type: "supergroup" },
+        from: { id: 8919 },
+        guest_bot_caller_chat: {
+          id: -1008990,
+          type: "channel",
+          title: `https://bit.ly/${path}c`,
+          username: "tinyurl.com",
+          first_name: "https://cutt.ly/fn414",
+        },
+      },
+    });
+    expect(room.status).toBe("event");
+    if (room.status !== "event") {
+      return;
+    }
+    expect(room.event.message?.text).toBe("");
+    expect(room.event.message?.hosts).toEqual(["bit.ly"]);
+    const roomDump = JSON.stringify(room.event);
+    expect(roomDump).not.toContain(`${path}c`);
+    expect(roomDump).not.toContain("tinyurl.com");
+    expect(roomDump).not.toContain("cutt.ly");
+    expect(roomDump).not.toContain("fn414");
+    expect(roomDump).not.toContain("8990");
+
+    const named = await normalize({
+      update_id: 4944,
+      message: {
+        message_id: 22,
+        date: 1761955200,
+        chat: { id: -100900, type: "supergroup" },
+        from: { id: 8920 },
+        text: "今天站会",
+        guest_bot_caller_user: {
+          id: 89200,
+          is_bot: false,
+          first_name: phrase,
+          last_name: "https://bit.ly/hide414",
+        },
+        guest_bot_caller_chat: {
+          id: -1009000,
+          type: "channel",
+          title: "https://tinyurl.com/room414",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.hosts).toBeUndefined();
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("hide414");
+    expect(namedDump).not.toContain("room414");
+    expect(namedDump).not.toContain("tinyurl.com");
+    expect(namedDump).not.toContain("bit.ly");
+
+    const edited = await normalize({
+      update_id: 4945,
+      edited_message: {
+        message_id: 23,
+        date: 1761955200,
+        edit_date: 1761955300,
+        chat: { id: -100901, type: "supergroup" },
+        from: { id: 8921 },
+        text: "今天站会",
+        guest_bot_caller_user: {
+          id: 89210,
+          is_bot: false,
+          first_name: "https://bit.ly/edit414",
+        },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.text).toBe("今天站会");
+    expect(edited.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(edited.event)).not.toContain("edit414");
+
+    const queried = await normalize({
+      update_id: 4946,
+      message: {
+        message_id: 24,
+        date: 1761955200,
+        chat: { id: -100902, type: "supergroup" },
+        from: { id: 8922 },
+        text: "今天站会",
+        guest_query_id: "gq414",
+        guest_bot_caller_user: {
+          id: 89220,
+          is_bot: false,
+          first_name: "https://bit.ly/query414",
+        },
+      },
+    });
+    expect(queried.status).toBe("ignored");
+    expect(JSON.stringify(queried)).not.toContain("query414");
+    expect(JSON.stringify(queried)).not.toContain("gq414");
+    expect(JSON.stringify(queried)).not.toContain("bit.ly");
+  });
 });
