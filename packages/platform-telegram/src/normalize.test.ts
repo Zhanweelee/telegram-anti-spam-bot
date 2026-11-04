@@ -20614,6 +20614,145 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks added checklist tasks and keeps the task text", async () => {
+    const first = "新加的广告事项";
+    const second = "另一条广告事项";
+    const title = "原清单标题广告";
+    const actor = "加任务的人";
+    const completer = "完成任务的人";
+    const firstId = 90204;
+    const secondId = 90205;
+    const added = await normalize({
+      update_id: 4670,
+      message: {
+        message_id: 720,
+        date: 1761955200,
+        chat: { id: -100499660, type: "supergroup" },
+        from: { id: 103, first_name: actor },
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: firstId,
+              text: first,
+              completed_by_user: { id: 1, first_name: completer },
+            },
+            { id: secondId, text: second },
+          ],
+          checklist_message: {
+            message_id: 1,
+            date: 1761955200,
+            chat: { id: -100499660, type: "supergroup" },
+            checklist: { title },
+          },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.asChecklistAdded).toBe(true);
+    expect(added.event.message?.text).toBe(`${first} ${second}`);
+    const dumped = JSON.stringify(added.event);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(completer);
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(String(firstId));
+    expect(dumped).not.toContain(String(secondId));
+
+    const kept = await normalize({
+      update_id: 4671,
+      message: {
+        message_id: 721,
+        date: 1761955200,
+        chat: { id: -100499661, type: "supergroup" },
+        from: { id: 103, first_name: actor },
+        text: "今天站会",
+        checklist_tasks_added: {
+          tasks: [{ id: firstId, text: first }],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asChecklistAdded).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(first);
+
+    const skippedBlank = await normalize({
+      update_id: 4672,
+      message: {
+        message_id: 722,
+        date: 1761955200,
+        chat: { id: -100499662, type: "supergroup" },
+        from: { id: 103 },
+        checklist_tasks_added: {
+          tasks: [
+            { id: firstId, text: "" },
+            { id: secondId, text: second },
+          ],
+        },
+      },
+    });
+    expect(skippedBlank.status).toBe("event");
+    if (skippedBlank.status !== "event") {
+      return;
+    }
+    expect(skippedBlank.event.message?.asChecklistAdded).toBe(true);
+    expect(skippedBlank.event.message?.text).toBe(second);
+    expect(JSON.stringify(skippedBlank.event)).not.toContain(String(secondId));
+
+    const empty = await normalize({
+      update_id: 4673,
+      message: {
+        message_id: 723,
+        date: 1761955200,
+        chat: { id: -100499663, type: "supergroup" },
+        from: { id: 103 },
+        checklist_tasks_added: { tasks: [] },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asChecklistAdded).toBeUndefined();
+
+    const blank = await normalize({
+      update_id: 4674,
+      message: {
+        message_id: 724,
+        date: 1761955200,
+        chat: { id: -100499664, type: "supergroup" },
+        from: { id: 103 },
+        checklist_tasks_added: { tasks: [{ id: firstId, text: "" }] },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.asChecklistAdded).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4675,
+      message: {
+        message_id: 725,
+        date: 1761955200,
+        chat: { id: -100499665, type: "supergroup" },
+        from: { id: 103 },
+        checklist_tasks_added: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asChecklistAdded).toBeUndefined();
+  });
+
   it("marks a poll option change and keeps the option text", async () => {
     const added = "投票广告选项";
     const removed = "删掉的广告选项";

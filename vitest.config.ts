@@ -41,6 +41,7 @@ export default defineConfig({
       "packages/detectors-owner",
       "packages/detectors-proximity",
       "packages/detectors-poll",
+      "packages/detectors-task",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

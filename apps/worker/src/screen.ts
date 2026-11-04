@@ -99,6 +99,7 @@ import { createScriptDetector } from "@tasb/detector-script";
 import { createSenderDetector } from "@tasb/detector-sender";
 import { createSharedChatDetector } from "@tasb/detector-shared-chat";
 import { createStoryDetector } from "@tasb/detector-story";
+import { createTaskDetector } from "@tasb/detector-task";
 import { createTitleDetector } from "@tasb/detector-title";
 import { createViaDetector } from "@tasb/detector-via";
 import { type AlbumWatch, sweepAlbum, workerAlbumWatch } from "./album.js";
@@ -654,6 +655,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.pollNotice,
         value: createPollDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.taskAdded,
+        value: createTaskDetector(),
       },
       {
         source: "builtin",
