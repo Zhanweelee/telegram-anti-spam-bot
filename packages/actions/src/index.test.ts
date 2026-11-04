@@ -103,6 +103,9 @@ describe("delete action", () => {
           async readDefaultRights() {
             throw new Error("botrights_unavailable");
           },
+          async readCommandMenu() {
+            throw new Error("commands_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -209,6 +212,9 @@ describe("delete action", () => {
         },
         async readDefaultRights() {
           throw new Error("botrights_unavailable");
+        },
+        async readCommandMenu() {
+          throw new Error("commands_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -318,6 +324,9 @@ describe("delete action", () => {
         },
         async readDefaultRights() {
           throw new Error("botrights_unavailable");
+        },
+        async readCommandMenu() {
+          throw new Error("commands_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -429,6 +438,9 @@ function ports(): ModerationPort & {
     },
     async readDefaultRights() {
       throw new Error("botrights_unavailable");
+    },
+    async readCommandMenu() {
+      throw new Error("commands_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");

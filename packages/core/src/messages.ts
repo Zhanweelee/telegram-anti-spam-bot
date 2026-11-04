@@ -214,6 +214,9 @@ export const messageKeys = [
   "command.botrights.channels",
   "command.setcommands.usage",
   "command.setcommands.done",
+  "command.commands.usage",
+  "command.commands.header",
+  "command.commands.more",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -292,6 +295,7 @@ const syntax = [
   "/myrights [channels] <clear|right...>",
   "/botrights [channels]",
   "/setcommands [private]",
+  "/commands [private]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -557,6 +561,9 @@ const zh = {
   "command.setcommands.usage": "用法：/setcommands [private]",
   "command.setcommands.done":
     "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
+  "command.commands.usage": "用法：/commands [private]",
+  "command.commands.header": "命令 {count}",
+  "command.commands.more": "+{count}",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -831,6 +838,9 @@ const en = {
   "command.setcommands.usage": "Usage: /setcommands [private]",
   "command.setcommands.done":
     "Asked to set the command menu in private chats. Group menus stay. People who already have a language-specific list are unchanged.",
+  "command.commands.usage": "Usage: /commands [private]",
+  "command.commands.header": "commands {count}",
+  "command.commands.more": "+{count}",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

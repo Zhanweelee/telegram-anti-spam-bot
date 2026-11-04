@@ -1567,6 +1567,76 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the private command menu and drops extra fields", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: [
+            { command: "help", description: "/help", note: phrase },
+            {
+              command: "stickers",
+              description: "/stickers <chatId> <name>",
+              is_ephemeral: true,
+            },
+          ],
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.readCommandMenu({ tenantId: "local" }),
+    ).resolves.toEqual([
+      { command: "help", description: "/help", ephemeral: "unknown" },
+      {
+        command: "stickers",
+        description: "/stickers <chatId> <name>",
+        ephemeral: "on",
+      },
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getMyCommands`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      scope: { type: "all_private_chats" },
+    });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.method).not.toContain("setMyCommands");
+    expect(calls[0]?.method).not.toContain("deleteMyCommands");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readCommandMenu({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("commands_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: [{ command: "help", description: "" }],
+            }),
+            { status: 200 },
+          ),
+      }).readCommandMenu({ tenantId: "local" }),
+    ).rejects.toThrow("commands_failed");
+  });
+
   it("sets the private command menu without a language or a group scope", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

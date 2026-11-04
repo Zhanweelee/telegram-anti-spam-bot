@@ -62,6 +62,7 @@ describe("operator command example", () => {
     expect(help).toContain("/myrights [channels] <clear|right...>");
     expect(help).toContain("/botrights [channels]");
     expect(help).toContain("/setcommands [private]");
+    expect(help).toContain("/commands [private]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -209,6 +210,12 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(botRights).toBe("参数无效");
+    const listed = await runPrivateCommand({
+      text: "/commands",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(listed).toBe("参数无效");
     const topic = await runPrivateCommand({
       text: "/newtopic -100 hello",
       actorId: "42",
