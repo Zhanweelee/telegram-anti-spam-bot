@@ -2905,7 +2905,7 @@ describe("handleIncomingEvent", () => {
     });
     expect(body.commands.at(-1)).toEqual({
       command: "allowhost",
-      description: "/allowhost <chatId> [add|remove <host>|reset]",
+      description: "/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
     });
     expect(body.commands.find((item) => item.command === "verifyfail")).toEqual(
       {

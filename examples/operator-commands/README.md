@@ -10,6 +10,8 @@
 
 `/commands skip 95` 跳过前面的 95 条再往下列。不写 `skip` 时仍从第一条开始。
 
+`/allowhost -100 skip 31` 只列出最后一台放行主机。不写 `skip` 时仍从第一台开始。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

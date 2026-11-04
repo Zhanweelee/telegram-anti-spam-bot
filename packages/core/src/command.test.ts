@@ -7953,7 +7953,7 @@ describe("runOperatorCommand", () => {
     });
     expect(menu.at(-1)).toEqual({
       command: "allowhost",
-      description: "/allowhost <chatId> [add|remove <host>|reset]",
+      description: "/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
     });
     expect(menu.find((item) => item.command === "verifyfail")).toEqual({
       command: "verifyfail",
@@ -18624,7 +18624,7 @@ describe("runOperatorCommand", () => {
     if (help.status === "reply") {
       expect(help.text).toContain("/verifyfail <chatId> [stay|kick|ban|reset]");
       expect(help.text).toContain(
-        "/allowhost <chatId> [add|remove <host>|reset]",
+        "/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
       );
     }
   });
@@ -18744,7 +18744,7 @@ describe("runOperatorCommand", () => {
       adminActorIds: ["42"],
     });
     expect(usage).toMatchObject({
-      text: "用法：/allowhost <chatId> [add|remove <host>|reset]",
+      text: "用法：/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
     });
     expect(JSON.stringify(usage)).not.toContain(phrase);
     const group = await runOperatorCommand({
@@ -18796,6 +18796,143 @@ describe("runOperatorCommand", () => {
     expect(broken).toMatchObject({ text: "参数无效" });
     expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+  });
+
+  it("continues a long allow-host list after skip", async () => {
+    const deps = kit();
+    const hosts = Array.from({ length: 32 }, (_, index) => {
+      const tail = String(index).padStart(2, "0");
+      return `${"a".repeat(63)}.${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(59)}${tail}`;
+    });
+    for (const host of hosts) {
+      expect(host).toHaveLength(253);
+      expect(await deps.runtime.addAllowHost("local", "-100", host)).toBe(true);
+    }
+    const first = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(first.status).toBe("reply");
+    if (first.status !== "reply") {
+      return;
+    }
+    expect(first.text.length).toBeLessThanOrEqual(3500);
+    expect(first.text.startsWith("-100 放行主机 32\n")).toBe(true);
+    const lines = first.text.split("\n");
+    const omitted = Number(/^还有 (\d+) 个$/.exec(lines.at(-1) ?? "")?.[1]);
+    expect(omitted).toBeGreaterThan(0);
+    const listed = lines.slice(1, -1);
+    expect(listed.length + omitted).toBe(32);
+    expect(listed).toEqual(hosts.slice(0, listed.length));
+    expect(listed.every((host) => host.length === 253)).toBe(true);
+    expect(first.text).not.toContain(hosts[31]);
+    const same = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100 skip 0", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(same).toEqual(first);
+    const kept = 32 - omitted;
+    const tail = await runOperatorCommand({
+      ...deps,
+      event: event({ text: `/allowhost -100 skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith("-100 放行主机 32\n")).toBe(true);
+    const tailLines = tail.text.split("\n");
+    const tailOmitted = /^还有 (\d+) 个$/.exec(tailLines.at(-1) ?? "")?.[1];
+    const tailHosts =
+      tailOmitted === undefined ? tailLines.slice(1) : tailLines.slice(1, -1);
+    expect(tailHosts.every((host) => host.length === 253)).toBe(true);
+    expect(tailHosts[0]).toBe(hosts[kept]);
+    const last = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100 skip 31", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(last).toMatchObject({
+      text: `-100 放行主机 32\n${hosts[31]}`,
+    });
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100 skip 31", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english).toMatchObject({
+      text: `Allowed hosts for -100: 32\n${hosts[31]}`,
+    });
+    const past = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100 skip 32", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const empty = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -200 skip 0", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(empty).toMatchObject({ text: "-200 放行主机 0" });
+    const emptySkip = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -200 skip 1", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const badLog = kit();
+    const bad = await runOperatorCommand({
+      ...badLog,
+      event: event({ text: "/allowhost -100 skip 01", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...badLog.runtime,
+        async listAllowHosts() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const phraseSkip = await runOperatorCommand({
+      ...badLog,
+      event: event({ text: `/allowhost -100 skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(phraseSkip).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(phraseSkip)).not.toContain(phrase);
+    expect(JSON.stringify(badLog.logger.entries)).not.toContain(phrase);
+    const extra = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/allowhost -100 skip 1 extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
+    });
+    const denied = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/allowhost -200 skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      runtime: {
+        ...deps.runtime,
+        async listAllowHosts() {
+          throw new Error("called");
+        },
+      },
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(denied)).not.toContain("called");
   });
 
   it("bans on the second warning when the chat limit is 2", async () => {

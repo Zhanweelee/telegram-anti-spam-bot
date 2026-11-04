@@ -6457,6 +6457,16 @@ async function editAllowHost(
     }
     return say(input, "command.allowhost.show", { chatId, count: 0 });
   }
+  if (op === "skip") {
+    if (args.length !== 3) {
+      return say(input, "command.invalid");
+    }
+    const count = rulesSkipCount(args[2] ?? "");
+    if (count === undefined) {
+      return say(input, "command.invalid");
+    }
+    return formatAllowHosts(input, chatId, count);
+  }
   if ((op !== "add" && op !== "remove") || args.length !== 3) {
     return say(input, "command.allowhost.usage");
   }
@@ -6503,6 +6513,7 @@ async function editAllowHost(
 async function formatAllowHosts(
   input: OperatorCommandInput,
   chatId: string,
+  skip = 0,
 ): Promise<string> {
   const list = await readAllowHosts(input, chatId);
   if (list === undefined) {
@@ -6513,9 +6524,17 @@ async function formatAllowHosts(
     count: list.length,
   });
   if (list.length === 0) {
+    if (skip > 0) {
+      return say(input, "command.invalid");
+    }
     return header;
   }
-  return [header, ...list].join("\n");
+  if (skip >= list.length) {
+    return say(input, "command.invalid");
+  }
+  return fitAdministratorLines(header, list.slice(skip), (count) =>
+    say(input, "command.allowhost.more", { count }),
+  );
 }
 
 async function readAllowHosts(
