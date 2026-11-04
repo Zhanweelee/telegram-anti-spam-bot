@@ -106,6 +106,9 @@ function commandModerator(
     async setMemberTag() {
       throw new Error("tag_unavailable");
     },
+    async deleteStickerSet() {
+      throw new Error("delstickers_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

@@ -178,6 +178,8 @@ export const messageKeys = [
   "command.tag.usage",
   "command.tag.done",
   "command.tag.cleared",
+  "command.delstickers.usage",
+  "command.delstickers.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -241,6 +243,7 @@ const syntax = [
   "/delphoto <chatId>",
   "/leave <chatId>",
   "/tag <chatId> <userId> [tag]",
+  "/delstickers <chatId>",
 ].join("\n");
 
 const zh = {
@@ -444,6 +447,8 @@ const zh = {
   "command.tag.usage": "用法：/tag <chatId> <userId> [tag]",
   "command.tag.done": "已请求设置 {chatId} 里 {actorId} 的标签。名字还在。",
   "command.tag.cleared": "已请求清掉 {chatId} 里 {actorId} 的标签。名字还在。",
+  "command.delstickers.usage": "用法：/delstickers <chatId>",
+  "command.delstickers.done": "已请求删除 {chatId} 的群贴纸包。消息还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -662,6 +667,9 @@ const en = {
     "Asked to set the tag of {actorId} in {chatId}. The name stays.",
   "command.tag.cleared":
     "Asked to clear the tag of {actorId} in {chatId}. The name stays.",
+  "command.delstickers.usage": "Usage: /delstickers <chatId>",
+  "command.delstickers.done":
+    "Asked to delete the group sticker set of {chatId}. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

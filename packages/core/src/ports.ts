@@ -246,6 +246,7 @@ export interface ModerationPort {
   deletePhoto(target: ChatTarget): Promise<void>;
   leaveChat(target: ChatTarget): Promise<void>;
   setMemberTag(target: MemberTagTarget): Promise<void>;
+  deleteStickerSet(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

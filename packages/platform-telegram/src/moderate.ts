@@ -544,6 +544,18 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async deleteStickerSet(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteChatStickerSet",
+        fetchImpl: input.fetchImpl,
+        missing: "delstickers_unavailable",
+        failed: "delstickers_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+    },
   };
 }
 
