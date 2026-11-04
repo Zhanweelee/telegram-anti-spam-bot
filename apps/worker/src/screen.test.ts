@@ -2785,6 +2785,100 @@ describe("screenTelegramEvent", () => {
     expect(user.decision.action).toBe("allow");
   });
 
+  it("keeps a linked channel mirror and still deletes its short link", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "机密频道";
+    const mirror = await normalizeUpdate({
+      update: {
+        update_id: 4810,
+        message: {
+          message_id: 12,
+          date: 1761955200,
+          chat: { id: -100890, type: "supergroup" },
+          from: { id: 8910 },
+          text: "今天站会",
+          is_automatic_forward: true,
+          sender_chat: { id: -1008900, type: "channel", title },
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: {
+              id: -1008900,
+              type: "channel",
+              title: `https://bit.ly/${title}`,
+            },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(mirror.status).toBe("event");
+    if (mirror.status !== "event") {
+      return;
+    }
+    expect(mirror.event.message?.forward).toBeUndefined();
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const kept = await screenTelegramEvent(mirror.event, {
+      logger,
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(kept.decision.reasons).not.toContain("forward_channel");
+    expect(moderator.deleted).toEqual([]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain(title);
+    expect(logged).not.toContain("bit.ly");
+
+    const spam = await normalizeUpdate({
+      update: {
+        update_id: 4811,
+        message: {
+          message_id: 13,
+          date: 1761955200,
+          chat: { id: -100891, type: "supergroup" },
+          from: { id: 8911 },
+          text: `${phrase} https://bit.ly/ad891`,
+          is_automatic_forward: true,
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: { id: -1008910, type: "channel", title },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(spam.status).toBe("event");
+    if (spam.status !== "event") {
+      return;
+    }
+    expect(spam.event.message?.forward).toBeUndefined();
+    const spamLog = createMemoryLogger();
+    const spamModerator = createMemoryModerator();
+    const removed = await screenTelegramEvent(spam.event, {
+      logger: spamLog,
+      moderator: spamModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("keyword_match");
+    expect(removed.decision.reasons).not.toContain("forward_channel");
+    expect(spamModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100891", messageId: "13" },
+    ]);
+    const spamLogged = JSON.stringify(spamLog.entries);
+    expect(spamLogged).not.toContain(phrase);
+    expect(spamLogged).not.toContain(title);
+    expect(spamLogged).not.toContain("ad891");
+  });
+
   it("keeps keyword deletes after the free quota drops llm", async () => {
     const phrase = "请免费领取礼品";
     let calls = 0;
