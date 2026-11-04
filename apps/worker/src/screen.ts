@@ -64,6 +64,7 @@ import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
 import { createLlmDetector } from "@tasb/detector-llm";
+import { createMediaDetector } from "@tasb/detector-media";
 import { createNoticeDetector } from "@tasb/detector-notice";
 import {
   createFloodDetector,
@@ -455,6 +456,31 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.notice,
         value: createNoticeDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaSticker,
+        value: createMediaDetector("sticker"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaAnimation,
+        value: createMediaDetector("animation"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaVoice,
+        value: createMediaDetector("voice"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaVideoNote,
+        value: createMediaDetector("video_note"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaDice,
+        value: createMediaDetector("dice"),
       },
       {
         source: "builtin",

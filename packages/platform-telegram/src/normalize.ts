@@ -4980,6 +4980,9 @@ async function mediaMark(
     const id = uniqueId(value);
     return id ? { kind, sha256: await sha256Hex(`${kind}\n${id}`) } : { kind };
   }
+  if (isDice(message.dice)) {
+    return { kind: "dice" };
+  }
   const rich = message.rich_message;
   if (isRecord(rich)) {
     const found = await firstRichMedia(rich.blocks);
@@ -4988,6 +4991,15 @@ async function mediaMark(
     }
   }
   return firstPaidMedia(message.paid_media);
+}
+
+function isDice(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.emoji === "string" &&
+    value.emoji.length > 0 &&
+    value.emoji.length <= 16
+  );
 }
 
 async function firstPaidMedia(

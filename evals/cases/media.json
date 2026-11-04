@@ -1,0 +1,14 @@
+[
+  { "id": "sticker", "kind": "message", "media": "sticker", "label": "spam" },
+  {
+    "id": "animation",
+    "kind": "message",
+    "media": "animation",
+    "label": "ham"
+  },
+  { "id": "voice", "kind": "message", "media": "voice", "label": "ham" },
+  { "id": "note", "kind": "message", "media": "video_note", "label": "ham" },
+  { "id": "dice", "kind": "message", "media": "dice", "label": "ham" },
+  { "id": "plain", "kind": "message", "label": "ham" },
+  { "id": "member", "kind": "chat_member", "label": "ham" }
+]
