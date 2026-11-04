@@ -46,6 +46,14 @@ describe("operator command example", () => {
     expect(help).toContain("/unreact");
     expect(help).toContain("/delphoto");
     expect(help).toContain("/leave");
+    expect(help).toContain("/tag");
+    const tagged = await runPrivateCommand({
+      text: "/tag -100 77 ops",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(tagged).toBe("已请求设置 -100 里 77 的标签。名字还在。");
+    expect(tagged).not.toContain("ops");
     const left = await runPrivateCommand({
       text: "/leave -100",
       actorId: "42",

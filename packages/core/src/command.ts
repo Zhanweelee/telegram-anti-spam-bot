@@ -102,6 +102,7 @@ const COMMAND_NAMES = [
   "unreact",
   "delphoto",
   "leave",
+  "tag",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -112,6 +113,7 @@ const MAX_MUTE_SECONDS = 366 * 24 * 60 * 60;
 const TOKEN_LIMIT = 80;
 const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
+const MEMBER_TAG_LIMIT = 16;
 
 export interface OperatorCommandInput {
   readonly event: Event;
@@ -156,6 +158,7 @@ export interface OperatorCommandInput {
       | "readPermissions"
       | "removeReaction"
       | "revokeInvite"
+      | "setMemberTag"
       | "showGeneral"
       | "unbanActor"
       | "unbanSenderChat"
@@ -327,6 +330,8 @@ async function dispatch(
       return deleteChatPhoto(input, args);
     case "leave":
       return leaveOneChat(input, args);
+    case "tag":
+      return setOneMemberTag(input, args);
   }
 }
 
@@ -1911,6 +1916,60 @@ function rejectLeave(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "leave",
+  });
+}
+
+async function setOneMemberTag(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.tag.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  const tag = args.slice(2).join(" ");
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId) ||
+    tag.length > MEMBER_TAG_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setMemberTag;
+  if (!set) {
+    rejectTag(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+      tag,
+    });
+  } catch {
+    rejectTag(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    tag.length === 0 ? "command.tag.cleared" : "command.tag.done",
+    { chatId, actorId },
+  );
+}
+
+function rejectTag(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "tag",
   });
 }
 

@@ -530,6 +530,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setMemberTag(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatMemberTag",
+        fetchImpl: input.fetchImpl,
+        missing: "tag_unavailable",
+        failed: "tag_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+          tag: target.tag,
+        },
+      });
+    },
   };
 }
 

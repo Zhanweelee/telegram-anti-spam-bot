@@ -155,6 +155,13 @@ export interface ReactionActorTarget {
   readonly kind: "user" | "chat";
 }
 
+export interface MemberTagTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+  readonly tag: string;
+}
+
 export interface MessageReactionTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -238,6 +245,7 @@ export interface ModerationPort {
   removeReaction(target: MessageReactionTarget): Promise<void>;
   deletePhoto(target: ChatTarget): Promise<void>;
   leaveChat(target: ChatTarget): Promise<void>;
+  setMemberTag(target: MemberTagTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

@@ -235,6 +235,27 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a member tag including an empty one", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setMemberTag({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "77",
+      tag: "ops",
+    });
+    await moderator.setMemberTag({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "77",
+      tag: "",
+    });
+    expect(moderator.memberTagsSet).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "77", tag: "ops" },
+      { tenantId: "t", chatId: "c", actorId: "77", tag: "" },
+    ]);
+    expect(JSON.stringify(moderator.memberTagsSet)).not.toContain("first_name");
+  });
+
   it("records a left chat without the title", async () => {
     const moderator = createMemoryModerator();
     await moderator.leaveChat({ tenantId: "t", chatId: "c" });

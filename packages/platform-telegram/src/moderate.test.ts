@@ -1238,6 +1238,62 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets a member tag and keeps the name out of the body extras", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setMemberTag({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      tag: "",
+    });
+    await moderator.setMemberTag({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      tag: "ops",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatMemberTag`,
+      `https://api.telegram.org/bot${token}/setChatMemberTag`,
+    ]);
+    const cleared = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      user_id?: number;
+      tag?: string;
+      first_name?: string;
+    };
+    expect(cleared).toEqual({ chat_id: -100, user_id: 77, tag: "" });
+    const set = JSON.parse(calls[1]?.body ?? "{}") as { tag?: string };
+    expect(set.tag).toBe("ops");
+    expect(calls[0]?.method).not.toContain("getChatMember");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setMemberTag({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        tag: "ops",
+      }),
+    ).rejects.toThrow("tag_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

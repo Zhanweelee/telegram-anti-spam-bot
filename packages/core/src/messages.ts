@@ -175,6 +175,9 @@ export const messageKeys = [
   "command.delphoto.done",
   "command.leave.usage",
   "command.leave.done",
+  "command.tag.usage",
+  "command.tag.done",
+  "command.tag.cleared",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -237,6 +240,7 @@ const syntax = [
   "/unreact <chatId> <messageId> <actorId>",
   "/delphoto <chatId>",
   "/leave <chatId>",
+  "/tag <chatId> <userId> [tag]",
 ].join("\n");
 
 const zh = {
@@ -437,6 +441,9 @@ const zh = {
   "command.leave.usage": "用法：/leave <chatId>",
   "command.leave.done":
     "已请求退出 {chatId}。之后这个 bot 不再处理它。消息还在。",
+  "command.tag.usage": "用法：/tag <chatId> <userId> [tag]",
+  "command.tag.done": "已请求设置 {chatId} 里 {actorId} 的标签。名字还在。",
+  "command.tag.cleared": "已请求清掉 {chatId} 里 {actorId} 的标签。名字还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -650,6 +657,11 @@ const en = {
   "command.leave.usage": "Usage: /leave <chatId>",
   "command.leave.done":
     "Asked to leave {chatId}. This bot stops handling it. The messages stay.",
+  "command.tag.usage": "Usage: /tag <chatId> <userId> [tag]",
+  "command.tag.done":
+    "Asked to set the tag of {actorId} in {chatId}. The name stays.",
+  "command.tag.cleared":
+    "Asked to clear the tag of {actorId} in {chatId}. The name stays.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
