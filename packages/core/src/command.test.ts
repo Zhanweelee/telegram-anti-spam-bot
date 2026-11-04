@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(75);
+    expect(menu).toHaveLength(76);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7366,9 +7366,13 @@ describe("runOperatorCommand", () => {
       command: "joinbot",
       description: "/joinbot <chatId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "reactions")).toEqual({
       command: "reactions",
       description: "/reactions <chatId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "community",
+      description: "/community <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -10464,6 +10468,213 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the chat community and drops the name", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      chatId: string;
+      keys: readonly string[];
+    }[] = [];
+    const ids: Array<string | null> = ["82002", null, "7"];
+    const remember = {
+      async readCommunity(target: { tenantId: string; chatId: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          keys: Object.keys(target),
+        });
+        const id = ids[seen.length - 1];
+        if (id === undefined) {
+          throw new Error("called");
+        }
+        return { id };
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["群 -100", "社区 82002"].join("\n"),
+    });
+    expect(seen[0]).toEqual({
+      tenantId: "local",
+      chatId: "-100",
+      keys: ["tenantId", "chatId"],
+    });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const none = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(none).toMatchObject({
+      text: ["群 -100", "社区 无"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/community <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readCommunity() {
+          return { id: "82002" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100", "community 82002"].join("\n"),
+    });
+    const englishNone = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readCommunity() {
+          return { id: null };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishNone).toMatchObject({
+      text: ["chat -100", "community none"].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/community -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/community", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/community <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/community -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/community <chatId>" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/community ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          return { id: phrase };
+        },
+      },
+      ...kit(),
+    });
+    expect(named).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(named)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommunity() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"community"',
+    );
+    const owned = await runOperatorCommand({
+      event: event({ text: "/community -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: remember,
+      ...kit(),
+    });
+    expect(owned).toMatchObject({
+      text: ["群 -100", "社区 7"].join("\n"),
+    });
+    expect(seen).toHaveLength(3);
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/community -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readCommunity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/community ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readCommunity() {
           throw new Error("called");
         },
       },

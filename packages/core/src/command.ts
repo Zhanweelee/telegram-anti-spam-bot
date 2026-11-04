@@ -24,6 +24,7 @@ import {
   auditExportDocument,
   type BotIdentity,
   type ChatAdministrator,
+  type ChatCommunity,
   type ChatGuard,
   type ChatKind,
   type DefaultAdministratorRights,
@@ -144,6 +145,7 @@ const COMMAND_NAMES = [
   "guard",
   "joinbot",
   "reactions",
+  "community",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -290,6 +292,7 @@ export interface OperatorCommandInput {
       | "readBoostCount"
       | "readChatGuard"
       | "readCommandMenu"
+      | "readCommunity"
       | "readDefaultRights"
       | "readJoinBot"
       | "readMember"
@@ -547,6 +550,8 @@ async function dispatch(
       return showJoinBot(input, args);
     case "reactions":
       return showReactions(input, args);
+    case "community":
+      return showCommunity(input, args);
   }
 }
 
@@ -3948,6 +3953,63 @@ function rejectReactionAllowlist(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "reactions",
+  });
+}
+
+async function showCommunity(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.community.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readCommunity;
+  if (!read) {
+    rejectCommunity(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const community = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isChatCommunity(community)) {
+      rejectCommunity(input);
+      return say(input, "command.invalid");
+    }
+    return describeCommunity(input, chatId, community);
+  } catch {
+    rejectCommunity(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isChatCommunity(community: ChatCommunity): boolean {
+  return community.id === null || isBotUserId(community.id);
+}
+
+function describeCommunity(
+  input: OperatorCommandInput,
+  chatId: string,
+  community: ChatCommunity,
+): string {
+  const id =
+    community.id === null
+      ? say(input, "command.community.none")
+      : say(input, "command.community.id", { id: community.id });
+  return [say(input, "command.community.header", { chatId }), id].join("\n");
+}
+
+function rejectCommunity(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "community",
   });
 }
 

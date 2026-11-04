@@ -1567,6 +1567,139 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the chat community and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            invite_link: invite,
+            community: { id: 82002, name: phrase },
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readCommunity({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ id: "82002" });
+    expect(resolved).not.toHaveProperty("name");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ id: null });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readCommunity({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("community_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                community: { id: 82002, name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("community_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                community: { id: -1, name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("community_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, community: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("community_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("community_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, community: { id: 82002 } },
+            }),
+            { status: 200 },
+          ),
+      }).readCommunity({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("community_failed");
+  });
+
   it("reads the allowed reactions and drops the emoji", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

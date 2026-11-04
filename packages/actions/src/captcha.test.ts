@@ -150,6 +150,9 @@ function moderator(
     async readReactions() {
       throw new Error("reactions_unavailable");
     },
+    async readCommunity() {
+      throw new Error("community_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },
