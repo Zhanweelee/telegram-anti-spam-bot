@@ -77,6 +77,26 @@ export const reportChatDocumentSchema = z.strictObject({
 
 export type ReportChatDocument = z.output<typeof reportChatDocumentSchema>;
 
+/** Default flood detector: 5 messages in 10 seconds. See ADR 0010. */
+export const FLOOD_THRESHOLD = 5;
+export const FLOOD_WINDOW_SECONDS = 10;
+export const MIN_FLOOD_THRESHOLD = 2;
+export const MAX_FLOOD_THRESHOLD = 32;
+export const MIN_FLOOD_WINDOW_SECONDS = 1;
+export const MAX_FLOOD_WINDOW_SECONDS = 300;
+
+/** One flood window per chat. A bad document is ignored by the adapter. */
+export const floodPolicyDocumentSchema = z.strictObject({
+  threshold: z.number().int().min(MIN_FLOOD_THRESHOLD).max(MAX_FLOOD_THRESHOLD),
+  windowSeconds: z
+    .number()
+    .int()
+    .min(MIN_FLOOD_WINDOW_SECONDS)
+    .max(MAX_FLOOD_WINDOW_SECONDS),
+});
+
+export type FloodPolicy = z.output<typeof floodPolicyDocumentSchema>;
+
 /** Per-chat switches that are not prefilter policy and not rules. */
 export interface RuntimeStore {
   getDryRun(tenantId: string, chatId: string): Promise<boolean>;
@@ -131,4 +151,17 @@ export interface RuntimeStore {
     targetId: string,
   ): Promise<boolean>;
   clearReportChat(tenantId: string, chatId: string): Promise<void>;
+  /** Null when this chat still uses 5 messages in 10 seconds. */
+  getFloodPolicy(tenantId: string, chatId: string): Promise<FloodPolicy | null>;
+  /**
+   * Returns false when the policy is outside 2–32 messages or 1–300 seconds,
+   * or a new chat would exceed the memory cap. The default 5/10 clears the
+   * row. Updating a chat that is already stored still succeeds.
+   */
+  setFloodPolicy(
+    tenantId: string,
+    chatId: string,
+    policy: FloodPolicy,
+  ): Promise<boolean>;
+  clearFloodPolicy(tenantId: string, chatId: string): Promise<void>;
 }

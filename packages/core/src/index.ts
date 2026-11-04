@@ -320,7 +320,15 @@ export {
   resolveRuleSet,
 } from "./rules-load.js";
 export {
+  FLOOD_THRESHOLD,
+  FLOOD_WINDOW_SECONDS,
+  type FloodPolicy,
+  floodPolicyDocumentSchema,
+  MAX_FLOOD_THRESHOLD,
+  MAX_FLOOD_WINDOW_SECONDS,
   MAX_RULE_SWITCHES,
+  MIN_FLOOD_THRESHOLD,
+  MIN_FLOOD_WINDOW_SECONDS,
   type ReportChatDocument,
   type RuleActionDocument,
   type RuleActionOverride,

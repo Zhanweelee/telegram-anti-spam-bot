@@ -7,6 +7,10 @@ import {
   type ChatDirectory,
   type ChatDirectoryDocument,
   chatDirectoryDocumentSchema,
+  FLOOD_THRESHOLD,
+  FLOOD_WINDOW_SECONDS,
+  type FloodPolicy,
+  floodPolicyDocumentSchema,
   MAX_BLOCKLIST_CHATS,
   MAX_BLOCKLIST_ENTRIES,
   MAX_DIRECTORY_ACTORS,
@@ -118,6 +122,10 @@ export function createKvRuntimeStore(
     string,
     { readonly targetId: string | null; readonly expiresAt: number }
   >();
+  const floodCache = new Map<
+    string,
+    { readonly policy: FloodPolicy | null; readonly expiresAt: number }
+  >();
 
   async function load(
     tenantId: string,
@@ -198,6 +206,35 @@ export function createKvRuntimeStore(
         : JSON.stringify(reportChatDocumentSchema.parse({ targetId }));
     await kv.put(id, body);
     reportCache.set(id, { targetId, expiresAt: now() + ttlMs });
+  }
+
+  async function loadFlood(
+    tenantId: string,
+    chatId: string,
+  ): Promise<FloodPolicy | null> {
+    const id = runtimeFloodKey(tenantId, chatId);
+    const at = now();
+    const hit = floodCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.policy;
+    }
+    const policy = parseFlood(await kv.get(id));
+    floodCache.set(id, { policy, expiresAt: at + ttlMs });
+    return policy;
+  }
+
+  async function saveFlood(
+    tenantId: string,
+    chatId: string,
+    policy: FloodPolicy | null,
+  ): Promise<void> {
+    const id = runtimeFloodKey(tenantId, chatId);
+    const body =
+      policy === null
+        ? "{}"
+        : JSON.stringify(floodPolicyDocumentSchema.parse(policy));
+    await kv.put(id, body);
+    floodCache.set(id, { policy, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -300,6 +337,29 @@ export function createKvRuntimeStore(
       }
       await saveReport(tenantId, chatId, null);
     },
+    async getFloodPolicy(tenantId, chatId) {
+      return loadFlood(tenantId, chatId);
+    },
+    async setFloodPolicy(tenantId, chatId, policy) {
+      const parsed = floodPolicyDocumentSchema.safeParse(policy);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadFlood(tenantId, chatId);
+      const next = isDefaultFlood(parsed.data) ? null : parsed.data;
+      if (sameFlood(current, next)) {
+        return true;
+      }
+      await saveFlood(tenantId, chatId, next);
+      return true;
+    },
+    async clearFloodPolicy(tenantId, chatId) {
+      const current = await loadFlood(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveFlood(tenantId, chatId, null);
+    },
   };
 }
 
@@ -329,6 +389,42 @@ function runtimeActionKey(tenantId: string, chatId: string): string {
 
 function runtimeReportKey(tenantId: string, chatId: string): string {
   return `runtime-report\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeFloodKey(tenantId: string, chatId: string): string {
+  return `runtime-flood\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function isDefaultFlood(policy: FloodPolicy): boolean {
+  return (
+    policy.threshold === FLOOD_THRESHOLD &&
+    policy.windowSeconds === FLOOD_WINDOW_SECONDS
+  );
+}
+
+function sameFlood(
+  left: FloodPolicy | null,
+  right: FloodPolicy | null,
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  return (
+    left.threshold === right.threshold &&
+    left.windowSeconds === right.windowSeconds
+  );
+}
+
+function parseFlood(raw: string | null): FloodPolicy | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = floodPolicyDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseReport(raw: string | null): string | null {

@@ -256,6 +256,64 @@ describe("memory adapter", () => {
     );
   });
 
+  it("keeps a flood policy apart from report chats", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "chat_1", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_2")).toBeNull();
+    expect(await runtime.getReportChat("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "chat_1", {
+        threshold: 5,
+        windowSeconds: 10,
+      }),
+    ).toBe(true);
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "chat_1", {
+        threshold: 1,
+        windowSeconds: 10,
+      }),
+    ).toBe(false);
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.setFloodPolicy("tenant_a", `chat_${index}`, {
+          threshold: 8,
+          windowSeconds: 10,
+        }),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "overflow", {
+        threshold: 8,
+        windowSeconds: 10,
+      }),
+    ).toBe(false);
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "overflow", {
+        threshold: 5,
+        windowSeconds: 10,
+      }),
+    ).toBe(true);
+    expect(await runtime.getFloodPolicy("tenant_a", "overflow")).toBeNull();
+    await runtime.clearFloodPolicy("tenant_a", "chat_0");
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "overflow", {
+        threshold: 4,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

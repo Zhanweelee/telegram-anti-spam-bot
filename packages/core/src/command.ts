@@ -77,10 +77,13 @@ import {
   type RuleSource,
   resolveRuleSet,
 } from "./rules-load.js";
-import type {
-  RuleActionOverride,
-  RuleSwitch,
-  RuntimeStore,
+import {
+  FLOOD_THRESHOLD,
+  FLOOD_WINDOW_SECONDS,
+  type FloodPolicy,
+  type RuleActionOverride,
+  type RuleSwitch,
+  type RuntimeStore,
 } from "./runtime.js";
 import {
   normalizeWarnLimit,
@@ -182,6 +185,7 @@ const COMMAND_NAMES = [
   "warns",
   "warnlimit",
   "report",
+  "flood",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -535,6 +539,8 @@ async function dispatch(
       return setWarnLimit(input, args);
     case "report":
       return editReport(input, args);
+    case "flood":
+      return editFlood(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5586,6 +5592,160 @@ function rejectReport(input: OperatorCommandInput): void {
     chatId: input.event.chatId,
     command: "report",
   });
+}
+
+async function editFlood(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 3) {
+    return say(input, "command.flood.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatFlood(input, chatId);
+  }
+  if (requested === "reset") {
+    if (args.length !== 2) {
+      return say(input, "command.flood.usage");
+    }
+    const cleared = await removeFloodPolicy(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.flood.done", {
+      chatId,
+      threshold: FLOOD_THRESHOLD,
+      windowSeconds: FLOOD_WINDOW_SECONDS,
+    });
+  }
+  const threshold = parseFloodCount(requested);
+  if (threshold === undefined) {
+    return say(input, "command.invalid");
+  }
+  let windowSeconds = FLOOD_WINDOW_SECONDS;
+  const seconds = args[2];
+  if (seconds === undefined) {
+    const current = await readFloodPolicy(input, chatId);
+    if (current === undefined) {
+      return say(input, "command.invalid");
+    }
+    windowSeconds = current?.windowSeconds ?? FLOOD_WINDOW_SECONDS;
+  } else {
+    const parsed = parseFloodWindow(seconds);
+    if (parsed === undefined) {
+      return say(input, "command.invalid");
+    }
+    windowSeconds = parsed;
+  }
+  const saved = await writeFloodPolicy(input, chatId, {
+    threshold,
+    windowSeconds,
+  });
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("flood_policy_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "flood",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.flood.done", {
+    chatId,
+    threshold,
+    windowSeconds,
+  });
+}
+
+async function formatFlood(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const policy = await readFloodPolicy(input, chatId);
+  if (policy === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.flood.show", {
+    chatId,
+    threshold: policy?.threshold ?? FLOOD_THRESHOLD,
+    windowSeconds: policy?.windowSeconds ?? FLOOD_WINDOW_SECONDS,
+  });
+}
+
+async function readFloodPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<FloodPolicy | null | undefined> {
+  try {
+    return await input.runtime.getFloodPolicy(input.event.tenantId, chatId);
+  } catch {
+    rejectFlood(input);
+    return undefined;
+  }
+}
+
+async function writeFloodPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+  policy: FloodPolicy,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setFloodPolicy(
+      input.event.tenantId,
+      chatId,
+      policy,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectFlood(input);
+    return "invalid";
+  }
+}
+
+async function removeFloodPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearFloodPolicy(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectFlood(input);
+    return false;
+  }
+}
+
+function rejectFlood(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "flood",
+  });
+}
+
+function parseFloodCount(value: string): number | undefined {
+  if (!/^(?:[2-9]|[12]\d|3[0-2])$/.test(value)) {
+    return undefined;
+  }
+  return Number(value);
+}
+
+function parseFloodWindow(value: string): number | undefined {
+  if (!/^(?:[1-9]\d?|[1-2]\d{2}|300)$/.test(value)) {
+    return undefined;
+  }
+  return Number(value);
 }
 
 function parseWarnLimit(value: string): number | undefined {

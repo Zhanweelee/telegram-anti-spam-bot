@@ -94,6 +94,7 @@ describe("operator command example", () => {
     expect(help).toContain("\n/warns <chatId> [actorId]");
     expect(help).toContain("\n/warnlimit <chatId> [limit|reset]");
     expect(help).toContain("\n/report <chatId> [targetId|reset]");
+    expect(help).toContain("\n/flood <chatId> [count [seconds]|reset]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
