@@ -24,6 +24,8 @@ import {
   auditExportDocument,
   type BotIdentity,
   type ChatAdministrator,
+  type ChatGuard,
+  type ChatKind,
   type DefaultAdministratorRights,
   type DefaultChatPermissions,
   type DefaultRightsSnapshot,
@@ -137,6 +139,7 @@ const COMMAND_NAMES = [
   "myshort",
   "who",
   "hook",
+  "guard",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -281,6 +284,7 @@ export interface OperatorCommandInput {
       | "readBotName"
       | "readBotShortDescription"
       | "readBoostCount"
+      | "readChatGuard"
       | "readCommandMenu"
       | "readDefaultRights"
       | "readMember"
@@ -531,6 +535,8 @@ async function dispatch(
       return showBotIdentity(input, args);
     case "hook":
       return showWebhook(input, args);
+    case "guard":
+      return showChatGuard(input, args);
   }
 }
 
@@ -3637,6 +3643,168 @@ function rejectWebhook(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "hook",
+  });
+}
+
+async function showChatGuard(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.guard.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readChatGuard;
+  if (!read) {
+    rejectChatGuard(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const guard = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isChatGuard(guard)) {
+      rejectChatGuard(input);
+      return say(input, "command.invalid");
+    }
+    return describeChatGuard(input, chatId, guard);
+  } catch {
+    rejectChatGuard(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isChatGuard(
+  guard: ChatGuard,
+): guard is ChatGuard & { readonly type: ChatKind } {
+  return (
+    isChatKind(guard.type) &&
+    isPermissionState(guard.forum) &&
+    isPermissionState(guard.directMessages) &&
+    isPermissionState(guard.joinByRequest) &&
+    isPermissionState(guard.joinToSend) &&
+    isPermissionState(guard.nativeAntiSpam) &&
+    isOptionalCount(guard.slowModeSeconds) &&
+    isOptionalCount(guard.autoDeleteSeconds) &&
+    isOptionalCount(guard.boostExemption) &&
+    isPermissionState(guard.protectedContent) &&
+    isPermissionState(guard.hiddenMembers) &&
+    isPermissionState(guard.visibleHistory) &&
+    isReactionCount(guard.maxReactions) &&
+    isLinkedChat(guard.linkedChatId)
+  );
+}
+
+function isChatKind(value: string): value is ChatKind {
+  return (
+    value === "private" ||
+    value === "group" ||
+    value === "supergroup" ||
+    value === "channel"
+  );
+}
+
+function isOptionalCount(value: number | null): boolean {
+  return value === null || (Number.isSafeInteger(value) && value >= 0);
+}
+
+function isReactionCount(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function isLinkedChat(value: string | null): boolean {
+  return value === null || isTargetId(value);
+}
+
+function describeChatGuard(
+  input: OperatorCommandInput,
+  chatId: string,
+  guard: ChatGuard & { readonly type: ChatKind },
+): string {
+  return [
+    say(input, "command.guard.header", { chatId }),
+    say(input, "command.guard.type", {
+      type: say(input, chatKindKey(guard.type)),
+    }),
+    guardFlag(input, "command.guard.forum", guard.forum),
+    guardFlag(input, "command.guard.direct", guard.directMessages),
+    guardFlag(input, "command.guard.join_request", guard.joinByRequest),
+    guardFlag(input, "command.guard.join_send", guard.joinToSend),
+    guardFlag(input, "command.guard.native", guard.nativeAntiSpam),
+    guardCount(
+      input,
+      guard.slowModeSeconds,
+      "command.guard.slow",
+      "command.guard.slow_unknown",
+      "seconds",
+    ),
+    guardCount(
+      input,
+      guard.autoDeleteSeconds,
+      "command.guard.autodelete",
+      "command.guard.autodelete_unknown",
+      "seconds",
+    ),
+    guardCount(
+      input,
+      guard.boostExemption,
+      "command.guard.boost",
+      "command.guard.boost_unknown",
+      "count",
+    ),
+    guardFlag(input, "command.guard.protected", guard.protectedContent),
+    guardFlag(input, "command.guard.hidden", guard.hiddenMembers),
+    guardFlag(input, "command.guard.history", guard.visibleHistory),
+    say(input, "command.guard.reactions", { count: guard.maxReactions }),
+    guard.linkedChatId === null
+      ? say(input, "command.guard.linked_unknown")
+      : say(input, "command.guard.linked", { id: guard.linkedChatId }),
+  ].join("\n");
+}
+
+function chatKindKey(kind: ChatKind): MessageKey {
+  if (kind === "private") {
+    return "command.guard.type.private";
+  }
+  if (kind === "group") {
+    return "command.guard.type.group";
+  }
+  if (kind === "supergroup") {
+    return "command.guard.type.supergroup";
+  }
+  return "command.guard.type.channel";
+}
+
+function guardFlag(
+  input: OperatorCommandInput,
+  label: MessageKey,
+  state: PermissionState,
+): string {
+  return `${say(input, label)} ${say(input, permissionStateKey(state))}`;
+}
+
+function guardCount(
+  input: OperatorCommandInput,
+  value: number | null,
+  known: MessageKey,
+  unknown: MessageKey,
+  key: string,
+): string {
+  return value === null
+    ? say(input, unknown)
+    : say(input, known, { [key]: value });
+}
+
+function rejectChatGuard(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "guard",
   });
 }
 

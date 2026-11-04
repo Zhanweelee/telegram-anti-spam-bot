@@ -192,6 +192,13 @@ describe("memory adapter", () => {
     );
   });
 
+  it("does not invent a chat guard posture", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readChatGuard({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("guard_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(

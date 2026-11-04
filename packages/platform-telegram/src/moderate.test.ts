@@ -1567,6 +1567,153 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the chat guard posture and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            username: "giftchat",
+            description: phrase,
+            invite_link: invite,
+            bio: phrase,
+            is_forum: true,
+            is_direct_messages: false,
+            join_by_request: true,
+            join_to_send_messages: false,
+            has_aggressive_anti_spam_enabled: true,
+            slow_mode_delay: 30,
+            message_auto_delete_time: 86400,
+            unrestrict_boost_count: 2,
+            has_protected_content: true,
+            has_hidden_members: false,
+            has_visible_history: true,
+            max_reaction_count: 11,
+            linked_chat_id: -100777,
+            sticker_set_name: phrase,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readChatGuard({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({
+      type: "supergroup",
+      forum: "on",
+      directMessages: "off",
+      joinByRequest: "on",
+      joinToSend: "off",
+      nativeAntiSpam: "on",
+      slowModeSeconds: 30,
+      autoDeleteSeconds: 86400,
+      boostExemption: 2,
+      protectedContent: "on",
+      hiddenMembers: "off",
+      visibleHistory: "on",
+      maxReactions: 11,
+      linkedChatId: "-100777",
+    });
+    expect(resolved).not.toHaveProperty("title");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(JSON.stringify(resolved)).not.toContain("giftchat");
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: 42,
+                type: "private",
+                first_name: phrase,
+                max_reaction_count: 0,
+                slow_mode_delay: 0,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "42" }),
+    ).resolves.toMatchObject({
+      type: "private",
+      forum: "unknown",
+      slowModeSeconds: 0,
+      autoDeleteSeconds: null,
+      linkedChatId: null,
+      maxReactions: 0,
+    });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readChatGuard({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("guard_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                type: "supergroup",
+                title: phrase,
+                max_reaction_count: 1,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: phrase,
+                max_reaction_count: 1.5,
+                slow_mode_delay: -1,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+  });
+
   it("reads the webhook backlog and drops the address", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

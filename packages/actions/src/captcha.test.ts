@@ -141,6 +141,9 @@ function moderator(
     async readWebhook() {
       throw new Error("hook_unavailable");
     },
+    async readChatGuard() {
+      throw new Error("guard_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },
