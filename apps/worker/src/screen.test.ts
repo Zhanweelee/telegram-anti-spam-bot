@@ -1935,6 +1935,73 @@ describe("screenTelegramEvent", () => {
     ).toBe(true);
   });
 
+  it("deletes the second message when that chat's flood count is 2", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(
+      await runtime.setFloodPolicy("local", "-100rate", {
+        threshold: 2,
+        windowSeconds: 10,
+      }),
+    ).toBe(true);
+    const window = createMemoryRateWindow();
+    const base = Date.parse("2026-11-01T00:00:00.000Z");
+    async function at(index: number, chatId: string) {
+      const text = `note-${chatId}-${index}`;
+      return parseEvent({
+        id: `flood_policy_${chatId}_${index}`,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: new Date(base + index * 1000).toISOString(),
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: String(index),
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      });
+    }
+    const first = await screenTelegramEvent(await at(0, "-100rate"), {
+      runtime,
+      rateWindow: window,
+    });
+    expect(first.decision.action).toBe("allow");
+    const second = await screenTelegramEvent(await at(1, "-100rate"), {
+      runtime,
+      rateWindow: window,
+    });
+    expect(second.decision.action).toBe("delete");
+    expect(second.decision.reasons).toContain("flood");
+    expect(JSON.stringify(second)).not.toContain("note-");
+    const other = await screenTelegramEvent(await at(0, "-200rate"), {
+      runtime,
+      rateWindow: window,
+    });
+    expect(other.decision.action).toBe("allow");
+    const otherSecond = await screenTelegramEvent(await at(1, "-200rate"), {
+      runtime,
+      rateWindow: window,
+    });
+    expect(otherSecond.decision.action).toBe("allow");
+
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failed = await screenTelegramEvent(await at(3, "-300rate"), {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+      runtime: {
+        ...broken,
+        async getFloodPolicy() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(failed.decision.action).toBe("allow");
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+
   it("deletes a contact card URL and keeps the vCard out of logs", async () => {
     const phone = "13800138118";
     const path = "card118";

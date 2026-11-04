@@ -25,6 +25,8 @@ import {
   type Detector,
   defaultPrefilterPolicy,
   type Event,
+  FLOOD_THRESHOLD,
+  FLOOD_WINDOW_SECONDS,
   type LlmClassifier,
   type Logger,
   loadPolicy,
@@ -243,6 +245,20 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let floodThreshold = FLOOD_THRESHOLD;
+  let floodWindowSeconds = FLOOD_WINDOW_SECONDS;
+  try {
+    const flood = await runtime.getFloodPolicy(event.tenantId, event.chatId);
+    if (flood) {
+      floodThreshold = flood.threshold;
+      floodWindowSeconds = flood.windowSeconds;
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -330,8 +346,8 @@ export async function screenTelegramEvent(
         manifest: builtinManifests.flood,
         value: createFloodDetector({
           window: deps.rateWindow ?? workerRateWindow,
-          windowSeconds: 10,
-          threshold: 5,
+          windowSeconds: floodWindowSeconds,
+          threshold: floodThreshold,
         }),
       },
       {

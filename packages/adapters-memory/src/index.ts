@@ -19,7 +19,11 @@ import {
   type DefaultRightsTarget,
   type DeleteMessagesTarget,
   type DeleteTarget,
+  FLOOD_THRESHOLD,
+  FLOOD_WINDOW_SECONDS,
+  type FloodPolicy,
   type ForumTopicTarget,
+  floodPolicyDocumentSchema,
   type GeneralNameTarget,
   isExpired,
   type JoinTarget,
@@ -823,6 +827,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const switches = new Map<string, Map<string, boolean>>();
   const actions = new Map<string, Map<string, RuleActionOverride["action"]>>();
   const reports = new Map<string, string>();
+  const floods = new Map<string, FloodPolicy>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -925,6 +930,31 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearReportChat(tenantId, chatId) {
       reports.delete(key(tenantId, chatId));
+    },
+    async getFloodPolicy(tenantId, chatId) {
+      return floods.get(key(tenantId, chatId)) ?? null;
+    },
+    async setFloodPolicy(tenantId, chatId, policy) {
+      const parsed = floodPolicyDocumentSchema.safeParse(policy);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      if (
+        parsed.data.threshold === FLOOD_THRESHOLD &&
+        parsed.data.windowSeconds === FLOOD_WINDOW_SECONDS
+      ) {
+        floods.delete(id);
+        return true;
+      }
+      if (!floods.has(id) && floods.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      floods.set(id, parsed.data);
+      return true;
+    },
+    async clearFloodPolicy(tenantId, chatId) {
+      floods.delete(key(tenantId, chatId));
     },
   };
 }

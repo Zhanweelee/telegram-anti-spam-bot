@@ -110,6 +110,9 @@ export const messageKeys = [
   "command.report.show",
   "command.report.default",
   "command.report.done",
+  "command.flood.usage",
+  "command.flood.show",
+  "command.flood.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -465,6 +468,7 @@ const syntax = [
   "/warns <chatId> [actorId]",
   "/warnlimit <chatId> [limit|reset]",
   "/report <chatId> [targetId|reset]",
+  "/flood <chatId> [count [seconds]|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -594,6 +598,10 @@ const zh = {
   "command.report.show": "{chatId} 上报 {targetId}",
   "command.report.default": "{chatId} 上报默认",
   "command.report.done": "已设置 {chatId} 上报到 {targetId}",
+  "command.flood.usage": "用法：/flood <chatId> [count [seconds]|reset]",
+  "command.flood.show": "{chatId} 洪泛 {threshold} 条 / {windowSeconds} 秒",
+  "command.flood.done":
+    "已设置 {chatId} 洪泛 {threshold} 条 / {windowSeconds} 秒",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1006,6 +1014,10 @@ const en = {
   "command.report.show": "Reports for {chatId} go to {targetId}",
   "command.report.default": "Reports for {chatId} use the default",
   "command.report.done": "Set reports for {chatId} to {targetId}",
+  "command.flood.usage": "Usage: /flood <chatId> [count [seconds]|reset]",
+  "command.flood.show": "Flood for {chatId} is {threshold} in {windowSeconds}s",
+  "command.flood.done":
+    "Set flood for {chatId} to {threshold} in {windowSeconds}s",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

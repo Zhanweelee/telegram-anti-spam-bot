@@ -252,6 +252,75 @@ describe("kv runtime store", () => {
     await second.clearReportChat("local", "-100");
     expect(await second.getReportChat("local", "-100")).toBeNull();
   });
+
+  it("keeps a flood policy in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.getFloodPolicy("local", "-100")).toBeNull();
+    expect(
+      await first.setFloodPolicy("local", "-100", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    const written = puts;
+    expect(
+      await first.setFloodPolicy("local", "-100", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    expect(puts).toBe(written);
+    expect(await first.setReportChat("local", "-100", "77")).toBe(true);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getFloodPolicy("local", "-100")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await second.getReportChat("local", "-100")).toBe("77");
+    const keys = [...backing.values.keys()];
+    const floodKey = keys.find((key) => key.startsWith("runtime-flood"));
+    const reportKey = keys.find((key) => key.startsWith("runtime-report"));
+    expect(floodKey).toBeDefined();
+    expect(backing.values.get(reportKey ?? "")).not.toContain("8");
+    expect(backing.values.get(floodKey ?? "")).not.toContain("77");
+    if (floodKey !== undefined) {
+      backing.values.set(floodKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getFloodPolicy("local", "-100")).toBeNull();
+    expect(await fresh.getReportChat("local", "-100")).toBe("77");
+    expect(String(await fresh.getFloodPolicy("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(
+      await fresh.setFloodPolicy("local", "-100", {
+        threshold: 33,
+        windowSeconds: 10,
+      }),
+    ).toBe(false);
+    expect(await fresh.getFloodPolicy("local", "-100")).toBeNull();
+    expect(
+      await fresh.setFloodPolicy("local", "-100", {
+        threshold: 5,
+        windowSeconds: 10,
+      }),
+    ).toBe(true);
+    expect(await fresh.getFloodPolicy("local", "-100")).toBeNull();
+    await second.clearFloodPolicy("local", "-100");
+    expect(await second.getFloodPolicy("local", "-100")).toBeNull();
+  });
 });
 
 describe("kv chat directory", () => {
