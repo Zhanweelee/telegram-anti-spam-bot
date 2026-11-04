@@ -1,0 +1,18 @@
+[
+  {
+    "id": "sender_channel",
+    "kind": "message",
+    "label": "spam",
+    "asChannel": true
+  },
+  {
+    "id": "sender_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "sender_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

@@ -151,6 +151,12 @@ export const builtinManifests = {
     integrity:
       "fc1049b7bff5b34139423e4ebefbd6382c9ae36818435c7ba4d8185afc48ca2b",
   }),
+  channelSender: manifest({
+    id: "channel_sender",
+    kind: "detector",
+    integrity:
+      "29b97f81bf78cce73fe9739a01a0ed62e63cb99fe25dc1ce71e635a810a19582",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
