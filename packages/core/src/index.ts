@@ -349,8 +349,10 @@ export {
   createMemoryWarnStore,
   MAX_WARN_ACTORS,
   MAX_WARN_CHATS,
+  sortWarnCounts,
   WARN_LIMIT,
   WarnCapacityError,
+  type WarnCount,
   type WarnStore,
   type WarnTarget,
 } from "./warn.js";

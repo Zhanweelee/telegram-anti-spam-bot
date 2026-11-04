@@ -89,6 +89,28 @@ describe("d1 storage", () => {
     expect(await first.read(target)).toBe(0);
   });
 
+  it("skips a warning row that is not an id", async () => {
+    const db = openSqlite();
+    const store = createD1WarnStore(db);
+    await store.write({ tenantId: "local", chatId: "-100", actorId: "8" }, 2);
+    await db
+      .prepare(
+        `INSERT INTO warn_counts (tenant_id, chat_id, actor_id, count)
+         VALUES ('local', '-100', 'not-a-number', 2)`,
+      )
+      .run();
+    await db
+      .prepare(
+        `INSERT INTO warn_counts (tenant_id, chat_id, actor_id, count)
+         VALUES ('local', '-200', '9', 4)`,
+      )
+      .run();
+    expect(await store.list("local", "-100")).toEqual([
+      { actorId: "8", count: 2 },
+    ]);
+    expect(await store.list("local", "-300")).toEqual([]);
+  });
+
   it("applies the migration twice and then stores a rule set", async () => {
     const db = openSqlite();
     await applyStorageMigrations(db);

@@ -2905,7 +2905,7 @@ describe("handleIncomingEvent", () => {
     });
     expect(body.commands.at(-1)).toEqual({
       command: "warns",
-      description: "/warns <chatId> <actorId>",
+      description: "/warns <chatId> [actorId]",
     });
     expect(body.commands.find((item) => item.command === "warn")).toEqual({
       command: "warn",

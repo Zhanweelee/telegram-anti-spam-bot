@@ -77,7 +77,7 @@ import {
   resolveRuleSet,
 } from "./rules-load.js";
 import type { RuleSwitch, RuntimeStore } from "./runtime.js";
-import { WARN_LIMIT, type WarnStore } from "./warn.js";
+import { WARN_LIMIT, type WarnCount, type WarnStore } from "./warn.js";
 
 const COMMAND_NAMES = [
   "help",
@@ -5335,6 +5335,9 @@ async function readWarnings(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
+  if (args.length === 1) {
+    return listWarnings(input, args[0] ?? "");
+  }
   const parsed = warnArgs(input, args, "command.warns.usage");
   if (typeof parsed === "string") {
     return parsed;
@@ -5367,6 +5370,39 @@ async function readWarnings(
     count,
     limit: WARN_LIMIT,
   });
+}
+
+async function listWarnings(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const store = input.warns;
+  if (!store) {
+    rejectWarn(input, "warns");
+    return say(input, "command.invalid");
+  }
+  let rows: readonly WarnCount[] = [];
+  try {
+    rows = await store.list(input.event.tenantId, chatId);
+  } catch {
+    rejectWarn(input, "warns");
+    return say(input, "command.invalid");
+  }
+  if (rows.length === 0) {
+    return say(input, "command.warns.empty", { chatId });
+  }
+  const lines = [chatId];
+  for (const row of rows) {
+    lines.push(`${row.actorId} ${row.count}/${WARN_LIMIT}`);
+  }
+  return lines.join("\n");
 }
 
 function warnArgs(
