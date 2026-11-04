@@ -17419,6 +17419,27 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(outcome.event)).not.toContain(leaked);
   });
 
+  it("ignores the decoy button that uses the same captcha nonce", async () => {
+    const nonce = "0123456789abcdef";
+    const leaked = "请免费领取礼品";
+    const outcome = await normalize({
+      update_id: 32,
+      callback_query: {
+        id: "cb-decoy",
+        from: { id: 77 },
+        data: `n:${nonce}`,
+        message: {
+          message_id: 4,
+          chat: { id: -100123 },
+          text: leaked,
+        },
+      },
+    });
+    expect(outcome.status).toBe("ignored");
+    expect(JSON.stringify(outcome)).not.toContain(leaked);
+    expect(JSON.stringify(outcome)).not.toContain(nonce);
+  });
+
   it("ignores callback data that is not a captcha nonce", async () => {
     const leaked = "请免费领取礼品";
     const outcome = await normalize({
