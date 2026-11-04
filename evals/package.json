@@ -16,6 +16,7 @@
     "@tasb/detector-blocklist": "workspace:*",
     "@tasb/detector-llm": "workspace:*",
     "@tasb/detector-regex": "workspace:*",
+    "@tasb/detector-script": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/detector-bot": "workspace:*",
     "@tasb/detector-contact": "workspace:*",

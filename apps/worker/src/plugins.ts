@@ -139,6 +139,18 @@ export const builtinManifests = {
     integrity:
       "24b8cc2782af84d0e6de6681c6978dd5da4e6bce37784f6e56926e691273e952",
   }),
+  scriptArabic: manifest({
+    id: "script_arabic",
+    kind: "detector",
+    integrity:
+      "6e0a84b5e27ba838be78fc355c3d9eb372295b15e62d6df2e7b55ac7f60e9dac",
+  }),
+  scriptCyrillic: manifest({
+    id: "script_cyrillic",
+    kind: "detector",
+    integrity:
+      "fc1049b7bff5b34139423e4ebefbd6382c9ae36818435c7ba4d8185afc48ca2b",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

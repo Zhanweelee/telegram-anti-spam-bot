@@ -115,6 +115,22 @@
       "actions": ["delete"]
     },
     {
+      "id": "script_arabic",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["script_arabic"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "script_cyrillic",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["script_cyrillic"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

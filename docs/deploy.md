@@ -149,6 +149,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> media_sticker on` 只删这个群的贴纸。`media_animation` 删动图，`media_voice` 删语音，`media_video_note` 删视频留言，`media_dice` 删骰子。五条默认关闭。付费帖仍留下。见 ADR 0469。
 
+`/rule <chatId> script_arabic on` 删这个群里阿拉伯字母占多数的消息。`script_cyrillic` 删西里尔文。至少 4 个字母，并且要多于其它字母。两条默认关闭。见 ADR 0470。
+
 ## 确认
 
 ```sh

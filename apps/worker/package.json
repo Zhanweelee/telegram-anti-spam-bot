@@ -28,6 +28,7 @@
     "@tasb/detector-link": "workspace:*",
     "@tasb/detector-llm": "workspace:*",
     "@tasb/detector-regex": "workspace:*",
+    "@tasb/detector-script": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/platform-telegram": "workspace:*",
     "hono": "4.13.16"

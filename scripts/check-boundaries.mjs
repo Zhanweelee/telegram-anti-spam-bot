@@ -50,6 +50,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-script/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -87,6 +91,7 @@ const rules = [
       /^@tasb\/detector-folder$/,
       /^@tasb\/detector-media$/,
       /^@tasb\/detector-notice$/,
+      /^@tasb\/detector-script$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
@@ -125,6 +130,7 @@ const rules = [
       /^@tasb\/detector-folder$/,
       /^@tasb\/detector-media$/,
       /^@tasb\/detector-notice$/,
+      /^@tasb\/detector-script$/,
       /^node:/,
       /^vitest$/,
     ],
