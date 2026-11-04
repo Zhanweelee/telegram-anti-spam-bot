@@ -183,6 +183,7 @@ function harness(options?: { failStorage?: boolean }) {
     async leaveChat() {},
     async setMemberTag() {},
     async deleteStickerSet() {},
+    async setReaction() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

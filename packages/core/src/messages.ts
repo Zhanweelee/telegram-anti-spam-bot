@@ -182,6 +182,8 @@ export const messageKeys = [
   "command.delstickers.done",
   "command.boosts.usage",
   "command.boosts.done",
+  "command.react.usage",
+  "command.react.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -247,6 +249,7 @@ const syntax = [
   "/tag <chatId> <userId> [tag]",
   "/delstickers <chatId>",
   "/boosts <chatId> <userId>",
+  "/react <chatId> <messageId> <emoji>",
 ].join("\n");
 
 const zh = {
@@ -454,6 +457,9 @@ const zh = {
   "command.delstickers.done": "已请求删除 {chatId} 的群贴纸包。消息还在。",
   "command.boosts.usage": "用法：/boosts <chatId> <userId>",
   "command.boosts.done": "{actorId} 在 {chatId} 有 {count} 次助推",
+  "command.react.usage": "用法：/react <chatId> <messageId> <emoji>",
+  "command.react.done":
+    "已请求在 {chatId} 的消息 {messageId} 上设置 {emoji}。别人的反应还在。一组媒体里会落到还在的第一条。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -677,6 +683,9 @@ const en = {
     "Asked to delete the group sticker set of {chatId}. The messages stay.",
   "command.boosts.usage": "Usage: /boosts <chatId> <userId>",
   "command.boosts.done": "{actorId} has {count} boosts in {chatId}",
+  "command.react.usage": "Usage: /react <chatId> <messageId> <emoji>",
+  "command.react.done":
+    "Asked to set {emoji} on message {messageId} of {chatId}. Other people's reactions stay. A media group uses the first message that is still there.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

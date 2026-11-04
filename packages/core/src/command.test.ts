@@ -4797,6 +4797,172 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("sets one emoji reaction and keeps other people's reactions", async () => {
+    const deps = kit();
+    const seen: { chatId: string; messageId: string; emoji: string }[] = [];
+    const remember = {
+      async setReaction(target: {
+        chatId: string;
+        messageId: string;
+        emoji: string;
+      }) {
+        seen.push({
+          chatId: target.chatId,
+          messageId: target.messageId,
+          emoji: target.emoji,
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求在 -100 的消息 55 上设置 👍。别人的反应还在。一组媒体里会落到还在的第一条。",
+    });
+    expect(seen).toEqual([{ chatId: "-100", messageId: "55", emoji: "👍" }]);
+    const first = await runOperatorCommand({
+      event: event({ text: "/react -100 1 ❤", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(first).toMatchObject({
+      text: "已请求在 -100 的消息 1 上设置 ❤。别人的反应还在。一组媒体里会落到还在的第一条。",
+    });
+    expect(seen[1]).toEqual({ chatId: "-100", messageId: "1", emoji: "❤" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/react <chatId> <messageId> <emoji>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setReaction() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set 👍 on message 55 of -100. Other people's reactions stay. A media group uses the first message that is still there.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/react -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/react <chatId> <messageId> <emoji>",
+    });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/react <chatId> <messageId> <emoji>",
+    });
+    expect(seen).toHaveLength(2);
+    const styled = await runOperatorCommand({
+      event: event({ text: "/react -100 55 \u2764\uFE0F", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(styled).toMatchObject({ text: "参数无效" });
+    const zero = await runOperatorCommand({
+      event: event({ text: "/react -100 01 👍", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(zero).toMatchObject({ text: "参数无效" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/react -100 55 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/react -100 55 👍", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setReaction() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain("👍");
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"react"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/react -200 55 👍", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

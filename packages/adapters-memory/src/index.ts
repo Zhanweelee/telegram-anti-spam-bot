@@ -27,6 +27,7 @@ import {
   parseRuleSet,
   prefilterPolicySchema,
   type ReactionActorTarget,
+  type ReactionChoice,
   type ReplyMessage,
   type ReplyPort,
   type RuleSet,
@@ -148,6 +149,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly chatsLeft: readonly ChatTarget[];
   readonly memberTagsSet: readonly MemberTagTarget[];
   readonly stickerSetsDeleted: readonly ChatTarget[];
+  readonly reactionsSet: readonly ReactionChoice[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -180,6 +182,7 @@ export function createMemoryModerator(): ModerationPort & {
   const chatsLeft: ChatTarget[] = [];
   const memberTagsSet: MemberTagTarget[] = [];
   const stickerSetsDeleted: ChatTarget[] = [];
+  const reactionsSet: ReactionChoice[] = [];
   return {
     deleted,
     deletedMessages,
@@ -212,6 +215,7 @@ export function createMemoryModerator(): ModerationPort & {
     chatsLeft,
     memberTagsSet,
     stickerSetsDeleted,
+    reactionsSet,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -380,6 +384,14 @@ export function createMemoryModerator(): ModerationPort & {
       stickerSetsDeleted.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
+      });
+    },
+    async setReaction(target) {
+      reactionsSet.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageId: target.messageId,
+        emoji: target.emoji,
       });
     },
     async unpinTopic(target) {

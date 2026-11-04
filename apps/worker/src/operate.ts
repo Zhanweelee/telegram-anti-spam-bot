@@ -112,6 +112,9 @@ function commandModerator(
     async deleteStickerSet() {
       throw new Error("delstickers_unavailable");
     },
+    async setReaction() {
+      throw new Error("react_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },
