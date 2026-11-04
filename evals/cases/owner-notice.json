@@ -1,0 +1,24 @@
+[
+  {
+    "id": "owner_notice_changed",
+    "kind": "message",
+    "label": "spam",
+    "ownerNotice": "changed"
+  },
+  {
+    "id": "owner_notice_left",
+    "kind": "message",
+    "label": "spam",
+    "ownerNotice": "left"
+  },
+  {
+    "id": "owner_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "owner_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

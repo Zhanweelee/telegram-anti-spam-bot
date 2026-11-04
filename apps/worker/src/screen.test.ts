@@ -5675,6 +5675,153 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps an owner change until that chat asks", async () => {
+    const name = "新群主广告名";
+    const actor = "交群的人";
+    const userId = 90199;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      changed?: boolean;
+      left?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 100, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.changed
+              ? {
+                  chat_owner_changed: {
+                    new_owner: { id: userId, is_bot: false, first_name: name },
+                  },
+                }
+              : {}),
+            ...(input.left ? { chat_owner_left: {} } : {}),
+            ...(input.flag
+              ? { chat_owner_changed: true, chat_owner_left: true }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10430,
+      chatId: -1001052,
+      changed: true,
+    });
+    expect(idle.message?.ownerNotice).toBe("changed");
+    expect(idle.message?.text).toBe(name);
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    expect(JSON.stringify(idle)).not.toContain(String(userId));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "owner_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["owner_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10431, chatId: -1001053, changed: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("owner_notice");
+    expect(removed.decision.ruleIds).toContain("owner_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "owner:changed" },
+    ]);
+    const left = await screenTelegramEvent(
+      await posted({ updateId: 10432, chatId: -1001054, left: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(left.decision.action).toBe("delete");
+    expect(left.decision.evidence).toEqual([
+      { kind: "feature", summary: "owner:left" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10433, chatId: -1001055, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10434,
+        chatId: -1001056,
+        changed: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      left: left.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(userId));
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a video-chat invite until that chat asks", async () => {
     const name = "视频邀请广告名";
     const actor = "拉人的人";

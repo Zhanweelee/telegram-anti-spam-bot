@@ -123,6 +123,8 @@ export const messageSchema = z
     checklistNotice: z.enum(["done", "undone"]).optional(),
     /** Video-chat invite. User ids stay out. Invited names stay in the text. */
     asCallInvite: z.literal(true).optional(),
+    /** Owner change or owner left. User ids stay out. The new name stays in the text. */
+    ownerNotice: z.enum(["changed", "left"]).optional(),
   })
   .refine(
     (message) =>

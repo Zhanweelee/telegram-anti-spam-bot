@@ -43,6 +43,7 @@
     "@tasb/detector-post": "workspace:*",
     "@tasb/detector-checklist": "workspace:*",
     "@tasb/detector-call-invite": "workspace:*",
+    "@tasb/detector-owner": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

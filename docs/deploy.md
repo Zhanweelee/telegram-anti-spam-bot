@@ -193,6 +193,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> call_invite on` 删这个群里把人拉进视频聊天的提示。默认关闭。用户编号不进证据。被邀请的名字仍参与关键词。开始、结束和预约仍看 `call_notice`。见 ADR 0491。
 
+`/rule <chatId> owner_notice on` 删这个群里换群主和群主离开的提示。默认关闭。用户编号不进证据。新群主的名字仍参与关键词。没有下一位时这行也会删除。见 ADR 0492。
+
 ## 确认
 
 ```sh
