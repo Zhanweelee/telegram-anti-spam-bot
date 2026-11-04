@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(83);
+    expect(menu).toHaveLength(84);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7398,9 +7398,13 @@ describe("runOperatorCommand", () => {
       command: "allows",
       description: "/allows <chatId> <actorId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "canadmin")).toEqual({
       command: "canadmin",
       description: "/canadmin <chatId> <actorId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "kick",
+      description: "/kick <chatId> <actorId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -13121,6 +13125,174 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readMemberAdmin() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("removes a member who can rejoin", async () => {
+    const deps = kit();
+    const kicked: { chatId: string; actorId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor(target) {
+          kicked.push({ chatId: target.chatId, actorId: target.actorId });
+          return "removed";
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已移出 -100 77" });
+    expect(kicked).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/kick <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async kickActor() {
+          return "removed" as const;
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "Removed 77 from -100" });
+
+    const away = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          return "absent" as const;
+        },
+      },
+      ...kit(),
+    });
+    expect(away).toMatchObject({ text: "-100 77 不在群里" });
+
+    const awayEn = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async kickActor() {
+          return "absent" as const;
+        },
+      },
+      ...kit(),
+    });
+    expect(awayEn).toMatchObject({ text: "77 is not in -100" });
+
+    const admin = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          return "admin" as const;
+        },
+      },
+      ...kit(),
+    });
+    expect(admin).toMatchObject({ text: "-100 77 是管理员" });
+
+    const adminEn = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async kickActor() {
+          return "admin" as const;
+        },
+      },
+      ...kit(),
+    });
+    expect(adminEn).toMatchObject({ text: "77 is an admin in -100" });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/kick -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/kick <chatId> <actorId>" });
+
+    const extra = await runOperatorCommand({
+      event: event({ text: "/kick -100 77 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/kick <chatId> <actorId>" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/kick -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async kickActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/kick -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/kick -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async kickActor() {
           throw new Error("called");
         },
       },

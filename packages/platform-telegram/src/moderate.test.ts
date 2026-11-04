@@ -607,6 +607,127 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("removes a member without lifting a ban or copying a name", async () => {
+    const phrase = "请免费领取礼品";
+    const target = { tenantId: "local", chatId: "-100", actorId: "77" };
+    function opened(result: Record<string, unknown>) {
+      const calls: { method: string; body: string }[] = [];
+      const moderator = createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          const method = url.slice(url.lastIndexOf("/") + 1);
+          calls.push({ method, body: String(init?.body ?? "") });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: method === "unbanChatMember" ? true : result,
+            }),
+            { status: 200 },
+          );
+        },
+      });
+      return { calls, moderator };
+    }
+    const member = opened({
+      status: "member",
+      user: { id: 77, first_name: phrase },
+    });
+    expect(await member.moderator.kickActor(target)).toBe("removed");
+    expect(member.calls.map((call) => call.method)).toEqual([
+      "getChatMember",
+      "unbanChatMember",
+    ]);
+    expect(member.calls[0]?.body).toBe('{"chat_id":-100,"user_id":77}');
+    expect(member.calls[1]?.body).toBe('{"chat_id":-100,"user_id":77}');
+    expect(JSON.stringify(member.calls)).not.toContain("only_if_banned");
+    expect(member.calls.map((call) => call.method)).not.toContain(
+      "banChatMember",
+    );
+    expect(JSON.stringify(member.calls)).not.toContain(phrase);
+
+    const restricted = opened({
+      status: "restricted",
+      user: { id: 77 },
+      is_member: true,
+    });
+    expect(await restricted.moderator.kickActor(target)).toBe("removed");
+    expect(restricted.calls).toHaveLength(2);
+
+    const missingFlag = opened({ status: "restricted", user: { id: 77 } });
+    expect(await missingFlag.moderator.kickActor(target)).toBe("removed");
+    expect(missingFlag.calls).toHaveLength(2);
+
+    const away = opened({
+      status: "restricted",
+      user: { id: 77 },
+      is_member: false,
+    });
+    expect(await away.moderator.kickActor(target)).toBe("absent");
+    expect(away.calls.map((call) => call.method)).toEqual(["getChatMember"]);
+
+    const left = opened({
+      status: "left",
+      user: { id: 77, first_name: phrase },
+    });
+    expect(await left.moderator.kickActor(target)).toBe("absent");
+    expect(left.calls.map((call) => call.method)).toEqual(["getChatMember"]);
+
+    const banned = opened({
+      status: "kicked",
+      user: { id: 77, first_name: phrase },
+    });
+    expect(await banned.moderator.kickActor(target)).toBe("absent");
+    expect(banned.calls.map((call) => call.method)).toEqual(["getChatMember"]);
+    expect(JSON.stringify(banned.calls)).not.toContain("unbanChatMember");
+
+    const administrator = opened({
+      status: "administrator",
+      user: { id: 77, first_name: phrase },
+    });
+    expect(await administrator.moderator.kickActor(target)).toBe("admin");
+    expect(administrator.calls).toHaveLength(1);
+
+    const creator = opened({
+      status: "creator",
+      user: { id: 77, first_name: phrase },
+    });
+    expect(await creator.moderator.kickActor(target)).toBe("admin");
+    expect(creator.calls).toHaveLength(1);
+
+    await expect(
+      opened({
+        status: "restricted",
+        user: { id: 77 },
+        is_member: "yes",
+      }).moderator.kickActor(target),
+    ).rejects.toThrow("kick_failed");
+    await expect(
+      opened({ status: "member", user: { id: 78 } }).moderator.kickActor(
+        target,
+      ),
+    ).rejects.toThrow("kick_failed");
+    await expect(
+      opened({ status: "member", user: { id: "77" } }).moderator.kickActor(
+        target,
+      ),
+    ).rejects.toThrow("kick_failed");
+    await expect(
+      opened({ status: "other", user: { id: 77 } }).moderator.kickActor(target),
+    ).rejects.toThrow("kick_failed");
+    let called = false;
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl: async () => {
+          called = true;
+          return new Response("ok", { status: 200 });
+        },
+      }).kickActor(target),
+    ).rejects.toThrow("kick_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("lifts restrictions only when the member is restricted", async () => {
     const phrase = "请免费领取礼品";
     const calls: { method: string; body: string }[] = [];

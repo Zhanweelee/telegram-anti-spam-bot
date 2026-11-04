@@ -9,6 +9,7 @@ import type {
   DefaultChatPermissions,
   DefaultRightsSnapshot,
   JoinBot,
+  KickResult,
   MemberAdmin,
   MemberAllows,
   MemberStanding,
@@ -319,6 +320,35 @@ export function createTelegramModerator(input: {
           only_if_banned: true,
         },
       });
+    },
+    async kickActor(target): Promise<KickResult> {
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "kick_unavailable",
+        failed: "kick_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      const place = kickPlace(member, target.actorId);
+      if (place !== "in") {
+        return place;
+      }
+      await postTelegram({
+        token: input.token,
+        method: "unbanChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "kick_unavailable",
+        failed: "kick_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      return "removed";
     },
     async unmuteActor(target): Promise<UnmuteResult> {
       const member = await postTelegram({
@@ -2129,6 +2159,53 @@ const requiredAdministratorFields = new Set<string>([
   "can_delete_stories",
   "can_send_welcome_messages",
 ]);
+
+function kickPlace(body: unknown, actorId: string): "in" | "absent" | "admin" {
+  const result = kickMemberResult(body);
+  const user = result.user;
+  if (
+    !isRecord(user) ||
+    typeof user.id !== "number" ||
+    !Number.isSafeInteger(user.id) ||
+    String(user.id) !== actorId
+  ) {
+    throw new Error("kick_failed");
+  }
+  if (result.status === "creator" || result.status === "administrator") {
+    return "admin";
+  }
+  if (result.status === "left" || result.status === "kicked") {
+    return "absent";
+  }
+  if (result.status === "member") {
+    return "in";
+  }
+  if (result.status === "restricted") {
+    return kickStillInChat(result) ? "in" : "absent";
+  }
+  throw new Error("kick_failed");
+}
+
+function kickMemberResult(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("kick_failed");
+  }
+  const result = body.result;
+  if (!isRecord(result) || typeof result.status !== "string") {
+    throw new Error("kick_failed");
+  }
+  return result;
+}
+
+function kickStillInChat(result: Record<string, unknown>): boolean {
+  if (!("is_member" in result) || result.is_member === undefined) {
+    return true;
+  }
+  if (typeof result.is_member !== "boolean") {
+    throw new Error("kick_failed");
+  }
+  return result.is_member;
+}
 
 function readMemberAdminValue(body: unknown, actorId: string): MemberAdmin {
   const result = memberAdminResult(body);

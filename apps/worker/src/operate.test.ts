@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(83);
+    expect(body.commands).toHaveLength(84);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2894,9 +2894,13 @@ describe("handleIncomingEvent", () => {
       command: "allows",
       description: "/allows <chatId> <actorId>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "canadmin")).toEqual({
       command: "canadmin",
       description: "/canadmin <chatId> <actorId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "kick",
+      description: "/kick <chatId> <actorId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -6579,6 +6583,128 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/canadmin -100 77", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("removes a member who can rejoin", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/kick -100 77", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          const method = url.slice(url.lastIndexOf("/") + 1);
+          calls.push({ method, body: String(init?.body ?? "") });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result:
+                method === "getChatMember"
+                  ? {
+                      status: "member",
+                      user: { id: 77, first_name: phrase },
+                    }
+                  : true,
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已移出 -100 77",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "getChatMember",
+      "unbanChatMember",
+    ]);
+    expect(calls[0]?.body).toBe('{"chat_id":-100,"user_id":77}');
+    expect(calls[1]?.body).toBe('{"chat_id":-100,"user_id":77}');
+    expect(JSON.stringify(calls)).not.toContain("only_if_banned");
+    expect(calls.map((call) => call.method)).not.toContain("banChatMember");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+
+    const banned = deps();
+    const bannedCalls: string[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/kick -100 77", direct: true }),
+      {
+        ...banned,
+        botToken: "bot-token",
+        fetchImpl: async (input) => {
+          bannedCalls.push(
+            String(input).slice(String(input).lastIndexOf("/") + 1),
+          );
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "kicked",
+                user: { id: 77, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(banned.reply.sent.map((message) => message.text)).toEqual([
+      "-100 77 不在群里",
+    ]);
+    expect(bannedCalls).toEqual(["getChatMember"]);
+
+    const admin = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/kick -100 77", direct: true }),
+      {
+        ...admin,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "administrator",
+                user: { id: 77, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(admin.reply.sent.map((message) => message.text)).toEqual([
+      "-100 77 是管理员",
+    ]);
+
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/kick -100 77", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/kick -100 77", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

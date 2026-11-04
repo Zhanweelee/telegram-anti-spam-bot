@@ -203,6 +203,7 @@ export {
   type InviteLinkTarget,
   type JoinBot,
   type JoinTarget,
+  type KickResult,
   type MemberAdmin,
   type MemberAllows,
   type MemberStanding,
