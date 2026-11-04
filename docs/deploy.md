@@ -255,6 +255,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rules <chatId> on` 只列打开的规则，`off` 只列关闭的规则。不写时仍列出全部。见 ADR 0522。
 
+`/commands skip <count>` 跳过前面的命令再往下列。不写 `skip` 时仍从第一条开始。见 ADR 0523。
+
 ## 确认
 
 ```sh

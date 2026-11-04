@@ -9,6 +9,7 @@ import { createFixedClock } from "./clock.js";
 import { runOperatorCommand } from "./command.js";
 import { parseEvent } from "./event.js";
 import { createMemoryLogger } from "./logger.js";
+import { commandDescriptions } from "./messages.js";
 import { loadPolicy } from "./policy-load.js";
 import type { PolicyStore } from "./policy-store.js";
 import type {
@@ -7856,7 +7857,7 @@ describe("runOperatorCommand", () => {
     });
     expect(menu.find((item) => item.command === "commands")).toEqual({
       command: "commands",
-      description: "/commands [private]",
+      description: "/commands [private] [skip <count>]",
     });
     expect(menu.find((item) => item.command === "delcommands")).toEqual({
       command: "delcommands",
@@ -8277,7 +8278,9 @@ describe("runOperatorCommand", () => {
       },
       ...kit(),
     });
-    expect(usage).toMatchObject({ text: "用法：/commands [private]" });
+    expect(usage).toMatchObject({
+      text: "用法：/commands [private] [skip <count>]",
+    });
     expect(seen).toHaveLength(3);
     const invalid = await runOperatorCommand({
       event: event({ text: `/commands ${phrase}`, direct: true }),
@@ -8345,6 +8348,186 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
+  it("continues the private command menu after skip", async () => {
+    const menu = [...commandDescriptions().entries()].map(
+      ([command, description]) => ({
+        command,
+        description,
+        ephemeral: "unknown" as const,
+      }),
+    );
+    expect(menu).toHaveLength(99);
+    const moderator = {
+      async readCommandMenu() {
+        return menu;
+      },
+    };
+    const first = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(first.status).toBe("reply");
+    if (first.status !== "reply") {
+      return;
+    }
+    expect(first.text.length).toBeLessThanOrEqual(3500);
+    expect(first.text.startsWith("命令 99\n")).toBe(true);
+    const lines = first.text.split("\n");
+    const omitted = Number(/^\+(\d+)$/.exec(lines.at(-1) ?? "")?.[1]);
+    expect(omitted).toBeGreaterThan(0);
+    expect(lines.length - 2 + omitted).toBe(99);
+    expect(first.text).not.toContain("allowhost");
+    const kept = 99 - omitted;
+    const same = await runOperatorCommand({
+      event: event({ text: "/commands skip 0", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(same).toEqual(first);
+    const tail = await runOperatorCommand({
+      event: event({ text: `/commands skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith("命令 99\n")).toBe(true);
+    expect(tail.text).toContain("allowhost");
+    expect(tail.text).toContain("rulemute");
+    expect(tail.text.split("\n").at(-1)).not.toMatch(/^\+\d+$/);
+    const named = await runOperatorCommand({
+      event: event({ text: `/commands private skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(named).toEqual(tail);
+    const shifted = await runOperatorCommand({
+      event: event({ text: "/commands skip 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(shifted.status).toBe("reply");
+    if (shifted.status !== "reply") {
+      return;
+    }
+    const shiftedLines = shifted.text.split("\n");
+    const shiftedOmitted = Number(
+      /^\+(\d+)$/.exec(shiftedLines.at(-1) ?? "")?.[1],
+    );
+    expect(shiftedLines[0]).toBe("命令 99");
+    expect(shiftedLines[1]?.startsWith("rules ")).toBe(true);
+    expect(shiftedLines.slice(1, -1).length + shiftedOmitted).toBe(98);
+    expect(shifted.text).not.toContain("\nhelp ");
+    const english = await runOperatorCommand({
+      event: event({ text: `/commands skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator,
+      ...kit(),
+    });
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    expect(english.text.startsWith("commands 99\n")).toBe(true);
+    expect(english.text).toContain("allowhost");
+    const past = await runOperatorCommand({
+      event: event({ text: "/commands skip 99", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const emptyReads: number[] = [];
+    const emptyMenu = {
+      async readCommandMenu() {
+        emptyReads.push(1);
+        return [];
+      },
+    };
+    const empty = await runOperatorCommand({
+      event: event({ text: "/commands skip 0", direct: true }),
+      adminActorIds: ["42"],
+      moderator: emptyMenu,
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "命令 0" });
+    const emptySkip = await runOperatorCommand({
+      event: event({ text: "/commands skip 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: emptyMenu,
+      ...kit(),
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const badLog = kit();
+    const bad = await runOperatorCommand({
+      event: event({ text: "/commands skip 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...badLog,
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const phraseSkip = await runOperatorCommand({
+      event: event({ text: `/commands skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...badLog,
+    });
+    expect(phraseSkip).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(phraseSkip)).not.toContain(phrase);
+    expect(JSON.stringify(badLog.logger.entries)).not.toContain(phrase);
+    const extra = await runOperatorCommand({
+      event: event({ text: `/commands skip ${kept} extra`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/commands [private] [skip <count>]",
+    });
+    const deniedReads: number[] = [];
+    const denied = await runOperatorCommand({
+      event: event({
+        text: "/commands skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readCommandMenu() {
+          deniedReads.push(1);
+          return menu;
+        },
+      },
+      ...kit(),
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(deniedReads).toHaveLength(0);
+    expect(emptyReads).toHaveLength(2);
   });
 
   it("clears the private command menu", async () => {

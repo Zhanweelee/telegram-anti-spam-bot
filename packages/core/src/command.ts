@@ -3574,10 +3574,11 @@ async function showCommandMenu(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  if (args.length > 1) {
+  const parsed = parseCommandsArgs(args);
+  if (parsed === "usage") {
     return say(input, "command.commands.usage");
   }
-  if (args.length === 1 && args[0] !== "private") {
+  if (parsed === "invalid") {
     return say(input, "command.invalid");
   }
   if (!scopeOf(input).all) {
@@ -3590,23 +3591,66 @@ async function showCommandMenu(
   }
   try {
     const commands = await read({ tenantId: input.event.tenantId });
-    return describeCommandMenu(input, commands);
+    return describeCommandMenu(input, commands, parsed.skip);
   } catch {
     rejectReadCommandMenu(input);
     return say(input, "command.invalid");
   }
 }
 
+function parseCommandsArgs(
+  args: readonly string[],
+): "usage" | "invalid" | { readonly skip: number } {
+  let index = 0;
+  if (args[0] === "private") {
+    index = 1;
+  } else if (args.length === 1) {
+    return "invalid";
+  }
+  if (index === args.length) {
+    return { skip: 0 };
+  }
+  if (args[index] !== "skip") {
+    return "usage";
+  }
+  const countToken = args[index + 1];
+  if (countToken === undefined) {
+    return "invalid";
+  }
+  const count = rulesSkipCount(countToken);
+  if (count === undefined || args.length !== index + 2) {
+    return count === undefined && args.length === index + 2
+      ? "invalid"
+      : "usage";
+  }
+  return { skip: count };
+}
+
 function describeCommandMenu(
   input: OperatorCommandInput,
   commands: readonly MenuCommandSnapshot[],
+  skip: number,
 ): string {
+  const header = say(input, "command.commands.header", {
+    count: commands.length,
+  });
+  if (commands.length === 0) {
+    if (skip > 0) {
+      return say(input, "command.invalid");
+    }
+    return header;
+  }
+  if (skip >= commands.length) {
+    return say(input, "command.invalid");
+  }
   return fitAdministratorLines(
-    say(input, "command.commands.header", { count: commands.length }),
-    commands.map(
-      (item) =>
-        `${item.command} ${item.description} ${say(input, permissionStateKey(item.ephemeral))}`,
-    ),
+    header,
+    commands
+      .slice(skip)
+      .map(
+        (item) =>
+          `${item.command} ${item.description} ${say(input, permissionStateKey(item.ephemeral))}`,
+      ),
     (count) => say(input, "command.commands.more", { count }),
   );
 }
