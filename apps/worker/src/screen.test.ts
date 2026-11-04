@@ -2075,6 +2075,73 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(text);
   });
 
+  it("keeps one chat's allowed short-link host", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.addAllowHost("local", "-100host", "bit.ly")).toBe(
+      true,
+    );
+    async function message(id: string, chatId: string, text: string) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id,
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      });
+    }
+    const kept = await screenTelegramEvent(
+      await message("host_keep", "-100host", "https://bit.ly/docs"),
+      { runtime },
+    );
+    expect(kept.decision.action).toBe("allow");
+    const otherHost = await screenTelegramEvent(
+      await message("host_other_link", "-100host", "https://tinyurl.com/x"),
+      { runtime },
+    );
+    expect(otherHost.decision.action).toBe("delete");
+    expect(otherHost.decision.reasons).toContain("short_link");
+    const both = await screenTelegramEvent(
+      await message(
+        "host_both",
+        "-100host",
+        "https://bit.ly/docs https://tinyurl.com/x",
+      ),
+      { runtime },
+    );
+    expect(both.decision.action).toBe("delete");
+    const otherChat = await screenTelegramEvent(
+      await message("host_other_chat", "-200host", "https://bit.ly/docs"),
+      { runtime },
+    );
+    expect(otherChat.decision.action).toBe("delete");
+    expect(JSON.stringify(kept)).not.toContain("docs");
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failed = await screenTelegramEvent(
+      await message("host_fail", "-300host", "https://bit.ly/docs"),
+      {
+        logger,
+        runtime: {
+          ...broken,
+          async listAllowHosts() {
+            throw new Error(phrase);
+          },
+        },
+      },
+    );
+    expect(failed.decision.action).toBe("delete");
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain("docs");
+  });
+
   it("deletes the second copy when that chat's repeat count is 2", async () => {
     const runtime = createMemoryRuntimeStore();
     expect(

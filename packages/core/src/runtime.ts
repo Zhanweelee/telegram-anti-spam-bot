@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { punitiveActions } from "./decision.js";
+import { normalizeAllowHost } from "./text.js";
 
 /** One chat can override at most this many rule ids. */
 export const MAX_RULE_SWITCHES = 32;
@@ -174,6 +175,37 @@ export const chatKeywordDocumentSchema = z
 
 export type ChatKeywordDocument = z.output<typeof chatKeywordDocumentSchema>;
 
+/** Hosts one chat keeps even when the link detector would delete them. */
+export const MAX_ALLOW_HOSTS = 32;
+
+export const allowHostSchema = z
+  .string()
+  .min(1)
+  .max(253)
+  .refine((value) => normalizeAllowHost(value) === value, {
+    message: "allow_host",
+  });
+
+export const allowHostDocumentSchema = z
+  .strictObject({
+    hosts: z.array(allowHostSchema).max(MAX_ALLOW_HOSTS),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    for (const host of value.hosts) {
+      if (seen.has(host)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "duplicate_host",
+          path: ["hosts"],
+        });
+      }
+      seen.add(host);
+    }
+  });
+
+export type AllowHostDocument = z.output<typeof allowHostDocumentSchema>;
+
 /** Per-chat switches that are not prefilter policy and not rules. */
 export interface RuntimeStore {
   getDryRun(tenantId: string, chatId: string): Promise<boolean>;
@@ -318,4 +350,23 @@ export interface RuntimeStore {
     action: string,
   ): Promise<boolean>;
   clearCaptchaFail(tenantId: string, chatId: string): Promise<void>;
+  /** Hosts this chat keeps. Empty when every matched link is still deleted. */
+  listAllowHosts(tenantId: string, chatId: string): Promise<readonly string[]>;
+  /**
+   * Returns false when the host is not a stored hostname or IPv4 address, or a
+   * new chat or a new host would exceed the cap. Adding a host that is
+   * already stored still succeeds.
+   */
+  addAllowHost(
+    tenantId: string,
+    chatId: string,
+    host: string,
+  ): Promise<boolean>;
+  /** True when a stored host was removed. */
+  removeAllowHost(
+    tenantId: string,
+    chatId: string,
+    host: string,
+  ): Promise<boolean>;
+  clearAllowHosts(tenantId: string, chatId: string): Promise<void>;
 }

@@ -320,6 +320,9 @@ export {
   resolveRuleSet,
 } from "./rules-load.js";
 export {
+  type AllowHostDocument,
+  allowHostDocumentSchema,
+  allowHostSchema,
   CAPTCHA_TTL_SECONDS,
   type CaptchaFailAction,
   type CaptchaFailDocument,
@@ -334,6 +337,7 @@ export {
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
   floodPolicyDocumentSchema,
+  MAX_ALLOW_HOSTS,
   MAX_CAPTCHA_TTL_SECONDS,
   MAX_CHAT_KEYWORDS,
   MAX_FLOOD_THRESHOLD,
@@ -381,6 +385,7 @@ export {
   foldMappedLatin,
   foldMatchText,
   MAX_CHAT_KEYWORD_LENGTH,
+  normalizeAllowHost,
   normalizeChatKeyword,
 } from "./text.js";
 export { withTimeout } from "./timeout.js";

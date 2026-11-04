@@ -183,11 +183,17 @@ describe("resolveStores", () => {
     expect(await restarted.runtime.getCaptchaFail("local", "-100")).toBe(
       "kick",
     );
+    expect(await first.runtime.addAllowHost("local", "-100", "bit.ly")).toBe(
+      true,
+    );
+    expect(await restarted.runtime.listAllowHosts("local", "-100")).toEqual([
+      "bit.ly",
+    ]);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(10);
+    expect(values.size).toBe(11);
     expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
       true,
     );
@@ -217,6 +223,9 @@ describe("resolveStores", () => {
     ).toBe(true);
     expect(
       [...values.keys()].some((key) => key.startsWith("runtime-captcha-fail")),
+    ).toBe(true);
+    expect(
+      [...values.keys()].some((key) => key.startsWith("runtime-allow-host")),
     ).toBe(true);
     expect(
       await first.chats.noteBot({

@@ -135,6 +135,121 @@ describe("link fixtures", () => {
     expect(calls).toBe(0);
   });
 
+  it("keeps a named host and still scores the other links", async () => {
+    const baseline = createLinkDetector();
+    const docs = await baseline.detect({
+      event: eventFor("https://docs.bit.ly/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(docs?.reasons).toEqual(["short_link"]);
+    expect(docs?.evidence[0]?.summary).toBe("short_link:docs.bit.ly");
+    const allowed = createLinkDetector({
+      allowHosts: ["bit.ly", "t.me", "1.2.3.4", "spam.example"],
+      denylist: ["spam.example"],
+    });
+    const kept = await allowed.detect({
+      event: eventFor("https://bit.ly/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(kept).toBeNull();
+    const subdomain = await allowed.detect({
+      event: eventFor("https://docs.bit.ly/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(subdomain).toBeNull();
+    const invite = await allowed.detect({
+      event: eventFor("https://t.me/+INVITEKEEP"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(invite).toBeNull();
+    const address = await allowed.detect({
+      event: eventFor("http://1.2.3.4/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(address).toBeNull();
+    const denied = await allowed.detect({
+      event: eventFor("https://spam.example/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(denied).toBeNull();
+    const other = await allowed.detect({
+      event: eventFor("https://tinyurl.com/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(other?.reasons).toEqual(["short_link"]);
+    expect(other?.evidence[0]?.summary).toBe("short_link:tinyurl.com");
+    const mixed = await allowed.detect({
+      event: eventFor("https://bit.ly/x https://github.com/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(mixed).toBeNull();
+    const partial = createLinkDetector({ allowHosts: ["github.com"] });
+    const still = await partial.detect({
+      event: eventFor("https://bit.ly/x https://github.com/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(still?.reasons).toEqual(["short_link"]);
+    expect(still?.evidence[0]?.summary).toBe("short_link:bit.ly");
+    expect(JSON.stringify(still)).not.toContain("github");
+    const prefix = createLinkDetector({ allowHosts: ["1.2.3"] });
+    const numbered = await prefix.detect({
+      event: eventFor("http://1.2.3.4/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(numbered?.reasons).toEqual(["ip_host"]);
+    const empty = createLinkDetector({ allowHosts: [] });
+    const open = await empty.detect({
+      event: eventFor("https://bit.ly/x"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(open?.reasons).toEqual(["short_link"]);
+    const bareInvite = createLinkDetector();
+    const joined = await bareInvite.detect({
+      event: eventFor("https://t.me/+INVITEKEEP"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(joined?.reasons).toEqual(["invite"]);
+    let calls = 0;
+    const watched = createLinkDetector({
+      allowHosts: ["example.com"],
+      source: {
+        async lookup() {
+          calls += 1;
+          return "bad";
+        },
+      },
+    });
+    const skipped = await watched.detect({
+      event: eventFor("https://example.com/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(skipped).toBeNull();
+    expect(calls).toBe(0);
+    const looked = await watched.detect({
+      event: eventFor("https://example.org/a"),
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(looked?.reasons).toEqual(["reputation"]);
+    expect(calls).toBe(1);
+    expect(JSON.stringify({ kept, other, still, looked })).not.toContain(
+      phrase,
+    );
+  });
+
   it("scores a hidden short-link host and leaves the path out", async () => {
     const secret = "机密路径";
     const detector = createLinkDetector();

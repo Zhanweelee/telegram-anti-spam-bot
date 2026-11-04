@@ -353,6 +353,56 @@ describe("memory adapter", () => {
     expect(await runtime.addKeyword("tenant_a", "overflow", "代开")).toBe(true);
   });
 
+  it("keeps allowed hosts apart from extra keywords", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.listAllowHosts("tenant_a", "chat_1")).toEqual([]);
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "发票")).toBe(true);
+    expect(await runtime.addAllowHost("tenant_a", "chat_1", "bit.ly")).toBe(
+      true,
+    );
+    expect(await runtime.addAllowHost("tenant_a", "chat_1", "bit.ly")).toBe(
+      true,
+    );
+    expect(await runtime.listAllowHosts("tenant_a", "chat_1")).toEqual([
+      "bit.ly",
+    ]);
+    expect(await runtime.listAllowHosts("tenant_a", "chat_2")).toEqual([]);
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+    expect(
+      await runtime.removeAllowHost("tenant_a", "chat_1", "tinyurl.com"),
+    ).toBe(false);
+    expect(
+      await runtime.addAllowHost("tenant_a", "chat_1", "bit.ly/secret"),
+    ).toBe(false);
+    expect(await runtime.removeAllowHost("tenant_a", "chat_1", "bit.ly")).toBe(
+      true,
+    );
+    expect(await runtime.listAllowHosts("tenant_a", "chat_1")).toEqual([]);
+    for (let index = 0; index < 32; index += 1) {
+      expect(
+        await runtime.addAllowHost("tenant_a", "chat_1", `h${index}.example`),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.addAllowHost("tenant_a", "chat_1", "overflow.example"),
+    ).toBe(false);
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+    await runtime.clearAllowHosts("tenant_a", "chat_1");
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.addAllowHost("tenant_a", `chat_${index}`, "bit.ly"),
+      ).toBe(true);
+    }
+    expect(await runtime.addAllowHost("tenant_a", "overflow", "bit.ly")).toBe(
+      false,
+    );
+    await runtime.clearAllowHosts("tenant_a", "chat_0");
+    expect(
+      await runtime.addAllowHost("tenant_a", "overflow", "tinyurl.com"),
+    ).toBe(true);
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+  });
+
   it("keeps a repeat policy apart from flood and keywords", async () => {
     const runtime = createMemoryRuntimeStore();
     expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toBeNull();
