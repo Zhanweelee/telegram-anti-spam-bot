@@ -68,6 +68,7 @@ describe("operator command example", () => {
     expect(help).toContain("/button");
     expect(help).toContain("/botname [name]");
     expect(help).toContain("/myname");
+    expect(help).toContain("/botdesc [description]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -333,6 +334,15 @@ describe("operator command example", () => {
       "已请求设置这个 bot 的名字。已有单独语言名字的人不受影响。",
     );
     expect(botName).not.toContain("hello");
+    const botDescription = await runPrivateCommand({
+      text: "/botdesc hello",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(botDescription).toBe(
+      "已请求设置这个 bot 的简介。已有单独语言简介的人不受影响。",
+    );
+    expect(botDescription).not.toContain("hello");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

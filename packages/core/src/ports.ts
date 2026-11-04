@@ -341,6 +341,11 @@ export interface BotNameQuery {
   readonly tenantId: string;
 }
 
+export interface BotDescriptionTarget {
+  readonly tenantId: string;
+  readonly description: string;
+}
+
 export interface MenuCommandSnapshot {
   readonly command: string;
   readonly description: string;
@@ -395,6 +400,7 @@ export interface ModerationPort {
   setCommandMenu(target: CommandMenuTarget): Promise<void>;
   setMenuButton(target: MenuButtonTarget): Promise<void>;
   setBotName(target: BotNameTarget): Promise<void>;
+  setBotDescription(target: BotDescriptionTarget): Promise<void>;
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
   setStickerSet(target: ChatStickerSetTarget): Promise<void>;

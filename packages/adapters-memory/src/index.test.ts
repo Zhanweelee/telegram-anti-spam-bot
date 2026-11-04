@@ -178,6 +178,17 @@ describe("memory adapter", () => {
     );
   });
 
+  it("records a bot description without a language", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setBotDescription({ tenantId: "t", description: "ops" });
+    await moderator.setBotDescription({ tenantId: "t", description: "" });
+    expect(moderator.botDescriptionsSet).toEqual([
+      { tenantId: "t", description: "ops" },
+      { tenantId: "t", description: "" },
+    ]);
+    expect(moderator.botDescriptionsSet[0]).not.toHaveProperty("languageCode");
+  });
+
   it("records a bot name without a language", async () => {
     const moderator = createMemoryModerator();
     await moderator.setBotName({ tenantId: "t", name: "ops" });

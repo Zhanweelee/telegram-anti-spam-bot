@@ -231,6 +231,8 @@ export const messageKeys = [
   "command.myname.usage",
   "command.myname.body",
   "command.myname.empty",
+  "command.botdesc.done",
+  "command.botdesc.cleared",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -315,6 +317,7 @@ const syntax = [
   "/button",
   "/botname [name]",
   "/myname",
+  "/botdesc [description]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -602,6 +605,10 @@ const zh = {
   "command.myname.usage": "用法：/myname",
   "command.myname.body": "名字 {name}",
   "command.myname.empty": "名字 空",
+  "command.botdesc.done":
+    "已请求设置这个 bot 的简介。已有单独语言简介的人不受影响。",
+  "command.botdesc.cleared":
+    "已请求清掉这个 bot 的默认简介。已有单独语言简介的人不受影响。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -898,6 +905,10 @@ const en = {
   "command.myname.usage": "Usage: /myname",
   "command.myname.body": "name {name}",
   "command.myname.empty": "name empty",
+  "command.botdesc.done":
+    "Asked to set this bot's description. People who already have a language-specific description are unchanged.",
+  "command.botdesc.cleared":
+    "Asked to clear this bot's default description. People who already have a language-specific description are unchanged.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
