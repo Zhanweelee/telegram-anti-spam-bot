@@ -124,6 +124,8 @@ export const eventSchema = z.strictObject({
     .string()
     .regex(/^[A-Za-z0-9_-]{1,128}$/)
     .optional(),
+  /** Joined through a chat-folder invite. The invite link stays out. */
+  folderInvite: z.literal(true).optional(),
 });
 
 export type EventKind = z.output<typeof eventKindSchema>;

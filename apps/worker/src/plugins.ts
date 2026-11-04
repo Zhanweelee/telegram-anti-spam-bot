@@ -97,6 +97,12 @@ export const builtinManifests = {
     integrity:
       "de06e29b2c25afc892cec1be2de5aa9bc1ea873b7057e2d213a9b7272cb3a8ae",
   }),
+  folder: manifest({
+    id: "folder",
+    kind: "detector",
+    integrity:
+      "b531e68519f6ab24df90805a254ea47a9f5359156afe22ffa30d6bb3f9f8b8f3",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

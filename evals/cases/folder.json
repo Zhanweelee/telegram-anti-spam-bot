@@ -1,0 +1,11 @@
+[
+  {
+    "id": "folder",
+    "kind": "chat_member",
+    "folderInvite": true,
+    "label": "spam"
+  },
+  { "id": "plain", "kind": "chat_member", "label": "ham" },
+  { "id": "message", "kind": "message", "label": "ham" },
+  { "id": "leave", "kind": "chat_member", "label": "ham" }
+]

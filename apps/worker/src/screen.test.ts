@@ -738,6 +738,94 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("keeps a folder-invite join on captcha until a chat enables the ban", async () => {
+    const link = "https://t.me/addlist/SecretFolder";
+    const name = "文件夹广告";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 2060,
+        chat_member: {
+          chat: { id: -100592, type: "supergroup", title: name },
+          from: { id: 1, first_name: name },
+          date: 1761955200,
+          invite_link: { invite_link: link, name },
+          via_chat_folder_invite_link: true,
+          old_chat_member: {
+            user: { id: 91, first_name: name },
+            status: "left",
+          },
+          new_chat_member: {
+            user: { id: 91, first_name: name },
+            status: "member",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.folderInvite).toBe(true);
+    expect(outcome.event.membership).toBe("join");
+    const logger = createMemoryLogger();
+    const idle = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+      captchaStore: createMemoryCaptchaStore(),
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(idle.decision.action).toBe("captcha");
+    expect(idle.decision.reasons).not.toContain("folder_joined");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "folder_join",
+              enabled: true,
+              when: { eventKind: "chat_member" },
+              detectorIds: ["folder"],
+              threshold: 1,
+              actions: ["ban"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const enabled = await screenTelegramEvent(
+      { ...outcome.event, id: "tg_2061", chatId: "-100593" },
+      {
+        logger: createMemoryLogger(),
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(enabled.decision.action).toBe("ban");
+    expect(enabled.decision.reasons).toContain("folder_joined");
+    expect(enabled.decision.ruleIds).toContain("folder_join");
+    expect(JSON.stringify(enabled.decision.evidence)).toContain(
+      "folder:invite",
+    );
+    const dumped = JSON.stringify({
+      decision: enabled.decision,
+      logs: logger.entries,
+    });
+    expect(dumped).not.toContain(link);
+    expect(dumped).not.toContain("SecretFolder");
+    expect(dumped).not.toContain(name);
+  });
+
   it("deletes a shared contact and keeps the phone out of logs", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

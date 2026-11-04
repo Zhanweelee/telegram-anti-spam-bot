@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-397
+
+- 从群外加入且 `via_chat_folder_invite_link` 为 true 时，事件带 `folderInvite`。邀请链接不进事件。
+- 默认规则 `folder_join` 关闭。打开后封禁。没有改 ADR 0026 的基础检测器名单。见 ADR 0429。
+- 30 天保留期没有改。
+
 ### P3-396
 
 - 私聊 `/privacy` 回报私密转发和语音视频限制。缺字段写未知。
