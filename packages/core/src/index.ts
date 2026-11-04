@@ -225,6 +225,8 @@ export {
   type SuggestedPostTarget,
   type TopicPinTarget,
   type UnmuteResult,
+  type WebhookQuery,
+  type WebhookSnapshot,
 } from "./ports.js";
 export {
   type ExemptReason,

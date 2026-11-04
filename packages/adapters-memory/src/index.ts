@@ -452,6 +452,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readBotIdentity() {
       throw new Error("who_unavailable");
     },
+    async readWebhook() {
+      throw new Error("hook_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

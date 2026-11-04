@@ -86,6 +86,9 @@ function createOpenModerator(): ModerationPort {
     async readBotIdentity() {
       throw new Error("who_unavailable");
     },
+    async readWebhook() {
+      throw new Error("hook_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

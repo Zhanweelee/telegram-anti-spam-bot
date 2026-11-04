@@ -1567,6 +1567,136 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the webhook backlog and drops the address", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const address = `https://example.invalid/${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            url: address,
+            has_custom_certificate: false,
+            pending_update_count: 3,
+            ip_address: "203.0.113.1",
+            last_error_date: 1700000000,
+            last_error_message: phrase,
+            last_synchronization_error_date: 1700000001,
+            max_connections: 40,
+            allowed_updates: ["message"],
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(moderator.readWebhook({ tenantId: "local" })).resolves.toEqual(
+      {
+        pendingUpdateCount: 3,
+        customCertificate: "off",
+        maxConnections: 40,
+        lastErrorDate: 1700000000,
+      },
+    );
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getWebhookInfo`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setWebhook");
+    expect(calls[0]?.method).not.toContain("deleteWebhook");
+    expect("getWebhookInfo").not.toContain("setWebhook");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(address);
+    expect(calls[0]?.body).not.toContain(token);
+    const resolved = await moderator.readWebhook({ tenantId: "local" });
+    expect(resolved).not.toHaveProperty("url");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(JSON.stringify(resolved)).not.toContain("example.invalid");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { url: "", pending_update_count: 0 },
+            }),
+            { status: 200 },
+          ),
+      }).readWebhook({ tenantId: "local" }),
+    ).resolves.toEqual({
+      pendingUpdateCount: 0,
+      customCertificate: "unknown",
+      maxConnections: null,
+      lastErrorDate: null,
+    });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readWebhook({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("hook_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                url: address,
+                pending_update_count: -1,
+                last_error_message: phrase,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readWebhook({ tenantId: "local" }),
+    ).rejects.toThrow("hook_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                pending_update_count: 0,
+                max_connections: 101,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readWebhook({ tenantId: "local" }),
+    ).rejects.toThrow("hook_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                pending_update_count: 0,
+                max_connections: 0,
+                last_error_date: 1.5,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readWebhook({ tenantId: "local" }),
+    ).rejects.toThrow("hook_failed");
+  });
+
   it("reads the bot identity and drops the display name", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

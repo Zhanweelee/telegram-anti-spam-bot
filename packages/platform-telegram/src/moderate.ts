@@ -13,6 +13,7 @@ import type {
   MuteTarget,
   PermissionState,
   UnmuteResult,
+  WebhookSnapshot,
 } from "@tasb/core";
 import { telegramId } from "./ids.js";
 
@@ -641,6 +642,17 @@ export function createTelegramModerator(input: {
       });
       return readBotIdentityValue(identity);
     },
+    async readWebhook() {
+      const info = await postTelegram({
+        token: input.token,
+        method: "getWebhookInfo",
+        fetchImpl: input.fetchImpl,
+        missing: "hook_unavailable",
+        failed: "hook_failed",
+        body: {},
+      });
+      return readWebhookSnapshot(info);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -1146,6 +1158,68 @@ function readBotFlag(value: unknown): PermissionState {
     return "off";
   }
   throw new Error("who_failed");
+}
+
+function readWebhookSnapshot(body: unknown): WebhookSnapshot {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("hook_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("hook_failed");
+  }
+  const record = result as Record<string, unknown>;
+  return {
+    pendingUpdateCount: readPendingCount(record.pending_update_count),
+    customCertificate: readWebhookFlag(record.has_custom_certificate),
+    maxConnections: readMaxConnections(record.max_connections),
+    lastErrorDate: readLastErrorDate(record.last_error_date),
+  };
+}
+
+function readPendingCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("hook_failed");
+  }
+  return value;
+}
+
+function readWebhookFlag(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "unknown";
+  }
+  if (value === true) {
+    return "on";
+  }
+  if (value === false) {
+    return "off";
+  }
+  throw new Error("hook_failed");
+}
+
+function readMaxConnections(value: unknown): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (
+    typeof value !== "number" ||
+    !Number.isSafeInteger(value) ||
+    value < 1 ||
+    value > 100
+  ) {
+    throw new Error("hook_failed");
+  }
+  return value;
+}
+
+function readLastErrorDate(value: unknown): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("hook_failed");
+  }
+  return value;
 }
 
 function readBotShortDescriptionValue(body: unknown): string {
