@@ -20614,6 +20614,92 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks spoiler media and leaves the file id out", async () => {
+    const caption = "剧透说明广告";
+    const actor = "发剧透的人";
+    const fileId = "AgAC90209spoiler";
+    const covered = await normalize({
+      update_id: 4730,
+      message: {
+        message_id: 770,
+        date: 1761955200,
+        chat: { id: -100499730, type: "supergroup" },
+        from: { id: 108, first_name: actor },
+        caption,
+        photo: [{ file_id: fileId, width: 1, height: 1 }],
+        has_media_spoiler: true,
+      },
+    });
+    expect(covered.status).toBe("event");
+    if (covered.status !== "event") {
+      return;
+    }
+    expect(covered.event.message?.asSpoiler).toBe(true);
+    expect(covered.event.message?.media).toBe("photo");
+    expect(covered.event.message?.text).toBe(caption);
+    const coveredDump = JSON.stringify(covered.event);
+    expect(coveredDump).not.toContain(fileId);
+    expect(coveredDump).not.toContain("90209");
+    expect(coveredDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4731,
+      message: {
+        message_id: 771,
+        date: 1761955200,
+        chat: { id: -100499731, type: "supergroup" },
+        from: { id: 108, first_name: actor },
+        caption: "今天站会",
+        photo: [{ file_id: fileId, width: 1, height: 1 }],
+        has_media_spoiler: true,
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asSpoiler).toBe(true);
+
+    const videoId = "BAAC90210spoiler";
+    const video = await normalize({
+      update_id: 4732,
+      message: {
+        message_id: 772,
+        date: 1761955200,
+        chat: { id: -100499732, type: "supergroup" },
+        from: { id: 108 },
+        video: { file_id: videoId, width: 1, height: 1, duration: 1 },
+        has_media_spoiler: true,
+      },
+    });
+    expect(video.status).toBe("event");
+    if (video.status !== "event") {
+      return;
+    }
+    expect(video.event.message?.asSpoiler).toBe(true);
+    expect(video.event.message?.media).toBe("video");
+    expect(JSON.stringify(video.event)).not.toContain(videoId);
+
+    const plain = await normalize({
+      update_id: 4733,
+      message: {
+        message_id: 773,
+        date: 1761955200,
+        chat: { id: -100499733, type: "supergroup" },
+        from: { id: 108 },
+        photo: [{ file_id: fileId, width: 1, height: 1 }],
+        has_media_spoiler: false,
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.asSpoiler).toBeUndefined();
+    expect(plain.event.message?.media).toBe("photo");
+  });
+
   it("marks a pending suggested post and leaves the price out", async () => {
     const text = "待审建议帖广告";
     const actor = "投稿的人";

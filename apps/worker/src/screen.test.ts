@@ -5675,6 +5675,166 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps spoiler media until that chat asks", async () => {
+    const caption = "剧透说明广告";
+    const actor = "发剧透的人";
+    const fileId = "AgAC90209spoiler";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      spoiler?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 108, first_name: actor },
+            caption,
+            photo: [{ file_id: fileId, width: 1, height: 1 }],
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.spoiler ? { has_media_spoiler: true } : {}),
+            ...(input.flag ? { has_media_spoiler: false } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10510,
+      chatId: -1001110,
+      spoiler: true,
+    });
+    expect(idle.message?.asSpoiler).toBe(true);
+    expect(idle.message?.media).toBe("photo");
+    expect(idle.message?.text).toBe(caption);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(actor);
+    expect(idleDump).not.toContain(fileId);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "media_spoiler",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["media_spoiler"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10511, chatId: -1001111, spoiler: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("media_spoiler");
+    expect(removed.decision.ruleIds).toContain("media_spoiler");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:spoiler" },
+    ]);
+    const stickerOnly: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "media_sticker",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["media_sticker"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const keptBySticker = await screenTelegramEvent(
+      await posted({ updateId: 10512, chatId: -1001112, spoiler: true }),
+      {
+        source: stickerOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptBySticker.decision.action).toBe("allow");
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10513, chatId: -1001113, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10514,
+        chatId: -1001114,
+        spoiler: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptBySticker: keptBySticker.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(caption);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(fileId);
+    expect(dumped).not.toContain("90209");
+  });
+
   it("keeps a pending suggested post until that chat asks", async () => {
     const text = "待审建议帖广告";
     const actor = "投稿的人";

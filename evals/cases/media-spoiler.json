@@ -1,0 +1,18 @@
+[
+  {
+    "id": "media_spoiler_spam",
+    "kind": "message",
+    "label": "spam",
+    "asSpoiler": true
+  },
+  {
+    "id": "media_spoiler_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "media_spoiler_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

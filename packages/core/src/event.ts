@@ -139,6 +139,8 @@ export const messageSchema = z
     asGroupCreated: z.literal(true).optional(),
     /** Pending suggested post. Price and send date stay out. The post text stays in the message. */
     asPostPending: z.literal(true).optional(),
+    /** Media covered by a spoiler. The file id stays out. The caption stays in the message. */
+    asSpoiler: z.literal(true).optional(),
   })
   .refine(
     (message) =>

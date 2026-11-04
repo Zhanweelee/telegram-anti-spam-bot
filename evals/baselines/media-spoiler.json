@@ -1,0 +1,5 @@
+{
+  "detector": "media_spoiler",
+  "precision": 1,
+  "recall": 1
+}

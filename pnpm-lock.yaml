@@ -167,6 +167,9 @@ importers:
       '@tasb/detector-shared-chat':
         specifier: workspace:*
         version: link:../../packages/detectors-shared-chat
+      '@tasb/detector-spoiler':
+        specifier: workspace:*
+        version: link:../../packages/detectors-spoiler
       '@tasb/detector-story':
         specifier: workspace:*
         version: link:../../packages/detectors-story
@@ -312,6 +315,9 @@ importers:
       '@tasb/detector-shared-chat':
         specifier: workspace:*
         version: link:../packages/detectors-shared-chat
+      '@tasb/detector-spoiler':
+        specifier: workspace:*
+        version: link:../packages/detectors-spoiler
       '@tasb/detector-story':
         specifier: workspace:*
         version: link:../packages/detectors-story
@@ -734,6 +740,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-shared-chat:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-spoiler:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

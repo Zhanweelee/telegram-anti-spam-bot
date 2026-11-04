@@ -319,6 +319,12 @@ export const builtinManifests = {
     integrity:
       "bc581778f5473b813d250ea337a63158d701c034f4ad24f2cad51fa5d914e6e5",
   }),
+  mediaSpoiler: manifest({
+    id: "media_spoiler",
+    kind: "detector",
+    integrity:
+      "d0cfd88bf2fe25574ba3d3e57e41ca9132bdc33717ac725d6def44d11275a629",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
