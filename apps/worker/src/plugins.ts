@@ -283,6 +283,12 @@ export const builtinManifests = {
     integrity:
       "be6fb7dce7790a79758cb6d46702c83710388246111337101d1498eecc1c16f4",
   }),
+  pollNotice: manifest({
+    id: "poll_notice",
+    kind: "detector",
+    integrity:
+      "4e012e8af59d9b3deb9e8773e5265240ab8594a830c8f0719c58a3d2e19ee9ef",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

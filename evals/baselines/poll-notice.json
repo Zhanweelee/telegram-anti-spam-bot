@@ -1,0 +1,5 @@
+{
+  "detector": "poll_notice",
+  "precision": 1,
+  "recall": 1
+}

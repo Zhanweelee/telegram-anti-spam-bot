@@ -1,0 +1,24 @@
+[
+  {
+    "id": "poll_notice_added",
+    "kind": "message",
+    "label": "spam",
+    "pollNotice": "added"
+  },
+  {
+    "id": "poll_notice_deleted",
+    "kind": "message",
+    "label": "spam",
+    "pollNotice": "deleted"
+  },
+  {
+    "id": "poll_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "poll_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

@@ -307,6 +307,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "poll_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["poll_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

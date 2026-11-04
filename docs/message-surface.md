@@ -77,3 +77,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `chat_owner_changed.new_owner` 是用户对象时，消息带 `ownerNotice: "changed"`。`chat_owner_left` 是对象时带 `left`。没有下一位也带。同时出现时先认换人。用户编号不进事件。新群主的名字仍按 ADR 0120 成为正文。空的换人对象和布尔值不带这个标记。规则 `owner_notice` 默认关闭。见 ADR 0492。
 
 `proximity_alert_triggered.distance` 是大于等于 0 的安全整数时，消息带 `asProximity`。距离和用户编号不进事件。两个人的名字仍按 ADR 0121 成为正文。空对象、负数、小数、字符串和布尔值不带这个标记。0 米带这个标记。这条消息不因此带 `asLocation`。规则 `proximity_notice` 默认关闭。见 ADR 0493。
+
+`poll_option_added.option_text` 是非空字符串时，消息带 `pollNotice: "added"`。`poll_option_deleted.option_text` 满足同样条件时带 `deleted`。同时出现时先认新加。空字符串落到另一种。选项编号和原投票不进事件。选项文字仍按 ADR 0089 成为正文。空对象和布尔值不带这个标记。投票题干不带这个标记。规则 `poll_notice` 默认关闭。见 ADR 0494。

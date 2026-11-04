@@ -20614,6 +20614,155 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a poll option change and keeps the option text", async () => {
+    const added = "投票广告选项";
+    const removed = "删掉的广告选项";
+    const question = "原投票题干广告";
+    const actor = "加选项的人";
+    const optionId = "选项编号90203专属";
+    const created = await normalize({
+      update_id: 4660,
+      message: {
+        message_id: 710,
+        date: 1761955200,
+        chat: { id: -100499650, type: "supergroup" },
+        from: { id: 102, first_name: actor },
+        poll_option_added: {
+          option_persistent_id: optionId,
+          option_text: added,
+          poll_message: {
+            message_id: 1,
+            chat: { id: -100499650, type: "supergroup" },
+            date: 1761955200,
+            poll: { question },
+          },
+        },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.pollNotice).toBe("added");
+    expect(created.event.message?.text).toBe(added);
+    const dumped = JSON.stringify(created.event);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(optionId);
+    expect(dumped).not.toContain(question);
+
+    const deleted = await normalize({
+      update_id: 4661,
+      message: {
+        message_id: 711,
+        date: 1761955200,
+        chat: { id: -100499651, type: "supergroup" },
+        from: { id: 102, first_name: actor },
+        poll_option_deleted: {
+          option_persistent_id: optionId,
+          option_text: removed,
+        },
+      },
+    });
+    expect(deleted.status).toBe("event");
+    if (deleted.status !== "event") {
+      return;
+    }
+    expect(deleted.event.message?.pollNotice).toBe("deleted");
+    expect(deleted.event.message?.text).toBe(removed);
+    expect(JSON.stringify(deleted.event)).not.toContain(optionId);
+
+    const kept = await normalize({
+      update_id: 4662,
+      message: {
+        message_id: 712,
+        date: 1761955200,
+        chat: { id: -100499652, type: "supergroup" },
+        from: { id: 102, first_name: actor },
+        text: "今天站会",
+        poll_option_added: {
+          option_persistent_id: optionId,
+          option_text: added,
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.pollNotice).toBe("added");
+    expect(JSON.stringify(kept.event)).not.toContain(added);
+
+    const both = await normalize({
+      update_id: 4663,
+      message: {
+        message_id: 713,
+        date: 1761955200,
+        chat: { id: -100499653, type: "supergroup" },
+        from: { id: 102 },
+        poll_option_added: { option_text: added },
+        poll_option_deleted: { option_text: removed },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.pollNotice).toBe("added");
+    expect(both.event.message?.text).toBe(added);
+
+    const blankAdded = await normalize({
+      update_id: 4664,
+      message: {
+        message_id: 714,
+        date: 1761955200,
+        chat: { id: -100499654, type: "supergroup" },
+        from: { id: 102 },
+        poll_option_added: { option_text: "" },
+        poll_option_deleted: { option_text: removed },
+      },
+    });
+    expect(blankAdded.status).toBe("event");
+    if (blankAdded.status !== "event") {
+      return;
+    }
+    expect(blankAdded.event.message?.pollNotice).toBe("deleted");
+    expect(blankAdded.event.message?.text).toBe(removed);
+
+    const empty = await normalize({
+      update_id: 4665,
+      message: {
+        message_id: 715,
+        date: 1761955200,
+        chat: { id: -100499655, type: "supergroup" },
+        from: { id: 102 },
+        poll_option_added: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.pollNotice).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4666,
+      message: {
+        message_id: 716,
+        date: 1761955200,
+        chat: { id: -100499656, type: "supergroup" },
+        from: { id: 102 },
+        poll_option_added: true,
+        poll_option_deleted: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.pollNotice).toBeUndefined();
+  });
+
   it("marks a proximity alert and keeps the names", async () => {
     const traveler = "靠近广告名";
     const watcher = "守位置的人";
