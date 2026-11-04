@@ -113,6 +113,11 @@ export const messageKeys = [
   "command.flood.usage",
   "command.flood.show",
   "command.flood.done",
+  "command.keyword.usage",
+  "command.keyword.show",
+  "command.keyword.added",
+  "command.keyword.removed",
+  "command.keyword.absent",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -469,6 +474,7 @@ const syntax = [
   "/warnlimit <chatId> [limit|reset]",
   "/report <chatId> [targetId|reset]",
   "/flood <chatId> [count [seconds]|reset]",
+  "/keyword <chatId> [add|remove <token>|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -602,6 +608,11 @@ const zh = {
   "command.flood.show": "{chatId} 洪泛 {threshold} 条 / {windowSeconds} 秒",
   "command.flood.done":
     "已设置 {chatId} 洪泛 {threshold} 条 / {windowSeconds} 秒",
+  "command.keyword.usage": "用法：/keyword <chatId> [add|remove <token>|reset]",
+  "command.keyword.show": "{chatId} 关键词 {count}",
+  "command.keyword.added": "已添加 {chatId} 关键词 {count}",
+  "command.keyword.removed": "已移除 {chatId} 关键词 {count}",
+  "command.keyword.absent": "没有这个关键词",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1018,6 +1029,12 @@ const en = {
   "command.flood.show": "Flood for {chatId} is {threshold} in {windowSeconds}s",
   "command.flood.done":
     "Set flood for {chatId} to {threshold} in {windowSeconds}s",
+  "command.keyword.usage":
+    "Usage: /keyword <chatId> [add|remove <token>|reset]",
+  "command.keyword.show": "Keywords for {chatId}: {count}",
+  "command.keyword.added": "Added a keyword to {chatId}, now {count}",
+  "command.keyword.removed": "Removed a keyword from {chatId}, now {count}",
+  "command.keyword.absent": "No such keyword",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

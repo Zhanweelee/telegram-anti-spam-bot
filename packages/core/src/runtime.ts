@@ -97,6 +97,31 @@ export const floodPolicyDocumentSchema = z.strictObject({
 
 export type FloodPolicy = z.output<typeof floodPolicyDocumentSchema>;
 
+/** Extra keywords for one chat. The built-in list stays in the detector. */
+export const MAX_CHAT_KEYWORDS = 32;
+
+export const chatKeywordSchema = z.string().min(1).max(32);
+
+export const chatKeywordDocumentSchema = z
+  .strictObject({
+    keywords: z.array(chatKeywordSchema).max(MAX_CHAT_KEYWORDS),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    for (const keyword of value.keywords) {
+      if (seen.has(keyword)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "duplicate_keyword",
+          path: ["keywords"],
+        });
+      }
+      seen.add(keyword);
+    }
+  });
+
+export type ChatKeywordDocument = z.output<typeof chatKeywordDocumentSchema>;
+
 /** Per-chat switches that are not prefilter policy and not rules. */
 export interface RuntimeStore {
   getDryRun(tenantId: string, chatId: string): Promise<boolean>;
@@ -164,4 +189,23 @@ export interface RuntimeStore {
     policy: FloodPolicy,
   ): Promise<boolean>;
   clearFloodPolicy(tenantId: string, chatId: string): Promise<void>;
+  /** Extra keywords for this chat. Empty when only the built-in list applies. */
+  listKeywords(tenantId: string, chatId: string): Promise<readonly string[]>;
+  /**
+   * Returns false when the token is empty or longer than 32 characters, or a
+   * new chat or a new keyword would exceed the cap. Adding a token that is
+   * already stored still succeeds.
+   */
+  addKeyword(
+    tenantId: string,
+    chatId: string,
+    keyword: string,
+  ): Promise<boolean>;
+  /** True when a stored token was removed. */
+  removeKeyword(
+    tenantId: string,
+    chatId: string,
+    keyword: string,
+  ): Promise<boolean>;
+  clearKeywords(tenantId: string, chatId: string): Promise<void>;
 }

@@ -321,6 +321,61 @@ describe("kv runtime store", () => {
     await second.clearFloodPolicy("local", "-100");
     expect(await second.getFloodPolicy("local", "-100")).toBeNull();
   });
+
+  it("keeps extra keywords in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.listKeywords("local", "-100")).toEqual([]);
+    expect(await first.addKeyword("local", "-100", "发票")).toBe(true);
+    const written = puts;
+    expect(await first.addKeyword("local", "-100", "发票")).toBe(true);
+    expect(puts).toBe(written);
+    expect(
+      await first.setFloodPolicy("local", "-100", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.listKeywords("local", "-100")).toEqual(["发票"]);
+    expect(await second.getFloodPolicy("local", "-100")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    const keys = [...backing.values.keys()];
+    const keywordKey = keys.find((key) => key.startsWith("runtime-keyword"));
+    const floodKey = keys.find((key) => key.startsWith("runtime-flood"));
+    expect(keywordKey).toBeDefined();
+    expect(backing.values.get(floodKey ?? "")).not.toContain("发票");
+    expect(backing.values.get(keywordKey ?? "")).not.toContain("8");
+    if (keywordKey !== undefined) {
+      backing.values.set(keywordKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.listKeywords("local", "-100")).toEqual([]);
+    expect(await fresh.getFloodPolicy("local", "-100")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(
+      JSON.stringify(await fresh.listKeywords("local", "-100")),
+    ).not.toContain(secret);
+    expect(await fresh.addKeyword("local", "-100", "a".repeat(33))).toBe(false);
+    expect(await fresh.listKeywords("local", "-100")).toEqual([]);
+    await second.clearKeywords("local", "-100");
+    expect(await second.listKeywords("local", "-100")).toEqual([]);
+  });
 });
 
 describe("kv chat directory", () => {

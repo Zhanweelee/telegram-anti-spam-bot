@@ -98,6 +98,7 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     string,
     { threshold: number; windowSeconds: number }
   >();
+  const keywords = new Map<string, string[]>();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -179,6 +180,35 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async clearFloodPolicy(tenantId, chatId) {
       floods.delete(`${tenantId}:${chatId}`);
+    },
+    async listKeywords(tenantId, chatId) {
+      return keywords.get(`${tenantId}:${chatId}`) ?? [];
+    },
+    async addKeyword(tenantId, chatId, keyword) {
+      const id = `${tenantId}:${chatId}`;
+      const current = keywords.get(id) ?? [];
+      if (current.includes(keyword)) {
+        return true;
+      }
+      keywords.set(id, [...current, keyword]);
+      return true;
+    },
+    async removeKeyword(tenantId, chatId, keyword) {
+      const id = `${tenantId}:${chatId}`;
+      const current = keywords.get(id);
+      if (!current?.includes(keyword)) {
+        return false;
+      }
+      const next = current.filter((item) => item !== keyword);
+      if (next.length === 0) {
+        keywords.delete(id);
+        return true;
+      }
+      keywords.set(id, next);
+      return true;
+    },
+    async clearKeywords(tenantId, chatId) {
+      keywords.delete(`${tenantId}:${chatId}`);
     },
   };
 }
@@ -7358,7 +7388,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(93);
+    expect(menu).toHaveLength(94);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7470,6 +7500,10 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
+      command: "keyword",
+      description: "/keyword <chatId> [add|remove <token>|reset]",
+    });
+    expect(menu.find((item) => item.command === "flood")).toEqual({
       command: "flood",
       description: "/flood <chatId> [count [seconds]|reset]",
     });
@@ -17087,6 +17121,149 @@ describe("runOperatorCommand", () => {
     if (help.status === "reply") {
       expect(help.text).toContain("/flood <chatId> [count [seconds]|reset]");
     }
+  });
+
+  it("adds one chat's extra keyword and leaves the other chat alone", async () => {
+    const deps = kit();
+    const scoped = directory(["-100"]);
+    const shown = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(shown).toMatchObject({
+      status: "reply",
+      command: "keyword",
+      text: "-100 关键词 0",
+    });
+    const added = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 add 发票", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(added).toMatchObject({ text: "已添加 -100 关键词 1" });
+    const again = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(again).toMatchObject({ text: "-100 关键词 1\n发票" });
+    const second = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 add 代开", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(second).toMatchObject({ text: "已添加 -100 关键词 2" });
+    const listed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(listed).toMatchObject({ text: "-100 关键词 2\n发票\n代开" });
+    const other = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -200", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(other).toMatchObject({ text: "-200 关键词 0" });
+    const removed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 remove 发票", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(removed).toMatchObject({ text: "已移除 -100 关键词 1" });
+    const absent = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 remove 发票", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(absent).toMatchObject({ text: "没有这个关键词" });
+    expect(JSON.stringify(absent)).not.toContain("发票");
+    const reset = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 reset", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(reset).toMatchObject({ text: "-100 关键词 0" });
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 add VIP", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english).toMatchObject({ text: "Added a keyword to -100, now 1" });
+    const englishShow = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(englishShow).toMatchObject({ text: "Keywords for -100: 1\nvip" });
+    const usage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: `/keyword -100 add 发票 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/keyword <chatId> [add|remove <token>|reset]",
+    });
+    expect(JSON.stringify(usage)).not.toContain(phrase);
+    const noisy = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: `/keyword -100 add ${"a".repeat(33)}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+    });
+    expect(noisy).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(noisy)).not.toContain("a".repeat(33));
+    const group = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 add 发票" }),
+      adminActorIds: ["42"],
+    });
+    expect(group).toMatchObject({ status: "skip" });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/keyword -200 add 发票",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100 add 新词", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async addKeyword() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("keyword_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain("新词");
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/keyword -100", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async listKeywords() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
   it("bans on the second warning when the chat limit is 2", async () => {

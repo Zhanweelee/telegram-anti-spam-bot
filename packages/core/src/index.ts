@@ -320,10 +320,14 @@ export {
   resolveRuleSet,
 } from "./rules-load.js";
 export {
+  type ChatKeywordDocument,
+  chatKeywordDocumentSchema,
+  chatKeywordSchema,
   FLOOD_THRESHOLD,
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
   floodPolicyDocumentSchema,
+  MAX_CHAT_KEYWORDS,
   MAX_FLOOD_THRESHOLD,
   MAX_FLOOD_WINDOW_SECONDS,
   MAX_RULE_SWITCHES,
@@ -358,6 +362,8 @@ export {
   foldInterpuncts,
   foldMappedLatin,
   foldMatchText,
+  MAX_CHAT_KEYWORD_LENGTH,
+  normalizeChatKeyword,
 } from "./text.js";
 export { withTimeout } from "./timeout.js";
 export {
