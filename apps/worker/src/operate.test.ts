@@ -2827,7 +2827,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(97);
+    expect(body.commands).toHaveLength(98);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2904,6 +2904,10 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
+      command: "verifyfail",
+      description: "/verifyfail <chatId> [stay|kick|ban|reset]",
+    });
+    expect(body.commands.find((item) => item.command === "verifyfor")).toEqual({
       command: "verifyfor",
       description: "/verifyfor <chatId> [seconds|reset]",
     });
@@ -7090,6 +7094,120 @@ describe("handleIncomingEvent", () => {
     expect(expiredMod.released).toEqual([]);
     expect(expired.storage.records[0]?.reasons).toEqual(["captcha_expired"]);
     expect(JSON.stringify(expired.storage.records)).not.toContain(nonce);
+  });
+
+  it("kicks or bans when that chat's verification expires", async () => {
+    const nonce = "0123456789abcdef";
+    const clock = createFixedClock("2026-11-01T00:05:00.000Z");
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.setCaptchaFail("local", "-100", "kick")).toBe(true);
+    function late(chatId: string, id: string) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "challenge",
+        occurredAt: "2026-11-01T00:05:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        challenge: { nonce },
+      });
+    }
+    const store = createMemoryCaptchaStore();
+    await store.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+    });
+    const moderator = createMemoryModerator();
+    const kit = deps();
+    await handleIncomingEvent(late("-100", "evt_kick"), {
+      ...kit,
+      runtime,
+      moderator,
+      captchaStore: store,
+      clock,
+    });
+    expect(moderator.kicked).toEqual([
+      { tenantId: "local", chatId: "-100", actorId: "77" },
+    ]);
+    expect(moderator.banned).toEqual([]);
+    expect(moderator.released).toEqual([]);
+    expect(kit.storage.records[0]?.reasons).toEqual(["captcha_expired"]);
+
+    const otherStore = createMemoryCaptchaStore();
+    await otherStore.put({
+      tenantId: "local",
+      chatId: "-200",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+    });
+    const otherMod = createMemoryModerator();
+    await handleIncomingEvent(late("-200", "evt_stay"), {
+      ...kit,
+      runtime,
+      moderator: otherMod,
+      captchaStore: otherStore,
+      clock,
+    });
+    expect(otherMod.kicked).toEqual([]);
+    expect(otherMod.banned).toEqual([]);
+
+    expect(await runtime.setCaptchaFail("local", "-100", "ban")).toBe(true);
+    const banStore = createMemoryCaptchaStore();
+    await banStore.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+    });
+    const banMod = createMemoryModerator();
+    await handleIncomingEvent(late("-100", "evt_ban"), {
+      ...kit,
+      runtime,
+      moderator: banMod,
+      captchaStore: banStore,
+      clock,
+    });
+    expect(banMod.banned).toEqual([
+      { tenantId: "local", chatId: "-100", actorId: "77" },
+    ]);
+    expect(banMod.kicked).toEqual([]);
+
+    const failedStore = createMemoryCaptchaStore();
+    await failedStore.put({
+      tenantId: "local",
+      chatId: "-300",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:00:00.000Z",
+    });
+    const failedMod = createMemoryModerator();
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    await handleIncomingEvent(late("-300", "evt_read"), {
+      ...kit,
+      logger,
+      moderator: failedMod,
+      captchaStore: failedStore,
+      clock,
+      runtime: {
+        ...broken,
+        async getCaptchaFail() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(failedMod.kicked).toEqual([]);
+    expect(failedMod.banned).toEqual([]);
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(kit.storage.records.some((row) => row.eventId === "evt_read")).toBe(
+      true,
+    );
   });
 
   it("keeps the member restricted after the button is sent", async () => {

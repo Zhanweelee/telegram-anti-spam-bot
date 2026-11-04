@@ -99,6 +99,7 @@ describe("operator command example", () => {
     expect(help).toContain("\n/repeat <chatId> [count [seconds]|reset]");
     expect(help).toContain("\n/rulemute <chatId> [seconds|reset]");
     expect(help).toContain("\n/verifyfor <chatId> [seconds|reset]");
+    expect(help).toContain("\n/verifyfail <chatId> [stay|kick|ban|reset]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",

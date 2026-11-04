@@ -321,8 +321,12 @@ export {
 } from "./rules-load.js";
 export {
   CAPTCHA_TTL_SECONDS,
+  type CaptchaFailAction,
+  type CaptchaFailDocument,
   type CaptchaTtlDocument,
   type ChatKeywordDocument,
+  captchaFailActionSchema,
+  captchaFailDocumentSchema,
   captchaTtlDocumentSchema,
   chatKeywordDocumentSchema,
   chatKeywordSchema,

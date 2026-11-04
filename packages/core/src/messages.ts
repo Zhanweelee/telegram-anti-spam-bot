@@ -127,6 +127,12 @@ export const messageKeys = [
   "command.verifyfor.usage",
   "command.verifyfor.show",
   "command.verifyfor.done",
+  "command.verifyfail.usage",
+  "command.verifyfail.show",
+  "command.verifyfail.done",
+  "command.verifyfail.stay",
+  "command.verifyfail.kick",
+  "command.verifyfail.ban",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -487,6 +493,7 @@ const syntax = [
   "/repeat <chatId> [count [seconds]|reset]",
   "/rulemute <chatId> [seconds|reset]",
   "/verifyfor <chatId> [seconds|reset]",
+  "/verifyfail <chatId> [stay|kick|ban|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -635,6 +642,13 @@ const zh = {
   "command.verifyfor.usage": "用法：/verifyfor <chatId> [seconds|reset]",
   "command.verifyfor.show": "{chatId} 验证 {seconds} 秒",
   "command.verifyfor.done": "已设置 {chatId} 验证 {seconds} 秒",
+  "command.verifyfail.usage":
+    "用法：/verifyfail <chatId> [stay|kick|ban|reset]",
+  "command.verifyfail.show": "{chatId} 验证失败后{action}",
+  "command.verifyfail.done": "已设置 {chatId} 验证失败后{action}",
+  "command.verifyfail.stay": "留下",
+  "command.verifyfail.kick": "移出",
+  "command.verifyfail.ban": "封禁",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1068,6 +1082,14 @@ const en = {
   "command.verifyfor.usage": "Usage: /verifyfor <chatId> [seconds|reset]",
   "command.verifyfor.show": "Verification for {chatId} is {seconds}s",
   "command.verifyfor.done": "Set verification for {chatId} to {seconds}s",
+  "command.verifyfail.usage":
+    "Usage: /verifyfail <chatId> [stay|kick|ban|reset]",
+  "command.verifyfail.show": "Verification failure for {chatId} is {action}",
+  "command.verifyfail.done":
+    "Set verification failure for {chatId} to {action}",
+  "command.verifyfail.stay": "stay",
+  "command.verifyfail.kick": "kick",
+  "command.verifyfail.ban": "ban",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

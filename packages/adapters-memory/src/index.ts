@@ -17,6 +17,7 @@ import {
   type CommandMenuQuery,
   type CommandMenuTarget,
   captchaChallengeSchema,
+  captchaFailDocumentSchema,
   captchaTtlDocumentSchema,
   chatKeywordSchema,
   type DefaultRightsTarget,
@@ -842,6 +843,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const repeats = new Map<string, RepeatPolicy>();
   const mutes = new Map<string, number>();
   const captchas = new Map<string, number>();
+  const captchaFails = new Map<string, "kick" | "ban">();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -1081,6 +1083,28 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearCaptchaTtl(tenantId, chatId) {
       captchas.delete(key(tenantId, chatId));
+    },
+    async getCaptchaFail(tenantId, chatId) {
+      return captchaFails.get(key(tenantId, chatId)) ?? null;
+    },
+    async setCaptchaFail(tenantId, chatId, action) {
+      const id = key(tenantId, chatId);
+      if (action === "stay") {
+        captchaFails.delete(id);
+        return true;
+      }
+      const parsed = captchaFailDocumentSchema.safeParse({ action });
+      if (!parsed.success) {
+        return false;
+      }
+      if (!captchaFails.has(id) && captchaFails.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      captchaFails.set(id, parsed.data.action);
+      return true;
+    },
+    async clearCaptchaFail(tenantId, chatId) {
+      captchaFails.delete(key(tenantId, chatId));
     },
   };
 }
