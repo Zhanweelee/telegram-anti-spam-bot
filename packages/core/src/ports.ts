@@ -400,6 +400,8 @@ export interface BotIdentity {
   readonly username: string;
   readonly joinGroups: PermissionState;
   readonly readAllGroupMessages: PermissionState;
+  readonly guestQueries: PermissionState;
+  readonly joinRequestQueries: PermissionState;
 }
 
 export interface WebhookQuery {

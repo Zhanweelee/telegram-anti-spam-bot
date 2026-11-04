@@ -1433,6 +1433,8 @@ function readBotIdentityValue(body: unknown): BotIdentity {
     username,
     joinGroups: readBotFlag(record.can_join_groups),
     readAllGroupMessages: readBotFlag(record.can_read_all_group_messages),
+    guestQueries: readBotFlag(record.supports_guest_queries),
+    joinRequestQueries: readBotFlag(record.supports_join_request_queries),
   };
 }
 

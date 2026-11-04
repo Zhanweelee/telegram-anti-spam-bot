@@ -3536,7 +3536,9 @@ function isBotIdentity(identity: BotIdentity): boolean {
     isBotUserId(identity.id) &&
     isBotUsername(identity.username) &&
     isPermissionState(identity.joinGroups) &&
-    isPermissionState(identity.readAllGroupMessages)
+    isPermissionState(identity.readAllGroupMessages) &&
+    isPermissionState(identity.guestQueries) &&
+    isPermissionState(identity.joinRequestQueries)
   );
 }
 
@@ -3565,6 +3567,8 @@ function describeBotIdentity(
     username,
     `${say(input, "command.who.groups")} ${say(input, permissionStateKey(identity.joinGroups))}`,
     `${say(input, "command.who.messages")} ${say(input, permissionStateKey(identity.readAllGroupMessages))}`,
+    `${say(input, "command.who.guests")} ${say(input, permissionStateKey(identity.guestQueries))}`,
+    `${say(input, "command.who.join_queries")} ${say(input, permissionStateKey(identity.joinRequestQueries))}`,
   ].join("\n");
 }
 
