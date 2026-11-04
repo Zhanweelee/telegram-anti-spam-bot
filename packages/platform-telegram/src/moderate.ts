@@ -67,9 +67,34 @@ const speaking = {
   can_manage_topics: true,
 };
 
-export const captchaPrompt = "请点「我不是机器人」。点「我是机器人」不会通过。";
+export interface CaptchaQuiz {
+  readonly prompt: string;
+  readonly hint: string;
+  readonly passLabel: string;
+  readonly decoyLabel: string;
+}
 
-export const captchaDecoyHint = "请点「我不是机器人」。";
+/** The sum of the first two hex digits. The third digit picks a different number. */
+export function captchaQuiz(nonce: string): CaptchaQuiz {
+  const left = Number.parseInt(nonce.charAt(0), 16);
+  const right = Number.parseInt(nonce.charAt(1), 16);
+  const pass = left + right;
+  const decoy = (pass + 1 + Number.parseInt(nonce.charAt(2), 16)) % 31;
+  return {
+    prompt: `请点「${pass}」。点「${decoy}」不会通过。`,
+    hint: `请点「${pass}」。`,
+    passLabel: String(pass),
+    decoyLabel: String(decoy),
+  };
+}
+
+export function captchaPrompt(nonce: string): string {
+  return captchaQuiz(nonce).prompt;
+}
+
+export function captchaDecoyHint(nonce: string): string {
+  return captchaQuiz(nonce).hint;
+}
 
 export function createTelegramModerator(input: {
   readonly token: string | undefined;
@@ -1107,6 +1132,7 @@ export async function sendCaptchaButton(input: {
   if (!/^[a-f0-9]{16}$/.test(input.nonce)) {
     throw new Error("captcha_prompt_failed");
   }
+  const quiz = captchaQuiz(input.nonce);
   const body = await postTelegram({
     token: input.token,
     method: "sendMessage",
@@ -1115,13 +1141,13 @@ export async function sendCaptchaButton(input: {
     failed: "captcha_prompt_failed",
     body: {
       chat_id: telegramId(input.chatId),
-      text: captchaPrompt,
+      text: quiz.prompt,
       disable_notification: true,
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [
-          [{ text: "我是机器人", callback_data: `n:${input.nonce}` }],
-          [{ text: "我不是机器人", callback_data: `c:${input.nonce}` }],
+          [{ text: quiz.decoyLabel, callback_data: `n:${input.nonce}` }],
+          [{ text: quiz.passLabel, callback_data: `c:${input.nonce}` }],
         ],
       },
     },
