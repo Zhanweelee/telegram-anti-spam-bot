@@ -6,6 +6,7 @@ function eventFor(input: {
   kind?: "message" | "chat_member";
   asRichPhone?: true;
   asRichCard?: true;
+  asRichEmail?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -23,6 +24,7 @@ function eventFor(input: {
             textSha256: "e".repeat(64),
             ...(input.asRichPhone ? { asRichPhone: true as const } : {}),
             ...(input.asRichCard ? { asRichCard: true as const } : {}),
+            ...(input.asRichEmail ? { asRichEmail: true as const } : {}),
           },
         }
       : {}),
@@ -83,6 +85,46 @@ describe("rich contact detector", () => {
     expect(
       await card.detect({
         event: eventFor({ asRichPhone: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich email and leaves the address out of the hit", async () => {
+    const email = createRichDetector("email");
+    const hit = await email.detect({
+      event: eventFor({ asRichEmail: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_email",
+      score: 1,
+      reasons: ["rich_email"],
+      evidence: [{ kind: "feature", summary: "rich:email" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("902120011");
+    expect(
+      await email.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await email.detect({
+        event: eventFor({ kind: "chat_member", asRichEmail: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await email.detect({
+        event: eventFor({ asRichPhone: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichEmail: true }),
         logger,
         signal,
       }),

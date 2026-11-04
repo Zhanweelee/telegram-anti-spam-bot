@@ -11,6 +11,7 @@ interface RichContactCase {
   readonly label: "spam" | "ham";
   readonly asRichPhone?: true;
   readonly asRichCard?: true;
+  readonly asRichEmail?: true;
 }
 
 interface Baseline {
@@ -47,6 +48,7 @@ async function evaluate(
                 textSha256: "e".repeat(64),
                 ...(item.asRichPhone ? { asRichPhone: true as const } : {}),
                 ...(item.asRichCard ? { asRichCard: true as const } : {}),
+                ...(item.asRichEmail ? { asRichEmail: true as const } : {}),
               },
             }
           : {}),
@@ -103,6 +105,25 @@ describe("rich contact eval", () => {
     console.info(
       JSON.stringify({
         detector: "rich_card",
+        cases: cases.length,
+        precision: report.precision,
+        recall: report.recall,
+        baseline,
+      }),
+    );
+    expect(report.precision).toBeGreaterThanOrEqual(baseline.precision);
+    expect(report.recall).toBeGreaterThanOrEqual(baseline.recall);
+  });
+
+  it("does not regress email precision or recall", async () => {
+    const cases = load("cases/rich-email.json");
+    const baseline = JSON.parse(
+      readFileSync(join(root, "baselines/rich-email.json"), "utf8"),
+    ) as Baseline;
+    const report = await evaluate("email", cases);
+    console.info(
+      JSON.stringify({
+        detector: "rich_email",
         cases: cases.length,
         precision: report.precision,
         recall: report.recall,

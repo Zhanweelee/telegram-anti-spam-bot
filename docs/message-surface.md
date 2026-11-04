@@ -92,4 +92,6 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `has_media_spoiler` 正好是 `true` 时，消息带 `asSpoiler`。`false` 不带这个标记。文件号不进事件。说明仍是正文。媒体类别仍按原来的字段。规则 `media_spoiler` 默认关闭。见 ADR 0500。
 
-`rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。邮箱不带标记。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
+`rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
+
+`rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。

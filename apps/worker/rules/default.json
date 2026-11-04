@@ -379,6 +379,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "rich_email",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_email"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

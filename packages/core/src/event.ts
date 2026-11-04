@@ -145,6 +145,8 @@ export const messageSchema = z
     asRichPhone: z.literal(true).optional(),
     /** Rich text bank card. The number stays out. The visible text stays in the message. */
     asRichCard: z.literal(true).optional(),
+    /** Rich text email address. The address stays out. The visible text stays in the message. */
+    asRichEmail: z.literal(true).optional(),
   })
   .refine(
     (message) =>
