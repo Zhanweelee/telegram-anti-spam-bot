@@ -129,6 +129,7 @@ const COMMAND_NAMES = [
   "button",
   "botname",
   "myname",
+  "botdesc",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -142,6 +143,7 @@ const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
 const BOT_NAME_LIMIT = 64;
+const BOT_DESCRIPTION_LIMIT = 512;
 const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
 const STICKER_SET_NAME_LIMIT = 64;
@@ -279,6 +281,7 @@ export interface OperatorCommandInput {
       | "renameTopic"
       | "revokeInvite"
       | "setAdminTitle"
+      | "setBotDescription"
       | "setBotName"
       | "setCommandMenu"
       | "setDefaultRights"
@@ -503,6 +506,8 @@ async function dispatch(
       return setBotName(input, args);
     case "myname":
       return showBotName(input, args);
+    case "botdesc":
+      return setBotDescription(input, args);
   }
 }
 
@@ -3277,6 +3282,44 @@ function rejectReadBotName(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "myname",
+  });
+}
+
+async function setBotDescription(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const description = args.join(" ");
+  if (description.length > BOT_DESCRIPTION_LIMIT) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const set = input.moderator?.setBotDescription;
+  if (!set) {
+    rejectBotDescription(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({ tenantId: input.event.tenantId, description });
+  } catch {
+    rejectBotDescription(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    description.length === 0
+      ? "command.botdesc.cleared"
+      : "command.botdesc.done",
+  );
+}
+
+function rejectBotDescription(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "botdesc",
   });
 }
 

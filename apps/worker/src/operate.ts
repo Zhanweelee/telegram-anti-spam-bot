@@ -193,6 +193,9 @@ function commandModerator(
     async setBotName() {
       throw new Error("botname_unavailable");
     },
+    async setBotDescription() {
+      throw new Error("botdesc_unavailable");
+    },
     async approveJoin() {
       throw new Error("approve_unavailable");
     },
