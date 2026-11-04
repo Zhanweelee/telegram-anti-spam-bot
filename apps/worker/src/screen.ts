@@ -55,6 +55,7 @@ import {
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBotDetector } from "@tasb/detector-bot";
 import { createCallDetector } from "@tasb/detector-call";
+import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
 import { createFolderDetector } from "@tasb/detector-folder";
 import {
@@ -528,6 +529,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.chatTitle,
         value: createTitleDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.communityNotice,
+        value: createCommunityDetector(),
       },
       {
         source: "builtin",

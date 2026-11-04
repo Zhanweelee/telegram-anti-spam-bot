@@ -21433,6 +21433,112 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("82003");
   });
 
+  it("marks a community notice and leaves the name out", async () => {
+    const name = "社区广告名字";
+    const communityId = 880445991;
+    const added = await normalize({
+      update_id: 4995,
+      message: {
+        message_id: 503,
+        date: 1761955200,
+        chat: { id: -1004995, type: "supergroup" },
+        from: { id: 96 },
+        community_chat_added: {
+          community: { id: communityId, name },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.community).toBe("added");
+    expect(added.event.message?.text).toBe("");
+    expect(added.event.actor).toEqual({ id: "96", isAdmin: false });
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain(name);
+    expect(addedDump).not.toContain(String(communityId));
+
+    const joined = await normalize({
+      update_id: 4996,
+      message: {
+        message_id: 504,
+        date: 1761955200,
+        chat: { id: -1004996, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        community_chat_joined: {
+          community: { id: communityId, name },
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.community).toBe("joined");
+    expect(joined.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(joined.event)).not.toContain(name);
+    expect(JSON.stringify(joined.event)).not.toContain(String(communityId));
+
+    const removed = await normalize({
+      update_id: 4997,
+      message: {
+        message_id: 505,
+        date: 1761955200,
+        chat: { id: -1004997, type: "supergroup" },
+        from: { id: 96 },
+        community_chat_removed: {},
+      },
+    });
+    expect(removed.status).toBe("event");
+    if (removed.status !== "event") {
+      return;
+    }
+    expect(removed.event.message?.community).toBe("removed");
+    expect(removed.event.message?.text).toBe("");
+    expect(removed.event.message?.hosts).toBeUndefined();
+
+    const stray = await normalize({
+      update_id: 4998,
+      message: {
+        message_id: 506,
+        date: 1761955200,
+        chat: { id: -1004998, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        community_chat_removed: { name: "https://ow.ly/gone445" },
+      },
+    });
+    expect(stray.status).toBe("event");
+    if (stray.status !== "event") {
+      return;
+    }
+    expect(stray.event.message?.community).toBe("removed");
+    expect(stray.event.message?.text).toBe("今天站会");
+    expect(stray.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(stray.event)).not.toContain("gone445");
+    expect(JSON.stringify(stray.event)).not.toContain("ow.ly");
+
+    const empty = await normalize({
+      update_id: 4999,
+      message: {
+        message_id: 507,
+        date: 1761955200,
+        chat: { id: -1004999, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        community_chat_added: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.community).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a join request bio and drops the invite link", async () => {
     const phrase = "请免费领取礼品";
     const code = "JOIN83";

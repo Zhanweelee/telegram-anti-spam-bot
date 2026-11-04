@@ -163,6 +163,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> chat_title on` 删这个群里的改名服务消息。默认关闭。新群名不进证据，群名本身不变。见 ADR 0476。
 
+`/rule <chatId> community_notice on` 删这个群里移入、加入和移出社区的服务消息。默认关闭。社区名字不进证据。见 ADR 0477。
+
 ## 确认
 
 ```sh

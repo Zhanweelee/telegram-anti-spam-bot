@@ -43,3 +43,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `video_chat_started` 是对象时，消息带 `call` 为 `started`。`video_chat_ended.duration` 是有限且不小于 0 的数字时带 `ended`。`video_chat_scheduled.start_date` 同样带 `scheduled`。时长和开始时间不进事件。只有邀请名单时不带这个标记。规则 `call_notice` 默认关闭。见 ADR 0475。
 
 `new_chat_title` 是非空字符串时，消息带 `asTitle`。新群名不进事件。空字符串和换头像不带这个标记。规则 `chat_title` 默认关闭。见 ADR 0476。
+
+`community_chat_added.community` 或 `community_chat_joined.community` 是对象时，消息带 `community` 为 `added` 或 `joined`。`community_chat_removed` 是对象时带 `removed`。社区名字和社区 id 不进事件。没有 `community` 对象的移入或加入不带这个标记。规则 `community_notice` 默认关闭。见 ADR 0477。
