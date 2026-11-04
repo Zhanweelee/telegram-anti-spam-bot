@@ -67,6 +67,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/allows <chatId> <actorId>` 调用 `readMemberAllows`。配了 token 时使用 `getChatMember`，只带 `chat_id` 和 `user_id`。没有单独限制时回复无。受限时写出人是否还在、到期时间和每一项权限。缺布尔值整份回复是「参数无效」。名字和标签不进回复，也不进日志。没有 token 时不编一份权限。不调用 `restrictChatMember`。见 ADR 0432。
 
+`/canadmin <chatId> <actorId>` 调用 `readMemberAdmin`。配了 token 时使用 `getChatMember`，只带 `chat_id` 和 `user_id`。不是管理员时回复无。管理员写出打开的权限，以及这个 bot 能不能改。创建者不写权限词，也不写能不能改。缺必填布尔值整份回复是「参数无效」。名字和自定义头衔不进回复，也不进日志。没有 token 时不编一份权限。不调用 `promoteChatMember`。见 ADR 0433。
+
 `/mute <chatId> <actorId> [seconds]` 调用 `muteActor`。不写秒数时用 3600。写出的秒数要是 30 到 366 天里的整数。配了 token 时仍把每一项权限关掉，并带上 `until_date`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经禁言。见 ADR 0365。
 
 `/member <chatId> <actorId>` 调用 `readMember`。配了 token 时使用 `getChatMember`。回复只含状态，以及封禁或禁言的到期时间。`until_date` 为 0 时不写到期。普通成员的订阅到期、姓名和标签不进回复。没有 token 或调用失败时回复「参数无效」。见 ADR 0366。

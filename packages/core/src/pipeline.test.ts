@@ -173,6 +173,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readMemberAllows() {
       throw new Error("allows_unavailable");
     },
+    async readMemberAdmin() {
+      throw new Error("canadmin_unavailable");
+    },
     async readPermissions() {
       throw new Error("perms_unavailable");
     },

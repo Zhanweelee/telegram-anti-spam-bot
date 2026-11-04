@@ -255,6 +255,17 @@ describe("memory adapter", () => {
     ).rejects.toThrow("personal_unavailable");
   });
 
+  it("does not invent one member's admin rights", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readMemberAdmin({
+        tenantId: "t",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("canadmin_unavailable");
+  });
+
   it("does not invent individual allows", async () => {
     const moderator = createMemoryModerator();
     await expect(
