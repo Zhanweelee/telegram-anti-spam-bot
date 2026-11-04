@@ -22184,4 +22184,54 @@ describe("normalizeUpdate", () => {
     expect(numeric.event.message?.albumId).toBeUndefined();
     expect(JSON.stringify(numeric)).not.toContain("860043");
   });
+
+  it("ignores a message that has not been delivered yet", async () => {
+    const phrase = "请免费领取礼品";
+    const scheduled = await normalize({
+      update_id: 4601,
+      message: {
+        message_id: 0,
+        date: 1761955200,
+        chat: { id: -1004601, type: "supergroup" },
+        from: { id: 4601 },
+        text: `${phrase} https://bit.ly/gift4601`,
+      },
+    });
+    expect(scheduled.status).toBe("ignored");
+    const scheduledDump = JSON.stringify(scheduled);
+    expect(scheduledDump).not.toContain(phrase);
+    expect(scheduledDump).not.toContain("bit.ly");
+
+    const edited = await normalize({
+      update_id: 4602,
+      edited_message: {
+        message_id: 0,
+        date: 1761955200,
+        chat: { id: -1004602, type: "supergroup" },
+        from: { id: 4602 },
+        text: phrase,
+      },
+    });
+    expect(edited.status).toBe("ignored");
+    expect(JSON.stringify(edited)).not.toContain(phrase);
+
+    const incomplete = await normalize({
+      update_id: 4603,
+      message: {
+        message_id: 0,
+        ephemeral_message_id: 46031,
+        date: 1761955200,
+        chat: { id: -1004603, type: "supergroup" },
+        from: { id: 4603 },
+        text: "今天站会",
+      },
+    });
+    expect(incomplete.status).toBe("event");
+    if (incomplete.status !== "event") {
+      return;
+    }
+    expect(incomplete.event.message?.id).toBe("0");
+    expect(incomplete.event.message?.audienceId).toBeUndefined();
+    expect(incomplete.event.message?.text).toBe("今天站会");
+  });
 });
