@@ -41,3 +41,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `giveaway.chats` 里至少有一个聊天，或 `giveaway_winners.chat` 是聊天时，消息带 `asGiveaway`。频道名字、用户名、频道 id、中奖人数和中奖者姓名不进事件。奖品说明仍可成为正文。投票不带这个标记。规则 `giveaway_card` 默认关闭。见 ADR 0474。
 
 `video_chat_started` 是对象时，消息带 `call` 为 `started`。`video_chat_ended.duration` 是有限且不小于 0 的数字时带 `ended`。`video_chat_scheduled.start_date` 同样带 `scheduled`。时长和开始时间不进事件。只有邀请名单时不带这个标记。规则 `call_notice` 默认关闭。见 ADR 0475。
+
+`new_chat_title` 是非空字符串时，消息带 `asTitle`。新群名不进事件。空字符串和换头像不带这个标记。规则 `chat_title` 默认关闭。见 ADR 0476。

@@ -81,6 +81,7 @@ import {
 import { createScriptDetector } from "@tasb/detector-script";
 import { createSenderDetector } from "@tasb/detector-sender";
 import { createStoryDetector } from "@tasb/detector-story";
+import { createTitleDetector } from "@tasb/detector-title";
 import { createViaDetector } from "@tasb/detector-via";
 import { type AlbumWatch, sweepAlbum, workerAlbumWatch } from "./album.js";
 import { workerBlocklist } from "./blocklist-runtime.js";
@@ -522,6 +523,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.callNotice,
         value: createCallDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.chatTitle,
+        value: createTitleDetector(),
       },
       {
         source: "builtin",

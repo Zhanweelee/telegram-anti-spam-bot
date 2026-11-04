@@ -1,0 +1,18 @@
+[
+  {
+    "id": "chat_title",
+    "kind": "message",
+    "label": "spam",
+    "asTitle": true
+  },
+  {
+    "id": "title_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "title_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

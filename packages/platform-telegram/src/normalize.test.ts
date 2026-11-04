@@ -21067,6 +21067,93 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain(phrase);
   });
 
+  it("marks a renamed chat and leaves the title out", async () => {
+    const title = "改名广告标题";
+    const renamed = await normalize({
+      update_id: 4990,
+      message: {
+        message_id: 499,
+        date: 1761955200,
+        chat: { id: -1004990, type: "supergroup" },
+        from: { id: 96 },
+        new_chat_title: title,
+      },
+    });
+    expect(renamed.status).toBe("event");
+    if (renamed.status !== "event") {
+      return;
+    }
+    expect(renamed.event.message?.asTitle).toBe(true);
+    expect(renamed.event.message?.text).toBe("");
+    expect(renamed.event.actor).toEqual({ id: "96", isAdmin: false });
+    const dump = JSON.stringify(renamed.event);
+    expect(dump).not.toContain(title);
+
+    const alongside = await normalize({
+      update_id: 4991,
+      message: {
+        message_id: 500,
+        date: 1761955200,
+        chat: { id: -1004991, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        new_chat_title: title,
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.asTitle).toBe(true);
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(title);
+
+    const blank = await normalize({
+      update_id: 4992,
+      message: {
+        message_id: 501,
+        date: 1761955200,
+        chat: { id: -1004992, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        new_chat_title: "",
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.asTitle).toBeUndefined();
+    expect(blank.event.message?.text).toBe("今天站会");
+
+    const photo = await normalize({
+      update_id: 4993,
+      message: {
+        message_id: 502,
+        date: 1761955200,
+        chat: { id: -1004993, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        new_chat_photo: [
+          {
+            file_id: "wallfile4993",
+            file_unique_id: "uniq4993",
+            width: 1,
+            height: 1,
+          },
+        ],
+      },
+    });
+    expect(photo.status).toBe("event");
+    if (photo.status !== "event") {
+      return;
+    }
+    expect(photo.event.message?.asTitle).toBeUndefined();
+    expect(photo.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(photo.event)).not.toContain("wallfile4993");
+    expect(JSON.stringify(photo.event)).not.toContain("uniq4993");
+  });
+
   it("keeps hostnames from a chat background filename", async () => {
     const phrase = "请免费领取礼品";
     const code = "WALL98";
