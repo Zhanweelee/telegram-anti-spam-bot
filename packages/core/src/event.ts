@@ -99,6 +99,8 @@ export const messageSchema = z
     community: z.enum(["added", "joined", "removed"]).optional(),
     /** Shared chat card. Titles, usernames, and ids stay out. */
     asSharedChat: z.literal(true).optional(),
+    /** Chat photo service line. File ids and sizes stay out. */
+    photo: z.enum(["set", "cleared"]).optional(),
   })
   .refine(
     (message) =>

@@ -199,6 +199,12 @@ export const builtinManifests = {
     integrity:
       "13d9077476ae09154e74f0bd23c5a0ca327919e2259c35626f715e91018d3ef5",
   }),
+  chatPhoto: manifest({
+    id: "chat_photo",
+    kind: "detector",
+    integrity:
+      "5217c465c580e1629f8c7c10e5ad54d114209f1b2e5bb62279b1400e8c77c69c",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

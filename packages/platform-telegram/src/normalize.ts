@@ -148,6 +148,7 @@ async function messageEvent(
   const asTitle = renamedChat(message);
   const community = communityNotice(message);
   const asSharedChat = sharedChatCard(message);
+  const photo = photoNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -185,8 +186,25 @@ async function messageEvent(
       ...(asTitle ? { asTitle: true as const } : {}),
       ...(community === undefined ? {} : { community }),
       ...(asSharedChat ? { asSharedChat: true as const } : {}),
+      ...(photo === undefined ? {} : { photo }),
     },
   });
+}
+
+function photoNotice(
+  message: Record<string, unknown>,
+): "set" | "cleared" | undefined {
+  if (photoSizes(message.new_chat_photo)) {
+    return "set";
+  }
+  if (message.delete_chat_photo === true) {
+    return "cleared";
+  }
+  return undefined;
+}
+
+function photoSizes(value: unknown): boolean {
+  return Array.isArray(value) && value.some((item) => isRecord(item));
 }
 
 function sharedChatCard(message: Record<string, unknown>): boolean {

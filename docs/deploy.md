@@ -167,6 +167,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> shared_chat on` 删这个群里分享来的聊天卡片。默认关闭。标题不进证据。分享来的用户仍留下。见 ADR 0478。
 
+`/rule <chatId> chat_photo on` 删这个群里换头像和删头像的服务消息。默认关闭。文件号不进证据。群头像本身不变。见 ADR 0479。
+
 ## 确认
 
 ```sh

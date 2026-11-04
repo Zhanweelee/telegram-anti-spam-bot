@@ -24,6 +24,7 @@
     "@tasb/detector-folder": "workspace:*",
     "@tasb/detector-media": "workspace:*",
     "@tasb/detector-notice": "workspace:*",
+    "@tasb/detector-photo": "workspace:*",
     "@tasb/detector-via": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",
