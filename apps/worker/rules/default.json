@@ -195,6 +195,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "chat_photo",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["chat_photo"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

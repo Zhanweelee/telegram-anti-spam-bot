@@ -20218,6 +20218,120 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a chat photo and leaves the file id out", async () => {
+    const fileId = "AgADphoto447";
+    const uniqueId = "uniqphoto447";
+    const set = await normalize({
+      update_id: 4470,
+      message: {
+        message_id: 520,
+        date: 1761955200,
+        chat: { id: -100499450, type: "supergroup" },
+        from: { id: 96 },
+        new_chat_photo: [
+          {
+            file_id: fileId,
+            file_unique_id: uniqueId,
+            width: 90177,
+            height: 90178,
+          },
+        ],
+      },
+    });
+    expect(set.status).toBe("event");
+    if (set.status !== "event") {
+      return;
+    }
+    expect(set.event.message?.photo).toBe("set");
+    expect(set.event.message?.text).toBe("");
+    expect(set.event.actor).toEqual({ id: "96", isAdmin: false });
+    const setDump = JSON.stringify(set.event);
+    expect(setDump).not.toContain(fileId);
+    expect(setDump).not.toContain(uniqueId);
+    expect(setDump).not.toContain("90177");
+    expect(setDump).not.toContain("90178");
+
+    const alongside = await normalize({
+      update_id: 4471,
+      message: {
+        message_id: 521,
+        date: 1761955200,
+        chat: { id: -100499451, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        new_chat_photo: [
+          {
+            file_id: fileId,
+            file_unique_id: uniqueId,
+            width: 90177,
+            height: 90178,
+          },
+        ],
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.photo).toBe("set");
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(fileId);
+
+    const cleared = await normalize({
+      update_id: 4472,
+      message: {
+        message_id: 522,
+        date: 1761955200,
+        chat: { id: -100499452, type: "supergroup" },
+        from: { id: 96 },
+        delete_chat_photo: true,
+      },
+    });
+    expect(cleared.status).toBe("event");
+    if (cleared.status !== "event") {
+      return;
+    }
+    expect(cleared.event.message?.photo).toBe("cleared");
+    expect(cleared.event.message?.text).toBe("");
+
+    const both = await normalize({
+      update_id: 4474,
+      message: {
+        message_id: 524,
+        date: 1761955200,
+        chat: { id: -100499454, type: "supergroup" },
+        from: { id: 96 },
+        new_chat_photo: [{ file_id: fileId, file_unique_id: uniqueId }],
+        delete_chat_photo: true,
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.photo).toBe("set");
+    expect(JSON.stringify(both.event)).not.toContain(fileId);
+
+    const empty = await normalize({
+      update_id: 4473,
+      message: {
+        message_id: 523,
+        date: 1761955200,
+        chat: { id: -100499453, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        new_chat_photo: [],
+        delete_chat_photo: false,
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.photo).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a shared user name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "INV288";

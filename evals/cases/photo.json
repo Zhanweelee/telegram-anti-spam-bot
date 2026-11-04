@@ -1,0 +1,24 @@
+[
+  {
+    "id": "chat_photo_set",
+    "kind": "message",
+    "label": "spam",
+    "photo": "set"
+  },
+  {
+    "id": "chat_photo_cleared",
+    "kind": "message",
+    "label": "spam",
+    "photo": "cleared"
+  },
+  {
+    "id": "chat_photo_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "chat_photo_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

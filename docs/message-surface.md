@@ -47,3 +47,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `community_chat_added.community` 或 `community_chat_joined.community` 是对象时，消息带 `community` 为 `added` 或 `joined`。`community_chat_removed` 是对象时带 `removed`。社区名字和社区 id 不进事件。没有 `community` 对象的移入或加入不带这个标记。规则 `community_notice` 默认关闭。见 ADR 0477。
 
 `chat_shared.chat_id` 是有限安全整数时，消息带 `asSharedChat`。标题、用户名、请求编号、聊天编号和头像不进事件。空的 `chat_shared` 和 `users_shared` 不带这个标记。规则 `shared_chat` 默认关闭。见 ADR 0478。
+
+`new_chat_photo` 里至少有一个对象时，消息带 `photo: "set"`。`delete_chat_photo` 正好是 true 时带 `cleared`。同时出现时先认换头像。文件号和尺寸不进事件。空数组和 false 不带这个标记。规则 `chat_photo` 默认关闭。见 ADR 0479。

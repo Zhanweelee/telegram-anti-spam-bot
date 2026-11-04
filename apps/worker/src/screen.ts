@@ -70,6 +70,7 @@ import { createLlmDetector } from "@tasb/detector-llm";
 import { createLocationDetector } from "@tasb/detector-location";
 import { createMediaDetector } from "@tasb/detector-media";
 import { createNoticeDetector } from "@tasb/detector-notice";
+import { createPhotoDetector } from "@tasb/detector-photo";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -540,6 +541,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.sharedChat,
         value: createSharedChatDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.chatPhoto,
+        value: createPhotoDetector(),
       },
       {
         source: "builtin",
