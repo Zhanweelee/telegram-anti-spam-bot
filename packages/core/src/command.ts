@@ -109,6 +109,7 @@ const COMMAND_NAMES = [
   "title",
   "desc",
   "newtopic",
+  "rentopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -245,6 +246,7 @@ export interface OperatorCommandInput {
       | "readMemberCount"
       | "readPermissions"
       | "removeReaction"
+      | "renameTopic"
       | "revokeInvite"
       | "setDescription"
       | "setMemberTag"
@@ -435,6 +437,8 @@ async function dispatch(
       return setOneDescription(input, args);
     case "newtopic":
       return createOneTopic(input, args);
+    case "rentopic":
+      return renameOneTopic(input, args);
   }
 }
 
@@ -2361,6 +2365,56 @@ function rejectNewTopic(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "newtopic",
+  });
+}
+
+async function renameOneTopic(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 3) {
+    return say(input, "command.rentopic.usage");
+  }
+  const chatId = args[0];
+  const threadId = args[1];
+  const name = args.slice(2).join(" ");
+  if (
+    chatId === undefined ||
+    threadId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(threadId) ||
+    name.length > TOPIC_NAME_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const rename = input.moderator?.renameTopic;
+  if (!rename) {
+    rejectRenameTopic(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await rename({
+      tenantId: input.event.tenantId,
+      chatId,
+      threadId,
+      name,
+    });
+  } catch {
+    rejectRenameTopic(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.rentopic.done", { chatId, threadId });
+}
+
+function rejectRenameTopic(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "rentopic",
   });
 }
 

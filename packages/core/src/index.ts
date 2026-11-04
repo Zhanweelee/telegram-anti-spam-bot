@@ -196,6 +196,7 @@ export {
   parseAuditScope,
   type ReactionActorTarget,
   type ReactionChoice,
+  type RenamedTopicTarget,
   type SenderChatTarget,
   type Storage,
   type TopicPinTarget,

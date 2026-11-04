@@ -124,6 +124,9 @@ function commandModerator(
     async setDescription() {
       throw new Error("desc_unavailable");
     },
+    async renameTopic() {
+      throw new Error("rentopic_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

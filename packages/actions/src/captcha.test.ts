@@ -125,6 +125,7 @@ function moderator(
     async setReaction() {},
     async setTitle() {},
     async setDescription() {},
+    async renameTopic() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

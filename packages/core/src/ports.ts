@@ -213,6 +213,13 @@ export interface NewTopicTarget {
   readonly name: string;
 }
 
+export interface RenamedTopicTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly threadId: string;
+  readonly name: string;
+}
+
 export interface PinnedMessageTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -277,6 +284,7 @@ export interface ModerationPort {
   setTitle(target: ChatTitleTarget): Promise<void>;
   setDescription(target: ChatDescriptionTarget): Promise<void>;
   createTopic(target: NewTopicTarget): Promise<string>;
+  renameTopic(target: RenamedTopicTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

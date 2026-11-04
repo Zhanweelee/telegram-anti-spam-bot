@@ -235,6 +235,20 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one renamed forum topic", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.renameTopic({
+      tenantId: "t",
+      chatId: "c",
+      threadId: "1",
+      name: "hello",
+    });
+    expect(moderator.topicsRenamed).toEqual([
+      { tenantId: "t", chatId: "c", threadId: "1", name: "hello" },
+    ]);
+    expect(JSON.stringify(moderator.topicsRenamed)).not.toContain("icon");
+  });
+
   it("does not invent a forum topic id", async () => {
     const moderator = createMemoryModerator();
     await expect(
