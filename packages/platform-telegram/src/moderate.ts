@@ -1116,6 +1116,7 @@ export async function sendCaptchaButton(input: {
     body: {
       chat_id: telegramId(input.chatId),
       text: captchaPrompt,
+      disable_notification: true,
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [

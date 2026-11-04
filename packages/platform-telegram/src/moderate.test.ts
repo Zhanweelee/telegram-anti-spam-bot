@@ -4825,6 +4825,7 @@ describe("telegram captcha transport", () => {
     expect(passAt).toBeGreaterThan(decoyAt);
     expect(sent).toContain("我是机器人");
     expect(sent).toContain("我不是机器人");
+    expect(sent).toContain('"disable_notification":true');
     const moderator = createTelegramModerator({ token, fetchImpl });
     await moderator.releaseActor({
       tenantId: "local",
