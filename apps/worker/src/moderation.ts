@@ -33,6 +33,7 @@ function createOpenModerator(): ModerationPort {
     setMenuButton: (target) => memory.setMenuButton(target),
     setBotName: (target) => memory.setBotName(target),
     setBotDescription: (target) => memory.setBotDescription(target),
+    setBotShortDescription: (target) => memory.setBotShortDescription(target),
     approveJoin: (target) => memory.approveJoin(target),
     deferJoin: (target) => memory.deferJoin(target),
     async restrictActor() {

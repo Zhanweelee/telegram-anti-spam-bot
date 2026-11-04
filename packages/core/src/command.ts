@@ -131,6 +131,7 @@ const COMMAND_NAMES = [
   "myname",
   "botdesc",
   "mydesc",
+  "botshort",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -145,6 +146,7 @@ const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
 const BOT_NAME_LIMIT = 64;
 const BOT_DESCRIPTION_LIMIT = 512;
+const BOT_SHORT_DESCRIPTION_LIMIT = 120;
 const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
 const STICKER_SET_NAME_LIMIT = 64;
@@ -285,6 +287,7 @@ export interface OperatorCommandInput {
       | "setAdminTitle"
       | "setBotDescription"
       | "setBotName"
+      | "setBotShortDescription"
       | "setCommandMenu"
       | "setDefaultRights"
       | "setDescription"
@@ -512,6 +515,8 @@ async function dispatch(
       return setBotDescription(input, args);
     case "mydesc":
       return showBotDescription(input, args);
+    case "botshort":
+      return setBotShortDescription(input, args);
   }
 }
 
@@ -3371,6 +3376,44 @@ function rejectReadBotDescription(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "mydesc",
+  });
+}
+
+async function setBotShortDescription(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const shortDescription = args.join(" ");
+  if (shortDescription.length > BOT_SHORT_DESCRIPTION_LIMIT) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const set = input.moderator?.setBotShortDescription;
+  if (!set) {
+    rejectBotShortDescription(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({ tenantId: input.event.tenantId, shortDescription });
+  } catch {
+    rejectBotShortDescription(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    shortDescription.length === 0
+      ? "command.botshort.cleared"
+      : "command.botshort.done",
+  );
+}
+
+function rejectBotShortDescription(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "botshort",
   });
 }
 

@@ -86,6 +86,7 @@ function moderator(
     async setMenuButton() {},
     async setBotName() {},
     async setBotDescription() {},
+    async setBotShortDescription() {},
     async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {
