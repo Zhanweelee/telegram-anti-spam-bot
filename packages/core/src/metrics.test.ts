@@ -167,6 +167,16 @@ describe("aggregateMetrics", () => {
     expect(report.totals.intercepted).toBe(1);
     expect(report.totals.interceptRate).toBe(1);
     expect(report.totals.actions).toEqual({ ban: 1 });
+    const warned = aggregateMetrics([
+      entry("pipeline_completed", {
+        tenantId: "local",
+        chatId: "-100",
+        action: "warn",
+        dryRun: false,
+      }),
+    ]);
+    expect(warned.totals.intercepted).toBe(1);
+    expect(warned.totals.actions).toEqual({ warn: 1 });
     expect(report.totals.detectorErrors).toBe(3);
     expect(report.chats).toHaveLength(1);
     const json = JSON.stringify(report);

@@ -475,6 +475,7 @@ export async function handleIncomingEvent(
     runtime,
     moderator,
     captchaStore,
+    warnStore: warns,
     ...(deps.clock ? { clock: deps.clock } : {}),
     ...(deps.createNonce ? { createNonce: deps.createNonce } : {}),
     ...(deps.botToken ? { botToken: deps.botToken } : {}),

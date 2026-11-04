@@ -9,6 +9,8 @@ import {
   type Notifier,
   type Storage,
   supersedeChallenge,
+  WARN_LIMIT,
+  type WarnStore,
 } from "@tasb/core";
 import { z } from "zod";
 
@@ -238,6 +240,61 @@ export function createDeclineAction(): Action {
         ...(queryId ? { queryId } : {}),
       });
       return { actionId: "decline", status: "executed" };
+    },
+  });
+}
+
+export function createWarnAction(deps: { readonly store: WarnStore }): Action {
+  return defineAction({
+    id: "warn",
+    version: "0.1.0",
+    capabilities: ["moderation"],
+    configSchema: z.strictObject({}),
+    config: {},
+    async execute(ctx) {
+      if (ctx.dryRun) {
+        return { actionId: "warn", status: "skipped", detail: "dry_run" };
+      }
+      if (ctx.event.actor.id.length === 0) {
+        return { actionId: "warn", status: "failed", detail: "missing_actor" };
+      }
+      if (ctx.event.message?.paid === true) {
+        return { actionId: "warn", status: "skipped", detail: "paid_post" };
+      }
+      const messageId = ctx.event.message?.id;
+      if (messageId) {
+        const audienceId = ctx.event.message?.audienceId;
+        await ctx.moderator.deleteMessage({
+          tenantId: ctx.event.tenantId,
+          chatId: ctx.event.chatId,
+          messageId,
+          ...(audienceId ? { audienceId } : {}),
+        });
+      }
+      const target = {
+        tenantId: ctx.event.tenantId,
+        chatId: ctx.event.chatId,
+        actorId: ctx.event.actor.id,
+      };
+      if ((await deps.store.read(target)) >= WARN_LIMIT) {
+        await ctx.moderator.banActor(target);
+        return { actionId: "warn", status: "executed" };
+      }
+      const next = await deps.store.increment(target);
+      if (next < WARN_LIMIT) {
+        return { actionId: "warn", status: "executed" };
+      }
+      try {
+        await ctx.moderator.banActor(target);
+      } catch (error) {
+        try {
+          await deps.store.write(target, next - 1);
+        } catch {
+          // Surface the ban failure.
+        }
+        throw error;
+      }
+      return { actionId: "warn", status: "executed" };
     },
   });
 }

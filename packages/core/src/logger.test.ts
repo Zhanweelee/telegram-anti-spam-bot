@@ -55,6 +55,9 @@ describe("logger and clock", () => {
     expect(moreSevere("ban", "mute")).toBe("ban");
     expect(moreSevere("mute", "delete")).toBe("mute");
     expect(moreSevere("ban", "delete")).toBe("ban");
+    expect(moreSevere("warn", "delete")).toBe("warn");
+    expect(moreSevere("mute", "warn")).toBe("mute");
+    expect(moreSevere("ban", "warn")).toBe("ban");
     expect(moreSevere("log", "mute")).toBe("mute");
   });
 });

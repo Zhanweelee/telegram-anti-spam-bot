@@ -151,6 +151,12 @@ export const builtinManifests = {
     integrity:
       "a1d04fcd334e99741928997fdd8e4f145f2b97fdb1b5d0072bb35ca4fc9ec296",
   }),
+  warn: manifest({
+    id: "warn",
+    kind: "action",
+    integrity:
+      "2c7a6d47eed6b66be2f2d2dc17f05495c46fe0e562492ce078e9a49bb0dd7201",
+  }),
   mute: manifest({
     id: "mute",
     kind: "action",

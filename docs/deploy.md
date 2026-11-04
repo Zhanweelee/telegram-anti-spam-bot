@@ -84,7 +84,7 @@ printf '%s' "$TELEGRAM_BOT_TOKEN" | pnpm exec wrangler secret put TELEGRAM_BOT_T
 pnpm exec wrangler deploy
 ```
 
-`TELEGRAM_BOT_TOKEN` 用于私聊回复，以及 delete、mute、ban 和入群限制。没有它，Webhook 仍然返回 200。处罚只记在这台 isolate 的内存里，bot 不会去删消息、禁言或封禁。见 ADR 0020。
+`TELEGRAM_BOT_TOKEN` 用于私聊回复，以及 delete、warn、mute、ban 和入群限制。没有它，Webhook 仍然返回 200。处罚只记在这台 isolate 的内存里，bot 不会去删消息、禁言或封禁。见 ADR 0020。
 
 可选：把你的 Telegram 用户 id 设成管理员，私聊命令才改得了配置。
 
