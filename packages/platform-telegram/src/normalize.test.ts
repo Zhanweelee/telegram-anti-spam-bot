@@ -21178,6 +21178,249 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a rich reference and leaves the name out", async () => {
+    const name = "ref90232";
+    const actor = "发引用的人";
+    const marked = await normalize({
+      update_id: 4850,
+      message: {
+        message_id: 890,
+        date: 1761955200,
+        chat: { id: -100499850, type: "supergroup" },
+        from: { id: 121, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "reference",
+                  text: "引用广告",
+                  name,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichReference).toBe(true);
+    expect(marked.event.message?.asRichAnchorLink).toBeUndefined();
+    expect(marked.event.message?.text).toBe("引用广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(name);
+    expect(markedDump).not.toContain("90232");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4851,
+      message: {
+        message_id: 891,
+        date: 1761955200,
+        chat: { id: -100499851, type: "supergroup" },
+        from: { id: 121 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "reference",
+                text: "引用广告",
+                name,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichReference).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(name);
+
+    const nested = await normalize({
+      update_id: 4852,
+      message: {
+        message_id: 892,
+        date: 1761955200,
+        chat: { id: -100499852, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "reference",
+                    text: "嵌套引用",
+                    name,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichReference).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套引用");
+    expect(JSON.stringify(nested.event)).not.toContain("90232");
+
+    const blank = await normalize({
+      update_id: 4853,
+      message: {
+        message_id: 893,
+        date: 1761955200,
+        chat: { id: -100499853, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "reference",
+                text: "空引用",
+                name: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空引用");
+    expect(blank.event.message?.asRichReference).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4854,
+      message: {
+        message_id: 894,
+        date: 1761955200,
+        chat: { id: -100499854, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "reference",
+                text: "布尔引用",
+                name: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔引用");
+    expect(flag.event.message?.asRichReference).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4855,
+      message: {
+        message_id: 895,
+        date: 1761955200,
+        chat: { id: -100499855, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: { type: "reference", text: "缺引用" },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺引用");
+    expect(missing.event.message?.asRichReference).toBeUndefined();
+
+    const link = await normalize({
+      update_id: 4856,
+      message: {
+        message_id: 896,
+        date: 1761955200,
+        chat: { id: -100499856, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "anchor_link",
+                text: "链接留下",
+                anchor_name: "stay90233",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asRichAnchorLink).toBe(true);
+    expect(link.event.message?.asRichReference).toBeUndefined();
+    expect(JSON.stringify(link.event)).not.toContain("90233");
+
+    const cited = await normalize({
+      update_id: 4857,
+      message: {
+        message_id: 897,
+        date: 1761955200,
+        chat: { id: -100499857, type: "supergroup" },
+        from: { id: 121 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "reference_link",
+                text: "引用链接留下",
+                reference_name: "cite90234",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(cited.status).toBe("event");
+    if (cited.status !== "event") {
+      return;
+    }
+    expect(cited.event.message?.text).toBe("引用链接留下");
+    expect(cited.event.message?.asRichReference).toBeUndefined();
+    expect(JSON.stringify(cited.event)).not.toContain("90234");
+  });
+
   it("marks a rich anchor link and leaves the name out", async () => {
     const anchorName = "link90229";
     const actor = "发锚点链接的人";
@@ -21414,6 +21657,7 @@ describe("normalizeUpdate", () => {
     }
     expect(reference.event.message?.text).toBe("引用留下");
     expect(reference.event.message?.asRichAnchorLink).toBeUndefined();
+    expect(reference.event.message?.asRichReference).toBe(true);
     expect(JSON.stringify(reference.event)).not.toContain("90230");
   });
 

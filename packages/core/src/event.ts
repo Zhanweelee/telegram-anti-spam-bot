@@ -163,6 +163,8 @@ export const messageSchema = z
     asRichAnchor: z.literal(true).optional(),
     /** Rich text anchor link. The anchor name stays out. The visible text stays in the message. */
     asRichAnchorLink: z.literal(true).optional(),
+    /** Rich text reference. The name stays out. The visible text stays in the message. */
+    asRichReference: z.literal(true).optional(),
   })
   .refine(
     (message) =>

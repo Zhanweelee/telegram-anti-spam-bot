@@ -113,3 +113,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `rich_message` 里 `type` 为 `anchor` 且名字去掉空白后非空时，消息带 `asRichAnchor`。空白、布尔值和缺名字不带这个标记。行情标签和指向锚点的链接不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_anchor` 默认关闭。见 ADR 0510。
 
 `rich_message` 里 `type` 为 `anchor_link` 且 `anchor_name` 去掉空白后非空时，消息带 `asRichAnchorLink`。空白、布尔值和缺名字不带这个标记。锚点和引用不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_anchor_link` 默认关闭。见 ADR 0511。
+
+`rich_message` 里 `type` 为 `reference` 且名字去掉空白后非空时，消息带 `asRichReference`。空白、布尔值和缺名字不带这个标记。锚点链接和指向引用的链接不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_reference` 默认关闭。见 ADR 0512。
