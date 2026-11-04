@@ -84,6 +84,7 @@ import { createPhotoDetector } from "@tasb/detector-photo";
 import { createPinDetector } from "@tasb/detector-pin";
 import { createPostDetector } from "@tasb/detector-post";
 import { createPriceDetector } from "@tasb/detector-price";
+import { createProximityDetector } from "@tasb/detector-proximity";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -642,6 +643,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.ownerNotice,
         value: createOwnerDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.proximityNotice,
+        value: createProximityDetector(),
       },
       {
         source: "builtin",

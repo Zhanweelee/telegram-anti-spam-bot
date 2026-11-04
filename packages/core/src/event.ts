@@ -125,6 +125,8 @@ export const messageSchema = z
     asCallInvite: z.literal(true).optional(),
     /** Owner change or owner left. User ids stay out. The new name stays in the text. */
     ownerNotice: z.enum(["changed", "left"]).optional(),
+    /** Proximity alert. Distance and user ids stay out. Names stay in the text. */
+    asProximity: z.literal(true).optional(),
   })
   .refine(
     (message) =>

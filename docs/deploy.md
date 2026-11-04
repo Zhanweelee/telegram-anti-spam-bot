@@ -195,6 +195,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> owner_notice on` 删这个群里换群主和群主离开的提示。默认关闭。用户编号不进证据。新群主的名字仍参与关键词。没有下一位时这行也会删除。见 ADR 0492。
 
+`/rule <chatId> proximity_notice on` 删这个群里的靠近提醒。默认关闭。距离和用户编号不进证据。两个人的名字仍参与关键词。纯坐标仍看 `bare_location`。见 ADR 0493。
+
 ## 确认
 
 ```sh

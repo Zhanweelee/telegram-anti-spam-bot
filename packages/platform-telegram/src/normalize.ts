@@ -161,6 +161,7 @@ async function messageEvent(
   const checklistNotice = taskNotice(message);
   const asCallInvite = videoInvite(message);
   const ownerNotice = changedOwner(message);
+  const asProximity = nearUsers(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -213,8 +214,17 @@ async function messageEvent(
       ...(checklistNotice === undefined ? {} : { checklistNotice }),
       ...(asCallInvite ? { asCallInvite: true as const } : {}),
       ...(ownerNotice === undefined ? {} : { ownerNotice }),
+      ...(asProximity ? { asProximity: true as const } : {}),
     },
   });
+}
+
+function nearUsers(message: Record<string, unknown>): boolean {
+  const alert = message.proximity_alert_triggered;
+  if (!isRecord(alert) || typeof alert.distance !== "number") {
+    return false;
+  }
+  return Number.isSafeInteger(alert.distance) && alert.distance >= 0;
 }
 
 function changedOwner(

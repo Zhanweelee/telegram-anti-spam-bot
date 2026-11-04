@@ -277,6 +277,12 @@ export const builtinManifests = {
     integrity:
       "82cd1c3edba3b7f18bb09f471d040a850eaecf3ecaa9241909c132ae994142ee",
   }),
+  proximityNotice: manifest({
+    id: "proximity_notice",
+    kind: "detector",
+    integrity:
+      "be6fb7dce7790a79758cb6d46702c83710388246111337101d1498eecc1c16f4",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

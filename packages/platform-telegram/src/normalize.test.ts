@@ -20614,6 +20614,165 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a proximity alert and keeps the names", async () => {
+    const traveler = "靠近广告名";
+    const watcher = "守位置的人";
+    const actor = "报位置的人";
+    const travelerId = 90200;
+    const watcherId = 90201;
+    const distance = 90202;
+    const alert = await normalize({
+      update_id: 4650,
+      message: {
+        message_id: 700,
+        date: 1761955200,
+        chat: { id: -100499640, type: "supergroup" },
+        from: { id: 101, first_name: actor },
+        proximity_alert_triggered: {
+          traveler: { id: travelerId, is_bot: false, first_name: traveler },
+          watcher: { id: watcherId, is_bot: false, first_name: watcher },
+          distance,
+        },
+      },
+    });
+    expect(alert.status).toBe("event");
+    if (alert.status !== "event") {
+      return;
+    }
+    expect(alert.event.message?.asProximity).toBe(true);
+    expect(alert.event.message?.text).toBe(`${traveler} ${watcher}`);
+    const dumped = JSON.stringify(alert.event);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(String(travelerId));
+    expect(dumped).not.toContain(String(watcherId));
+    expect(dumped).not.toContain(String(distance));
+
+    const zero = await normalize({
+      update_id: 4651,
+      message: {
+        message_id: 701,
+        date: 1761955200,
+        chat: { id: -100499641, type: "supergroup" },
+        from: { id: 101, first_name: actor },
+        proximity_alert_triggered: {
+          traveler: { id: travelerId, is_bot: false },
+          watcher: { id: watcherId, is_bot: false },
+          distance: 0,
+        },
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asProximity).toBe(true);
+    expect(zero.event.message?.text).toBe("");
+    expect(JSON.stringify(zero.event)).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4652,
+      message: {
+        message_id: 702,
+        date: 1761955200,
+        chat: { id: -100499642, type: "supergroup" },
+        from: { id: 101, first_name: actor },
+        text: "今天站会",
+        proximity_alert_triggered: {
+          traveler: { id: travelerId, is_bot: false, first_name: traveler },
+          watcher: { id: watcherId, is_bot: false, first_name: watcher },
+          distance,
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asProximity).toBe(true);
+
+    const empty = await normalize({
+      update_id: 4653,
+      message: {
+        message_id: 703,
+        date: 1761955200,
+        chat: { id: -100499643, type: "supergroup" },
+        from: { id: 101 },
+        proximity_alert_triggered: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asProximity).toBeUndefined();
+
+    const negative = await normalize({
+      update_id: 4654,
+      message: {
+        message_id: 704,
+        date: 1761955200,
+        chat: { id: -100499644, type: "supergroup" },
+        from: { id: 101 },
+        proximity_alert_triggered: { distance: -1 },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asProximity).toBeUndefined();
+
+    const fraction = await normalize({
+      update_id: 4655,
+      message: {
+        message_id: 705,
+        date: 1761955200,
+        chat: { id: -100499645, type: "supergroup" },
+        from: { id: 101 },
+        proximity_alert_triggered: { distance: 1.5 },
+      },
+    });
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.asProximity).toBeUndefined();
+
+    const textDistance = await normalize({
+      update_id: 4656,
+      message: {
+        message_id: 706,
+        date: 1761955200,
+        chat: { id: -100499646, type: "supergroup" },
+        from: { id: 101 },
+        proximity_alert_triggered: { distance: "90202" },
+      },
+    });
+    expect(textDistance.status).toBe("event");
+    if (textDistance.status !== "event") {
+      return;
+    }
+    expect(textDistance.event.message?.asProximity).toBeUndefined();
+    expect(JSON.stringify(textDistance.event)).not.toContain("90202");
+
+    const flag = await normalize({
+      update_id: 4657,
+      message: {
+        message_id: 707,
+        date: 1761955200,
+        chat: { id: -100499647, type: "supergroup" },
+        from: { id: 101 },
+        proximity_alert_triggered: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asProximity).toBeUndefined();
+  });
+
   it("marks an owner change and keeps the new name", async () => {
     const name = "新群主广告名";
     const actor = "交群的人";

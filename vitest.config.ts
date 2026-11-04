@@ -39,6 +39,7 @@ export default defineConfig({
       "packages/detectors-checklist",
       "packages/detectors-call-invite",
       "packages/detectors-owner",
+      "packages/detectors-proximity",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",
