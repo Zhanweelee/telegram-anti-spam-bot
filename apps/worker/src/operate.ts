@@ -112,6 +112,9 @@ function commandModerator(
     async readJoinBot() {
       throw new Error("joinbot_unavailable");
     },
+    async readReactions() {
+      throw new Error("reactions_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

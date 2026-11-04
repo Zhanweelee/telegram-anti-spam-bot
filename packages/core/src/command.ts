@@ -38,6 +38,7 @@ import {
   type ModerationPort,
   minimumAuditExportLength,
   type PermissionState,
+  type ReactionAllowlist,
   type Storage,
   type WebhookSnapshot,
 } from "./ports.js";
@@ -142,6 +143,7 @@ const COMMAND_NAMES = [
   "hook",
   "guard",
   "joinbot",
+  "reactions",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -294,6 +296,7 @@ export interface OperatorCommandInput {
       | "readMemberCount"
       | "readMenuButton"
       | "readPermissions"
+      | "readReactions"
       | "readWebhook"
       | "removeReaction"
       | "renameGeneral"
@@ -542,6 +545,8 @@ async function dispatch(
       return showChatGuard(input, args);
     case "joinbot":
       return showJoinBot(input, args);
+    case "reactions":
+      return showReactions(input, args);
   }
 }
 
@@ -3883,6 +3888,66 @@ function rejectJoinBot(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "joinbot",
+  });
+}
+
+async function showReactions(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.reactions.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readReactions;
+  if (!read) {
+    rejectReactionAllowlist(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const allowlist = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isReactionAllowlist(allowlist)) {
+      rejectReactionAllowlist(input);
+      return say(input, "command.invalid");
+    }
+    return describeReactions(input, chatId, allowlist);
+  } catch {
+    rejectReactionAllowlist(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isReactionAllowlist(allowlist: ReactionAllowlist): boolean {
+  return (
+    allowlist.count === null ||
+    (Number.isSafeInteger(allowlist.count) && allowlist.count >= 0)
+  );
+}
+
+function describeReactions(
+  input: OperatorCommandInput,
+  chatId: string,
+  allowlist: ReactionAllowlist,
+): string {
+  const count =
+    allowlist.count === null
+      ? say(input, "command.reactions.all")
+      : say(input, "command.reactions.count", { count: allowlist.count });
+  return [say(input, "command.reactions.header", { chatId }), count].join("\n");
+}
+
+function rejectReactionAllowlist(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "reactions",
   });
 }
 

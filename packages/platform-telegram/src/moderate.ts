@@ -14,6 +14,7 @@ import type {
   ModerationPort,
   MuteTarget,
   PermissionState,
+  ReactionAllowlist,
   UnmuteResult,
   WebhookSnapshot,
 } from "@tasb/core";
@@ -377,6 +378,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readJoinBotValue(chat, target.chatId);
+    },
+    async readReactions(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "reactions_unavailable",
+        failed: "reactions_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readReactionAllowlist(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1190,6 +1204,68 @@ function readGuardBot(value: unknown): JoinBot {
     id: String(id),
     username: readJoinBotUsername(user.username),
   };
+}
+
+function readReactionAllowlist(
+  body: unknown,
+  chatId: string,
+): ReactionAllowlist {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("reactions_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("reactions_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("reactions_failed");
+  }
+  return { count: readAvailableReactions(record.available_reactions) };
+}
+
+function readAvailableReactions(value: unknown): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error("reactions_failed");
+  }
+  for (const item of value) {
+    readReactionType(item);
+  }
+  return value.length;
+}
+
+function readReactionType(value: unknown): void {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("reactions_failed");
+  }
+  const record = value as Record<string, unknown>;
+  if (record.type === "emoji") {
+    if (typeof record.emoji !== "string") {
+      throw new Error("reactions_failed");
+    }
+    return;
+  }
+  if (record.type === "custom_emoji") {
+    if (
+      typeof record.custom_emoji_id !== "string" ||
+      record.custom_emoji_id.length === 0
+    ) {
+      throw new Error("reactions_failed");
+    }
+    return;
+  }
+  if (record.type === "paid") {
+    return;
+  }
+  throw new Error("reactions_failed");
 }
 
 function readJoinBotUsername(value: unknown): string {

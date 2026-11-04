@@ -1567,6 +1567,180 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the allowed reactions and drops the emoji", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const customId = "5368324170676423940";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            invite_link: invite,
+            available_reactions: [
+              { type: "emoji", emoji: phrase },
+              { type: "custom_emoji", custom_emoji_id: customId },
+              { type: "paid" },
+            ],
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readReactions({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ count: 3 });
+    expect(resolved).not.toHaveProperty("emoji");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(JSON.stringify(resolved)).not.toContain(customId);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setMessageReaction");
+    expect("getChat").not.toContain("setMessageReaction");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(customId);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ count: null });
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, available_reactions: [] },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ count: 0 });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readReactions({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("reactions_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                available_reactions: [{ type: "emoji", emoji: phrase }],
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                available_reactions: [{ type: "sticker", emoji: phrase }],
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, available_reactions: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                available_reactions: [{ type: "emoji", emoji: 1 }],
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                available_reactions: [
+                  { type: "custom_emoji", custom_emoji_id: "" },
+                ],
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readReactions({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("reactions_failed");
+  });
+
   it("reads the join-request bot and drops the display name", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

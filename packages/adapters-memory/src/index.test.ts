@@ -206,6 +206,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("joinbot_unavailable");
   });
 
+  it("does not invent an allowed reaction count", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readReactions({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("reactions_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(
