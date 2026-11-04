@@ -129,6 +129,14 @@
       "detectorIds": ["contact"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "service_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["notice"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

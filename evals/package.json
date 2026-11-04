@@ -20,6 +20,7 @@
     "@tasb/detector-bot": "workspace:*",
     "@tasb/detector-contact": "workspace:*",
     "@tasb/detector-folder": "workspace:*",
+    "@tasb/detector-notice": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

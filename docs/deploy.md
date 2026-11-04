@@ -81,6 +81,8 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 `/allowhost <chatId> [add|remove <host>|reset]` 让这个群放行一台主机。不添加时短链、邀请和裸 IP 仍删除。带路径或端口的值不写入。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，一个群最多 32 台。配了之后写进 `runtime-allow-host` 键。见 ADR 0466。
 
+`/rule <chatId> service_notice on` 删掉这个群的入群和退群服务消息。默认关闭。`off` 回到留下。入群验证仍走 `chat_member`。见 ADR 0467。
+
 配了 `DB` 之后，入群验证的挑战写在同一份 D1 里。另一个 isolate 收到按钮时仍能对上 nonce。没配 `DB` 时挑战留在 isolate 内存，重启后丢失。Cron 只删除已经到期的行，一次最多 64 条，不提前解除 Telegram 限制。表用 `CREATE TABLE IF NOT EXISTS`，再执行一次迁移只会补上缺的表。不新增绑定。见 ADR 0009 和 ADR 0051。
 
 哪些可见字段会进检测，写在 [message-surface.md](message-surface.md)。
