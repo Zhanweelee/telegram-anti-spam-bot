@@ -40,6 +40,7 @@ import {
   minimumAuditExportLength,
   type ParentChat,
   type PermissionState,
+  type PersonalChat,
   type ReactionAllowlist,
   type StickerSetRight,
   type Storage,
@@ -150,6 +151,7 @@ const COMMAND_NAMES = [
   "community",
   "canstickers",
   "parent",
+  "personal",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -304,6 +306,7 @@ export interface OperatorCommandInput {
       | "readMenuButton"
       | "readParentChat"
       | "readPermissions"
+      | "readPersonalChat"
       | "readReactions"
       | "readStickerSetRight"
       | "readWebhook"
@@ -562,6 +565,8 @@ async function dispatch(
       return showCanStickers(input, args);
     case "parent":
       return showParentChat(input, args);
+    case "personal":
+      return showPersonalChat(input, args);
   }
 }
 
@@ -4137,6 +4142,63 @@ function rejectParentChat(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "parent",
+  });
+}
+
+async function showPersonalChat(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.personal.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readPersonalChat;
+  if (!read) {
+    rejectPersonalChat(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const personal = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isPersonalChat(personal)) {
+      rejectPersonalChat(input);
+      return say(input, "command.invalid");
+    }
+    return describePersonalChat(input, chatId, personal);
+  } catch {
+    rejectPersonalChat(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isPersonalChat(personal: PersonalChat): boolean {
+  return personal.id === null || isTargetId(personal.id);
+}
+
+function describePersonalChat(
+  input: OperatorCommandInput,
+  chatId: string,
+  personal: PersonalChat,
+): string {
+  const id =
+    personal.id === null
+      ? say(input, "command.personal.none")
+      : say(input, "command.personal.id", { id: personal.id });
+  return [say(input, "command.personal.header", { chatId }), id].join("\n");
+}
+
+function rejectPersonalChat(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "personal",
   });
 }
 

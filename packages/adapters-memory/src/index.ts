@@ -473,6 +473,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readParentChat() {
       throw new Error("parent_unavailable");
     },
+    async readPersonalChat() {
+      throw new Error("personal_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

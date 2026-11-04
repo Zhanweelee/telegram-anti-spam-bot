@@ -147,6 +147,9 @@ describe("delete action", () => {
           async readParentChat() {
             throw new Error("parent_unavailable");
           },
+          async readPersonalChat() {
+            throw new Error("personal_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -297,6 +300,9 @@ describe("delete action", () => {
         },
         async readParentChat() {
           throw new Error("parent_unavailable");
+        },
+        async readPersonalChat() {
+          throw new Error("personal_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -450,6 +456,9 @@ describe("delete action", () => {
         },
         async readParentChat() {
           throw new Error("parent_unavailable");
+        },
+        async readPersonalChat() {
+          throw new Error("personal_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -605,6 +614,9 @@ function ports(): ModerationPort & {
     },
     async readParentChat() {
       throw new Error("parent_unavailable");
+    },
+    async readPersonalChat() {
+      throw new Error("personal_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");

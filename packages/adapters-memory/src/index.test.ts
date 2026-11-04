@@ -234,6 +234,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("parent_unavailable");
   });
 
+  it("does not invent a personal channel", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readPersonalChat({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("personal_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(

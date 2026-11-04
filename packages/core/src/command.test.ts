@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(78);
+    expect(menu).toHaveLength(79);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7378,9 +7378,13 @@ describe("runOperatorCommand", () => {
       command: "canstickers",
       description: "/canstickers <chatId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "parent")).toEqual({
       command: "parent",
       description: "/parent <chatId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "personal",
+      description: "/personal <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -11142,6 +11146,213 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readParentChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the personal channel and drops the title", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      chatId: string;
+      keys: readonly string[];
+    }[] = [];
+    const ids: Array<string | null> = ["-100888", null, "-1002"];
+    const remember = {
+      async readPersonalChat(target: { tenantId: string; chatId: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          keys: Object.keys(target),
+        });
+        const id = ids[seen.length - 1];
+        if (id === undefined) {
+          throw new Error("called");
+        }
+        return { id };
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["群 -100", "个人频道 -100888"].join("\n"),
+    });
+    expect(seen[0]).toEqual({
+      tenantId: "local",
+      chatId: "-100",
+      keys: ["tenantId", "chatId"],
+    });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const none = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(none).toMatchObject({
+      text: ["群 -100", "个人频道 无"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/personal <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readPersonalChat() {
+          return { id: "-100888" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100", "personal -100888"].join("\n"),
+    });
+    const englishNone = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readPersonalChat() {
+          return { id: null };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishNone).toMatchObject({
+      text: ["chat -100", "personal none"].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/personal -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/personal", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/personal <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/personal -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/personal <chatId>" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/personal ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          return { id: phrase };
+        },
+      },
+      ...kit(),
+    });
+    expect(named).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(named)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readPersonalChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"personal"',
+    );
+    const owned = await runOperatorCommand({
+      event: event({ text: "/personal -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: remember,
+      ...kit(),
+    });
+    expect(owned).toMatchObject({
+      text: ["群 -100", "个人频道 -1002"].join("\n"),
+    });
+    expect(seen).toHaveLength(3);
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/personal -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readPersonalChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/personal ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readPersonalChat() {
           throw new Error("called");
         },
       },

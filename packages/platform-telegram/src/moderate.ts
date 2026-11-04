@@ -16,6 +16,7 @@ import type {
   MuteTarget,
   ParentChat,
   PermissionState,
+  PersonalChat,
   ReactionAllowlist,
   StickerSetRight,
   UnmuteResult,
@@ -433,6 +434,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readParentChatValue(chat, target.chatId);
+    },
+    async readPersonalChat(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "personal_unavailable",
+        failed: "personal_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readPersonalChatValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1268,6 +1282,48 @@ function readParentChatValue(body: unknown, chatId: string): ParentChat {
     throw new Error("parent_failed");
   }
   return { id: readParentChatId(record.parent_chat) };
+}
+
+function readPersonalChatValue(body: unknown, chatId: string): PersonalChat {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("personal_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("personal_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("personal_failed");
+  }
+  return { id: readPersonalChatId(record.personal_chat) };
+}
+
+function readPersonalChatId(value: unknown): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("personal_failed");
+  }
+  const chat = value as Record<string, unknown>;
+  if (typeof chat.type !== "string" || !chatKinds.has(chat.type)) {
+    throw new Error("personal_failed");
+  }
+  const id = chat.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id)) {
+    throw new Error("personal_failed");
+  }
+  const text = String(id);
+  if (!/^-?\d{1,20}$/.test(text)) {
+    throw new Error("personal_failed");
+  }
+  return text;
 }
 
 function readParentChatId(value: unknown): string | null {
