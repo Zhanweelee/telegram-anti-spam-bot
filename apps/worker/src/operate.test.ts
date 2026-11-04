@@ -2827,7 +2827,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(91);
+    expect(body.commands).toHaveLength(92);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2904,6 +2904,10 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
+      command: "report",
+      description: "/report <chatId> [targetId|reset]",
+    });
+    expect(body.commands.find((item) => item.command === "warnlimit")).toEqual({
       command: "warnlimit",
       description: "/warnlimit <chatId> [limit|reset]",
     });
@@ -8324,6 +8328,92 @@ describe("handleIncomingEvent", () => {
     expect(kit.reply.sent[0]?.chatId).toBe("42");
     expect(kit.reply.sent[0]?.text).toContain("keyword_match");
     expect(kit.reply.sent[0]?.text).not.toContain(phrase);
+  });
+
+  it("sends a report to the chat chosen for that group", async () => {
+    const kit = deps();
+    const source = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "watch",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["report"],
+            },
+          ],
+        };
+      },
+    };
+    expect(await kit.runtime.setReportChat("local", "-100567", "77")).toBe(
+      true,
+    );
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100567", actorId: "5" }),
+      {
+        ...kit,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source,
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.chatId)).toEqual(["77"]);
+    expect(kit.reply.sent[0]?.text).not.toContain(phrase);
+    const other = deps();
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100568", actorId: "5" }),
+      {
+        ...other,
+        runtime: kit.runtime,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source,
+      },
+    );
+    expect(other.reply.sent.map((message) => message.chatId)).toEqual(["42"]);
+    expect(await kit.runtime.setReportChat("local", "-100569", "-100569")).toBe(
+      true,
+    );
+    const loop = deps();
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100569", actorId: "5" }),
+      {
+        ...loop,
+        runtime: kit.runtime,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source,
+      },
+    );
+    expect(loop.reply.sent.map((message) => message.chatId)).toEqual(["42"]);
+    const brokenLog = createMemoryLogger();
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: phrase, chatId: "-100570", actorId: "5" }),
+      {
+        ...broken,
+        logger: brokenLog,
+        runtime: {
+          ...kit.runtime,
+          async getReportChat() {
+            throw new Error(phrase);
+          },
+        },
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        source,
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.chatId)).toEqual(["42"]);
+    expect(JSON.stringify(brokenLog.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(brokenLog.entries)).not.toContain(phrase);
   });
 
   it("marks paused rules after the free quota without counting the command", async () => {

@@ -215,6 +215,43 @@ describe("kv runtime store", () => {
     ).toBe(false);
     expect([...backing.values.values()].join("\n")).not.toContain("rule_extra");
   });
+
+  it("keeps a report chat in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    const first = createKvRuntimeStore(backing.store);
+    expect(await first.getReportChat("local", "-100")).toBeNull();
+    expect(await first.setReportChat("local", "-100", "77")).toBe(true);
+    expect(await first.setRuleSwitch("local", "-100", "via_inline", true)).toBe(
+      true,
+    );
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getReportChat("local", "-100")).toBe("77");
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    const keys = [...backing.values.keys()];
+    const reportKey = keys.find((key) => key.startsWith("runtime-report"));
+    const runtimeKey = keys.find((key) => key.startsWith("runtime\n"));
+    expect(reportKey).toBeDefined();
+    expect(backing.values.get(runtimeKey ?? "")).not.toContain("77");
+    expect(backing.values.get(reportKey ?? "")).not.toContain("via_inline");
+    if (reportKey !== undefined) {
+      backing.values.set(reportKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getReportChat("local", "-100")).toBeNull();
+    expect(await fresh.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    expect(String(await fresh.getReportChat("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(await fresh.setReportChat("local", "-100", "not-an-id")).toBe(false);
+    expect(await fresh.getReportChat("local", "-100")).toBeNull();
+    await second.clearReportChat("local", "-100");
+    expect(await second.getReportChat("local", "-100")).toBeNull();
+  });
 });
 
 describe("kv chat directory", () => {

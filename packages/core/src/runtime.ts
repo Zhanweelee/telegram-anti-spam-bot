@@ -68,6 +68,15 @@ export const ruleActionDocumentSchema = z
 
 export type RuleActionDocument = z.output<typeof ruleActionDocumentSchema>;
 
+const reportTargetSchema = z.string().regex(/^-?\d{1,20}$/);
+
+/** One destination per chat. A bad document is ignored by the adapter. */
+export const reportChatDocumentSchema = z.strictObject({
+  targetId: reportTargetSchema,
+});
+
+export type ReportChatDocument = z.output<typeof reportChatDocumentSchema>;
+
 /** Per-chat switches that are not prefilter policy and not rules. */
 export interface RuntimeStore {
   getDryRun(tenantId: string, chatId: string): Promise<boolean>;
@@ -110,4 +119,16 @@ export interface RuntimeStore {
     chatId: string,
     ruleId: string,
   ): Promise<void>;
+  /** Null when this chat still uses the deployment default. */
+  getReportChat(tenantId: string, chatId: string): Promise<string | null>;
+  /**
+   * Returns false when the id is not a chat id, or a new chat would exceed
+   * the memory cap. Updating a chat that is already stored still succeeds.
+   */
+  setReportChat(
+    tenantId: string,
+    chatId: string,
+    targetId: string,
+  ): Promise<boolean>;
+  clearReportChat(tenantId: string, chatId: string): Promise<void>;
 }

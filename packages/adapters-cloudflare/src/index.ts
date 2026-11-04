@@ -20,6 +20,7 @@ import {
   type RuleSubscriptionStore,
   type RuntimeDocument,
   type RuntimeStore,
+  reportChatDocumentSchema,
   ruleActionDocumentSchema,
   ruleActionSchema,
   rulePackIdSchema,
@@ -113,6 +114,10 @@ export function createKvRuntimeStore(
     string,
     { readonly document: RuleActionDocument; readonly expiresAt: number }
   >();
+  const reportCache = new Map<
+    string,
+    { readonly targetId: string | null; readonly expiresAt: number }
+  >();
 
   async function load(
     tenantId: string,
@@ -164,6 +169,35 @@ export function createKvRuntimeStore(
     const parsed = ruleActionDocumentSchema.parse({ actions });
     await kv.put(id, JSON.stringify(parsed));
     actionCache.set(id, { document: parsed, expiresAt: now() + ttlMs });
+  }
+
+  async function loadReport(
+    tenantId: string,
+    chatId: string,
+  ): Promise<string | null> {
+    const id = runtimeReportKey(tenantId, chatId);
+    const at = now();
+    const hit = reportCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.targetId;
+    }
+    const targetId = parseReport(await kv.get(id));
+    reportCache.set(id, { targetId, expiresAt: at + ttlMs });
+    return targetId;
+  }
+
+  async function saveReport(
+    tenantId: string,
+    chatId: string,
+    targetId: string | null,
+  ): Promise<void> {
+    const id = runtimeReportKey(tenantId, chatId);
+    const body =
+      targetId === null
+        ? "{}"
+        : JSON.stringify(reportChatDocumentSchema.parse({ targetId }));
+    await kv.put(id, body);
+    reportCache.set(id, { targetId, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -245,6 +279,27 @@ export function createKvRuntimeStore(
       }
       await saveActions(tenantId, chatId, actions);
     },
+    async getReportChat(tenantId, chatId) {
+      return loadReport(tenantId, chatId);
+    },
+    async setReportChat(tenantId, chatId, targetId) {
+      if (!reportChatDocumentSchema.safeParse({ targetId }).success) {
+        return false;
+      }
+      const current = await loadReport(tenantId, chatId);
+      if (current === targetId) {
+        return true;
+      }
+      await saveReport(tenantId, chatId, targetId);
+      return true;
+    },
+    async clearReportChat(tenantId, chatId) {
+      const current = await loadReport(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveReport(tenantId, chatId, null);
+    },
   };
 }
 
@@ -270,6 +325,22 @@ function runtimeKey(tenantId: string, chatId: string): string {
 
 function runtimeActionKey(tenantId: string, chatId: string): string {
   return `runtime-action\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeReportKey(tenantId: string, chatId: string): string {
+  return `runtime-report\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseReport(raw: string | null): string | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = reportChatDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.targetId : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseActions(raw: string | null): RuleActionDocument {

@@ -321,11 +321,13 @@ export {
 } from "./rules-load.js";
 export {
   MAX_RULE_SWITCHES,
+  type ReportChatDocument,
   type RuleActionDocument,
   type RuleActionOverride,
   type RuleSwitch,
   type RuntimeDocument,
   type RuntimeStore,
+  reportChatDocumentSchema,
   ruleActionDocumentSchema,
   ruleActionSchema,
   ruleSwitchSchema,

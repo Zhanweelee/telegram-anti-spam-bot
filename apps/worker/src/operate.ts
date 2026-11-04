@@ -8,9 +8,11 @@ import {
   type Locale,
   type Logger,
   type ModerationPort,
+  type Notifier,
   promoteChallenge,
   type ReplyPort,
   type ReviewQueue,
+  type RuntimeStore,
   resolveChallenge,
   runOperatorCommand,
   unrestrictChallenge,
@@ -282,12 +284,6 @@ export async function handleIncomingEvent(
   const rulePacks = deps.rulePacks ?? workerRulePacks;
   const quota = deps.quota;
   const chats = deps.chats;
-  const reportActorId = (deps.adminActorIds ?? []).find((id) => id.length > 0);
-  const notifier =
-    deps.notifier ??
-    (deps.reply && reportActorId
-      ? adminNotifier(deps.reply, reportActorId)
-      : undefined);
   if (event.kind === "bot_membership" || event.kind === "chat_member") {
     await syncChatDirectory(event, chats, logger);
   }
@@ -466,6 +462,14 @@ export async function handleIncomingEvent(
     await sendReply(event, text, outcome.command, deps.reply, logger);
     return;
   }
+  const notifier = await reportDestination({
+    event,
+    runtime,
+    reply: deps.reply,
+    notifier: deps.notifier,
+    adminActorIds: deps.adminActorIds ?? [],
+    logger,
+  });
   const result = await screenTelegramEvent(event, {
     logger,
     cache,
@@ -672,6 +676,43 @@ async function syncChatDirectory(
       tenantId: event.tenantId,
     });
   }
+}
+
+async function reportDestination(input: {
+  readonly event: Event;
+  readonly runtime: RuntimeStore;
+  readonly reply: ReplyPort | undefined;
+  readonly notifier: Notifier | undefined;
+  readonly adminActorIds: readonly string[];
+  readonly logger: Logger;
+}): Promise<Notifier | undefined> {
+  if (input.notifier) {
+    return input.notifier;
+  }
+  if (!input.reply) {
+    return undefined;
+  }
+  const fallback = input.adminActorIds.find((id) => id.length > 0);
+  let target: string | null = null;
+  try {
+    target = await input.runtime.getReportChat(
+      input.event.tenantId,
+      input.event.chatId,
+    );
+  } catch {
+    input.logger.warn("runtime_failed", {
+      eventId: input.event.id,
+      chatId: input.event.chatId,
+    });
+  }
+  if (target === input.event.chatId) {
+    target = null;
+  }
+  const destination = target ?? fallback;
+  if (!destination) {
+    return undefined;
+  }
+  return adminNotifier(input.reply, destination);
 }
 
 async function sendReply(

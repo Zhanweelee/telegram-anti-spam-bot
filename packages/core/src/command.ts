@@ -181,6 +181,7 @@ const COMMAND_NAMES = [
   "unwarn",
   "warns",
   "warnlimit",
+  "report",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -532,6 +533,8 @@ async function dispatch(
       return readWarnings(input, args);
     case "warnlimit":
       return setWarnLimit(input, args);
+    case "report":
+      return editReport(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5474,6 +5477,115 @@ async function setWarnLimit(
     return say(input, "command.invalid");
   }
   return say(input, "command.warnlimit.done", { chatId, limit });
+}
+
+async function editReport(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 2) {
+    return say(input, "command.report.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatReport(input, chatId);
+  }
+  if (requested === "reset") {
+    const cleared = await removeReportChat(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.report.default", { chatId });
+  }
+  if (!isTargetId(requested) || requested === chatId) {
+    return say(input, "command.invalid");
+  }
+  const saved = await writeReportChat(input, chatId, requested);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("report_chat_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "report",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.report.done", { chatId, targetId: requested });
+}
+
+async function formatReport(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const target = await readReportChat(input, chatId);
+  if (target === undefined) {
+    return say(input, "command.invalid");
+  }
+  if (target === null) {
+    return say(input, "command.report.default", { chatId });
+  }
+  return say(input, "command.report.show", { chatId, targetId: target });
+}
+
+async function readReportChat(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string | null | undefined> {
+  try {
+    return await input.runtime.getReportChat(input.event.tenantId, chatId);
+  } catch {
+    rejectReport(input);
+    return undefined;
+  }
+}
+
+async function writeReportChat(
+  input: OperatorCommandInput,
+  chatId: string,
+  targetId: string,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setReportChat(
+      input.event.tenantId,
+      chatId,
+      targetId,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectReport(input);
+    return "invalid";
+  }
+}
+
+async function removeReportChat(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearReportChat(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectReport(input);
+    return false;
+  }
+}
+
+function rejectReport(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "report",
+  });
 }
 
 function parseWarnLimit(value: string): number | undefined {
