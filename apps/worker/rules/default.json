@@ -107,6 +107,14 @@
       "actions": ["ban"]
     },
     {
+      "id": "folder_join",
+      "enabled": false,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["folder"],
+      "threshold": 1,
+      "actions": ["ban"]
+    },
+    {
       "id": "join_request",
       "enabled": true,
       "when": { "eventKind": "join_request" },

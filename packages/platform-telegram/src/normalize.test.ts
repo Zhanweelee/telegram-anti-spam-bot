@@ -16745,6 +16745,108 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.actor.id).not.toBe("1");
   });
 
+  it("marks a folder-invite join and drops the invite link", async () => {
+    const link = "https://t.me/addlist/SecretFolder";
+    const name = "文件夹广告";
+    const joined = await normalize({
+      update_id: 2060,
+      chat_member: {
+        chat: { id: -100123, title: name },
+        from: { id: 1, first_name: name },
+        date: 1761955200,
+        invite_link: { invite_link: link, name },
+        via_chat_folder_invite_link: true,
+        old_chat_member: { user: { id: 77, first_name: name }, status: "left" },
+        new_chat_member: {
+          user: { id: 77, first_name: name },
+          status: "member",
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.membership).toBe("join");
+    expect(joined.event.folderInvite).toBe(true);
+    expect(joined.event.profile?.text).toBe(name);
+    const absent = await normalize({
+      update_id: 2061,
+      chat_member: {
+        chat: { id: -100123 },
+        from: { id: 1 },
+        date: 1761955200,
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: { user: { id: 77 }, status: "member" },
+      },
+    });
+    expect(absent.status).toBe("event");
+    if (absent.status !== "event") {
+      return;
+    }
+    expect(absent.event.folderInvite).toBeUndefined();
+    const odd = await normalize({
+      update_id: 2062,
+      chat_member: {
+        chat: { id: -100123 },
+        from: { id: 1 },
+        date: 1761955200,
+        via_chat_folder_invite_link: "yes",
+        old_chat_member: { user: { id: 77 }, status: "left" },
+        new_chat_member: { user: { id: 77 }, status: "member" },
+      },
+    });
+    expect(odd.status).toBe("event");
+    if (odd.status !== "event") {
+      return;
+    }
+    expect(odd.event.membership).toBe("join");
+    expect(odd.event.folderInvite).toBeUndefined();
+    const left = await normalize({
+      update_id: 2063,
+      chat_member: {
+        chat: { id: -100123 },
+        from: { id: 1 },
+        date: 1761955200,
+        via_chat_folder_invite_link: true,
+        old_chat_member: { user: { id: 77 }, status: "member" },
+        new_chat_member: { user: { id: 77 }, status: "left" },
+      },
+    });
+    expect(left.status).toBe("event");
+    if (left.status !== "event") {
+      return;
+    }
+    expect(left.event.membership).toBe("leave");
+    expect(left.event.folderInvite).toBeUndefined();
+    const bot = await normalize({
+      update_id: 2064,
+      chat_member: {
+        chat: { id: -100123 },
+        from: { id: 1 },
+        date: 1761955200,
+        via_chat_folder_invite_link: true,
+        invite_link: { invite_link: link },
+        old_chat_member: { user: { id: 90, is_bot: true }, status: "left" },
+        new_chat_member: {
+          user: { id: 90, is_bot: true, username: name },
+          status: "member",
+        },
+      },
+    });
+    expect(bot.status).toBe("event");
+    if (bot.status !== "event") {
+      return;
+    }
+    expect(bot.event.actor.bot).toBe(true);
+    expect(bot.event.membership).toBeUndefined();
+    expect(bot.event.folderInvite).toBe(true);
+    const dumped = JSON.stringify({ joined, absent, odd, left, bot });
+    expect(dumped).not.toContain(link);
+    expect(dumped).not.toContain("SecretFolder");
+    expect(JSON.stringify(bot.event)).not.toContain(name);
+  });
+
   it("treats creator and administrator status as admins", async () => {
     const outcome = await normalize({
       update_id: 2002,

@@ -1,0 +1,15 @@
+[
+  {
+    "name": "folder",
+    "kind": "chat_member",
+    "folderInvite": true,
+    "expect": "hit"
+  },
+  { "name": "plain", "kind": "chat_member", "expect": "miss" },
+  {
+    "name": "message",
+    "kind": "message",
+    "folderInvite": true,
+    "expect": "miss"
+  }
+]

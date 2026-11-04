@@ -222,6 +222,9 @@ async function chatMemberEvent(
       ? await joinProfile(value.new_chat_member.user, value.new_chat_member.tag)
       : await changedMemberTag(value);
   const configured = admins.has(actor);
+  const folderInvite =
+    value.via_chat_folder_invite_link === true &&
+    (membership === "join" || botJoin);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -238,6 +241,7 @@ async function chatMemberEvent(
     ...(direct ? { direct: true } : {}),
     ...(membership ? { membership } : {}),
     ...(profile ? { profile } : {}),
+    ...(folderInvite ? { folderInvite: true as const } : {}),
   });
 }
 

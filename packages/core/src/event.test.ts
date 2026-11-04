@@ -385,4 +385,29 @@ describe("event schema", () => {
       }),
     ).toThrow();
   });
+
+  it("keeps a folder-invite flag and rejects false", () => {
+    const event = parseEvent({
+      id: "evt_folder",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "chat_member",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      membership: "join",
+      folderInvite: true,
+    });
+    expect(event.folderInvite).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_folder",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        folderInvite: false,
+      }),
+    ).toThrow();
+  });
 });
