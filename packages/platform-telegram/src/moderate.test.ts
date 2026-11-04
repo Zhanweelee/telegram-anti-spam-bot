@@ -1956,6 +1956,141 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("parent_failed");
   });
 
+  it("reads the personal channel and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "private",
+            first_name: phrase,
+            last_name: phrase,
+            username: phrase,
+            invite_link: invite,
+            parent_chat: { id: -100777, type: "channel", title: phrase },
+            personal_chat: {
+              id: -100888,
+              type: "channel",
+              title: phrase,
+              username: phrase,
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readPersonalChat({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ id: "-100888" });
+    expect(resolved).not.toHaveProperty("title");
+    expect(resolved).not.toHaveProperty("username");
+    expect(resolved).not.toHaveProperty("type");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "private",
+                first_name: phrase,
+                parent_chat: { id: -100777, type: "channel", title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPersonalChat({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ id: null });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readPersonalChat({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("personal_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                first_name: phrase,
+                personal_chat: { id: -100888, type: "channel", title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPersonalChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("personal_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                personal_chat: { id: -100888, title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPersonalChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("personal_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, personal_chat: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readPersonalChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("personal_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readPersonalChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("personal_failed");
+  });
+
   it("reads the allowed reactions and drops the emoji", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

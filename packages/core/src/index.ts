@@ -218,6 +218,7 @@ export {
   type NewTopicTarget,
   type ParentChat,
   type PermissionState,
+  type PersonalChat,
   type PinnedMessageTarget,
   parseAuditQuery,
   parseAuditRecord,
