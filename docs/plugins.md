@@ -273,6 +273,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/commands [private]` 调用 `readCommandMenu`。配了 token 时使用 `getMyCommands`，范围是 `all_private_chats`，不送 `language_code`。回复列出命令、说明和临时标记。空列表写 0。缺 `is_ephemeral` 写未知。非布尔值、坏命令名或说明超长时整份回复是「参数无效」。放不下时保留前面的命令并写上剩下的个数。只有配置里的管理员可以看。没有 token 时不编一份菜单。不调用 `setMyCommands` 或 `deleteMyCommands`。见 ADR 0408。
 
+`/commands skip <count>` 先按原顺序跳过前面的 `count` 条再列。不写 `skip` 或 `count` 为 0 时回复不变。`private` 仍是同一份私聊菜单。见 ADR 0523。
+
 `/delcommands [private]` 调用 `deleteCommandMenu`。配了 token 时使用 `deleteMyCommands`，范围是 `all_private_chats`，不送 `language_code`。清掉之后更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。只有配置里的管理员可以改。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经清掉。不调用 `setMyCommands` 或 `getMyCommands`，也不改黑名单、封禁或禁言。见 ADR 0409。
 
 `/menubutton <commands|default>` 调用 `setMenuButton`。配了 token 时使用 `setChatMenuButton`。`commands` 送 `{ type: "commands" }`，`default` 送 `{ type: "default" }`。不送 `chat_id`，所以改的是默认按钮。某个私聊里单独设过的按钮不受影响。只有配置里的管理员可以改。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经设置。不送 `web_app`。不调用 `getChatMenuButton`，也不改黑名单、封禁或禁言。见 ADR 0410。
