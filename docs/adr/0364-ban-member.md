@@ -32,5 +32,6 @@
 
 - 误封之后仍用 `/unban` 解除。人要自己再加入。
 - 超级群和频道上，Telegram 仍可能删掉这个人的历史消息。请求里的 `revoke_messages` 保持 false。
+- 限时封禁是另一条命令 `/banfor`，见 ADR 0431。这条永久封禁仍不带 `until_date`。
 - 一次封禁是一次 Telegram 子请求。
 - 30 天保留期不动。

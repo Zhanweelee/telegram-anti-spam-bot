@@ -146,6 +146,7 @@ function harness(options?: { failStorage?: boolean }) {
     async deleteCommandMenu() {},
     async muteActor() {},
     async banActor() {},
+    async banActorFor() {},
     async banSenderChat() {},
     async unbanSenderChat() {},
     async approveJoin() {},

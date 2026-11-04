@@ -24,6 +24,7 @@ function createOpenModerator(): ModerationPort {
     deleteCommandMenu: (query) => memory.deleteCommandMenu(query),
     muteActor: (target) => memory.muteActor(target),
     banActor: (target) => memory.banActor(target),
+    banActorFor: (target) => memory.banActorFor(target),
     banSenderChat: (target) => memory.banSenderChat(target),
     unbanSenderChat: (target) => memory.unbanSenderChat(target),
     declineJoin: (target) => memory.declineJoin(target),

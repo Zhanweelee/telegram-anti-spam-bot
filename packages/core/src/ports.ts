@@ -86,6 +86,10 @@ export interface BanTarget {
   readonly actorId: string;
 }
 
+export interface TimedBanTarget extends BanTarget {
+  readonly durationSeconds: number;
+}
+
 export interface ChatTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -444,6 +448,7 @@ export interface ModerationPort {
   deleteCommandMenu(query: CommandMenuQuery): Promise<void>;
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
+  banActorFor(target: TimedBanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;
   clearReactions(target: ReactionActorTarget): Promise<void>;
   revokeInvite(target: InviteLinkTarget): Promise<void>;

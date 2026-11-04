@@ -69,6 +69,8 @@ export const messageKeys = [
   "command.unmute.absent",
   "command.ban.usage",
   "command.ban.done",
+  "command.banfor.usage",
+  "command.banfor.done",
   "command.mute.usage",
   "command.mute.done",
   "command.member.usage",
@@ -408,6 +410,7 @@ const syntax = [
   "/parent <chatId>",
   "/personal <chatId>",
   "/privacy <chatId>",
+  "/banfor <chatId> <actorId> <seconds>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -494,6 +497,8 @@ const zh = {
   "command.unmute.absent": "{chatId} {actorId} 没有禁言",
   "command.ban.usage": "用法：/ban <chatId> <actorId>",
   "command.ban.done": "已封禁 {chatId} {actorId}",
+  "command.banfor.usage": "用法：/banfor <chatId> <actorId> <seconds>",
+  "command.banfor.done": "已限时封禁 {chatId} {actorId} {seconds} 秒",
   "command.mute.usage": "用法：/mute <chatId> <actorId> [seconds]",
   "command.mute.done": "已禁言 {chatId} {actorId} {seconds} 秒",
   "command.member.usage": "用法：/member <chatId> <actorId>",
@@ -858,6 +863,8 @@ const en = {
   "command.unmute.absent": "{actorId} is not muted in {chatId}",
   "command.ban.usage": "Usage: /ban <chatId> <actorId>",
   "command.ban.done": "Banned {actorId} in {chatId}",
+  "command.banfor.usage": "Usage: /banfor <chatId> <actorId> <seconds>",
+  "command.banfor.done": "Banned {actorId} in {chatId} for {seconds} seconds",
   "command.mute.usage": "Usage: /mute <chatId> <actorId> [seconds]",
   "command.mute.done": "Muted {actorId} in {chatId} for {seconds} seconds",
   "command.member.usage": "Usage: /member <chatId> <actorId>",

@@ -75,6 +75,14 @@ describe("telegram captcha transport", () => {
         actorId: "77",
       }),
     ).rejects.toThrow("ban_unavailable");
+    await expect(
+      moderator.banActorFor({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        durationSeconds: 3600,
+      }),
+    ).rejects.toThrow("banfor_unavailable");
     expect(called).toBe(false);
   });
 
@@ -4100,6 +4108,18 @@ describe("telegram captcha transport", () => {
     expect(calls[1]?.body).toContain('"can_edit_tag":false');
     expect(calls[2]?.body).toContain('"revoke_messages":false');
     expect(calls[2]?.body).not.toContain("message_id");
+    expect(calls[2]?.body).not.toContain("until_date");
+    await moderator.banActorFor({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      durationSeconds: 3600,
+    });
+    expect(calls[4]?.method).toBe("banChatMember");
+    expect(calls[4]?.body).toContain('"until_date":1700003600');
+    expect(calls[4]?.body).toContain('"revoke_messages":false');
+    expect(calls[4]?.body).toContain('"user_id":77');
+    expect(calls[4]?.body).not.toContain(phrase);
     await expect(
       createTelegramModerator({
         token,
