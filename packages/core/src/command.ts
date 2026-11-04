@@ -123,6 +123,7 @@ const COMMAND_NAMES = [
   "botrights",
   "setcommands",
   "commands",
+  "delcommands",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -246,6 +247,7 @@ export interface OperatorCommandInput {
       | "closeTopic"
       | "declineJoin"
       | "declinePost"
+      | "deleteCommandMenu"
       | "deleteMessage"
       | "deleteMessages"
       | "deletePhoto"
@@ -481,6 +483,8 @@ async function dispatch(
       return publishCommandMenu(input, args);
     case "commands":
       return showCommandMenu(input, args);
+    case "delcommands":
+      return clearCommandMenu(input, args);
   }
 }
 
@@ -3040,6 +3044,41 @@ function rejectReadCommandMenu(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "commands",
+  });
+}
+
+async function clearCommandMenu(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.delcommands.usage");
+  }
+  if (args.length === 1 && args[0] !== "private") {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const clear = input.moderator?.deleteCommandMenu;
+  if (!clear) {
+    rejectClearCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await clear({ tenantId: input.event.tenantId });
+  } catch {
+    rejectClearCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.delcommands.done");
+}
+
+function rejectClearCommandMenu(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "delcommands",
   });
 }
 

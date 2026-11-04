@@ -10,6 +10,7 @@ import {
   type ChatStickerSetTarget,
   type ChatTarget,
   type ChatTitleTarget,
+  type CommandMenuQuery,
   type CommandMenuTarget,
   captchaChallengeSchema,
   type DefaultRightsTarget,
@@ -138,6 +139,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly suggestedPostsDeclined: readonly SuggestedPostTarget[];
   readonly defaultRightsSet: readonly DefaultRightsTarget[];
   readonly commandMenusSet: readonly CommandMenuTarget[];
+  readonly commandMenusDeleted: readonly CommandMenuQuery[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
@@ -180,6 +182,7 @@ export function createMemoryModerator(): ModerationPort & {
   const suggestedPostsDeclined: SuggestedPostTarget[] = [];
   const defaultRightsSet: DefaultRightsTarget[] = [];
   const commandMenusSet: CommandMenuTarget[] = [];
+  const commandMenusDeleted: CommandMenuQuery[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
@@ -222,6 +225,7 @@ export function createMemoryModerator(): ModerationPort & {
     suggestedPostsDeclined,
     defaultRightsSet,
     commandMenusSet,
+    commandMenusDeleted,
     approved,
     deferred,
     restricted,
@@ -289,6 +293,9 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
       });
+    },
+    async deleteCommandMenu(query) {
+      commandMenusDeleted.push({ tenantId: query.tenantId });
     },
     async setCommandMenu(target) {
       commandMenusSet.push({

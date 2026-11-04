@@ -73,6 +73,7 @@ function moderator(
       });
     },
     async deleteMessages() {},
+    async deleteCommandMenu() {},
     async muteActor() {},
     async banActor() {},
     async banSenderChat() {},

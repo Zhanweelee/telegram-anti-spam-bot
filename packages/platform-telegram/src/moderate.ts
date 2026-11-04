@@ -80,6 +80,16 @@ export function createTelegramModerator(input: {
             },
       });
     },
+    async deleteCommandMenu() {
+      await postTelegram({
+        token: input.token,
+        method: "deleteMyCommands",
+        fetchImpl: input.fetchImpl,
+        missing: "delcommands_unavailable",
+        failed: "delcommands_failed",
+        body: { scope: { type: "all_private_chats" } },
+      });
+    },
     async deleteMessages(target) {
       if (target.messageIds.length < 1 || target.messageIds.length > 100) {
         throw new Error("deletes_failed");
