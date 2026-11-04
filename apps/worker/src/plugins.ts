@@ -169,6 +169,12 @@ export const builtinManifests = {
     integrity:
       "8e1e49f3e645e6775df242d1cd2e06598e7e14f71d8ba1eaf399ba43f77f8bab",
   }),
+  giveawayCard: manifest({
+    id: "giveaway_card",
+    kind: "detector",
+    integrity:
+      "142eec32ad66c94f6a9fdfdb0e215d0e75628342c58fb018dd1814e186f8b627",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

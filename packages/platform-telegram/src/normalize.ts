@@ -143,6 +143,7 @@ async function messageEvent(
   const asChannel = sentAsForeignChannel(message);
   const asStory = sharedStory(message);
   const asLocation = bareLocation(message);
+  const asGiveaway = sharedGiveaway(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -175,8 +176,22 @@ async function messageEvent(
       ...(asChannel ? { asChannel: true as const } : {}),
       ...(asStory ? { asStory: true as const } : {}),
       ...(asLocation ? { asLocation: true as const } : {}),
+      ...(asGiveaway ? { asGiveaway: true as const } : {}),
     },
   });
+}
+
+function sharedGiveaway(message: Record<string, unknown>): boolean {
+  const giveaway = message.giveaway;
+  if (isRecord(giveaway) && hasChatRecord(giveaway.chats)) {
+    return true;
+  }
+  const winners = message.giveaway_winners;
+  return isRecord(winners) && isRecord(winners.chat);
+}
+
+function hasChatRecord(value: unknown): boolean {
+  return Array.isArray(value) && value.some((item) => isRecord(item));
 }
 
 function bareLocation(message: Record<string, unknown>): boolean {

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "giveaway_card",
+    "kind": "message",
+    "label": "spam",
+    "asGiveaway": true
+  },
+  {
+    "id": "giveaway_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "giveaway_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

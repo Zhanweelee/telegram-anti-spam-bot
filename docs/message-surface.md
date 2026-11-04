@@ -37,3 +37,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `message.story` 带有 `chat` 时，消息带 `asStory`。只回复一条故事不带这个标记。发布者名字仍只留主机名。用户名和故事编号不进事件。规则 `shared_story` 默认关闭。见 ADR 0472。
 
 `message.location` 同时有纬度和经度、并且没有 `venue` 时，消息带 `asLocation`。坐标、精度、方向和实时时长不进事件。场馆消息不带这个标记。规则 `bare_location` 默认关闭。见 ADR 0473。
+
+`giveaway.chats` 里至少有一个聊天，或 `giveaway_winners.chat` 是聊天时，消息带 `asGiveaway`。频道名字、用户名、频道 id、中奖人数和中奖者姓名不进事件。奖品说明仍可成为正文。投票不带这个标记。规则 `giveaway_card` 默认关闭。见 ADR 0474。
