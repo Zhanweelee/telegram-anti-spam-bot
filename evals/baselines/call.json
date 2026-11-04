@@ -1,0 +1,5 @@
+{
+  "detector": "call_notice",
+  "precision": 1,
+  "recall": 1
+}

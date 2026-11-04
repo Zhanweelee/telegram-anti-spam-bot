@@ -1,0 +1,18 @@
+[
+  {
+    "id": "call_notice",
+    "kind": "message",
+    "label": "spam",
+    "call": "started"
+  },
+  {
+    "id": "call_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "call_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

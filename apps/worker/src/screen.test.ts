@@ -4539,6 +4539,168 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("991441");
   });
 
+  it("keeps a video-chat notice until that chat asks", async () => {
+    const duration = 90177;
+    const startDate = 1700000002;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      started?: boolean;
+      ended?: boolean;
+      scheduled?: boolean;
+      invited?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.started ? { video_chat_started: {} } : {}),
+            ...(input.ended ? { video_chat_ended: { duration } } : {}),
+            ...(input.scheduled
+              ? { video_chat_scheduled: { start_date: startDate } }
+              : {}),
+            ...(input.invited
+              ? {
+                  video_chat_participants_invited: {
+                    users: [{ id: 991442, first_name: "干净名字" }],
+                  },
+                }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7300,
+      chatId: -100760,
+      started: true,
+    });
+    expect(idle.message?.call).toBe("started");
+    expect(idle.message?.text).toBe("");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "call_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["call_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7301, chatId: -100761, started: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("call_notice");
+    expect(removed.decision.ruleIds).toContain("call_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "call:started" },
+    ]);
+    const ended = await screenTelegramEvent(
+      await posted({ updateId: 7302, chatId: -100762, ended: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(ended.decision.action).toBe("delete");
+    expect(ended.decision.evidence).toEqual([
+      { kind: "feature", summary: "call:ended" },
+    ]);
+    const scheduled = await screenTelegramEvent(
+      await posted({ updateId: 7303, chatId: -100763, scheduled: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(scheduled.decision.action).toBe("delete");
+    expect(scheduled.decision.evidence).toEqual([
+      { kind: "feature", summary: "call:scheduled" },
+    ]);
+    const invited = await screenTelegramEvent(
+      await posted({ updateId: 7304, chatId: -100764, invited: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(invited.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7305,
+        chatId: -100765,
+        ended: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      ended: ended.decision,
+      scheduled: scheduled.decision,
+      invited: invited.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(duration));
+    expect(dumped).not.toContain(String(startDate));
+    expect(dumped).not.toContain("干净名字");
+    expect(dumped).not.toContain("991442");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

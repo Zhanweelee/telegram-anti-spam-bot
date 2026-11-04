@@ -144,6 +144,7 @@ async function messageEvent(
   const asStory = sharedStory(message);
   const asLocation = bareLocation(message);
   const asGiveaway = sharedGiveaway(message);
+  const call = callNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -177,8 +178,32 @@ async function messageEvent(
       ...(asStory ? { asStory: true as const } : {}),
       ...(asLocation ? { asLocation: true as const } : {}),
       ...(asGiveaway ? { asGiveaway: true as const } : {}),
+      ...(call === undefined ? {} : { call }),
     },
   });
+}
+
+function callNotice(
+  message: Record<string, unknown>,
+): "started" | "ended" | "scheduled" | undefined {
+  if (isRecord(message.video_chat_started)) {
+    return "started";
+  }
+  if (timedCall(message.video_chat_ended, "duration")) {
+    return "ended";
+  }
+  if (timedCall(message.video_chat_scheduled, "start_date")) {
+    return "scheduled";
+  }
+  return undefined;
+}
+
+function timedCall(value: unknown, field: "duration" | "start_date"): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const mark = value[field];
+  return typeof mark === "number" && Number.isFinite(mark) && mark >= 0;
 }
 
 function sharedGiveaway(message: Record<string, unknown>): boolean {

@@ -54,6 +54,7 @@ import {
 } from "@tasb/core";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBotDetector } from "@tasb/detector-bot";
+import { createCallDetector } from "@tasb/detector-call";
 import { createContactDetector } from "@tasb/detector-contact";
 import { createFolderDetector } from "@tasb/detector-folder";
 import {
@@ -516,6 +517,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.giveawayCard,
         value: createGiveawayDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.callNotice,
+        value: createCallDetector(),
       },
       {
         source: "builtin",

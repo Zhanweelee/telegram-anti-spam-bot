@@ -23,6 +23,7 @@
     "@tasb/detector-giveaway": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/detector-bot": "workspace:*",
+    "@tasb/detector-call": "workspace:*",
     "@tasb/detector-contact": "workspace:*",
     "@tasb/detector-folder": "workspace:*",
     "@tasb/detector-media": "workspace:*",

@@ -22,6 +22,7 @@ export default defineConfig({
       "packages/detectors-story",
       "packages/detectors-location",
       "packages/detectors-giveaway",
+      "packages/detectors-call",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",
