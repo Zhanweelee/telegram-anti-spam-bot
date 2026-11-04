@@ -97,6 +97,7 @@ const COMMAND_NAMES = [
   "showgeneral",
   "deltopic",
   "count",
+  "pin",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -142,6 +143,7 @@ export interface OperatorCommandInput {
       | "lockChat"
       | "muteActor"
       | "openTopic"
+      | "pinMessage"
       | "readAdministrators"
       | "readMember"
       | "readMemberCount"
@@ -307,6 +309,8 @@ async function dispatch(
       return deleteOneTopic(input, args);
     case "count":
       return showMemberCount(input, args);
+    case "pin":
+      return pinOneMessage(input, args);
   }
 }
 
@@ -1662,6 +1666,53 @@ function rejectCount(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "count",
+  });
+}
+
+async function pinOneMessage(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.pin.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const pin = input.moderator?.pinMessage;
+  if (!pin) {
+    rejectPin(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await pin({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+    });
+  } catch {
+    rejectPin(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.pin.done", { chatId, messageId });
+}
+
+function rejectPin(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "pin",
   });
 }
 

@@ -185,6 +185,7 @@ export {
   type MuteTarget,
   type NamedForumTopicTarget,
   type PermissionState,
+  type PinnedMessageTarget,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
