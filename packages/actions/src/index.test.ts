@@ -103,6 +103,9 @@ describe("delete action", () => {
           async readMemberAdmin() {
             throw new Error("canadmin_unavailable");
           },
+          async readOwnAdmin() {
+            throw new Error("cani_unavailable");
+          },
           async readPermissions() {
             throw new Error("perms_unavailable");
           },
@@ -269,6 +272,9 @@ describe("delete action", () => {
         },
         async readMemberAdmin() {
           throw new Error("canadmin_unavailable");
+        },
+        async readOwnAdmin() {
+          throw new Error("cani_unavailable");
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
@@ -438,6 +444,9 @@ describe("delete action", () => {
         },
         async readMemberAdmin() {
           throw new Error("canadmin_unavailable");
+        },
+        async readOwnAdmin() {
+          throw new Error("cani_unavailable");
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
@@ -609,6 +618,9 @@ function ports(): ModerationPort & {
     },
     async readMemberAdmin() {
       throw new Error("canadmin_unavailable");
+    },
+    async readOwnAdmin() {
+      throw new Error("cani_unavailable");
     },
     async readPermissions() {
       throw new Error("perms_unavailable");

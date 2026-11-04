@@ -85,6 +85,8 @@ export const messageKeys = [
   "command.kick.done",
   "command.kick.absent",
   "command.kick.admin",
+  "command.cani.usage",
+  "command.cani.header",
   "command.mute.usage",
   "command.mute.done",
   "command.member.usage",
@@ -428,6 +430,7 @@ const syntax = [
   "/allows <chatId> <actorId>",
   "/canadmin <chatId> <actorId>",
   "/kick <chatId> <actorId>",
+  "/cani <chatId>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -530,6 +533,8 @@ const zh = {
   "command.kick.done": "已移出 {chatId} {actorId}",
   "command.kick.absent": "{chatId} {actorId} 不在群里",
   "command.kick.admin": "{chatId} {actorId} 是管理员",
+  "command.cani.usage": "用法：/cani <chatId>",
+  "command.cani.header": "群 {chatId} 机器人 {actorId}",
   "command.mute.usage": "用法：/mute <chatId> <actorId> [seconds]",
   "command.mute.done": "已禁言 {chatId} {actorId} {seconds} 秒",
   "command.member.usage": "用法：/member <chatId> <actorId>",
@@ -910,6 +915,8 @@ const en = {
   "command.kick.done": "Removed {actorId} from {chatId}",
   "command.kick.absent": "{actorId} is not in {chatId}",
   "command.kick.admin": "{actorId} is an admin in {chatId}",
+  "command.cani.usage": "Usage: /cani <chatId>",
+  "command.cani.header": "chat {chatId} bot {actorId}",
   "command.mute.usage": "Usage: /mute <chatId> <actorId> [seconds]",
   "command.mute.done": "Muted {actorId} in {chatId} for {seconds} seconds",
   "command.member.usage": "Usage: /member <chatId> <actorId>",

@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(84);
+    expect(menu).toHaveLength(85);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7402,9 +7402,13 @@ describe("runOperatorCommand", () => {
       command: "canadmin",
       description: "/canadmin <chatId> <actorId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "kick")).toEqual({
       command: "kick",
       description: "/kick <chatId> <actorId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "cani",
+      description: "/cani <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -13125,6 +13129,211 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readMemberAdmin() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("reads this bot's admin rights in one chat", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin(target) {
+          seen.push(target.chatId);
+          return {
+            kind: "admin",
+            botId: "9",
+            editable: "on",
+            admin: {
+              actorId: "9",
+              bot: true,
+              role: "administrator",
+              anonymous: false,
+              rights: ["deleteMessages", "restrictMembers"],
+            },
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: ["群 -100 机器人 9", "9 机器人 管理员 删除 限制 可改 on"].join(
+        "\n",
+      ),
+    });
+    expect(seen).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/cani <chatId>");
+    }
+
+    const creator = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          return {
+            kind: "admin",
+            botId: "9",
+            editable: null,
+            admin: {
+              actorId: "9",
+              bot: true,
+              role: "creator",
+              anonymous: false,
+              rights: [],
+            },
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(creator).toMatchObject({
+      text: ["群 -100 机器人 9", "9 机器人 创建者"].join("\n"),
+    });
+    expect(JSON.stringify(creator)).not.toContain("可改");
+
+    const open = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          return { kind: "none", botId: "9" };
+        },
+      },
+      ...kit(),
+    });
+    expect(open).toMatchObject({
+      text: ["群 -100 机器人 9", "管理员 无"].join("\n"),
+    });
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readOwnAdmin() {
+          return { kind: "none", botId: "9" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100 bot 9", "admin none"].join("\n"),
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/cani -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/cani", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/cani <chatId>" });
+
+    const extra = await runOperatorCommand({
+      event: event({ text: "/cani -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/cani <chatId>" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/cani ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const unnamed = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          return { kind: "none", botId: "bot" };
+        },
+      },
+      ...kit(),
+    });
+    expect(unnamed).toMatchObject({ text: "参数无效" });
+
+    const mismatched = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          return {
+            kind: "admin",
+            botId: "9",
+            editable: "on",
+            admin: {
+              actorId: "8",
+              bot: true,
+              role: "administrator",
+              anonymous: false,
+              rights: ["deleteMessages"],
+            },
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(mismatched).toMatchObject({ text: "参数无效" });
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/cani -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readOwnAdmin() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/cani -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readOwnAdmin() {
           throw new Error("called");
         },
       },

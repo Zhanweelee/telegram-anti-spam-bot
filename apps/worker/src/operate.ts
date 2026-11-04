@@ -82,6 +82,9 @@ function commandModerator(
     async readMemberAdmin() {
       throw new Error("canadmin_unavailable");
     },
+    async readOwnAdmin() {
+      throw new Error("cani_unavailable");
+    },
     async readPermissions() {
       throw new Error("perms_unavailable");
     },

@@ -17,6 +17,7 @@ import type {
   MenuCommandSnapshot,
   ModerationPort,
   MuteTarget,
+  OwnAdmin,
   ParentChat,
   PermissionState,
   PersonalChat,
@@ -421,6 +422,42 @@ export function createTelegramModerator(input: {
         },
       });
       return readMemberAdminValue(member, target.actorId);
+    },
+    async readOwnAdmin(target): Promise<OwnAdmin> {
+      const me = await postTelegram({
+        token: input.token,
+        method: "getMe",
+        fetchImpl: input.fetchImpl,
+        missing: "cani_unavailable",
+        failed: "cani_failed",
+        body: {},
+      });
+      const botId = ownBotId(me);
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "cani_unavailable",
+        failed: "cani_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(botId),
+        },
+      });
+      try {
+        const admin = readMemberAdminValue(member, botId);
+        if (admin.kind === "none") {
+          return { kind: "none", botId };
+        }
+        return {
+          kind: "admin",
+          botId,
+          editable: admin.editable,
+          admin: admin.admin,
+        };
+      } catch {
+        throw new Error("cani_failed");
+      }
     },
     async readPermissions(target) {
       const chat = await postTelegram({
@@ -2205,6 +2242,21 @@ function kickStillInChat(result: Record<string, unknown>): boolean {
     throw new Error("kick_failed");
   }
   return result.is_member;
+}
+
+function ownBotId(body: unknown): string {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("cani_failed");
+  }
+  const result = body.result;
+  if (!isRecord(result) || result.is_bot !== true) {
+    throw new Error("cani_failed");
+  }
+  const id = result.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+    throw new Error("cani_failed");
+  }
+  return String(id);
 }
 
 function readMemberAdminValue(body: unknown, actorId: string): MemberAdmin {

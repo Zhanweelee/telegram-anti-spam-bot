@@ -71,6 +71,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/kick <chatId> <actorId>` 调用 `kickActor`。配了 token 时先 `getChatMember`。普通成员，以及还在群里的受限成员，再调用 `unbanChatMember`，不带 `only_if_banned`。已经离开、已经封禁或是管理员时不调用第二次。回复写明移出、不在群里或是管理员。名字不进回复。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经移出。不调用 `banChatMember`。不改 `/ban` 和 `/unban`。见 ADR 0434。
 
+`/cani <chatId>` 调用 `readOwnAdmin`。配了 token 时先 `getMe`，再 `getChatMember`，只带 `chat_id` 和这个 bot 的 `user_id`。不是管理员时回复无。管理员写出打开的权限，以及这个 bot 能不能改。创建者不写权限词，也不写能不能改。名字和用户名不进回复，也不进日志。没有 token 时不编一份权限。不调用 `promoteChatMember`。不改 `/canadmin`。见 ADR 0435。
+
 `/mute <chatId> <actorId> [seconds]` 调用 `muteActor`。不写秒数时用 3600。写出的秒数要是 30 到 366 天里的整数。配了 token 时仍把每一项权限关掉，并带上 `until_date`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经禁言。见 ADR 0365。
 
 `/member <chatId> <actorId>` 调用 `readMember`。配了 token 时使用 `getChatMember`。回复只含状态，以及封禁或禁言的到期时间。`until_date` 为 0 时不写到期。普通成员的订阅到期、姓名和标签不进回复。没有 token 或调用失败时回复「参数无效」。见 ADR 0366。
