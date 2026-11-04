@@ -58,6 +58,7 @@ describe("operator command example", () => {
     expect(help).toContain("/stickers <chatId> <name>");
     expect(help).toContain("/admintitle <chatId> <userId> [title]");
     expect(help).toContain("/declinepost <chatId> <messageId> [comment]");
+    expect(help).toContain("/delephemeral <chatId> <userId> <messageId>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -247,6 +248,14 @@ describe("operator command example", () => {
       "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
     );
     expect(declinedPost).not.toContain("ops");
+    const ephemeral = await runPrivateCommand({
+      text: "/delephemeral -100 77 55",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(ephemeral).toBe(
+      "已请求删除 -100 里发给 77 的临时消息 55。对方离线时可能收不到这次删除。其它消息还在。",
+    );
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

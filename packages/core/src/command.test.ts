@@ -6621,6 +6621,202 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("deletes one ephemeral message for one recipient", async () => {
+    const deps = kit();
+    const seen: {
+      chatId: string;
+      messageId: string;
+      audienceId?: string;
+    }[] = [];
+    const remember = {
+      async deleteMessage(target: {
+        chatId: string;
+        messageId: string;
+        audienceId?: string;
+      }) {
+        seen.push({
+          chatId: target.chatId,
+          messageId: target.messageId,
+          ...(target.audienceId === undefined
+            ? {}
+            : { audienceId: target.audienceId }),
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求删除 -100 里发给 77 的临时消息 55。对方离线时可能收不到这次删除。其它消息还在。",
+    });
+    expect(seen).toEqual([
+      { chatId: "-100", messageId: "55", audienceId: "77" },
+    ]);
+    expect(seen[0]).not.toHaveProperty("actorId");
+    const first = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(first).toMatchObject({
+      text: "已请求删除 -100 里发给 77 的临时消息 1。对方离线时可能收不到这次删除。其它消息还在。",
+    });
+    expect(seen[1]).toEqual({
+      chatId: "-100",
+      messageId: "1",
+      audienceId: "77",
+    });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/delephemeral 42 77 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求删除 42 里发给 77 的临时消息 55。对方离线时可能收不到这次删除。其它消息还在。",
+    });
+    expect(seen[2]).toEqual({
+      chatId: "42",
+      messageId: "55",
+      audienceId: "77",
+    });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain(
+        "/delephemeral <chatId> <userId> <messageId>",
+      );
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async deleteMessage() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to delete ephemeral message 55 sent to 77 in -100. An offline recipient may not see the deletion. The other messages stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/delephemeral", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/delephemeral <chatId> <userId> <messageId>",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/delephemeral <chatId> <userId> <messageId>",
+    });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/delephemeral <chatId> <userId> <messageId>",
+    });
+    expect(seen).toHaveLength(3);
+    const leading = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(leading).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/delephemeral ${phrase} 77 55`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/delephemeral -100 77 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"delephemeral"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/delephemeral -200 77 55",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

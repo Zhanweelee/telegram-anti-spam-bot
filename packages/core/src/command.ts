@@ -114,6 +114,7 @@ const COMMAND_NAMES = [
   "stickers",
   "admintitle",
   "declinepost",
+  "delephemeral",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -458,6 +459,8 @@ async function dispatch(
       return setOneAdminTitle(input, args);
     case "declinepost":
       return declineOnePost(input, args);
+    case "delephemeral":
+      return deleteEphemeral(input, args);
   }
 }
 
@@ -2653,6 +2656,61 @@ function rejectDeclinePost(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "declinepost",
+  });
+}
+
+async function deleteEphemeral(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 3) {
+    return say(input, "command.delephemeral.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  const messageId = args[2];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    messageId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId) ||
+    !isMessageId(messageId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deleteMessage;
+  if (!remove) {
+    rejectDeleteEphemeral(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+      audienceId: actorId,
+    });
+  } catch {
+    rejectDeleteEphemeral(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.delephemeral.done", {
+    chatId,
+    messageId,
+    actorId,
+  });
+}
+
+function rejectDeleteEphemeral(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "delephemeral",
   });
 }
 

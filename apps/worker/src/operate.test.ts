@@ -2461,6 +2461,103 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("deletes one ephemeral message for one recipient", async () => {
+    const kit = deps();
+    const calls: { method: string; url: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/delephemeral -100 77 55", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            url,
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: true,
+              description: phrase,
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求删除 -100 里发给 77 的临时消息 55。对方离线时可能收不到这次删除。其它消息还在。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "deleteEphemeralMessage",
+    ]);
+    expect(calls[0]?.url).not.toContain("/deleteMessage");
+    expect(calls[0]?.method).not.toContain("deleteMessages");
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      receiver_user_id: 77,
+      ephemeral_message_id: 55,
+    });
+    expect(calls[0]?.body).not.toContain('"message_id"');
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const first = deps();
+    const firstCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/delephemeral -100 77 1", direct: true }),
+      {
+        ...first,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          firstCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(first.reply.sent.map((message) => message.text)).toEqual([
+      "已请求删除 -100 里发给 77 的临时消息 1。对方离线时可能收不到这次删除。其它消息还在。",
+    ]);
+    expect(JSON.parse(firstCalls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      receiver_user_id: 77,
+      ephemeral_message_id: 1,
+    });
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/delephemeral -100 77 55", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/delephemeral -100 77 55", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];
