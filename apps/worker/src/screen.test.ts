@@ -5675,6 +5675,148 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a price notice until that chat asks", async () => {
+    const stars = 90188;
+    const directStars = 90189;
+    const actor = "改价的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      paid?: number;
+      direct?: boolean;
+      empty?: boolean;
+      paidPost?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: {
+              id: input.chatId,
+              type: input.direct ? "channel" : "supergroup",
+            },
+            from: { id: 96, first_name: actor },
+            ...(input.paidPost ? { is_paid_post: true } : {}),
+            ...(input.paid === undefined
+              ? {}
+              : {
+                  paid_message_price_changed: {
+                    paid_message_star_count: input.paid,
+                  },
+                }),
+            ...(input.direct
+              ? {
+                  direct_message_price_changed: {
+                    are_direct_messages_enabled: false,
+                    direct_message_star_count: directStars,
+                  },
+                }
+              : {}),
+            ...(input.empty ? { paid_message_price_changed: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8800,
+      chatId: -100880,
+      paid: stars,
+    });
+    expect(idle.message?.priceNotice).toBe("paid");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(String(stars));
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "price_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["price_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8801, chatId: -100881, direct: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("price_notice");
+    expect(removed.decision.ruleIds).toContain("price_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "price:direct" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 8802, chatId: -100882, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8803,
+        chatId: -100883,
+        paid: stars,
+        paidPost: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(stars));
+    expect(dumped).not.toContain(String(directStars));
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps an auto-delete notice until that chat asks", async () => {
     const seconds = 90186;
     const actor = "改计时的人";

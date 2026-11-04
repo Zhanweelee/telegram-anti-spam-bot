@@ -78,6 +78,7 @@ import { createMediaDetector } from "@tasb/detector-media";
 import { createNoticeDetector } from "@tasb/detector-notice";
 import { createPhotoDetector } from "@tasb/detector-photo";
 import { createPinDetector } from "@tasb/detector-pin";
+import { createPriceDetector } from "@tasb/detector-price";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -588,6 +589,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.autoDeleteNotice,
         value: createAutoDeleteDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.priceNotice,
+        value: createPriceDetector(),
       },
       {
         source: "builtin",

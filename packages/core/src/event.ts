@@ -115,6 +115,8 @@ export const messageSchema = z
     forumNotice: z.enum(["closed", "reopened", "hidden", "shown"]).optional(),
     /** Auto-delete timer service line. The seconds stay out. */
     asAutoDelete: z.literal(true).optional(),
+    /** Price-change service line. Star counts stay out. */
+    priceNotice: z.enum(["paid", "direct"]).optional(),
   })
   .refine(
     (message) =>

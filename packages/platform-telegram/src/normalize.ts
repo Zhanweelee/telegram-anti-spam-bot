@@ -156,6 +156,7 @@ async function messageEvent(
   const asBoost = addedBoost(message);
   const forumNotice = forumService(message);
   const asAutoDelete = autoDeleteNotice(message);
+  const priceNotice = changedPrice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -201,8 +202,34 @@ async function messageEvent(
       ...(asBoost ? { asBoost: true as const } : {}),
       ...(forumNotice === undefined ? {} : { forumNotice }),
       ...(asAutoDelete ? { asAutoDelete: true as const } : {}),
+      ...(priceNotice === undefined ? {} : { priceNotice }),
     },
   });
+}
+
+function changedPrice(
+  message: Record<string, unknown>,
+): "paid" | "direct" | undefined {
+  const paid = message.paid_message_price_changed;
+  if (isRecord(paid)) {
+    const stars = paid.paid_message_star_count;
+    if (
+      typeof stars === "number" &&
+      Number.isSafeInteger(stars) &&
+      stars >= 0
+    ) {
+      return "paid";
+    }
+  }
+  const direct = message.direct_message_price_changed;
+  if (
+    isRecord(direct) &&
+    (direct.are_direct_messages_enabled === true ||
+      direct.are_direct_messages_enabled === false)
+  ) {
+    return "direct";
+  }
+  return undefined;
 }
 
 function autoDeleteNotice(message: Record<string, unknown>): boolean {

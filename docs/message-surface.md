@@ -63,3 +63,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `forum_topic_closed`、`forum_topic_reopened`、`general_forum_topic_hidden` 或 `general_forum_topic_unhidden` 是对象时，消息带 `forumNotice`，取值是 `closed`、`reopened`、`hidden` 或 `shown`。同时出现时先认关掉，再认重开，再认隐藏，再认重新显示。名字、图标和话题号不进事件。布尔值不带这个标记。空对象带这个标记。新建和改名不带这个标记，话题名仍按 ADR 0088 成为正文。规则 `forum_notice` 默认关闭。见 ADR 0485。
 
 `message_auto_delete_timer_changed.message_auto_delete_time` 是大于等于 0 的安全整数时，消息带 `asAutoDelete`。秒数和发送者名字不进事件。空对象、负数和小数不带这个标记。0 带这个标记。规则 `autodelete_notice` 默认关闭。见 ADR 0486。
+
+`paid_message_price_changed.paid_message_star_count` 是大于等于 0 的安全整数时，消息带 `priceNotice: "paid"`。`direct_message_price_changed.are_direct_messages_enabled` 正好是布尔值时带 `direct`。同时出现时先认付费发言。星星数量、开关和发送者名字不进事件。空对象、负数和小数不带这个标记。0 颗星带 `paid`。规则 `price_notice` 默认关闭。见 ADR 0487。

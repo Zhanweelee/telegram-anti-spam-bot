@@ -1,0 +1,5 @@
+{
+  "detector": "price_notice",
+  "precision": 1,
+  "recall": 1
+}
