@@ -40,6 +40,7 @@ import {
   minimumAuditExportLength,
   type PermissionState,
   type ReactionAllowlist,
+  type StickerSetRight,
   type Storage,
   type WebhookSnapshot,
 } from "./ports.js";
@@ -146,6 +147,7 @@ const COMMAND_NAMES = [
   "joinbot",
   "reactions",
   "community",
+  "canstickers",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -300,6 +302,7 @@ export interface OperatorCommandInput {
       | "readMenuButton"
       | "readPermissions"
       | "readReactions"
+      | "readStickerSetRight"
       | "readWebhook"
       | "removeReaction"
       | "renameGeneral"
@@ -552,6 +555,8 @@ async function dispatch(
       return showReactions(input, args);
     case "community":
       return showCommunity(input, args);
+    case "canstickers":
+      return showCanStickers(input, args);
   }
 }
 
@@ -4014,6 +4019,62 @@ function rejectCommunity(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "community",
+  });
+}
+
+async function showCanStickers(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.canstickers.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readStickerSetRight;
+  if (!read) {
+    rejectCanStickers(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const right = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isStickerSetRight(right)) {
+      rejectCanStickers(input);
+      return say(input, "command.invalid");
+    }
+    return describeCanStickers(input, chatId, right);
+  } catch {
+    rejectCanStickers(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isStickerSetRight(right: StickerSetRight): boolean {
+  return isPermissionState(right.canSet);
+}
+
+function describeCanStickers(
+  input: OperatorCommandInput,
+  chatId: string,
+  right: StickerSetRight,
+): string {
+  return [
+    say(input, "command.canstickers.header", { chatId }),
+    `${say(input, "command.canstickers.flag")} ${say(input, permissionStateKey(right.canSet))}`,
+  ].join("\n");
+}
+
+function rejectCanStickers(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "canstickers",
   });
 }
 

@@ -220,6 +220,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("community_unavailable");
   });
 
+  it("does not invent a sticker set right", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readStickerSetRight({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("canstickers_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(

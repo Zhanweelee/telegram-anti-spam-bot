@@ -467,6 +467,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readCommunity() {
       throw new Error("community_unavailable");
     },
+    async readStickerSetRight() {
+      throw new Error("canstickers_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

@@ -226,6 +226,7 @@ export {
   type ReactionChoice,
   type RenamedTopicTarget,
   type SenderChatTarget,
+  type StickerSetRight,
   type Storage,
   type SuggestedPostTarget,
   type TopicPinTarget,

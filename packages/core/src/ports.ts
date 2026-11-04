@@ -119,6 +119,10 @@ export interface ChatCommunity {
   readonly id: string | null;
 }
 
+export interface StickerSetRight {
+  readonly canSet: PermissionState;
+}
+
 export interface ReactionAllowlist {
   readonly count: number | null;
 }
@@ -439,6 +443,7 @@ export interface ModerationPort {
   readJoinBot(target: ChatTarget): Promise<JoinBot>;
   readReactions(target: ChatTarget): Promise<ReactionAllowlist>;
   readCommunity(target: ChatTarget): Promise<ChatCommunity>;
+  readStickerSetRight(target: ChatTarget): Promise<StickerSetRight>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   declinePost(target: SuggestedPostTarget): Promise<void>;

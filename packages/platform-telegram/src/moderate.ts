@@ -16,6 +16,7 @@ import type {
   MuteTarget,
   PermissionState,
   ReactionAllowlist,
+  StickerSetRight,
   UnmuteResult,
   WebhookSnapshot,
 } from "@tasb/core";
@@ -405,6 +406,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readChatCommunity(chat, target.chatId);
+    },
+    async readStickerSetRight(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "canstickers_unavailable",
+        failed: "canstickers_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readStickerSetRightValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1218,6 +1232,42 @@ function readGuardBot(value: unknown): JoinBot {
     id: String(id),
     username: readJoinBotUsername(user.username),
   };
+}
+
+function readStickerSetRightValue(
+  body: unknown,
+  chatId: string,
+): StickerSetRight {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("canstickers_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("canstickers_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("canstickers_failed");
+  }
+  return { canSet: readCanSetStickerSet(record.can_set_sticker_set) };
+}
+
+function readCanSetStickerSet(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "unknown";
+  }
+  if (value === true) {
+    return "on";
+  }
+  if (value === false) {
+    return "off";
+  }
+  throw new Error("canstickers_failed");
 }
 
 function readChatCommunity(body: unknown, chatId: string): ChatCommunity {
