@@ -14,6 +14,7 @@ interface RichContactCase {
   readonly asRichEmail?: true;
   readonly asRichMention?: true;
   readonly asRichTextMention?: true;
+  readonly asRichCommand?: true;
 }
 
 interface Baseline {
@@ -55,6 +56,7 @@ async function evaluate(
                 ...(item.asRichTextMention
                   ? { asRichTextMention: true as const }
                   : {}),
+                ...(item.asRichCommand ? { asRichCommand: true as const } : {}),
               },
             }
           : {}),
@@ -168,6 +170,25 @@ describe("rich contact eval", () => {
     console.info(
       JSON.stringify({
         detector: "rich_text_mention",
+        cases: cases.length,
+        precision: report.precision,
+        recall: report.recall,
+        baseline,
+      }),
+    );
+    expect(report.precision).toBeGreaterThanOrEqual(baseline.precision);
+    expect(report.recall).toBeGreaterThanOrEqual(baseline.recall);
+  });
+
+  it("does not regress command precision or recall", async () => {
+    const cases = load("cases/rich-command.json");
+    const baseline = JSON.parse(
+      readFileSync(join(root, "baselines/rich-command.json"), "utf8"),
+    ) as Baseline;
+    const report = await evaluate("command", cases);
+    console.info(
+      JSON.stringify({
+        detector: "rich_command",
         cases: cases.length,
         precision: report.precision,
         recall: report.recall,

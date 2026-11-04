@@ -6005,6 +6005,170 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a rich command until that chat asks", async () => {
+    const command = "/go90223";
+    const actor = "发命令的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "command" | "named";
+      paid?: boolean;
+    }) {
+      const rich =
+        input.kind === "named"
+          ? {
+              type: "text_mention",
+              text: "标识留下",
+              user: { id: 88022, is_bot: false, first_name: "某人" },
+            }
+          : {
+              type: "bot_command",
+              text: "点命令广告",
+              bot_command: command,
+            };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 116, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind
+              ? {
+                  rich_message: {
+                    blocks: [{ type: "paragraph", text: rich }],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_command" | "rich_text_mention"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10580,
+      chatId: -1001180,
+      kind: "command",
+    });
+    expect(idle.message?.asRichCommand).toBe(true);
+    expect(idle.message?.asRichTextMention).toBeUndefined();
+    expect(idle.message?.text).toBe("点命令广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(command);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10581, chatId: -1001181, kind: "command" }),
+      {
+        source: rule("rich_command"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_command");
+    expect(removed.decision.ruleIds).toContain("rich_command");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:command" },
+    ]);
+    const keptByName = await screenTelegramEvent(
+      await posted({ updateId: 10582, chatId: -1001182, kind: "command" }),
+      {
+        source: rule("rich_text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByName.decision.action).toBe("allow");
+    const keptName = await screenTelegramEvent(
+      await posted({ updateId: 10583, chatId: -1001183, kind: "named" }),
+      {
+        source: rule("rich_command"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptName.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10584, chatId: -1001184 }),
+      {
+        source: rule("rich_command"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10585,
+        chatId: -1001185,
+        kind: "command",
+        paid: true,
+      }),
+      {
+        source: rule("rich_command"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByName: keptByName.decision,
+      keptName: keptName.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(command);
+    expect(dumped).not.toContain("90223");
+    expect(dumped).not.toContain("点命令广告");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a rich text mention until that chat asks", async () => {
     const userId = 902220011;
     const hiddenName = "隐藏名90222";

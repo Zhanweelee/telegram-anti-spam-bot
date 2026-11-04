@@ -361,6 +361,12 @@ export const builtinManifests = {
     integrity:
       "65c28788c51e7153698ea93f54f08b2a67a701c1379aa8703be85b59b8f6ab29",
   }),
+  richCommand: manifest({
+    id: "rich_command",
+    kind: "detector",
+    integrity:
+      "e816f9ee046c2da553e7a3515a87830b0b91ce61b522a17e8b0c85b66f5accd9",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

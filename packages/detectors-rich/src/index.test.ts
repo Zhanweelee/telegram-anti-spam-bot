@@ -9,6 +9,7 @@ function eventFor(input: {
   asRichEmail?: true;
   asRichMention?: true;
   asRichTextMention?: true;
+  asRichCommand?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -31,6 +32,7 @@ function eventFor(input: {
             ...(input.asRichTextMention
               ? { asRichTextMention: true as const }
               : {}),
+            ...(input.asRichCommand ? { asRichCommand: true as const } : {}),
           },
         }
       : {}),
@@ -211,6 +213,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichTextMention: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich command and leaves the command out of the hit", async () => {
+    const command = createRichDetector("command");
+    const hit = await command.detect({
+      event: eventFor({ asRichCommand: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_command",
+      score: 1,
+      reasons: ["rich_command"],
+      evidence: [{ kind: "feature", summary: "rich:command" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90223");
+    expect(
+      await command.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await command.detect({
+        event: eventFor({ kind: "chat_member", asRichCommand: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await command.detect({
+        event: eventFor({ asRichTextMention: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichCommand: true }),
         logger,
         signal,
       }),

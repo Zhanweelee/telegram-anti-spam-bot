@@ -1,0 +1,5 @@
+{
+  "detector": "rich_command",
+  "precision": 1,
+  "recall": 1
+}

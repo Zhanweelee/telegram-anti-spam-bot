@@ -103,3 +103,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `rich_message` 里 `type` 为 `mention` 且用户名去掉空白后非空时，消息带 `asRichMention`。空白、布尔值和缺用户名不带这个标记。按标识提及的用户不带这个标记。用户名不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_mention` 默认关闭。见 ADR 0505。
 
 `rich_message` 里 `type` 为 `text_mention` 且 `user.id` 是大于 0 的安全整数时，消息带 `asRichTextMention`。缺用户、布尔值、字符串编号和 0 不带这个标记。用户名提及不带。用户编号和名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_text_mention` 默认关闭。见 ADR 0506。
+
+`rich_message` 里 `type` 为 `bot_command` 且命令去掉空白后非空时，消息带 `asRichCommand`。空白、布尔值和缺命令不带这个标记。按标识提及不带。命令不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_command` 默认关闭。见 ADR 0507。
