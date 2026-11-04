@@ -1,0 +1,36 @@
+[
+  {
+    "id": "forum_notice_closed",
+    "kind": "message",
+    "label": "spam",
+    "forumNotice": "closed"
+  },
+  {
+    "id": "forum_notice_reopened",
+    "kind": "message",
+    "label": "spam",
+    "forumNotice": "reopened"
+  },
+  {
+    "id": "forum_notice_hidden",
+    "kind": "message",
+    "label": "spam",
+    "forumNotice": "hidden"
+  },
+  {
+    "id": "forum_notice_shown",
+    "kind": "message",
+    "label": "spam",
+    "forumNotice": "shown"
+  },
+  {
+    "id": "forum_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "forum_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

@@ -179,6 +179,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> chat_boost on` 删这个群里的助推提示。默认关闭。次数不进证据。助推本身还在。见 ADR 0484。
 
+`/rule <chatId> forum_notice on` 删这个群里关掉话题、重开话题、隐藏通用话题和重新显示通用话题的提示。默认关闭。话题名不进证据。话题开关不变。见 ADR 0485。
+
 ## 确认
 
 ```sh

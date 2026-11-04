@@ -20614,6 +20614,117 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a forum notice and leaves the topic name out", async () => {
+    const title = "关掉广告名";
+    const closed = await normalize({
+      update_id: 4530,
+      message: {
+        message_id: 580,
+        date: 1761955200,
+        chat: { id: -100499510, type: "supergroup" },
+        from: { id: 96, first_name: "关话题的人" },
+        forum_topic_closed: { name: title },
+      },
+    });
+    expect(closed.status).toBe("event");
+    if (closed.status !== "event") {
+      return;
+    }
+    expect(closed.event.message?.forumNotice).toBe("closed");
+    expect(closed.event.message?.text).toBe("");
+    expect(closed.event.actor).toEqual({ id: "96", isAdmin: false });
+    const closedDump = JSON.stringify(closed.event);
+    expect(closedDump).not.toContain(title);
+    expect(closedDump).not.toContain("关话题的人");
+
+    const reopened = await normalize({
+      update_id: 4531,
+      message: {
+        message_id: 581,
+        date: 1761955200,
+        chat: { id: -100499511, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        forum_topic_reopened: {},
+      },
+    });
+    expect(reopened.status).toBe("event");
+    if (reopened.status !== "event") {
+      return;
+    }
+    expect(reopened.event.message?.forumNotice).toBe("reopened");
+    expect(reopened.event.message?.text).toBe("今天站会");
+
+    const hidden = await normalize({
+      update_id: 4532,
+      message: {
+        message_id: 582,
+        date: 1761955200,
+        chat: { id: -100499512, type: "supergroup" },
+        from: { id: 96 },
+        general_forum_topic_hidden: {},
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.forumNotice).toBe("hidden");
+    expect(hidden.event.message?.text).toBe("");
+
+    const shown = await normalize({
+      update_id: 4533,
+      message: {
+        message_id: 583,
+        date: 1761955200,
+        chat: { id: -100499513, type: "supergroup" },
+        from: { id: 96 },
+        general_forum_topic_unhidden: {},
+        forum_topic_closed: {},
+      },
+    });
+    expect(shown.status).toBe("event");
+    if (shown.status !== "event") {
+      return;
+    }
+    expect(shown.event.message?.forumNotice).toBe("closed");
+
+    const created = await normalize({
+      update_id: 4534,
+      message: {
+        message_id: 584,
+        date: 1761955200,
+        chat: { id: -100499514, type: "supergroup" },
+        from: { id: 96 },
+        forum_topic_created: { name: "新建话题名", icon_color: 7322096 },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.forumNotice).toBeUndefined();
+    expect(created.event.message?.text).toBe("新建话题名");
+
+    const flag = await normalize({
+      update_id: 4535,
+      message: {
+        message_id: 585,
+        date: 1761955200,
+        chat: { id: -100499515, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        forum_topic_closed: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.forumNotice).toBeUndefined();
+    expect(flag.event.message?.text).toBe("今天站会");
+  });
+
   it("marks a boost and leaves the count out", async () => {
     const booster = "助推的人";
     const count = 90185;
