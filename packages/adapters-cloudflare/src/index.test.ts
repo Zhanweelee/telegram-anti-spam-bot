@@ -376,6 +376,93 @@ describe("kv runtime store", () => {
     await second.clearKeywords("local", "-100");
     expect(await second.listKeywords("local", "-100")).toEqual([]);
   });
+
+  it("keeps a repeat policy in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.getRepeatPolicy("local", "-100")).toBeNull();
+    expect(
+      await first.setRepeatPolicy("local", "-100", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(true);
+    const written = puts;
+    expect(
+      await first.setRepeatPolicy("local", "-100", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(true);
+    expect(puts).toBe(written);
+    expect(
+      await first.setFloodPolicy("local", "-100", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    expect(await first.addKeyword("local", "-100", "发票")).toBe(true);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getRepeatPolicy("local", "-100")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+    expect(await second.getFloodPolicy("local", "-100")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await second.listKeywords("local", "-100")).toEqual(["发票"]);
+    const keys = [...backing.values.keys()];
+    const repeatKey = keys.find((key) => key.startsWith("runtime-repeat"));
+    const floodKey = keys.find((key) => key.startsWith("runtime-flood"));
+    const keywordKey = keys.find((key) => key.startsWith("runtime-keyword"));
+    expect(repeatKey).toBeDefined();
+    expect(repeatKey).not.toBe(floodKey);
+    expect(repeatKey).not.toBe(keywordKey);
+    expect(backing.values.get(floodKey ?? "")).not.toContain("30");
+    expect(backing.values.get(keywordKey ?? "")).not.toContain("30");
+    if (repeatKey !== undefined) {
+      backing.values.set(repeatKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getRepeatPolicy("local", "-100")).toBeNull();
+    expect(await fresh.getFloodPolicy("local", "-100")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await fresh.listKeywords("local", "-100")).toEqual(["发票"]);
+    expect(String(await fresh.getRepeatPolicy("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(
+      await fresh.setRepeatPolicy("local", "-100", {
+        threshold: 1,
+        windowSeconds: 60,
+      }),
+    ).toBe(false);
+    expect(await fresh.getRepeatPolicy("local", "-100")).toBeNull();
+    expect(
+      await fresh.setRepeatPolicy("local", "-100", {
+        threshold: 3,
+        windowSeconds: 60,
+      }),
+    ).toBe(true);
+    expect(await fresh.getRepeatPolicy("local", "-100")).toBeNull();
+    await second.clearRepeatPolicy("local", "-100");
+    expect(await second.getRepeatPolicy("local", "-100")).toBeNull();
+    expect(backing.values.get(repeatKey ?? "")).toBe("{}");
+  });
 });
 
 describe("kv chat directory", () => {

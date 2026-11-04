@@ -353,6 +353,86 @@ describe("memory adapter", () => {
     expect(await runtime.addKeyword("tenant_a", "overflow", "代开")).toBe(true);
   });
 
+  it("keeps a repeat policy apart from flood and keywords", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setFloodPolicy("tenant_a", "chat_1", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "发票")).toBe(true);
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "chat_1", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(true);
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_2")).toBeNull();
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "chat_1", {
+        threshold: 3,
+        windowSeconds: 60,
+      }),
+    ).toBe(true);
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "chat_1", {
+        threshold: 1,
+        windowSeconds: 60,
+      }),
+    ).toBe(false);
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "chat_1", {
+        threshold: 4,
+        windowSeconds: 301,
+      }),
+    ).toBe(false);
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.setRepeatPolicy("tenant_a", `chat_${index}`, {
+          threshold: 4,
+          windowSeconds: 30,
+        }),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "overflow", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(false);
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "overflow", {
+        threshold: 3,
+        windowSeconds: 60,
+      }),
+    ).toBe(true);
+    expect(await runtime.getRepeatPolicy("tenant_a", "overflow")).toBeNull();
+    await runtime.clearRepeatPolicy("tenant_a", "chat_0");
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "overflow", {
+        threshold: 2,
+        windowSeconds: 15,
+      }),
+    ).toBe(true);
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

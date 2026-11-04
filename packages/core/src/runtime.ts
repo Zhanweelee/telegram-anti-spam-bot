@@ -97,6 +97,15 @@ export const floodPolicyDocumentSchema = z.strictObject({
 
 export type FloodPolicy = z.output<typeof floodPolicyDocumentSchema>;
 
+/** Default repeat detector: 3 copies in 60 seconds. See ADR 0010. */
+export const REPEAT_THRESHOLD = 3;
+export const REPEAT_WINDOW_SECONDS = 60;
+
+/** Same bounds as flood: 2–32 copies, 1–300 seconds. */
+export const repeatPolicyDocumentSchema = floodPolicyDocumentSchema;
+
+export type RepeatPolicy = FloodPolicy;
+
 /** Extra keywords for one chat. The built-in list stays in the detector. */
 export const MAX_CHAT_KEYWORDS = 32;
 
@@ -208,4 +217,20 @@ export interface RuntimeStore {
     keyword: string,
   ): Promise<boolean>;
   clearKeywords(tenantId: string, chatId: string): Promise<void>;
+  /** Null when this chat still uses 3 copies in 60 seconds. */
+  getRepeatPolicy(
+    tenantId: string,
+    chatId: string,
+  ): Promise<RepeatPolicy | null>;
+  /**
+   * Returns false when the policy is outside 2–32 copies or 1–300 seconds,
+   * or a new chat would exceed the memory cap. The default 3/60 clears the
+   * row. Updating a chat that is already stored still succeeds.
+   */
+  setRepeatPolicy(
+    tenantId: string,
+    chatId: string,
+    policy: RepeatPolicy,
+  ): Promise<boolean>;
+  clearRepeatPolicy(tenantId: string, chatId: string): Promise<void>;
 }

@@ -21,12 +21,16 @@ import {
   MAX_RULE_SWITCHES,
   type PolicyStore,
   prefilterPolicySchema,
+  REPEAT_THRESHOLD,
+  REPEAT_WINDOW_SECONDS,
+  type RepeatPolicy,
   type RuleActionDocument,
   type RuleActionOverride,
   type RulePackArchive,
   type RuleSubscriptionStore,
   type RuntimeDocument,
   type RuntimeStore,
+  repeatPolicyDocumentSchema,
   reportChatDocumentSchema,
   ruleActionDocumentSchema,
   ruleActionSchema,
@@ -132,6 +136,10 @@ export function createKvRuntimeStore(
   const keywordCache = new Map<
     string,
     { readonly keywords: readonly string[]; readonly expiresAt: number }
+  >();
+  const repeatCache = new Map<
+    string,
+    { readonly policy: RepeatPolicy | null; readonly expiresAt: number }
   >();
 
   async function load(
@@ -272,6 +280,35 @@ export function createKvRuntimeStore(
         : JSON.stringify(chatKeywordDocumentSchema.parse({ keywords }));
     await kv.put(id, body);
     keywordCache.set(id, { keywords, expiresAt: now() + ttlMs });
+  }
+
+  async function loadRepeat(
+    tenantId: string,
+    chatId: string,
+  ): Promise<RepeatPolicy | null> {
+    const id = runtimeRepeatKey(tenantId, chatId);
+    const at = now();
+    const hit = repeatCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.policy;
+    }
+    const policy = parseRepeat(await kv.get(id));
+    repeatCache.set(id, { policy, expiresAt: at + ttlMs });
+    return policy;
+  }
+
+  async function saveRepeat(
+    tenantId: string,
+    chatId: string,
+    policy: RepeatPolicy | null,
+  ): Promise<void> {
+    const id = runtimeRepeatKey(tenantId, chatId);
+    const body =
+      policy === null
+        ? "{}"
+        : JSON.stringify(repeatPolicyDocumentSchema.parse(policy));
+    await kv.put(id, body);
+    repeatCache.set(id, { policy, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -438,6 +475,29 @@ export function createKvRuntimeStore(
       }
       await saveKeywords(tenantId, chatId, null);
     },
+    async getRepeatPolicy(tenantId, chatId) {
+      return loadRepeat(tenantId, chatId);
+    },
+    async setRepeatPolicy(tenantId, chatId, policy) {
+      const parsed = repeatPolicyDocumentSchema.safeParse(policy);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadRepeat(tenantId, chatId);
+      const next = isDefaultRepeat(parsed.data) ? null : parsed.data;
+      if (sameRepeat(current, next)) {
+        return true;
+      }
+      await saveRepeat(tenantId, chatId, next);
+      return true;
+    },
+    async clearRepeatPolicy(tenantId, chatId) {
+      const current = await loadRepeat(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveRepeat(tenantId, chatId, null);
+    },
   };
 }
 
@@ -477,6 +537,10 @@ function runtimeKeywordKey(tenantId: string, chatId: string): string {
   return `runtime-keyword\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
 }
 
+function runtimeRepeatKey(tenantId: string, chatId: string): string {
+  return `runtime-repeat\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
 function parseKeywords(raw: string | null): readonly string[] {
   if (raw === null) {
     return [];
@@ -507,6 +571,38 @@ function sameFlood(
     left.threshold === right.threshold &&
     left.windowSeconds === right.windowSeconds
   );
+}
+
+function isDefaultRepeat(policy: RepeatPolicy): boolean {
+  return (
+    policy.threshold === REPEAT_THRESHOLD &&
+    policy.windowSeconds === REPEAT_WINDOW_SECONDS
+  );
+}
+
+function sameRepeat(
+  left: RepeatPolicy | null,
+  right: RepeatPolicy | null,
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  return (
+    left.threshold === right.threshold &&
+    left.windowSeconds === right.windowSeconds
+  );
+}
+
+function parseRepeat(raw: string | null): RepeatPolicy | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = repeatPolicyDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseFlood(raw: string | null): FloodPolicy | null {

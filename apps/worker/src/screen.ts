@@ -34,6 +34,8 @@ import {
   type Notifier,
   type PipelineResult,
   type PolicyStore,
+  REPEAT_THRESHOLD,
+  REPEAT_WINDOW_SECONDS,
   type RuleActionOverride,
   type RulePackArchive,
   type RulePackSource,
@@ -278,6 +280,20 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let repeatThreshold = REPEAT_THRESHOLD;
+  let repeatWindowSeconds = REPEAT_WINDOW_SECONDS;
+  try {
+    const repeat = await runtime.getRepeatPolicy(event.tenantId, event.chatId);
+    if (repeat) {
+      repeatThreshold = repeat.threshold;
+      repeatWindowSeconds = repeat.windowSeconds;
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -374,8 +390,8 @@ export async function screenTelegramEvent(
         manifest: builtinManifests.repeat,
         value: createRepeatDetector({
           window: deps.rateWindow ?? workerRateWindow,
-          windowSeconds: 60,
-          threshold: 3,
+          windowSeconds: repeatWindowSeconds,
+          threshold: repeatThreshold,
         }),
       },
       {

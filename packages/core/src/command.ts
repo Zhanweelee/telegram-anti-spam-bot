@@ -81,6 +81,9 @@ import {
   FLOOD_THRESHOLD,
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
+  REPEAT_THRESHOLD,
+  REPEAT_WINDOW_SECONDS,
+  type RepeatPolicy,
   type RuleActionOverride,
   type RuleSwitch,
   type RuntimeStore,
@@ -188,6 +191,7 @@ const COMMAND_NAMES = [
   "report",
   "flood",
   "keyword",
+  "repeat",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -545,6 +549,8 @@ async function dispatch(
       return editFlood(input, args);
     case "keyword":
       return editKeyword(input, args);
+    case "repeat":
+      return editRepeat(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5750,6 +5756,146 @@ function parseFloodWindow(value: string): number | undefined {
     return undefined;
   }
   return Number(value);
+}
+
+async function editRepeat(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 3) {
+    return say(input, "command.repeat.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatRepeat(input, chatId);
+  }
+  if (requested === "reset") {
+    if (args.length !== 2) {
+      return say(input, "command.repeat.usage");
+    }
+    const cleared = await removeRepeatPolicy(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.repeat.done", {
+      chatId,
+      threshold: REPEAT_THRESHOLD,
+      windowSeconds: REPEAT_WINDOW_SECONDS,
+    });
+  }
+  const threshold = parseFloodCount(requested);
+  if (threshold === undefined) {
+    return say(input, "command.invalid");
+  }
+  let windowSeconds = REPEAT_WINDOW_SECONDS;
+  const seconds = args[2];
+  if (seconds === undefined) {
+    const current = await readRepeatPolicy(input, chatId);
+    if (current === undefined) {
+      return say(input, "command.invalid");
+    }
+    windowSeconds = current?.windowSeconds ?? REPEAT_WINDOW_SECONDS;
+  } else {
+    const parsed = parseFloodWindow(seconds);
+    if (parsed === undefined) {
+      return say(input, "command.invalid");
+    }
+    windowSeconds = parsed;
+  }
+  const saved = await writeRepeatPolicy(input, chatId, {
+    threshold,
+    windowSeconds,
+  });
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("repeat_policy_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "repeat",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.repeat.done", {
+    chatId,
+    threshold,
+    windowSeconds,
+  });
+}
+
+async function formatRepeat(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const policy = await readRepeatPolicy(input, chatId);
+  if (policy === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.repeat.show", {
+    chatId,
+    threshold: policy?.threshold ?? REPEAT_THRESHOLD,
+    windowSeconds: policy?.windowSeconds ?? REPEAT_WINDOW_SECONDS,
+  });
+}
+
+async function readRepeatPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<RepeatPolicy | null | undefined> {
+  try {
+    return await input.runtime.getRepeatPolicy(input.event.tenantId, chatId);
+  } catch {
+    rejectRepeat(input);
+    return undefined;
+  }
+}
+
+async function writeRepeatPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+  policy: RepeatPolicy,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setRepeatPolicy(
+      input.event.tenantId,
+      chatId,
+      policy,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectRepeat(input);
+    return "invalid";
+  }
+}
+
+async function removeRepeatPolicy(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearRepeatPolicy(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectRepeat(input);
+    return false;
+  }
+}
+
+function rejectRepeat(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "repeat",
+  });
 }
 
 async function editKeyword(

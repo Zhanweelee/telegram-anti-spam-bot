@@ -2075,6 +2075,82 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(text);
   });
 
+  it("deletes the second copy when that chat's repeat count is 2", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(
+      await runtime.setRepeatPolicy("local", "-100rep", {
+        threshold: 2,
+        windowSeconds: 60,
+      }),
+    ).toBe(true);
+    const window = createMemoryRateWindow();
+    const base = Date.parse("2026-11-01T00:00:00.000Z");
+    async function copy(index: number, chatId: string, text: string) {
+      return parseEvent({
+        id: `repeat_policy_${chatId}_${index}`,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: new Date(base + index * 1000).toISOString(),
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: String(index),
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      });
+    }
+    const first = await screenTelegramEvent(
+      await copy(0, "-100rep", "same-line"),
+      {
+        runtime,
+        rateWindow: window,
+      },
+    );
+    expect(first.decision.action).toBe("allow");
+    const second = await screenTelegramEvent(
+      await copy(1, "-100rep", "same-line"),
+      { runtime, rateWindow: window },
+    );
+    expect(second.decision.action).toBe("delete");
+    expect(second.decision.reasons).toContain("repeat");
+    expect(JSON.stringify(second)).not.toContain("same-line");
+    const other = await screenTelegramEvent(
+      await copy(0, "-200rep", "other-line"),
+      { runtime, rateWindow: window },
+    );
+    expect(other.decision.action).toBe("allow");
+    const otherSecond = await screenTelegramEvent(
+      await copy(1, "-200rep", "other-line"),
+      { runtime, rateWindow: window },
+    );
+    expect(otherSecond.decision.action).toBe("allow");
+
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failedWindow = createMemoryRateWindow();
+    const failedRuntime = {
+      ...broken,
+      async getRepeatPolicy() {
+        throw new Error(phrase);
+      },
+    };
+    const failedFirst = await screenTelegramEvent(
+      await copy(0, "-300rep", "quiet-line"),
+      { logger, rateWindow: failedWindow, runtime: failedRuntime },
+    );
+    expect(failedFirst.decision.action).toBe("allow");
+    const failedSecond = await screenTelegramEvent(
+      await copy(1, "-300rep", "quiet-line"),
+      { logger, rateWindow: failedWindow, runtime: failedRuntime },
+    );
+    expect(failedSecond.decision.action).toBe("allow");
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain("quiet-line");
+  });
+
   it("deletes a contact card URL and keeps the vCard out of logs", async () => {
     const phone = "13800138118";
     const path = "card118";
