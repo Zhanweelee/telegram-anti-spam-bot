@@ -135,6 +135,7 @@ function deleteExecuted(result: PipelineResult): boolean {
 
 /**
  * After one non-paid delete, remove the other known messages in that album.
+ * Public ids share one deleteMessages call. A receiver still uses deleteMessage.
  * Later arrivals are removed even when their own text would be kept.
  */
 export async function sweepAlbum(input: {
@@ -196,7 +197,33 @@ export async function sweepAlbum(input: {
     }
     targets.push(slot);
   }
+  const publicIds: string[] = [];
+  const privateSlots: AlbumSlot[] = [];
   for (const slot of targets) {
+    if (slot.audienceId) {
+      privateSlots.push(slot);
+    } else {
+      publicIds.push(slot.messageId);
+    }
+  }
+  if (publicIds.length > 0) {
+    try {
+      await input.moderator.deleteMessages({
+        tenantId: input.event.tenantId,
+        chatId: input.event.chatId,
+        messageIds: publicIds,
+      });
+      for (const messageId of publicIds) {
+        input.watch.markRemoved({ ...key, messageId });
+      }
+    } catch {
+      input.logger.warn("album_delete_failed", {
+        eventId: input.event.id,
+        chatId: input.event.chatId,
+      });
+    }
+  }
+  for (const slot of privateSlots) {
     try {
       await input.moderator.deleteMessage({
         tenantId: input.event.tenantId,
