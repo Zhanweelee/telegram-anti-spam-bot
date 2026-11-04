@@ -106,6 +106,10 @@ export const messageKeys = [
   "command.warnlimit.usage",
   "command.warnlimit.show",
   "command.warnlimit.done",
+  "command.report.usage",
+  "command.report.show",
+  "command.report.default",
+  "command.report.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -460,6 +464,7 @@ const syntax = [
   "/unwarn <chatId> <actorId>",
   "/warns <chatId> [actorId]",
   "/warnlimit <chatId> [limit|reset]",
+  "/report <chatId> [targetId|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -585,6 +590,10 @@ const zh = {
   "command.warnlimit.usage": "用法：/warnlimit <chatId> [limit|reset]",
   "command.warnlimit.show": "{chatId} 警告上限 {limit}",
   "command.warnlimit.done": "已设置 {chatId} 警告上限 {limit}",
+  "command.report.usage": "用法：/report <chatId> [targetId|reset]",
+  "command.report.show": "{chatId} 上报 {targetId}",
+  "command.report.default": "{chatId} 上报默认",
+  "command.report.done": "已设置 {chatId} 上报到 {targetId}",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -993,6 +1002,10 @@ const en = {
   "command.warnlimit.usage": "Usage: /warnlimit <chatId> [limit|reset]",
   "command.warnlimit.show": "Warning limit for {chatId} is {limit}",
   "command.warnlimit.done": "Set the warning limit for {chatId} to {limit}",
+  "command.report.usage": "Usage: /report <chatId> [targetId|reset]",
+  "command.report.show": "Reports for {chatId} go to {targetId}",
+  "command.report.default": "Reports for {chatId} use the default",
+  "command.report.done": "Set reports for {chatId} to {targetId}",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

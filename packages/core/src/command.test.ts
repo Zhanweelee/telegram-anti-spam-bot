@@ -93,6 +93,7 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     string,
     Map<string, RuleActionOverride["action"]>
   >();
+  const reports = new Map<string, string>();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -146,6 +147,16 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async clearRuleAction(tenantId, chatId, ruleId) {
       ruleActions.get(`${tenantId}:${chatId}`)?.delete(ruleId);
+    },
+    async getReportChat(tenantId, chatId) {
+      return reports.get(`${tenantId}:${chatId}`) ?? null;
+    },
+    async setReportChat(tenantId, chatId, targetId) {
+      reports.set(`${tenantId}:${chatId}`, targetId);
+      return true;
+    },
+    async clearReportChat(tenantId, chatId) {
+      reports.delete(`${tenantId}:${chatId}`);
     },
   };
 }
@@ -7325,7 +7336,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(91);
+    expect(menu).toHaveLength(92);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7437,6 +7448,10 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
+      command: "report",
+      description: "/report <chatId> [targetId|reset]",
+    });
+    expect(menu.find((item) => item.command === "warnlimit")).toEqual({
       command: "warnlimit",
       description: "/warnlimit <chatId> [limit|reset]",
     });
@@ -16744,6 +16759,147 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(missing).toMatchObject({ text: "参数无效" });
+  });
+
+  it("sends one chat's reports to a chosen chat", async () => {
+    const deps = kit();
+    const scoped = directory(["-100"]);
+    const shown = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(shown).toMatchObject({
+      status: "reply",
+      command: "report",
+      text: "-100 上报默认",
+    });
+    const set = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 77", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(set).toMatchObject({ text: "已设置 -100 上报到 77" });
+    const again = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(again).toMatchObject({ text: "-100 上报 77" });
+    const other = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -200", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(other).toMatchObject({ text: "-200 上报默认" });
+    const same = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(same).toMatchObject({ text: "参数无效" });
+    const kept = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(kept).toMatchObject({ text: "-100 上报 77" });
+    const reset = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 reset", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(reset).toMatchObject({ text: "-100 上报默认" });
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 88", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english).toMatchObject({
+      text: "Set reports for -100 to 88",
+    });
+    const englishShow = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -300", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(englishShow).toMatchObject({
+      text: "Reports for -300 use the default",
+    });
+    const usage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 77 extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/report <chatId> [targetId|reset]",
+    });
+    const group = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 77" }),
+      adminActorIds: ["42"],
+    });
+    expect(group).toMatchObject({ status: "skip" });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/report -200 77",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const noisy = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: `/report -100 ${phrase}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+    });
+    expect(noisy).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(noisy)).not.toContain(phrase);
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100 79", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async setReportChat() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("report_chat_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/report -100", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async getReportChat() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const help = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text).toContain("/report <chatId> [targetId|reset]");
+    }
   });
 
   it("bans on the second warning when the chat limit is 2", async () => {

@@ -232,6 +232,30 @@ describe("memory adapter", () => {
     ).toBe(true);
   });
 
+  it("keeps a report chat apart from rule switches", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.getReportChat("tenant_a", "chat_1")).toBeNull();
+    expect(await runtime.setReportChat("tenant_a", "chat_1", "77")).toBe(true);
+    expect(await runtime.getReportChat("tenant_a", "chat_1")).toBe("77");
+    expect(await runtime.getReportChat("tenant_a", "chat_2")).toBeNull();
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_1")).toEqual([]);
+    expect(await runtime.setReportChat("tenant_a", "chat_1", "88")).toBe(true);
+    await runtime.clearReportChat("tenant_a", "chat_1");
+    expect(await runtime.getReportChat("tenant_a", "chat_1")).toBeNull();
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.setReportChat("tenant_a", `chat_${index}`, "77"),
+      ).toBe(true);
+    }
+    expect(await runtime.setReportChat("tenant_a", "overflow", "77")).toBe(
+      false,
+    );
+    await runtime.clearReportChat("tenant_a", "chat_0");
+    expect(await runtime.setReportChat("tenant_a", "overflow", "88")).toBe(
+      true,
+    );
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

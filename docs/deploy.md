@@ -65,6 +65,8 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 `/rule [chatId] <ruleId> on|off|reset` 只改这一群这一条已有规则的启用状态。同一个命令还可以换成 `log`、`report`、`captcha`、`decline`、`delete`、`warn`、`mute`、`ban` 里的一个动作，`file` 回到文件里的动作。没配 `POLICY_KV` 时，开关和动作各在 isolate 内存里，最多 256 个群、每个群 32 条，重启后回到文件。配了 `POLICY_KV` 之后，开关和 dry-run 仍写进原来的键，动作写进 `runtime-action` 键，每个群最多 32 条，重启还在。热路径用本 isolate 的 60 秒缓存，不按每条消息读 KV。不新增绑定。见 ADR 0034、ADR 0035 和 ADR 0458。
 
+`/report <chatId> [targetId|reset]` 决定这个群的上报发到哪里。不设置时仍发给配置里的第一个管理员，回复里不写这个编号。目的地不能是本群。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，重启后回到默认。配了之后写进 `runtime-report` 键，重启还在。见 ADR 0021 和 ADR 0459。
+
 配了 `DB` 之后，入群验证的挑战写在同一份 D1 里。另一个 isolate 收到按钮时仍能对上 nonce。没配 `DB` 时挑战留在 isolate 内存，重启后丢失。Cron 只删除已经到期的行，一次最多 64 条，不提前解除 Telegram 限制。表用 `CREATE TABLE IF NOT EXISTS`，再执行一次迁移只会补上缺的表。不新增绑定。见 ADR 0009 和 ADR 0051。
 
 哪些可见字段会进检测，写在 [message-surface.md](message-surface.md)。

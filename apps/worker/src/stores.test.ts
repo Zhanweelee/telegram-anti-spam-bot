@@ -145,11 +145,13 @@ describe("resolveStores", () => {
     expect(await restarted.runtime.listRuleActions("local", "-100")).toEqual([
       { ruleId: "spam_keywords", action: "warn" },
     ]);
+    expect(await first.runtime.setReportChat("local", "-100", "77")).toBe(true);
+    expect(await restarted.runtime.getReportChat("local", "-100")).toBe("77");
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(3);
+    expect(values.size).toBe(4);
     expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
       true,
     );
@@ -158,6 +160,9 @@ describe("resolveStores", () => {
     );
     expect(
       [...values.keys()].some((key) => key.startsWith("runtime-action")),
+    ).toBe(true);
+    expect(
+      [...values.keys()].some((key) => key.startsWith("runtime-report")),
     ).toBe(true);
     expect(
       await first.chats.noteBot({

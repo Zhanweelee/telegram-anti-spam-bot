@@ -822,6 +822,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const dryRun = new Set<string>();
   const switches = new Map<string, Map<string, boolean>>();
   const actions = new Map<string, Map<string, RuleActionOverride["action"]>>();
+  const reports = new Map<string, string>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -907,6 +908,23 @@ export function createMemoryRuntimeStore(): RuntimeStore {
       if (saved.size === 0) {
         actions.delete(id);
       }
+    },
+    async getReportChat(tenantId, chatId) {
+      return reports.get(key(tenantId, chatId)) ?? null;
+    },
+    async setReportChat(tenantId, chatId, targetId) {
+      if (!/^-?\d{1,20}$/.test(targetId)) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      if (!reports.has(id) && reports.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      reports.set(id, targetId);
+      return true;
+    },
+    async clearReportChat(tenantId, chatId) {
+      reports.delete(key(tenantId, chatId));
     },
   };
 }
