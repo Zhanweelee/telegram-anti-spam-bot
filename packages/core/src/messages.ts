@@ -87,6 +87,8 @@ export const messageKeys = [
   "command.kick.admin",
   "command.cani.usage",
   "command.cani.header",
+  "command.captcha.usage",
+  "command.captcha.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -435,6 +437,7 @@ const syntax = [
   "/canadmin <chatId> <actorId>",
   "/kick <chatId> <actorId>",
   "/cani <chatId>",
+  "/captcha <chatId> <actorId>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -539,6 +542,8 @@ const zh = {
   "command.kick.admin": "{chatId} {actorId} 是管理员",
   "command.cani.usage": "用法：/cani <chatId>",
   "command.cani.header": "群 {chatId} 机器人 {actorId}",
+  "command.captcha.usage": "用法：/captcha <chatId> <actorId>",
+  "command.captcha.done": "已要求验证 {chatId} {actorId}",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -926,6 +931,8 @@ const en = {
   "command.kick.admin": "{actorId} is an admin in {chatId}",
   "command.cani.usage": "Usage: /cani <chatId>",
   "command.cani.header": "chat {chatId} bot {actorId}",
+  "command.captcha.usage": "Usage: /captcha <chatId> <actorId>",
+  "command.captcha.done": "Asked {actorId} in {chatId} to pass the check",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

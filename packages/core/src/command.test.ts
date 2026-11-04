@@ -4,6 +4,8 @@ import {
   createMemoryBlocklistStore,
 } from "./blocklist.js";
 import type { Cache } from "./cache.js";
+import { type CaptchaStore, parseCaptchaChallenge } from "./captcha.js";
+import { createFixedClock } from "./clock.js";
 import { runOperatorCommand } from "./command.js";
 import { parseEvent } from "./event.js";
 import { createMemoryLogger } from "./logger.js";
@@ -7295,7 +7297,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(85);
+    expect(menu).toHaveLength(86);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7407,8 +7409,8 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
-      command: "cani",
-      description: "/cani <chatId>",
+      command: "captcha",
+      description: "/captcha <chatId> <actorId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -15868,7 +15870,231 @@ describe("runOperatorCommand", () => {
       expect(help.text).toContain("/rule [chatId] <ruleId> [on|off|reset]");
     }
   });
+
+  it("asks someone already in the chat to pass the button check", async () => {
+    const deps = kit();
+    const store = memoryCaptcha();
+    const restricted: {
+      chatId: string;
+      actorId: string;
+      durationSeconds: number;
+    }[] = [];
+    const deleted: string[] = [];
+    const nonce = "0123456789abcdef";
+    const done = await runOperatorCommand({
+      event: event({ text: "/captcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor(target) {
+          restricted.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+        async deleteMessage(target) {
+          deleted.push(target.messageId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已要求验证 -100 77",
+      issuedChallenge: { chatId: "-100", actorId: "77" },
+    });
+    expect(done).not.toMatchObject({ text: expect.stringContaining(nonce) });
+    expect(restricted).toEqual([
+      { chatId: "-100", actorId: "77", durationSeconds: 300 },
+    ]);
+    const saved = await store.get("local", "-100", "77");
+    expect(saved?.nonce).toBe(nonce);
+    expect(saved?.expiresAt).toBe("2026-11-01T00:05:00.000Z");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(nonce);
+
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/captcha <chatId> <actorId>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/captcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      captcha: memoryCaptcha(),
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked 77 in -100 to pass the check",
+    });
+
+    await store.put(
+      parseCaptchaChallenge({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        nonce,
+        expiresAt: "2026-11-01T00:05:00.000Z",
+        messageId: "15",
+      }),
+    );
+    const again = await runOperatorCommand({
+      event: event({ text: "/captcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => "abcdef0123456789",
+      moderator: {
+        async restrictActor() {},
+        async deleteMessage(target) {
+          deleted.push(target.messageId);
+        },
+      },
+      ...kit(),
+    });
+    expect(again).toMatchObject({
+      issuedChallenge: { chatId: "-100", actorId: "77" },
+    });
+    expect(deleted).toEqual(["15"]);
+    expect((await store.get("local", "-100", "77"))?.nonce).toBe(
+      "abcdef0123456789",
+    );
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/captcha -100", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/captcha <chatId> <actorId>" });
+
+    const odd = await runOperatorCommand({
+      event: event({ text: "/captcha -100 abc", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(odd).toMatchObject({ text: "参数无效" });
+
+    const grouped = await runOperatorCommand({
+      event: event({ text: "/captcha -100 77" }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(grouped).toEqual({ status: "skip" });
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/captcha -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+
+    const failed = kit();
+    const failedStore = memoryCaptcha();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/captcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: failedStore,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => nonce,
+      moderator: {
+        async restrictActor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(await failedStore.get("local", "-100", "77")).toBeNull();
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(nonce);
+  });
 });
+
+function memoryCaptcha(): CaptchaStore {
+  const values = new Map<string, ReturnType<typeof parseCaptchaChallenge>>();
+  return {
+    async get(tenantId, chatId, actorId) {
+      return values.get(`${tenantId}:${chatId}:${actorId}`) ?? null;
+    },
+    async put(challenge) {
+      const parsed = parseCaptchaChallenge(challenge);
+      values.set(
+        `${parsed.tenantId}:${parsed.chatId}:${parsed.actorId}`,
+        parsed,
+      );
+    },
+    async delete(tenantId, chatId, actorId) {
+      values.delete(`${tenantId}:${chatId}:${actorId}`);
+    },
+    async deleteMany(challenges) {
+      for (const challenge of challenges) {
+        values.delete(
+          `${challenge.tenantId}:${challenge.chatId}:${challenge.actorId}`,
+        );
+      }
+    },
+    async take() {
+      return null;
+    },
+    async takeMany() {
+      return [];
+    },
+    async attachPrompt() {
+      return false;
+    },
+    async findByNonce() {
+      return null;
+    },
+    async listExpired() {
+      return [];
+    },
+  };
+}
 
 function directory(ids: readonly string[]) {
   return {
