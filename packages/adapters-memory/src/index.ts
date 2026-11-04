@@ -410,6 +410,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readCommandMenu() {
       throw new Error("commands_unavailable");
     },
+    async readMenuButton() {
+      throw new Error("button_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

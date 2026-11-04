@@ -6,6 +6,7 @@ import type {
   DefaultChatPermissions,
   DefaultRightsSnapshot,
   MemberStanding,
+  MenuButtonState,
   MenuCommandSnapshot,
   ModerationPort,
   MuteTarget,
@@ -554,6 +555,17 @@ export function createTelegramModerator(input: {
       });
       return readCommandMenuSnapshot(menu);
     },
+    async readMenuButton() {
+      const button = await postTelegram({
+        token: input.token,
+        method: "getChatMenuButton",
+        fetchImpl: input.fetchImpl,
+        missing: "button_unavailable",
+        failed: "button_failed",
+        body: {},
+      });
+      return readMenuButtonState(button);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -1011,6 +1023,21 @@ function telegramDefaultRights(
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
   };
+}
+
+function readMenuButtonState(body: unknown): MenuButtonState {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("button_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("button_failed");
+  }
+  const type = (result as Record<string, unknown>).type;
+  if (type === "commands" || type === "default" || type === "web_app") {
+    return type;
+  }
+  throw new Error("button_failed");
 }
 
 function readCommandMenuSnapshot(

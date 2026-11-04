@@ -194,6 +194,8 @@ export {
   type MemberStanding,
   type MemberTagTarget,
   type MenuButtonKind,
+  type MenuButtonQuery,
+  type MenuButtonState,
   type MenuButtonTarget,
   type MenuCommand,
   type MenuCommandSnapshot,
