@@ -16,6 +16,40 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("keeps a scheduled mark and rejects other values", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "hi",
+        textSha256: "ab".repeat(32),
+        offline: true,
+      },
+    });
+    expect(event.message?.offline).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "hi",
+          textSha256: "ab".repeat(32),
+          offline: "请免费领取礼品" as unknown as true,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("keeps a numeric album id and rejects other ids", () => {
     const albumId = "12532140322504850";
     const event = parseEvent({

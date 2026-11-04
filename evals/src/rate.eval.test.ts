@@ -23,6 +23,7 @@ interface RateCase {
   readonly sameMedia?: boolean;
   readonly albumId?: string;
   readonly edited?: boolean;
+  readonly offline?: boolean;
 }
 
 interface Baseline {
@@ -60,6 +61,7 @@ function eventFor(item: RateCase, index: number) {
       text,
       textSha256: item.sameText ? "e".repeat(64) : `${index}`.padStart(64, "a"),
       ...(item.albumId ? { albumId: item.albumId } : {}),
+      ...(item.offline ? { offline: true as const } : {}),
       ...(item.media
         ? {
             media: item.media,

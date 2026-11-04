@@ -163,6 +163,7 @@ async function messageEvent(
       ...(isRecord(message.contact) ? { contact: true as const } : {}),
       ...(isRecord(message.via_bot) ? { via: true as const } : {}),
       ...(message.is_paid_post === true ? { paid: true as const } : {}),
+      ...(message.is_from_offline === true ? { offline: true as const } : {}),
       ...(albumId ? { albumId } : {}),
       ...(media ? { media: media.kind } : {}),
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
