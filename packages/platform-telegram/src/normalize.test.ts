@@ -20937,6 +20937,168 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich map and leaves the coordinates out", async () => {
+    const caption = "地图说明广告";
+    const actor = "发地图的人";
+    const latitude = 23.90217;
+    const longitude = 113.90218;
+    const map = await normalize({
+      update_id: 4770,
+      message: {
+        message_id: 810,
+        date: 1761955200,
+        chat: { id: -100499770, type: "supergroup" },
+        from: { id: 112, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "map",
+              location: { latitude, longitude },
+              zoom: 12,
+              caption: { text: caption },
+            },
+          ],
+        },
+      },
+    });
+    expect(map.status).toBe("event");
+    if (map.status !== "event") {
+      return;
+    }
+    expect(map.event.message?.asRichMap).toBe(true);
+    expect(map.event.message?.asLocation).toBeUndefined();
+    expect(map.event.message?.text).toBe(caption);
+    const mapDump = JSON.stringify(map.event);
+    expect(mapDump).not.toContain(String(latitude));
+    expect(mapDump).not.toContain(String(longitude));
+    expect(mapDump).not.toContain("90217");
+    expect(mapDump).not.toContain(actor);
+
+    const nested = await normalize({
+      update_id: 4771,
+      message: {
+        message_id: 811,
+        date: 1761955200,
+        chat: { id: -100499771, type: "supergroup" },
+        from: { id: 112 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "map",
+                  location: { latitude, longitude },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichMap).toBe(true);
+    expect(JSON.stringify(nested.event)).not.toContain("90217");
+
+    const half = await normalize({
+      update_id: 4772,
+      message: {
+        message_id: 812,
+        date: 1761955200,
+        chat: { id: -100499772, type: "supergroup" },
+        from: { id: 112 },
+        rich_message: {
+          blocks: [
+            {
+              type: "map",
+              location: { latitude },
+              caption: { text: "半张地图" },
+            },
+          ],
+        },
+      },
+    });
+    expect(half.status).toBe("event");
+    if (half.status !== "event") {
+      return;
+    }
+    expect(half.event.message?.text).toBe("半张地图");
+    expect(half.event.message?.asRichMap).toBeUndefined();
+
+    const text = await normalize({
+      update_id: 4773,
+      message: {
+        message_id: 813,
+        date: 1761955200,
+        chat: { id: -100499773, type: "supergroup" },
+        from: { id: 112 },
+        rich_message: {
+          blocks: [
+            {
+              type: "map",
+              location: { latitude: "23.90217", longitude },
+              caption: { text: "文字坐标" },
+            },
+          ],
+        },
+      },
+    });
+    expect(text.status).toBe("event");
+    if (text.status !== "event") {
+      return;
+    }
+    expect(text.event.message?.text).toBe("文字坐标");
+    expect(text.event.message?.asRichMap).toBeUndefined();
+
+    const pin = await normalize({
+      update_id: 4774,
+      message: {
+        message_id: 814,
+        date: 1761955200,
+        chat: { id: -100499774, type: "supergroup" },
+        from: { id: 112 },
+        location: { latitude, longitude },
+      },
+    });
+    expect(pin.status).toBe("event");
+    if (pin.status !== "event") {
+      return;
+    }
+    expect(pin.event.message?.asLocation).toBe(true);
+    expect(pin.event.message?.asRichMap).toBeUndefined();
+    expect(JSON.stringify(pin.event)).not.toContain("90217");
+
+    const kept = await normalize({
+      update_id: 4775,
+      message: {
+        message_id: 815,
+        date: 1761955200,
+        chat: { id: -100499775, type: "supergroup" },
+        from: { id: 112 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "map",
+              location: { latitude, longitude },
+              caption: { text: caption },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichMap).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(String(latitude));
+  });
+
   it("marks a rich block spoiler and leaves the file id out", async () => {
     const caption = "富文本剧透广告";
     const actor = "发块剧透的人";

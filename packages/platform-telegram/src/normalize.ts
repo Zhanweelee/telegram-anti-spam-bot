@@ -170,6 +170,7 @@ async function messageEvent(
   const asPostPending = pendingPost(message);
   const asSpoiler = coveredMedia(message);
   const richContact = richContactMark(message);
+  const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -233,6 +234,7 @@ async function messageEvent(
       ...(richContact.phone ? { asRichPhone: true as const } : {}),
       ...(richContact.card ? { asRichCard: true as const } : {}),
       ...(richContact.email ? { asRichEmail: true as const } : {}),
+      ...(asRichMap ? { asRichMap: true as const } : {}),
     },
   });
 }
@@ -718,6 +720,36 @@ function sharedGiveaway(message: Record<string, unknown>): boolean {
 
 function hasChatRecord(value: unknown): boolean {
   return Array.isArray(value) && value.some((item) => isRecord(item));
+}
+
+function richMap(message: Record<string, unknown>): boolean {
+  return findRichMap(message.rich_message);
+}
+
+function findRichMap(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => findRichMap(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "map" && mapPoint(value.location)) {
+    return true;
+  }
+  for (const nested of Object.values(value)) {
+    if (findRichMap(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function mapPoint(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    finiteCoordinate(value.latitude) &&
+    finiteCoordinate(value.longitude)
+  );
 }
 
 function bareLocation(message: Record<string, unknown>): boolean {

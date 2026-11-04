@@ -343,6 +343,12 @@ export const builtinManifests = {
     integrity:
       "618a72804ba95a8627e078416aff8298d8ca9066abb342bca40e1f14323d84b3",
   }),
+  richMap: manifest({
+    id: "rich_map",
+    kind: "detector",
+    integrity:
+      "2f432aa6b76cadb9cee866a1a36ad3a0d552cdc91b0767cd1034d82617acadef",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

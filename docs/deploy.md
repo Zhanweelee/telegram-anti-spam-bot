@@ -217,6 +217,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> media_spoiler on` 也删富文本里盖着剧透的照片、视频和动图。文件号不进证据。说明仍参与关键词。见 ADR 0503。
 
+`/rule <chatId> rich_map on` 删这个群里的富文本地图。默认关闭。坐标不进证据。说明仍参与关键词。纯位置仍看 `bare_location`。见 ADR 0504。
+
 ## 确认
 
 ```sh

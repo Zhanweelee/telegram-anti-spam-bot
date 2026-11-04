@@ -147,6 +147,8 @@ export const messageSchema = z
     asRichCard: z.literal(true).optional(),
     /** Rich text email address. The address stays out. The visible text stays in the message. */
     asRichEmail: z.literal(true).optional(),
+    /** Rich text map. Coordinates stay out. The caption stays in the message. */
+    asRichMap: z.literal(true).optional(),
   })
   .refine(
     (message) =>
