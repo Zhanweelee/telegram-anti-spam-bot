@@ -3249,6 +3249,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(declined.comment, urls);
   }
   pushPlainUrls(message.new_chat_title, urls);
+  pushBackgroundFilename(message, urls);
   pushPlainUrls(memberNames(message), urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
@@ -3311,6 +3312,26 @@ function pushPlainUrls(value: unknown, urls: string[]): void {
   for (const url of urlsInText(value)) {
     urls.push(url);
   }
+}
+
+/** 壁纸和图案的文件名只留主机名。文件 id 和主题名不读。 */
+function pushBackgroundFilename(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const background = message.chat_background_set;
+  if (!isRecord(background) || !isRecord(background.type)) {
+    return;
+  }
+  const kind = background.type.type;
+  if (kind !== "wallpaper" && kind !== "pattern") {
+    return;
+  }
+  const document = background.type.document;
+  if (!isRecord(document)) {
+    return;
+  }
+  pushPlainUrls(document.file_name, urls);
 }
 
 function pushOpenedSpans(value: unknown, urls: string[]): void {

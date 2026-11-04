@@ -20346,6 +20346,186 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain(phrase);
   });
 
+  it("keeps hostnames from a chat background filename", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "WALL98";
+    const labeled = await normalize({
+      update_id: 9801,
+      message: {
+        message_id: 980,
+        date: 1761955200,
+        chat: {
+          id: -101098,
+          type: "supergroup",
+          title: "https://cutt.ly/old98",
+          description: "https://ow.ly/desc98",
+        },
+        from: { id: 9, first_name: "https://tinyurl.com/name98" },
+        text: "今天站会",
+        chat_background_set: {
+          type: {
+            type: "wallpaper",
+            document: {
+              file_id: "https://bit.ly/id98",
+              file_unique_id: "uniq98",
+              file_name: `${phrase} https://bit.ly/wall98 https://t.me/+${code}.`,
+            },
+            dark_theme_dimming: 0,
+            theme_name: "https://rb.gy/theme98",
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("wall98");
+    expect(labeledDump).not.toContain("id98");
+    expect(labeledDump).not.toContain("uniq98");
+    expect(labeledDump).not.toContain("theme98");
+    expect(labeledDump).not.toContain("old98");
+    expect(labeledDump).not.toContain("desc98");
+    expect(labeledDump).not.toContain("name98");
+    expect(labeledDump).not.toContain("cutt.ly");
+    expect(labeledDump).not.toContain("ow.ly");
+    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).not.toContain("rb.gy");
+
+    const pattern = await normalize({
+      update_id: 9802,
+      message: {
+        message_id: 981,
+        date: 1761955200,
+        chat: {
+          id: -101099,
+          type: "supergroup",
+          title: "https://bit.ly/kept98",
+        },
+        from: { id: 9 },
+        text: "今天站会",
+        chat_background_set: {
+          type: {
+            type: "pattern",
+            document: {
+              file_id: "AgACPattern98",
+              file_unique_id: "pat98",
+              file_name: "https://example.com/ok98",
+            },
+          },
+        },
+      },
+    });
+    expect(pattern.status).toBe("event");
+    if (pattern.status !== "event") {
+      return;
+    }
+    expect(pattern.event.message?.text).toBe("今天站会");
+    expect(pattern.event.message?.hosts).toEqual(["example.com"]);
+    const patternDump = JSON.stringify(pattern.event);
+    expect(patternDump).not.toContain("ok98");
+    expect(patternDump).not.toContain("kept98");
+    expect(patternDump).not.toContain("bit.ly");
+    expect(patternDump).not.toContain("AgACPattern98");
+    expect(patternDump).not.toContain("pat98");
+
+    const fill = await normalize({
+      update_id: 9803,
+      message: {
+        message_id: 982,
+        date: 1761955200,
+        chat: { id: -101100, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        chat_background_set: {
+          type: {
+            type: "fill",
+            document: { file_name: "https://bit.ly/fill98" },
+            theme_name: "https://is.gd/fill98",
+          },
+        },
+      },
+    });
+    expect(fill.status).toBe("event");
+    if (fill.status !== "event") {
+      return;
+    }
+    expect(fill.event.message?.text).toBe("今天站会");
+    expect(fill.event.message?.hosts).toBeUndefined();
+    const fillDump = JSON.stringify(fill.event);
+    expect(fillDump).not.toContain("bit.ly");
+    expect(fillDump).not.toContain("fill98");
+    expect(fillDump).not.toContain("is.gd");
+
+    const theme = await normalize({
+      update_id: 9804,
+      message: {
+        message_id: 983,
+        date: 1761955200,
+        chat: { id: -101101, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        chat_background_set: {
+          type: {
+            type: "chat_theme",
+            theme_name: "https://is.gd/theme98",
+          },
+        },
+      },
+    });
+    expect(theme.status).toBe("event");
+    if (theme.status !== "event") {
+      return;
+    }
+    expect(theme.event.message?.text).toBe("今天站会");
+    expect(theme.event.message?.hosts).toBeUndefined();
+    const themeDump = JSON.stringify(theme.event);
+    expect(themeDump).not.toContain("is.gd");
+    expect(themeDump).not.toContain("theme98");
+
+    const renamed = `免费领取 https://bit.ly/body98`;
+    const alone = await normalize({
+      update_id: 9805,
+      message: {
+        message_id: 984,
+        date: 1761955200,
+        chat: { id: -101102, type: "supergroup", title: phrase },
+        from: { id: 9 },
+        chat_background_set: {
+          type: {
+            type: "wallpaper",
+            document: {
+              file_id: "https://cutt.ly/alone98",
+              file_unique_id: "aloneid98",
+              file_name: renamed,
+            },
+          },
+        },
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.text).toBe("");
+    expect(alone.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    const aloneDump = JSON.stringify(alone.event);
+    expect(aloneDump).not.toContain("免费领取");
+    expect(aloneDump).not.toContain("body98");
+    expect(aloneDump).not.toContain("alone98");
+    expect(aloneDump).not.toContain("aloneid98");
+    expect(aloneDump).not.toContain("cutt.ly");
+    expect(aloneDump).not.toContain(phrase);
+  });
+
   it("keeps hostnames from a community name", async () => {
     const phrase = "请免费领取礼品";
     const code = "COMM82";
