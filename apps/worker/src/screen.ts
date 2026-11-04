@@ -95,6 +95,7 @@ import { createPollDetector } from "@tasb/detector-poll";
 import { createPostDetector } from "@tasb/detector-post";
 import { createPriceDetector } from "@tasb/detector-price";
 import { createProximityDetector } from "@tasb/detector-proximity";
+import { createSwitchQueryDetector } from "@tasb/detector-query";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -777,6 +778,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.copyText,
         value: createCopyTextDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.switchQuery,
+        value: createSwitchQueryDetector(),
       },
       {
         source: "builtin",

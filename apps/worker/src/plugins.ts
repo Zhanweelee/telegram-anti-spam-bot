@@ -421,6 +421,12 @@ export const builtinManifests = {
     integrity:
       "d3df88ebd533922c2c796fa1d573fa03438d3199b7a4078ae9c93a8317582924",
   }),
+  switchQuery: manifest({
+    id: "switch_query",
+    kind: "detector",
+    integrity:
+      "cd73bddb9430a17daa8bf8a9aa33a19766606d30be1a9811b6fd0f97ae5a7001",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

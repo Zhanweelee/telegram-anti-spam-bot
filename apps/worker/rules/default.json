@@ -491,6 +491,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "switch_query",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["switch_query"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

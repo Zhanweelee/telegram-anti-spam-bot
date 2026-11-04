@@ -1,0 +1,5 @@
+{
+  "detector": "switch_query",
+  "precision": 1,
+  "recall": 1
+}

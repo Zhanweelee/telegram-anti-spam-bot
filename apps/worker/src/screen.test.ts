@@ -6005,6 +6005,185 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a switch query until that chat asks", async () => {
+    const sentence = "口令90255";
+    const actor = "发查询的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "switch_query" | "copy_text";
+      paid?: boolean;
+    }) {
+      const message =
+        input.kind === "copy_text"
+          ? {
+              text: "复制留下",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "复制广告", copy_text: { text: "口令90258" } }],
+                ],
+              },
+            }
+          : input.kind === "switch_query"
+            ? {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: "查询广告", switch_inline_query: sentence }],
+                  ],
+                },
+              }
+            : { text: "今天站会" };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 126, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "switch_query" | "copy_text"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10680,
+      chatId: -1001280,
+      kind: "switch_query",
+    });
+    expect(idle.message?.asSwitchQuery).toBe(true);
+    expect(idle.message?.asCopyText).toBeUndefined();
+    expect(idle.message?.text).toBe("查询广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(sentence);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10681,
+        chatId: -1001281,
+        kind: "switch_query",
+      }),
+      {
+        source: rule("switch_query"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("switch_query");
+    expect(removed.decision.ruleIds).toContain("switch_query");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "button:switch_query" },
+    ]);
+    const keptByCopy = await screenTelegramEvent(
+      await posted({
+        updateId: 10682,
+        chatId: -1001282,
+        kind: "switch_query",
+      }),
+      {
+        source: rule("copy_text"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByCopy.decision.action).toBe("allow");
+    const keptCopy = await screenTelegramEvent(
+      await posted({
+        updateId: 10683,
+        chatId: -1001283,
+        kind: "copy_text",
+      }),
+      {
+        source: rule("switch_query"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptCopy.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10684, chatId: -1001284 }),
+      {
+        source: rule("switch_query"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10685,
+        chatId: -1001285,
+        kind: "switch_query",
+        paid: true,
+      }),
+      {
+        source: rule("switch_query"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByCopy: keptByCopy.decision,
+      keptCopy: keptCopy.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(sentence);
+    expect(dumped).not.toContain("90255");
+    expect(dumped).not.toContain("90258");
+    expect(dumped).not.toContain("查询广告");
+    expect(dumped).not.toContain("复制广告");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a copy button until that chat asks", async () => {
     const sentence = "口令90251";
     const actor = "发复制的人";

@@ -173,6 +173,7 @@ async function messageEvent(
   const asTextMention = textMentionMark(message);
   const asCustomEmoji = customEmojiMark(message);
   const asCopyText = copyTextMark(message);
+  const asSwitchQuery = switchQueryMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -252,6 +253,7 @@ async function messageEvent(
       ...(asTextMention ? { asTextMention: true as const } : {}),
       ...(asCustomEmoji ? { asCustomEmoji: true as const } : {}),
       ...(asCopyText ? { asCopyText: true as const } : {}),
+      ...(asSwitchQuery ? { asSwitchQuery: true as const } : {}),
     },
   });
 }
@@ -588,6 +590,70 @@ function richCopyText(value: unknown): boolean {
   }
   for (const nested of Object.values(value)) {
     if (richCopyText(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function switchQueryMark(message: Record<string, unknown>): boolean {
+  if (inlineSwitchQuery(message.reply_markup)) {
+    return true;
+  }
+  const rich = message.rich_message;
+  return isRecord(rich) && richSwitchQuery(rich);
+}
+
+function inlineSwitchQuery(markup: unknown): boolean {
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return false;
+  }
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (buttonSwitchesQuery(button)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function buttonSwitchesQuery(button: unknown): boolean {
+  if (!isRecord(button)) {
+    return false;
+  }
+  if (hiddenSecret(button.switch_inline_query)) {
+    return true;
+  }
+  if (hiddenSecret(button.switch_inline_query_current_chat)) {
+    return true;
+  }
+  const chosen = button.switch_inline_query_chosen_chat;
+  return isRecord(chosen) && hiddenSecret(chosen.query);
+}
+
+function richSwitchQuery(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richSwitchQuery(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "button" && buttonSwitchesQuery(value.button)) {
+    return true;
+  }
+  if (value.type === "buttons" && Array.isArray(value.buttons)) {
+    for (const button of value.buttons) {
+      if (buttonSwitchesQuery(button)) {
+        return true;
+      }
+    }
+  }
+  for (const nested of Object.values(value)) {
+    if (richSwitchQuery(nested)) {
       return true;
     }
   }
