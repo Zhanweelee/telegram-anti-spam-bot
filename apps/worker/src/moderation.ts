@@ -74,6 +74,7 @@ function createOpenModerator(): ModerationPort {
     setTitle: (target) => memory.setTitle(target),
     setDescription: (target) => memory.setDescription(target),
     renameTopic: (target) => memory.renameTopic(target),
+    renameGeneral: (target) => memory.renameGeneral(target),
     unpinTopic: (target) => memory.unpinTopic(target),
     closeTopic: (target) => memory.closeTopic(target),
     openTopic: (target) => memory.openTopic(target),

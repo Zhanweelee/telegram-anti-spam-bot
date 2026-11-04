@@ -180,6 +180,7 @@ export {
   type DeleteTarget,
   type ForumTopicTarget,
   fitAuditExportDocument,
+  type GeneralNameTarget,
   type InviteLinkTarget,
   type JoinTarget,
   type MemberStanding,

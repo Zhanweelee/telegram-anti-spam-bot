@@ -110,6 +110,7 @@ const COMMAND_NAMES = [
   "desc",
   "newtopic",
   "rentopic",
+  "rengeneral",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -246,6 +247,7 @@ export interface OperatorCommandInput {
       | "readMemberCount"
       | "readPermissions"
       | "removeReaction"
+      | "renameGeneral"
       | "renameTopic"
       | "revokeInvite"
       | "setDescription"
@@ -439,6 +441,8 @@ async function dispatch(
       return createOneTopic(input, args);
     case "rentopic":
       return renameOneTopic(input, args);
+    case "rengeneral":
+      return renameGeneralTopic(input, args);
   }
 }
 
@@ -2415,6 +2419,52 @@ function rejectRenameTopic(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "rentopic",
+  });
+}
+
+async function renameGeneralTopic(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.rengeneral.usage");
+  }
+  const chatId = args[0];
+  const name = args.slice(1).join(" ");
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    name.length > TOPIC_NAME_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const rename = input.moderator?.renameGeneral;
+  if (!rename) {
+    rejectRenameGeneral(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await rename({
+      tenantId: input.event.tenantId,
+      chatId,
+      name,
+    });
+  } catch {
+    rejectRenameGeneral(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.rengeneral.done", { chatId });
+}
+
+function rejectRenameGeneral(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "rengeneral",
   });
 }
 

@@ -54,6 +54,7 @@ describe("operator command example", () => {
     expect(help).toContain("/desc <chatId> [description]");
     expect(help).toContain("/newtopic <chatId> <name>");
     expect(help).toContain("/rentopic <chatId> <threadId> <name>");
+    expect(help).toContain("/rengeneral <chatId> <name>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -211,6 +212,15 @@ describe("operator command example", () => {
       "已请求修改 -100 里话题 55 的名字。消息还在。其它话题还在。",
     );
     expect(renamed).not.toContain("hello");
+    const general = await runPrivateCommand({
+      text: "/rengeneral -100 hello",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(general).toBe(
+      "已请求修改 -100 的通用话题名字。其它话题还在。消息还在。",
+    );
+    expect(general).not.toContain("hello");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

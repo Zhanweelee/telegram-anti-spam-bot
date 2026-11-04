@@ -638,6 +638,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async renameGeneral(target) {
+      await postTelegram({
+        token: input.token,
+        method: "editGeneralForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "rengeneral_unavailable",
+        failed: "rengeneral_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          name: target.name,
+        },
+      });
+    },
   };
 }
 

@@ -127,6 +127,9 @@ function commandModerator(
     async renameTopic() {
       throw new Error("rentopic_unavailable");
     },
+    async renameGeneral() {
+      throw new Error("rengeneral_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

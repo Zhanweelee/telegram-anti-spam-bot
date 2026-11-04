@@ -5728,6 +5728,189 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("renames the General topic and keeps the name out of the reply", async () => {
+    const deps = kit();
+    const seen: { chatId: string; name: string }[] = [];
+    const remember = {
+      async renameGeneral(target: { chatId: string; name: string }) {
+        seen.push({ chatId: target.chatId, name: target.name });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求修改 -100 的通用话题名字。其它话题还在。消息还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain("hello");
+    expect(seen).toEqual([{ chatId: "-100", name: "hello" }]);
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100 hello world", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求修改 -100 的通用话题名字。其它话题还在。消息还在。",
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+    expect(seen[1]).toEqual({ chatId: "-100", name: "hello world" });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/rengeneral 42 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求修改 42 的通用话题名字。其它话题还在。消息还在。",
+    });
+    expect(seen[2]).toEqual({ chatId: "42", name: "hello" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/rengeneral <chatId> <name>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async renameGeneral() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to change the General topic name of -100. The other topics stay. The messages stay.",
+    });
+    expect(JSON.stringify(english)).not.toContain("hello");
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100 hello", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async renameGeneral() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/rengeneral", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/rengeneral <chatId> <name>",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async renameGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/rengeneral <chatId> <name>",
+    });
+    const exact = "a".repeat(128);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/rengeneral -100 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求修改 -100 的通用话题名字。其它话题还在。消息还在。",
+    });
+    expect(JSON.stringify(fitted)).not.toContain(exact);
+    expect(seen[3]?.name).toBe(exact);
+    const tooLong = "a".repeat(129);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/rengeneral -100 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async renameGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(4);
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/rengeneral -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(hidden).toMatchObject({
+      text: "已请求修改 -100 的通用话题名字。其它话题还在。消息还在。",
+    });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(seen[4]?.name).toBe(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/rengeneral ${phrase} hello`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async renameGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/rengeneral -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/rengeneral -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async renameGeneral() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"rengeneral"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/rengeneral -200 hello",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async renameGeneral() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];
