@@ -16,6 +16,7 @@ interface RichContactCase {
   readonly asRichTextMention?: true;
   readonly asRichCommand?: true;
   readonly asRichHashtag?: true;
+  readonly asRichCashtag?: true;
 }
 
 interface Baseline {
@@ -59,6 +60,7 @@ async function evaluate(
                   : {}),
                 ...(item.asRichCommand ? { asRichCommand: true as const } : {}),
                 ...(item.asRichHashtag ? { asRichHashtag: true as const } : {}),
+                ...(item.asRichCashtag ? { asRichCashtag: true as const } : {}),
               },
             }
           : {}),
@@ -210,6 +212,25 @@ describe("rich contact eval", () => {
     console.info(
       JSON.stringify({
         detector: "rich_hashtag",
+        cases: cases.length,
+        precision: report.precision,
+        recall: report.recall,
+        baseline,
+      }),
+    );
+    expect(report.precision).toBeGreaterThanOrEqual(baseline.precision);
+    expect(report.recall).toBeGreaterThanOrEqual(baseline.recall);
+  });
+
+  it("does not regress cashtag precision or recall", async () => {
+    const cases = load("cases/rich-cashtag.json");
+    const baseline = JSON.parse(
+      readFileSync(join(root, "baselines/rich-cashtag.json"), "utf8"),
+    ) as Baseline;
+    const report = await evaluate("cashtag", cases);
+    console.info(
+      JSON.stringify({
+        detector: "rich_cashtag",
         cases: cases.length,
         precision: report.precision,
         recall: report.recall,

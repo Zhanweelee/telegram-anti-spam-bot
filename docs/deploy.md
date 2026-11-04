@@ -227,6 +227,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> rich_hashtag on` 删这个群里的富文本话题标签。默认关闭。标签不进证据。看得见的字仍参与关键词。机器人命令仍看 `rich_command`。见 ADR 0508。
 
+`/rule <chatId> rich_cashtag on` 删这个群里的富文本行情标签。默认关闭。行情代码不进证据。看得见的字仍参与关键词。话题标签仍看 `rich_hashtag`。见 ADR 0509。
+
 ## 确认
 
 ```sh
