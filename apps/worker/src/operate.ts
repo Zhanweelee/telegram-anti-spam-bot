@@ -187,6 +187,9 @@ function commandModerator(
     async setMenuButton() {
       throw new Error("menubutton_unavailable");
     },
+    async setBotName() {
+      throw new Error("botname_unavailable");
+    },
     async approveJoin() {
       throw new Error("approve_unavailable");
     },

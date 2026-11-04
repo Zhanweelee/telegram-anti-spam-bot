@@ -142,6 +142,16 @@ export function createTelegramModerator(input: {
         body: { menu_button: { type: target.kind } },
       });
     },
+    async setBotName(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setMyName",
+        fetchImpl: input.fetchImpl,
+        missing: "botname_unavailable",
+        failed: "botname_failed",
+        body: { name: target.name },
+      });
+    },
     async setCommandMenu(target) {
       await postTelegram({
         token: input.token,

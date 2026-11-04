@@ -154,6 +154,7 @@ function harness(options?: { failStorage?: boolean }) {
     async setDefaultRights() {},
     async setCommandMenu() {},
     async setMenuButton() {},
+    async setBotName() {},
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},

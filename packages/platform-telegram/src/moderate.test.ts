@@ -1567,6 +1567,43 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets the bot name without a language", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setBotName({ tenantId: "local", name: phrase });
+    await moderator.setBotName({ tenantId: "local", name: "" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setMyName`,
+      `https://api.telegram.org/bot${token}/setMyName`,
+    ]);
+    expect(calls[0]?.method).not.toContain("getMyName");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ name: phrase });
+    expect(JSON.parse(calls[1]?.body ?? "null")).toEqual({ name: "" });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setBotName({
+        tenantId: "local",
+        name: phrase,
+      }),
+    ).rejects.toThrow("botname_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads the default menu button and drops the web app", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

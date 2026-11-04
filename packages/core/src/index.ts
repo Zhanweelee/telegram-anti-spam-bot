@@ -172,6 +172,7 @@ export {
   auditRecordSchema,
   auditScopeSchema,
   type BanTarget,
+  type BotNameTarget,
   type ChatAdministrator,
   type ChatDescriptionTarget,
   type ChatStickerSetTarget,

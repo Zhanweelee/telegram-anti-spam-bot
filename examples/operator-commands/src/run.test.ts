@@ -66,6 +66,7 @@ describe("operator command example", () => {
     expect(help).toContain("/delcommands [private]");
     expect(help).toContain("/menubutton <commands|default>");
     expect(help).toContain("/button");
+    expect(help).toContain("/botname [name]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -316,6 +317,15 @@ describe("operator command example", () => {
     expect(menuButton).toBe(
       "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
     );
+    const botName = await runPrivateCommand({
+      text: "/botname hello",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(botName).toBe(
+      "已请求设置这个 bot 的名字。已有单独语言名字的人不受影响。",
+    );
+    expect(botName).not.toContain("hello");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",
