@@ -331,6 +331,13 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent a boost count", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readBoostCount({ tenantId: "t", chatId: "c", actorId: "77" }),
+    ).rejects.toThrow("boosts_unavailable");
+  });
+
   it("does not invent a member count", async () => {
     const moderator = createMemoryModerator();
     await expect(

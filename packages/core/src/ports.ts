@@ -240,6 +240,7 @@ export interface ModerationPort {
   showGeneral(target: ChatTarget): Promise<void>;
   deleteTopic(target: NamedForumTopicTarget): Promise<void>;
   readMemberCount(target: ChatTarget): Promise<number>;
+  readBoostCount(target: BanTarget): Promise<number>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;
