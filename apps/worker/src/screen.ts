@@ -83,6 +83,7 @@ import {
   createMapDetector,
 } from "@tasb/detector-location";
 import { createMediaDetector } from "@tasb/detector-media";
+import { createTextMentionDetector } from "@tasb/detector-mention";
 import { createNoticeDetector } from "@tasb/detector-notice";
 import { createOwnerDetector } from "@tasb/detector-owner";
 import { createPendingDetector } from "@tasb/detector-pending";
@@ -759,6 +760,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.richReferenceLink,
         value: createRichDetector("reference_link"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.textMention,
+        value: createTextMentionDetector(),
       },
       {
         source: "builtin",

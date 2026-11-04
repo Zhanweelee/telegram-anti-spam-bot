@@ -1,0 +1,18 @@
+[
+  {
+    "id": "text_mention_spam",
+    "kind": "message",
+    "label": "spam",
+    "asTextMention": true
+  },
+  {
+    "id": "text_mention_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "text_mention_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

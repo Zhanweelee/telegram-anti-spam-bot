@@ -167,6 +167,8 @@ export const messageSchema = z
     asRichReference: z.literal(true).optional(),
     /** Rich text reference link. The reference name stays out. The visible text stays in the message. */
     asRichReferenceLink: z.literal(true).optional(),
+    /** Ordinary text mention. The user id stays out. The visible text stays in the message. */
+    asTextMention: z.literal(true).optional(),
   })
   .refine(
     (message) =>

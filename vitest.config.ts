@@ -47,6 +47,7 @@ export default defineConfig({
       "packages/detectors-created",
       "packages/detectors-pending",
       "packages/detectors-spoiler",
+      "packages/detectors-mention",
       "packages/detectors-rich",
       "packages/detectors-forward",
       "packages/actions",

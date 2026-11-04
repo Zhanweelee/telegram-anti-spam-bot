@@ -1,0 +1,5 @@
+{
+  "detector": "text_mention",
+  "precision": 1,
+  "recall": 1
+}

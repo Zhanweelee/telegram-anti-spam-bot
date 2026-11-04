@@ -467,6 +467,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "text_mention",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["text_mention"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

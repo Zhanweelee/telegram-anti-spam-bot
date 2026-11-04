@@ -237,6 +237,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> rich_reference_link on` 删这个群里指向引用的富文本链接。默认关闭。名字不进证据。看得见的字仍参与关键词。引用仍看 `rich_reference`。见 ADR 0513。
 
+`/rule <chatId> text_mention on` 删这个群里按用户标识的普通提及。默认关闭。用户编号不进证据。看得见的字仍参与关键词。富文本提及仍看 `rich_text_mention`。见 ADR 0514。
+
 ## 确认
 
 ```sh
