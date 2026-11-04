@@ -1090,6 +1090,76 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("removes one actor reaction from one message", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.removeReaction({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "1",
+      actorId: "77",
+      kind: "user",
+    });
+    await moderator.removeReaction({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "55",
+      actorId: "-1005",
+      kind: "chat",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/deleteMessageReaction`,
+      `https://api.telegram.org/bot${token}/deleteMessageReaction`,
+    ]);
+    const userBody = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      message_id?: number;
+      user_id?: number;
+      actor_chat_id?: number;
+    };
+    expect(userBody.chat_id).toBe(-100);
+    expect(userBody.message_id).toBe(1);
+    expect(userBody.user_id).toBe(77);
+    expect(userBody.actor_chat_id).toBeUndefined();
+    const chatBody = JSON.parse(calls[1]?.body ?? "{}") as {
+      chat_id?: number;
+      message_id?: number;
+      user_id?: number;
+      actor_chat_id?: number;
+    };
+    expect(chatBody.chat_id).toBe(-100);
+    expect(chatBody.message_id).toBe(55);
+    expect(chatBody.actor_chat_id).toBe(-1005);
+    expect(chatBody.user_id).toBeUndefined();
+    expect(calls[0]?.method).not.toContain("deleteAll");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).removeReaction({
+        tenantId: "local",
+        chatId: "-100",
+        messageId: "55",
+        actorId: "77",
+        kind: "user",
+      }),
+    ).rejects.toThrow("unreact_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

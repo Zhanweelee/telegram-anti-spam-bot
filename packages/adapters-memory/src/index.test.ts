@@ -235,6 +235,27 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one removed message reaction", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.removeReaction({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "55",
+      actorId: "77",
+      kind: "user",
+    });
+    expect(moderator.messageReactionsRemoved).toEqual([
+      {
+        tenantId: "t",
+        chatId: "c",
+        messageId: "55",
+        actorId: "77",
+        kind: "user",
+      },
+    ]);
+    expect(moderator.reactionsCleared).toEqual([]);
+  });
+
   it("records one unpinned message id", async () => {
     const moderator = createMemoryModerator();
     await moderator.unpinMessage({

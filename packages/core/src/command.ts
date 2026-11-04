@@ -99,6 +99,7 @@ const COMMAND_NAMES = [
   "count",
   "pin",
   "unpinmsg",
+  "unreact",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -149,6 +150,7 @@ export interface OperatorCommandInput {
       | "readMember"
       | "readMemberCount"
       | "readPermissions"
+      | "removeReaction"
       | "revokeInvite"
       | "showGeneral"
       | "unbanActor"
@@ -315,6 +317,8 @@ async function dispatch(
       return pinOneMessage(input, args);
     case "unpinmsg":
       return unpinOneMessage(input, args);
+    case "unreact":
+      return removeOneReaction(input, args);
   }
 }
 
@@ -1764,6 +1768,61 @@ function rejectUnpinMessage(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "unpinmsg",
+  });
+}
+
+async function removeOneReaction(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 3) {
+    return say(input, "command.unreact.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  const actorId = args[2];
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const kind = reactionKind(actorId);
+  if (kind === undefined) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.removeReaction;
+  if (!remove) {
+    rejectUnreact(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+      actorId,
+      kind,
+    });
+  } catch {
+    rejectUnreact(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unreact.done", { chatId, messageId, actorId });
+}
+
+function rejectUnreact(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unreact",
   });
 }
 

@@ -490,6 +490,22 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async removeReaction(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteMessageReaction",
+        fetchImpl: input.fetchImpl,
+        missing: "unreact_unavailable",
+        failed: "unreact_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+          ...(target.kind === "user"
+            ? { user_id: telegramId(target.actorId) }
+            : { actor_chat_id: telegramId(target.actorId) }),
+        },
+      });
+    },
   };
 }
 

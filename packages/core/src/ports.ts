@@ -155,6 +155,14 @@ export interface ReactionActorTarget {
   readonly kind: "user" | "chat";
 }
 
+export interface MessageReactionTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly messageId: string;
+  readonly actorId: string;
+  readonly kind: "user" | "chat";
+}
+
 export interface InviteLinkTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -227,6 +235,7 @@ export interface ModerationPort {
   readMemberCount(target: ChatTarget): Promise<number>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
+  removeReaction(target: MessageReactionTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

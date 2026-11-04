@@ -94,6 +94,9 @@ function commandModerator(
     async unpinMessage() {
       throw new Error("unpinmsg_unavailable");
     },
+    async removeReaction() {
+      throw new Error("unreact_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },
