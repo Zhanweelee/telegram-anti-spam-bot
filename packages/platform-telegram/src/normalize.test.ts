@@ -21178,6 +21178,612 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a custom emoji and leaves the id out", async () => {
+    const emojiId = "emoji90246";
+    const actor = "发表情的人";
+    const marked = await normalize({
+      update_id: 4890,
+      message: {
+        message_id: 930,
+        date: 1761955200,
+        chat: { id: -100499890, type: "supergroup" },
+        from: { id: 124, first_name: actor },
+        text: "表情广告",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: emojiId,
+          },
+        ],
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asCustomEmoji).toBe(true);
+    expect(marked.event.message?.asTextMention).toBeUndefined();
+    expect(marked.event.message?.text).toBe("表情广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(emojiId);
+    expect(markedDump).not.toContain("90246");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4891,
+      message: {
+        message_id: 931,
+        date: 1761955200,
+        chat: { id: -100499891, type: "supergroup" },
+        from: { id: 124 },
+        text: "今天站会",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: emojiId,
+          },
+        ],
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90246");
+
+    const caption = await normalize({
+      update_id: 4892,
+      message: {
+        message_id: 932,
+        date: 1761955200,
+        chat: { id: -100499892, type: "supergroup" },
+        from: { id: 124 },
+        photo: [{ file_id: "photofile", width: 1, height: 1 }],
+        caption: "图片表情",
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: emojiId,
+          },
+        ],
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.text).toBe("图片表情");
+    expect(caption.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(caption.event)).not.toContain("90246");
+
+    const blank = await normalize({
+      update_id: 4893,
+      message: {
+        message_id: 933,
+        date: 1761955200,
+        chat: { id: -100499893, type: "supergroup" },
+        from: { id: 124 },
+        text: "空表情",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "   ",
+          },
+        ],
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空表情");
+    expect(blank.event.message?.asCustomEmoji).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4894,
+      message: {
+        message_id: 934,
+        date: 1761955200,
+        chat: { id: -100499894, type: "supergroup" },
+        from: { id: 124 },
+        text: "布尔表情",
+        entities: [
+          { type: "custom_emoji", offset: 0, length: 2, custom_emoji_id: true },
+        ],
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔表情");
+    expect(flag.event.message?.asCustomEmoji).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4895,
+      message: {
+        message_id: 935,
+        date: 1761955200,
+        chat: { id: -100499895, type: "supergroup" },
+        from: { id: 124 },
+        text: "缺表情",
+        entities: [{ type: "custom_emoji", offset: 0, length: 2 }],
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺表情");
+    expect(missing.event.message?.asCustomEmoji).toBeUndefined();
+
+    const bold = await normalize({
+      update_id: 4896,
+      message: {
+        message_id: 936,
+        date: 1761955200,
+        chat: { id: -100499896, type: "supergroup" },
+        from: { id: 124 },
+        text: "加粗留下",
+        entities: [{ type: "bold", offset: 0, length: 2 }],
+      },
+    });
+    expect(bold.status).toBe("event");
+    if (bold.status !== "event") {
+      return;
+    }
+    expect(bold.event.message?.text).toBe("加粗留下");
+    expect(bold.event.message?.asCustomEmoji).toBeUndefined();
+
+    const mention = await normalize({
+      update_id: 4897,
+      message: {
+        message_id: 937,
+        date: 1761955200,
+        chat: { id: -100499897, type: "supergroup" },
+        from: { id: 124 },
+        text: "点名留下",
+        entities: [
+          {
+            type: "text_mention",
+            offset: 0,
+            length: 2,
+            user: { id: 90247047, first_name: "名90247" },
+          },
+        ],
+      },
+    });
+    expect(mention.status).toBe("event");
+    if (mention.status !== "event") {
+      return;
+    }
+    expect(mention.event.message?.text).toBe("点名留下");
+    expect(mention.event.message?.asTextMention).toBe(true);
+    expect(mention.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(mention.event)).not.toContain("90247");
+
+    const rich = await normalize({
+      update_id: 4898,
+      message: {
+        message_id: 938,
+        date: 1761955200,
+        chat: { id: -100499898, type: "supergroup" },
+        from: { id: 124 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "custom_emoji",
+                    custom_emoji_id: emojiId,
+                    alternative_text: "嵌套表情",
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("嵌套表情");
+    expect(rich.event.message?.asCustomEmoji).toBe(true);
+    expect(rich.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90246");
+
+    const poll = await normalize({
+      update_id: 4899,
+      message: {
+        message_id: 939,
+        date: 1761955200,
+        chat: { id: -100499899, type: "supergroup" },
+        from: { id: 124 },
+        poll: {
+          id: "pollq",
+          question: "投票表情",
+          question_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+          options: [{ text: "选项留下" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(poll.status).toBe("event");
+    if (poll.status !== "event") {
+      return;
+    }
+    expect(poll.event.message?.text).toBe("投票表情");
+    expect(poll.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(poll.event)).not.toContain("90246");
+
+    const option = await normalize({
+      update_id: 4900,
+      message: {
+        message_id: 940,
+        date: 1761955200,
+        chat: { id: -100499900, type: "supergroup" },
+        from: { id: 124 },
+        poll: {
+          id: "pollo",
+          question: "投票留下",
+          options: [
+            {
+              text: "选项表情",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: emojiId,
+                },
+              ],
+            },
+          ],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(option.status).toBe("event");
+    if (option.status !== "event") {
+      return;
+    }
+    expect(option.event.message?.text).toBe("投票留下");
+    expect(option.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(option.event)).not.toContain("90246");
+
+    const task = await normalize({
+      update_id: 4901,
+      message: {
+        message_id: 941,
+        date: 1761955200,
+        chat: { id: -100499901, type: "supergroup" },
+        from: { id: 124 },
+        checklist: {
+          title: "清单留下",
+          tasks: [
+            {
+              id: 1,
+              text: "任务表情",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: emojiId,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(task.status).toBe("event");
+    if (task.status !== "event") {
+      return;
+    }
+    expect(task.event.message?.text).toBe("清单留下");
+    expect(task.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(task.event)).not.toContain("90246");
+
+    const quoted = await normalize({
+      update_id: 4902,
+      message: {
+        message_id: 942,
+        date: 1761955200,
+        chat: { id: -100499902, type: "supergroup" },
+        from: { id: 124 },
+        text: "引用留下",
+        quote: {
+          text: "另一条",
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90248",
+            },
+          ],
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.text).toBe("引用留下");
+    expect(quoted.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(quoted.event)).not.toContain("90248");
+
+    const gift = await normalize({
+      update_id: 4903,
+      message: {
+        message_id: 943,
+        date: 1761955200,
+        chat: { id: -100499903, type: "supergroup" },
+        from: { id: 124 },
+        gift: {
+          gift: { id: "giftfile" },
+          text: "礼物表情",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+        },
+      },
+    });
+    expect(gift.status).toBe("event");
+    if (gift.status !== "event") {
+      return;
+    }
+    expect(gift.event.message?.text).toBe("礼物表情");
+    expect(gift.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(gift.event)).not.toContain("90246");
+
+    const dated = await normalize({
+      update_id: 4904,
+      message: {
+        message_id: 944,
+        date: 1761955200,
+        chat: { id: -100499904, type: "supergroup" },
+        from: { id: 124 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90249,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90249");
+
+    const explained = await normalize({
+      update_id: 4905,
+      message: {
+        message_id: 945,
+        date: 1761955200,
+        chat: { id: -100499905, type: "supergroup" },
+        from: { id: 124 },
+        poll: {
+          id: "polle",
+          question: "投票说明",
+          explanation_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+          options: [{ text: "选项留下" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(explained.status).toBe("event");
+    if (explained.status !== "event") {
+      return;
+    }
+    expect(explained.event.message?.text).toBe("投票说明");
+    expect(explained.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(explained.event)).not.toContain("90246");
+
+    const titled = await normalize({
+      update_id: 4906,
+      message: {
+        message_id: 946,
+        date: 1761955200,
+        chat: { id: -100499906, type: "supergroup" },
+        from: { id: 124 },
+        checklist: {
+          title: "清单标题",
+          title_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+          tasks: [{ id: 1, text: "任务留下" }],
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("清单标题");
+    expect(titled.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(titled.event)).not.toContain("90246");
+
+    const unique = await normalize({
+      update_id: 4907,
+      message: {
+        message_id: 947,
+        date: 1761955200,
+        chat: { id: -100499907, type: "supergroup" },
+        from: { id: 124 },
+        unique_gift: {
+          gift: { base_name: "收藏名" },
+          text: "独特表情",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+        },
+      },
+    });
+    expect(unique.status).toBe("event");
+    if (unique.status !== "event") {
+      return;
+    }
+    expect(unique.event.message?.text).toBe("独特表情");
+    expect(unique.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(unique.event)).not.toContain("90246");
+
+    const upgraded = await normalize({
+      update_id: 4908,
+      message: {
+        message_id: 948,
+        date: 1761955200,
+        chat: { id: -100499908, type: "supergroup" },
+        from: { id: 124 },
+        gift_upgrade_sent: {
+          gift: { id: "upgradefile" },
+          text: "升级表情",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+        },
+      },
+    });
+    expect(upgraded.status).toBe("event");
+    if (upgraded.status !== "event") {
+      return;
+    }
+    expect(upgraded.event.message?.text).toBe("升级表情");
+    expect(upgraded.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(upgraded.event)).not.toContain("90246");
+
+    const game = await normalize({
+      update_id: 4909,
+      message: {
+        message_id: 949,
+        date: 1761955200,
+        chat: { id: -100499909, type: "supergroup" },
+        from: { id: 124 },
+        game: {
+          title: "游戏留下",
+          description: "游戏说明",
+          text: "说明留下",
+          text_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: emojiId,
+            },
+          ],
+          photo: [
+            {
+              file_id: "gamefile",
+              file_unique_id: "gameuniq",
+              width: 1,
+              height: 1,
+            },
+          ],
+        },
+      },
+    });
+    expect(game.status).toBe("event");
+    if (game.status !== "event") {
+      return;
+    }
+    expect(game.event.message?.text).toBe("游戏留下");
+    expect(game.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(game.event)).not.toContain("90246");
+
+    const topic = await normalize({
+      update_id: 4910,
+      message: {
+        message_id: 950,
+        date: 1761955200,
+        chat: { id: -100499910, type: "supergroup" },
+        from: { id: 124 },
+        forum_topic_created: {
+          name: "话题留下",
+          icon_color: 9367192,
+          icon_custom_emoji_id: "emoji90250",
+        },
+      },
+    });
+    expect(topic.status).toBe("event");
+    if (topic.status !== "event") {
+      return;
+    }
+    expect(topic.event.message?.text).toBe("话题留下");
+    expect(topic.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(topic.event)).not.toContain("90250");
+  });
+
   it("marks a text mention and leaves the user id out", async () => {
     const userId = 90238038;
     const username = "user90238";

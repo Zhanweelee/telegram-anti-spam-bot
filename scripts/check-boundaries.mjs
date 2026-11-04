@@ -174,6 +174,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-emoji/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/detectors-rich/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -246,6 +250,7 @@ const rules = [
       /^@tasb\/detector-pending$/,
       /^@tasb\/detector-spoiler$/,
       /^@tasb\/detector-mention$/,
+      /^@tasb\/detector-emoji$/,
       /^@tasb\/detector-rich$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
@@ -316,6 +321,7 @@ const rules = [
       /^@tasb\/detector-pending$/,
       /^@tasb\/detector-spoiler$/,
       /^@tasb\/detector-mention$/,
+      /^@tasb\/detector-emoji$/,
       /^@tasb\/detector-rich$/,
       /^node:/,
       /^vitest$/,

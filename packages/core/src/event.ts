@@ -169,6 +169,8 @@ export const messageSchema = z
     asRichReferenceLink: z.literal(true).optional(),
     /** Ordinary text mention. The user id stays out. The visible text stays in the message. */
     asTextMention: z.literal(true).optional(),
+    /** Custom emoji. The emoji id stays out. The visible text stays in the message. */
+    asCustomEmoji: z.literal(true).optional(),
   })
   .refine(
     (message) =>

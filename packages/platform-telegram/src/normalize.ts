@@ -171,6 +171,7 @@ async function messageEvent(
   const asSpoiler = coveredMedia(message);
   const richContact = richContactMark(message);
   const asTextMention = textMentionMark(message);
+  const asCustomEmoji = customEmojiMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -248,6 +249,7 @@ async function messageEvent(
         ? { asRichReferenceLink: true as const }
         : {}),
       ...(asTextMention ? { asTextMention: true as const } : {}),
+      ...(asCustomEmoji ? { asCustomEmoji: true as const } : {}),
     },
   });
 }
@@ -457,6 +459,76 @@ function textMentionMark(message: Record<string, unknown>): boolean {
       ) {
         return true;
       }
+    }
+  }
+  return false;
+}
+
+function customEmojiMark(message: Record<string, unknown>): boolean {
+  const lists: unknown[] = [message.entities, message.caption_entities];
+  const poll = message.poll;
+  if (isRecord(poll)) {
+    lists.push(poll.question_entities, poll.explanation_entities);
+    if (Array.isArray(poll.options)) {
+      for (const option of poll.options) {
+        if (isRecord(option)) {
+          lists.push(option.text_entities);
+        }
+      }
+    }
+  }
+  const checklist = message.checklist;
+  if (isRecord(checklist)) {
+    lists.push(checklist.title_entities);
+    if (Array.isArray(checklist.tasks)) {
+      for (const task of checklist.tasks) {
+        if (isRecord(task)) {
+          lists.push(task.text_entities);
+        }
+      }
+    }
+  }
+  for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
+    const gift = message[field];
+    if (isRecord(gift)) {
+      lists.push(gift.entities);
+    }
+  }
+  const game = message.game;
+  if (isRecord(game)) {
+    lists.push(game.text_entities);
+  }
+  for (const list of lists) {
+    if (!Array.isArray(list)) {
+      continue;
+    }
+    for (const entity of list) {
+      if (
+        isRecord(entity) &&
+        entity.type === "custom_emoji" &&
+        hiddenSecret(entity.custom_emoji_id)
+      ) {
+        return true;
+      }
+    }
+  }
+  const rich = message.rich_message;
+  return isRecord(rich) && richCustomEmoji(rich);
+}
+
+function richCustomEmoji(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richCustomEmoji(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "custom_emoji" && hiddenSecret(value.custom_emoji_id)) {
+    return true;
+  }
+  for (const nested of Object.values(value)) {
+    if (richCustomEmoji(nested)) {
+      return true;
     }
   }
   return false;
