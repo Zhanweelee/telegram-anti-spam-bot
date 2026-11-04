@@ -171,6 +171,8 @@ export const messageSchema = z
     asTextMention: z.literal(true).optional(),
     /** Custom emoji. The emoji id stays out. The visible text stays in the message. */
     asCustomEmoji: z.literal(true).optional(),
+    /** Copy-to-clipboard button. The copied sentence stays out. The visible label stays in the message. */
+    asCopyText: z.literal(true).optional(),
   })
   .refine(
     (message) =>

@@ -1,0 +1,5 @@
+{
+  "detector": "copy_text",
+  "precision": 1,
+  "recall": 1
+}

@@ -21,6 +21,7 @@
     "@tasb/detector-call": "workspace:*",
     "@tasb/detector-community": "workspace:*",
     "@tasb/detector-contact": "workspace:*",
+    "@tasb/detector-copy": "workspace:*",
     "@tasb/detector-folder": "workspace:*",
     "@tasb/detector-media": "workspace:*",
     "@tasb/detector-mention": "workspace:*",

@@ -63,6 +63,7 @@ import { createCallInviteDetector } from "@tasb/detector-call-invite";
 import { createChecklistDetector } from "@tasb/detector-checklist";
 import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
+import { createCopyTextDetector } from "@tasb/detector-copy";
 import { createCreatedDetector } from "@tasb/detector-created";
 import { createDeclineDetector } from "@tasb/detector-decline";
 import { createCustomEmojiDetector } from "@tasb/detector-emoji";
@@ -771,6 +772,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.customEmoji,
         value: createCustomEmojiDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.copyText,
+        value: createCopyTextDetector(),
       },
       {
         source: "builtin",

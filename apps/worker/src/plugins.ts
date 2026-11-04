@@ -415,6 +415,12 @@ export const builtinManifests = {
     integrity:
       "12fb26fa503fa5145052619c4066f89dea350c84f77621a55b57faf9af588cd8",
   }),
+  copyText: manifest({
+    id: "copy_text",
+    kind: "detector",
+    integrity:
+      "d3df88ebd533922c2c796fa1d573fa03438d3199b7a4078ae9c93a8317582924",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

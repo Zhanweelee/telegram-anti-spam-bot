@@ -6005,6 +6005,188 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a copy button until that chat asks", async () => {
+    const sentence = "口令90251";
+    const actor = "发复制的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "copy_text" | "custom_emoji";
+      paid?: boolean;
+    }) {
+      const message =
+        input.kind === "custom_emoji"
+          ? {
+              text: "表情留下",
+              entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji90246",
+                },
+              ],
+            }
+          : input.kind === "copy_text"
+            ? {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: "复制广告", copy_text: { text: sentence } }],
+                  ],
+                },
+              }
+            : { text: "今天站会" };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 125, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "copy_text" | "custom_emoji"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10670,
+      chatId: -1001270,
+      kind: "copy_text",
+    });
+    expect(idle.message?.asCopyText).toBe(true);
+    expect(idle.message?.asCustomEmoji).toBeUndefined();
+    expect(idle.message?.text).toBe("复制广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(sentence);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10671,
+        chatId: -1001271,
+        kind: "copy_text",
+      }),
+      {
+        source: rule("copy_text"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("copy_text");
+    expect(removed.decision.ruleIds).toContain("copy_text");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "button:copy_text" },
+    ]);
+    const keptByEmoji = await screenTelegramEvent(
+      await posted({
+        updateId: 10672,
+        chatId: -1001272,
+        kind: "copy_text",
+      }),
+      {
+        source: rule("custom_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByEmoji.decision.action).toBe("allow");
+    const keptEmoji = await screenTelegramEvent(
+      await posted({
+        updateId: 10673,
+        chatId: -1001273,
+        kind: "custom_emoji",
+      }),
+      {
+        source: rule("copy_text"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptEmoji.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10674, chatId: -1001274 }),
+      {
+        source: rule("copy_text"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10675,
+        chatId: -1001275,
+        kind: "copy_text",
+        paid: true,
+      }),
+      {
+        source: rule("copy_text"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByEmoji: keptByEmoji.decision,
+      keptEmoji: keptEmoji.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(sentence);
+    expect(dumped).not.toContain("90251");
+    expect(dumped).not.toContain("90246");
+    expect(dumped).not.toContain("复制广告");
+    expect(dumped).not.toContain("表情留下");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a custom emoji until that chat asks", async () => {
     const emojiId = "emoji90246";
     const actor = "发表情的人";
