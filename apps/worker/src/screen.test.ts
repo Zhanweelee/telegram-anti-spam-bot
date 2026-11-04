@@ -6005,6 +6005,175 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a rich anchor link until that chat asks", async () => {
+    const anchorName = "link90229";
+    const actor = "发锚点链接的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "anchor_link" | "anchor";
+      paid?: boolean;
+    }) {
+      const rich =
+        input.kind === "anchor"
+          ? ["锚点留下", { type: "anchor", name: "keep90231" }]
+          : {
+              type: "anchor_link",
+              text: "链接广告",
+              anchor_name: anchorName,
+            };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 120, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind
+              ? {
+                  rich_message: {
+                    blocks: [{ type: "paragraph", text: rich }],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_anchor_link" | "rich_anchor"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10620,
+      chatId: -1001220,
+      kind: "anchor_link",
+    });
+    expect(idle.message?.asRichAnchorLink).toBe(true);
+    expect(idle.message?.asRichAnchor).toBeUndefined();
+    expect(idle.message?.text).toBe("链接广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(anchorName);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10621,
+        chatId: -1001221,
+        kind: "anchor_link",
+      }),
+      {
+        source: rule("rich_anchor_link"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_anchor_link");
+    expect(removed.decision.ruleIds).toContain("rich_anchor_link");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:anchor_link" },
+    ]);
+    const keptByAnchor = await screenTelegramEvent(
+      await posted({
+        updateId: 10622,
+        chatId: -1001222,
+        kind: "anchor_link",
+      }),
+      {
+        source: rule("rich_anchor"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByAnchor.decision.action).toBe("allow");
+    const keptAnchor = await screenTelegramEvent(
+      await posted({ updateId: 10623, chatId: -1001223, kind: "anchor" }),
+      {
+        source: rule("rich_anchor_link"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptAnchor.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10624, chatId: -1001224 }),
+      {
+        source: rule("rich_anchor_link"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10625,
+        chatId: -1001225,
+        kind: "anchor_link",
+        paid: true,
+      }),
+      {
+        source: rule("rich_anchor_link"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByAnchor: keptByAnchor.decision,
+      keptAnchor: keptAnchor.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(anchorName);
+    expect(dumped).not.toContain("90229");
+    expect(dumped).not.toContain("链接广告");
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain("keep90231");
+  });
+
   it("keeps a rich anchor until that chat asks", async () => {
     const name = "anchor90227";
     const actor = "发锚点的人";

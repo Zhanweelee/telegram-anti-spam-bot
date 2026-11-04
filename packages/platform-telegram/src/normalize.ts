@@ -241,6 +241,7 @@ async function messageEvent(
       ...(richContact.hashtag ? { asRichHashtag: true as const } : {}),
       ...(richContact.cashtag ? { asRichCashtag: true as const } : {}),
       ...(richContact.anchor ? { asRichAnchor: true as const } : {}),
+      ...(richContact.anchorLink ? { asRichAnchorLink: true as const } : {}),
     },
   });
 }
@@ -313,6 +314,7 @@ function richContactMark(message: Record<string, unknown>): {
   hashtag: boolean;
   cashtag: boolean;
   anchor: boolean;
+  anchorLink: boolean;
 } {
   const found = {
     phone: false,
@@ -324,6 +326,7 @@ function richContactMark(message: Record<string, unknown>): {
     hashtag: false,
     cashtag: false,
     anchor: false,
+    anchorLink: false,
   };
   const rich = message.rich_message;
   if (isRecord(rich)) {
@@ -344,6 +347,7 @@ function walkRichContact(
     hashtag: boolean;
     cashtag: boolean;
     anchor: boolean;
+    anchorLink: boolean;
   },
 ): void {
   if (
@@ -355,7 +359,8 @@ function walkRichContact(
     found.command &&
     found.hashtag &&
     found.cashtag &&
-    found.anchor
+    found.anchor &&
+    found.anchorLink
   ) {
     return;
   }
@@ -397,6 +402,9 @@ function walkRichContact(
   }
   if (value.type === "anchor" && hiddenSecret(value.name)) {
     found.anchor = true;
+  }
+  if (value.type === "anchor_link" && hiddenSecret(value.anchor_name)) {
+    found.anchorLink = true;
   }
   for (const nested of Object.values(value)) {
     walkRichContact(nested, found);

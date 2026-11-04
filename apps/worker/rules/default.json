@@ -443,6 +443,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "rich_anchor_link",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_anchor_link"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

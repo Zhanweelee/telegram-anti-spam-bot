@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_anchor_link_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichAnchorLink": true
+  },
+  {
+    "id": "rich_anchor_link_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_anchor_link_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
