@@ -6005,6 +6005,171 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a rich cashtag until that chat asks", async () => {
+    const cashtag = "$cash90226";
+    const actor = "发行情的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "cashtag" | "hashtag";
+      paid?: boolean;
+    }) {
+      const rich =
+        input.kind === "hashtag"
+          ? {
+              type: "hashtag",
+              text: "话题留下",
+              hashtag: "#tag90224",
+            }
+          : {
+              type: "cashtag",
+              text: "行情广告",
+              cashtag,
+            };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 118, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind
+              ? {
+                  rich_message: {
+                    blocks: [{ type: "paragraph", text: rich }],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_cashtag" | "rich_hashtag"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10600,
+      chatId: -1001200,
+      kind: "cashtag",
+    });
+    expect(idle.message?.asRichCashtag).toBe(true);
+    expect(idle.message?.asRichHashtag).toBeUndefined();
+    expect(idle.message?.text).toBe("行情广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(cashtag);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10601, chatId: -1001201, kind: "cashtag" }),
+      {
+        source: rule("rich_cashtag"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_cashtag");
+    expect(removed.decision.ruleIds).toContain("rich_cashtag");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:cashtag" },
+    ]);
+    const keptByTag = await screenTelegramEvent(
+      await posted({ updateId: 10602, chatId: -1001202, kind: "cashtag" }),
+      {
+        source: rule("rich_hashtag"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByTag.decision.action).toBe("allow");
+    const keptTag = await screenTelegramEvent(
+      await posted({ updateId: 10603, chatId: -1001203, kind: "hashtag" }),
+      {
+        source: rule("rich_cashtag"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptTag.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10604, chatId: -1001204 }),
+      {
+        source: rule("rich_cashtag"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10605,
+        chatId: -1001205,
+        kind: "cashtag",
+        paid: true,
+      }),
+      {
+        source: rule("rich_cashtag"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByTag: keptByTag.decision,
+      keptTag: keptTag.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(cashtag);
+    expect(dumped).not.toContain("90226");
+    expect(dumped).not.toContain("行情广告");
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain("#tag90224");
+  });
+
   it("keeps a rich hashtag until that chat asks", async () => {
     const hashtag = "#tag90224";
     const actor = "发话题的人";

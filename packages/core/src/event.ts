@@ -157,6 +157,8 @@ export const messageSchema = z
     asRichCommand: z.literal(true).optional(),
     /** Rich text hashtag. The tag stays out. The visible text stays in the message. */
     asRichHashtag: z.literal(true).optional(),
+    /** Rich text cashtag. The ticker stays out. The visible text stays in the message. */
+    asRichCashtag: z.literal(true).optional(),
   })
   .refine(
     (message) =>

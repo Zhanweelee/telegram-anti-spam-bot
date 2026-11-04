@@ -373,6 +373,12 @@ export const builtinManifests = {
     integrity:
       "5677b7724626285cb35c7b76d3c8a482032d5185dac3e7e56b939a4f26b97cfe",
   }),
+  richCashtag: manifest({
+    id: "rich_cashtag",
+    kind: "detector",
+    integrity:
+      "b58588edb5c760de3c2b90eb0f90a03e1170ff6ddafe08b21dcb434059464863",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

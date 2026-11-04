@@ -11,6 +11,7 @@ function eventFor(input: {
   asRichTextMention?: true;
   asRichCommand?: true;
   asRichHashtag?: true;
+  asRichCashtag?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -35,6 +36,7 @@ function eventFor(input: {
               : {}),
             ...(input.asRichCommand ? { asRichCommand: true as const } : {}),
             ...(input.asRichHashtag ? { asRichHashtag: true as const } : {}),
+            ...(input.asRichCashtag ? { asRichCashtag: true as const } : {}),
           },
         }
       : {}),
@@ -295,6 +297,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichHashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich cashtag and leaves the ticker out of the hit", async () => {
+    const cash = createRichDetector("cashtag");
+    const hit = await cash.detect({
+      event: eventFor({ asRichCashtag: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_cashtag",
+      score: 1,
+      reasons: ["rich_cashtag"],
+      evidence: [{ kind: "feature", summary: "rich:cashtag" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90226");
+    expect(
+      await cash.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await cash.detect({
+        event: eventFor({ kind: "chat_member", asRichCashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await cash.detect({
+        event: eventFor({ asRichHashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichCashtag: true }),
         logger,
         signal,
       }),

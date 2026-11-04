@@ -20939,6 +20939,219 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich cashtag and leaves the ticker out", async () => {
+    const cashtag = "$cash90226";
+    const actor = "发行情的人";
+    const marked = await normalize({
+      update_id: 4820,
+      message: {
+        message_id: 860,
+        date: 1761955200,
+        chat: { id: -100499820, type: "supergroup" },
+        from: { id: 118, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "cashtag",
+                  text: "行情广告",
+                  cashtag,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichCashtag).toBe(true);
+    expect(marked.event.message?.asRichHashtag).toBeUndefined();
+    expect(marked.event.message?.text).toBe("行情广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(cashtag);
+    expect(markedDump).not.toContain("90226");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4821,
+      message: {
+        message_id: 861,
+        date: 1761955200,
+        chat: { id: -100499821, type: "supergroup" },
+        from: { id: 118 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "cashtag",
+                text: "行情广告",
+                cashtag,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichCashtag).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(cashtag);
+
+    const nested = await normalize({
+      update_id: 4822,
+      message: {
+        message_id: 862,
+        date: 1761955200,
+        chat: { id: -100499822, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "cashtag",
+                    text: "嵌套行情",
+                    cashtag,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichCashtag).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套行情");
+    expect(JSON.stringify(nested.event)).not.toContain("90226");
+
+    const blank = await normalize({
+      update_id: 4823,
+      message: {
+        message_id: 863,
+        date: 1761955200,
+        chat: { id: -100499823, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "cashtag",
+                text: "空行情",
+                cashtag: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空行情");
+    expect(blank.event.message?.asRichCashtag).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4824,
+      message: {
+        message_id: 864,
+        date: 1761955200,
+        chat: { id: -100499824, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "cashtag",
+                text: "布尔行情",
+                cashtag: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔行情");
+    expect(flag.event.message?.asRichCashtag).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4825,
+      message: {
+        message_id: 865,
+        date: 1761955200,
+        chat: { id: -100499825, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: { type: "cashtag", text: "缺行情" },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺行情");
+    expect(missing.event.message?.asRichCashtag).toBeUndefined();
+
+    const tag = await normalize({
+      update_id: 4826,
+      message: {
+        message_id: 866,
+        date: 1761955200,
+        chat: { id: -100499826, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "hashtag",
+                text: "话题留下",
+                hashtag: "#tag90224",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(tag.status).toBe("event");
+    if (tag.status !== "event") {
+      return;
+    }
+    expect(tag.event.message?.asRichHashtag).toBe(true);
+    expect(tag.event.message?.asRichCashtag).toBeUndefined();
+    expect(JSON.stringify(tag.event)).not.toContain("90224");
+  });
+
   it("marks a rich hashtag and leaves the tag out", async () => {
     const hashtag = "#tag90224";
     const actor = "发话题的人";
@@ -21149,6 +21362,7 @@ describe("normalizeUpdate", () => {
     }
     expect(cash.event.message?.text).toBe("行情留下");
     expect(cash.event.message?.asRichHashtag).toBeUndefined();
+    expect(cash.event.message?.asRichCashtag).toBe(true);
     expect(JSON.stringify(cash.event)).not.toContain("90225");
   });
 

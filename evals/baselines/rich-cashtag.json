@@ -1,0 +1,5 @@
+{
+  "detector": "rich_cashtag",
+  "precision": 1,
+  "recall": 1
+}
