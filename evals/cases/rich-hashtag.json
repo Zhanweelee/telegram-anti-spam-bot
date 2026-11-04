@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_hashtag_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichHashtag": true
+  },
+  {
+    "id": "rich_hashtag_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_hashtag_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

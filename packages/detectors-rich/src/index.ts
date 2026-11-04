@@ -8,6 +8,7 @@ export const richContacts = [
   "mention",
   "text_mention",
   "command",
+  "hashtag",
 ] as const;
 export type RichContact = (typeof richContacts)[number];
 
@@ -18,6 +19,7 @@ const richSpecs = {
   mention: { id: "rich_mention", summary: "rich:mention" },
   text_mention: { id: "rich_text_mention", summary: "rich:text_mention" },
   command: { id: "rich_command", summary: "rich:command" },
+  hashtag: { id: "rich_hashtag", summary: "rich:hashtag" },
 } as const;
 
 const richMarks = {
@@ -27,6 +29,7 @@ const richMarks = {
   mention: "asRichMention",
   text_mention: "asRichTextMention",
   command: "asRichCommand",
+  hashtag: "asRichHashtag",
 } as const;
 
 export function createRichDetector(kind: RichContact): Detector {

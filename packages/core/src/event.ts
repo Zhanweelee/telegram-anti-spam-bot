@@ -155,6 +155,8 @@ export const messageSchema = z
     asRichTextMention: z.literal(true).optional(),
     /** Rich text bot command. The command stays out. The visible text stays in the message. */
     asRichCommand: z.literal(true).optional(),
+    /** Rich text hashtag. The tag stays out. The visible text stays in the message. */
+    asRichHashtag: z.literal(true).optional(),
   })
   .refine(
     (message) =>

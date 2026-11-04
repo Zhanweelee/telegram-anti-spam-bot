@@ -367,6 +367,12 @@ export const builtinManifests = {
     integrity:
       "e816f9ee046c2da553e7a3515a87830b0b91ce61b522a17e8b0c85b66f5accd9",
   }),
+  richHashtag: manifest({
+    id: "rich_hashtag",
+    kind: "detector",
+    integrity:
+      "5677b7724626285cb35c7b76d3c8a482032d5185dac3e7e56b939a4f26b97cfe",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
