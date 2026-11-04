@@ -172,6 +172,9 @@ function commandModerator(
     async setDefaultRights() {
       throw new Error("myrights_unavailable");
     },
+    async setCommandMenu() {
+      throw new Error("setcommands_unavailable");
+    },
     async approveJoin() {
       throw new Error("approve_unavailable");
     },

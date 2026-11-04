@@ -28,6 +28,7 @@ function createOpenModerator(): ModerationPort {
     declineJoin: (target) => memory.declineJoin(target),
     declinePost: (target) => memory.declinePost(target),
     setDefaultRights: (target) => memory.setDefaultRights(target),
+    setCommandMenu: (target) => memory.setCommandMenu(target),
     approveJoin: (target) => memory.approveJoin(target),
     deferJoin: (target) => memory.deferJoin(target),
     async restrictActor() {

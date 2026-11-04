@@ -81,6 +81,7 @@ function moderator(
     async declineJoin() {},
     async declinePost() {},
     async setDefaultRights() {},
+    async setCommandMenu() {},
     async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {

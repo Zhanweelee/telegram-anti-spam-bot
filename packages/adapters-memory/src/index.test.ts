@@ -171,6 +171,28 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a private command menu without a chat", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setCommandMenu({
+      tenantId: "t",
+      commands: [
+        { command: "help", description: "/help" },
+        { command: "setcommands", description: "/setcommands [private]" },
+      ],
+    });
+    expect(moderator.commandMenusSet).toEqual([
+      {
+        tenantId: "t",
+        commands: [
+          { command: "help", description: "/help" },
+          { command: "setcommands", description: "/setcommands [private]" },
+        ],
+      },
+    ]);
+    expect(moderator.commandMenusSet[0]).not.toHaveProperty("chatId");
+    expect(moderator.commandMenusSet[0]).not.toHaveProperty("scope");
+  });
+
   it("records default administrator rights without inventing a chat", async () => {
     const moderator = createMemoryModerator();
     await moderator.setDefaultRights({

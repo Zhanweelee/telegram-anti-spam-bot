@@ -7262,6 +7262,191 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("sets the private command menu from the fixed catalog", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      keys: readonly string[];
+      commands: readonly { command: string; description: string }[];
+    }[] = [];
+    const remember = {
+      async setCommandMenu(target: {
+        tenantId: string;
+        commands: readonly { command: string; description: string }[];
+      }) {
+        seen.push({
+          tenantId: target.tenantId,
+          keys: Object.keys(target),
+          commands: target.commands.map((item) => ({
+            command: item.command,
+            description: item.description,
+          })),
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/setcommands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
+    });
+    expect(seen).toHaveLength(1);
+    const menu = seen[0]?.commands ?? [];
+    expect(menu).toHaveLength(60);
+    expect(menu.length).toBeLessThanOrEqual(100);
+    expect(menu[0]).toEqual({ command: "help", description: "/help" });
+    expect(menu.find((item) => item.command === "whitelist")).toEqual({
+      command: "whitelist",
+      description: "/whitelist <chatId>",
+    });
+    expect(menu.find((item) => item.command === "botrights")).toEqual({
+      command: "botrights",
+      description: "/botrights [channels]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "setcommands",
+      description: "/setcommands [private]",
+    });
+    expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
+    for (const item of menu) {
+      expect(item.command).toMatch(/^[a-z0-9_]{1,32}$/);
+      expect(item.description.length).toBeGreaterThan(0);
+      expect(item.description.length).toBeLessThanOrEqual(256);
+      expect(item).not.toHaveProperty("isEphemeral");
+      expect(item).not.toHaveProperty("is_ephemeral");
+    }
+    expect(seen[0]?.keys).toEqual(["tenantId", "commands"]);
+    expect(seen[0]?.tenantId).toBe("local");
+    expect(JSON.stringify(seen)).not.toContain(phrase);
+    expect(JSON.stringify(done)).not.toContain("/help");
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/setcommands private", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(named).toMatchObject({
+      text: "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
+    });
+    expect(seen).toHaveLength(2);
+    expect(seen[1]?.commands).toEqual(menu);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/setcommands [private]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/setcommands", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: remember,
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set the command menu in private chats. Group menus stay. People who already have a language-specific list are unchanged.",
+    });
+    expect(seen).toHaveLength(3);
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/setcommands", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/setcommands private extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/setcommands [private]",
+    });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/setcommands ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/setcommands", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/setcommands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"setcommands"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/setcommands",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/setcommands ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

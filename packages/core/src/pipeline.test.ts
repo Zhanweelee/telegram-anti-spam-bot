@@ -151,6 +151,7 @@ function harness(options?: { failStorage?: boolean }) {
     async declineJoin() {},
     async declinePost() {},
     async setDefaultRights() {},
+    async setCommandMenu() {},
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
