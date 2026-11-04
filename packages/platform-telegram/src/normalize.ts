@@ -139,6 +139,7 @@ async function messageEvent(
   const links = linkHosts(message);
   const media = await mediaMark(message);
   const albumId = albumToken(message.media_group_id);
+  const notice = serviceNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -167,8 +168,25 @@ async function messageEvent(
       ...(albumId ? { albumId } : {}),
       ...(media ? { media: media.kind } : {}),
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
+      ...(notice === undefined ? {} : { notice }),
     },
   });
+}
+
+function serviceNotice(
+  message: Record<string, unknown>,
+): "join" | "leave" | undefined {
+  if (hasJoinMembers(message.new_chat_members)) {
+    return "join";
+  }
+  if (isRecord(message.left_chat_member)) {
+    return "leave";
+  }
+  return undefined;
+}
+
+function hasJoinMembers(value: unknown): boolean {
+  return Array.isArray(value) && value.some((item) => isRecord(item));
 }
 
 function albumToken(value: unknown): string | undefined {

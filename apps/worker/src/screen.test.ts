@@ -1408,6 +1408,107 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(name);
   });
 
+  it("keeps join and leave notices until a chat asks to delete them", async () => {
+    const name = "干净名字";
+    const joined = await normalizeUpdate({
+      update: {
+        update_id: 2070,
+        message: {
+          message_id: 70,
+          date: 1761955200,
+          chat: { id: -100594, type: "supergroup", title: name },
+          from: { id: 92, first_name: name },
+          new_chat_members: [{ id: 9201, first_name: name }],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.notice).toBe("join");
+    const idle = await screenTelegramEvent(joined.event, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(idle.decision.action).toBe("allow");
+    expect(idle.decision.reasons).not.toContain("service_notice");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "service_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      { ...joined.event, id: "tg_2071", chatId: "-100595" },
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("service_notice");
+    expect(removed.decision.ruleIds).toContain("service_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain("notice:join");
+    const left = await normalizeUpdate({
+      update: {
+        update_id: 2072,
+        message: {
+          message_id: 72,
+          date: 1761955200,
+          chat: { id: -100596, type: "supergroup" },
+          from: { id: 93 },
+          left_chat_member: { id: 9301, first_name: name },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(left.status).toBe("event");
+    if (left.status !== "event") {
+      return;
+    }
+    expect(left.event.message?.notice).toBe("leave");
+    expect(left.event.message?.text).toBe("");
+    const dropped = await screenTelegramEvent(left.event, {
+      source,
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+      moderator: createMemoryModerator(),
+    });
+    expect(dropped.decision.action).toBe("delete");
+    expect(JSON.stringify(dropped.decision.evidence)).toContain("notice:leave");
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      dropped: dropped.decision,
+    });
+    expect(dumped).not.toContain(name);
+    expect(JSON.stringify(joined.event)).not.toContain("9201");
+    expect(JSON.stringify(left.event)).not.toContain("9301");
+    expect(JSON.stringify(left.event)).not.toContain(name);
+  });
+
   it("deletes a shared contact and keeps the phone out of logs", async () => {
     const phone = "13800138000";
     const name = "机密姓名";

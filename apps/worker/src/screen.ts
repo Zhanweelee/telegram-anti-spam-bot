@@ -64,6 +64,7 @@ import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
 import { createLlmDetector } from "@tasb/detector-llm";
+import { createNoticeDetector } from "@tasb/detector-notice";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -422,6 +423,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.folder,
         value: createFolderDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.notice,
+        value: createNoticeDetector(),
       },
       {
         source: "builtin",

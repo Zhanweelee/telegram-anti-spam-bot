@@ -1,0 +1,6 @@
+[
+  { "id": "join", "kind": "message", "notice": "join", "label": "spam" },
+  { "id": "leave", "kind": "message", "notice": "leave", "label": "spam" },
+  { "id": "plain", "kind": "message", "label": "ham" },
+  { "id": "member", "kind": "chat_member", "label": "ham" }
+]

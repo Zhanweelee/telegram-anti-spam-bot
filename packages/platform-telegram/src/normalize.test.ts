@@ -21126,6 +21126,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.notice).toBe("join");
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from85b");
@@ -21154,6 +21155,7 @@ describe("normalizeUpdate", () => {
     expect(left.event.message?.text).toBe("");
     expect(left.event.message?.textSha256).toBe(await sha256Hex(""));
     expect(left.event.message?.hosts).toBeUndefined();
+    expect(left.event.message?.notice).toBe("leave");
     const leftDump = JSON.stringify(left.event);
     expect(leftDump).not.toContain("left85");
     expect(leftDump).not.toContain("gone85");
@@ -21199,6 +21201,7 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    expect(labeled.event.message?.notice).toBeUndefined();
     const labeledDump = JSON.stringify(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);

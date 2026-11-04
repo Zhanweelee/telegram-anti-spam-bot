@@ -80,6 +80,8 @@ export const messageSchema = z
       .optional(),
     /** Only user who can see this message. Names stay out. */
     audienceId: idSchema.optional(),
+    /** Join or leave service line. Names stay in the visible text, if any. */
+    notice: z.enum(["join", "leave"]).optional(),
   })
   .refine(
     (message) =>
