@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(73);
+    expect(menu).toHaveLength(74);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7358,9 +7358,13 @@ describe("runOperatorCommand", () => {
       command: "hook",
       description: "/hook",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "guard")).toEqual({
       command: "guard",
       description: "/guard <chatId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "joinbot",
+      description: "/joinbot <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -10000,6 +10004,245 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the join-request bot and drops the display name", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      chatId: string;
+      keys: readonly string[];
+    }[] = [];
+    const snapshots = [
+      { id: "4242", username: "giftbot" },
+      { id: null, username: null },
+      { id: "7", username: "" },
+    ];
+    const remember = {
+      async readJoinBot(target: { tenantId: string; chatId: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          keys: Object.keys(target),
+        });
+        const snapshot = snapshots[seen.length - 1];
+        if (snapshot === undefined) {
+          throw new Error("called");
+        }
+        return snapshot;
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["群 -100", "机器人 4242", "用户名 giftbot"].join("\n"),
+    });
+    expect(seen[0]).toEqual({
+      tenantId: "local",
+      chatId: "-100",
+      keys: ["tenantId", "chatId"],
+    });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain("giftbot");
+    expect(JSON.stringify(described)).toContain("giftbot");
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: ["群 -100", "机器人 未知", "用户名 未知"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/joinbot <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readJoinBot() {
+          return { id: "4242", username: "giftbot" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100", "bot 4242", "username giftbot"].join("\n"),
+    });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readJoinBot() {
+          return { id: "7", username: "" };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({
+      text: ["chat -100", "bot 7", "username empty"].join("\n"),
+    });
+    const englishUnknown = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readJoinBot() {
+          return { id: null, username: null };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishUnknown).toMatchObject({
+      text: ["chat -100", "bot unknown", "username unknown"].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/joinbot", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/joinbot <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/joinbot -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/joinbot <chatId>" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/joinbot ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          return { id: "4242", username: phrase };
+        },
+      },
+      ...kit(),
+    });
+    expect(named).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(named)).not.toContain(phrase);
+    const half = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          return { id: null, username: "giftbot" };
+        },
+      },
+      ...kit(),
+    });
+    expect(half).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(half)).not.toContain("giftbot");
+    const missing = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readJoinBot() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"joinbot"',
+    );
+    const owned = await runOperatorCommand({
+      event: event({ text: "/joinbot -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: remember,
+      ...kit(),
+    });
+    expect(owned).toMatchObject({
+      text: ["群 -100", "机器人 7", "用户名 空"].join("\n"),
+    });
+    expect(seen).toHaveLength(3);
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/joinbot -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readJoinBot() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/joinbot ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readJoinBot() {
           throw new Error("called");
         },
       },

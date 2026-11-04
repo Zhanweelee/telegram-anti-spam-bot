@@ -7,6 +7,7 @@ import type {
   DefaultAdministratorRights,
   DefaultChatPermissions,
   DefaultRightsSnapshot,
+  JoinBot,
   MemberStanding,
   MenuButtonState,
   MenuCommandSnapshot,
@@ -363,6 +364,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readChatGuardValue(chat, target.chatId);
+    },
+    async readJoinBot(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "joinbot_unavailable",
+        failed: "joinbot_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readJoinBotValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1135,6 +1149,57 @@ function readLinkedChat(value: unknown): string | null {
     throw new Error("guard_failed");
   }
   return id;
+}
+
+function readJoinBotValue(body: unknown, chatId: string): JoinBot {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("joinbot_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("joinbot_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("joinbot_failed");
+  }
+  return readGuardBot(record.guard_bot);
+}
+
+function readGuardBot(value: unknown): JoinBot {
+  if (value === undefined) {
+    return { id: null, username: null };
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("joinbot_failed");
+  }
+  const user = value as Record<string, unknown>;
+  if (user.is_bot !== true) {
+    throw new Error("joinbot_failed");
+  }
+  const id = user.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+    throw new Error("joinbot_failed");
+  }
+  return {
+    id: String(id),
+    username: readJoinBotUsername(user.username),
+  };
+}
+
+function readJoinBotUsername(value: unknown): string {
+  if (value === undefined) {
+    return "";
+  }
+  if (typeof value !== "string" || !/^[A-Za-z0-9_]{1,32}$/.test(value)) {
+    throw new Error("joinbot_failed");
+  }
+  return value;
 }
 
 function readDefaultPermissions(body: unknown): DefaultChatPermissions {

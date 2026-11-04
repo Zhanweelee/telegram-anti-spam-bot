@@ -92,6 +92,9 @@ function createOpenModerator(): ModerationPort {
     async readChatGuard() {
       throw new Error("guard_unavailable");
     },
+    async readJoinBot() {
+      throw new Error("joinbot_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

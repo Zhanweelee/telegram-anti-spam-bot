@@ -199,6 +199,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("guard_unavailable");
   });
 
+  it("does not invent a join-request bot", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readJoinBot({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("joinbot_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(

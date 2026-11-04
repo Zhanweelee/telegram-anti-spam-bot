@@ -458,6 +458,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readChatGuard() {
       throw new Error("guard_unavailable");
     },
+    async readJoinBot() {
+      throw new Error("joinbot_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

@@ -1567,6 +1567,131 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the join-request bot and drops the display name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            invite_link: invite,
+            guard_bot: {
+              id: 4242,
+              is_bot: true,
+              first_name: phrase,
+              username: "giftbot",
+              can_join_groups: true,
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readJoinBot({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ id: "4242", username: "giftbot" });
+    expect(resolved).not.toHaveProperty("first_name");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readJoinBot({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ id: null, username: null });
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                guard_bot: { id: 7, is_bot: true, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readJoinBot({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ id: "7", username: "" });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readJoinBot({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("joinbot_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                guard_bot: { id: 4242, is_bot: true, username: "giftbot" },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readJoinBot({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("joinbot_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                guard_bot: {
+                  id: 4242,
+                  is_bot: false,
+                  first_name: phrase,
+                  username: phrase,
+                },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readJoinBot({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("joinbot_failed");
+  });
+
   it("reads the chat guard posture and drops the title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

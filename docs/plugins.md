@@ -173,6 +173,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/guard <chatId>` 调用 `readChatGuard`。配了 token 时使用 `getChat`，只带 `chat_id`。回复写类型、话题、频道私聊、审核入群、入群才能发言、官方反垃圾、慢速秒数、自毁秒数、加速豁免、防转发、隐藏成员、可见历史、反应上限和关联群。缺开关或秒数写未知。标题、简介、邀请链接、用户名和名字不进回复，也不进日志。类型不是四种群、秒数不是非负整数、反应上限缺失或关联群号不合规则时整份回复是「参数无效」。配置里的管理员可以看任意群。接入目录里的人只能看自己的群。没有 token 时不编一份状态。不调用 `setChatPermissions`。见 ADR 0420。
 
+`/joinbot <chatId>` 调用 `readJoinBot`。配了 token 时使用 `getChat`，只带 `chat_id`。回复写处理入群申请的 bot 编号和用户名。没有 `guard_bot` 写未知。缺用户名写空。名字和其它用户字段不进回复，也不进日志。不是 bot、编号不是正的安全整数或用户名不合规则时整份回复是「参数无效」。配置里的管理员可以看任意群。接入目录里的人只能看自己的群。没有 token 时不编一份身份。不调用 `setChatPermissions`。见 ADR 0421。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

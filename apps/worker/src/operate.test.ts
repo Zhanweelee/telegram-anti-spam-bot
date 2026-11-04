@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(73);
+    expect(body.commands).toHaveLength(74);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2852,9 +2852,13 @@ describe("handleIncomingEvent", () => {
       command: "hook",
       description: "/hook",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "guard")).toEqual({
       command: "guard",
       description: "/guard <chatId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "joinbot",
+      description: "/joinbot <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -4638,6 +4642,196 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the join-request bot and drops the display name", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const invite = `https://t.me/+${phrase}`;
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                invite_link: invite,
+                guard_bot: {
+                  id: 4242,
+                  is_bot: true,
+                  first_name: phrase,
+                  username: "giftbot",
+                },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "机器人 4242", "用户名 giftbot"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(JSON.stringify(kit.reply.sent)).toContain("giftbot");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("giftbot");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
+    const cleared = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "机器人 未知", "用户名 未知"].join("\n"),
+    ]);
+    expect(JSON.stringify(cleared.reply.sent)).not.toContain(phrase);
+    const blank = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...blank,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                guard_bot: { id: 7, is_bot: true, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(blank.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "机器人 7", "用户名 空"].join("\n"),
+    ]);
+    expect(JSON.stringify(blank.reply.sent)).not.toContain(phrase);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                title: phrase,
+                guard_bot: { id: 4242, is_bot: false, first_name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const wide = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...wide,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                invite_link: invite,
+                guard_bot: {
+                  id: 4242,
+                  is_bot: true,
+                  username: phrase,
+                  first_name: phrase,
+                },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(invite);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/joinbot -100", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",
