@@ -235,6 +235,18 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a deleted group sticker set without the name", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.deleteStickerSet({ tenantId: "t", chatId: "c" });
+    expect(moderator.stickerSetsDeleted).toEqual([
+      { tenantId: "t", chatId: "c" },
+    ]);
+    expect(JSON.stringify(moderator.stickerSetsDeleted)).not.toContain(
+      "sticker",
+    );
+    expect(JSON.stringify(moderator.stickerSetsDeleted)).not.toContain("name");
+  });
+
   it("records a member tag including an empty one", async () => {
     const moderator = createMemoryModerator();
     await moderator.setMemberTag({

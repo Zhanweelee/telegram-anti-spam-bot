@@ -103,6 +103,7 @@ const COMMAND_NAMES = [
   "delphoto",
   "leave",
   "tag",
+  "delstickers",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -145,6 +146,7 @@ export interface OperatorCommandInput {
       | "deleteMessage"
       | "deleteMessages"
       | "deletePhoto"
+      | "deleteStickerSet"
       | "deleteTopic"
       | "hideGeneral"
       | "leaveChat"
@@ -332,6 +334,8 @@ async function dispatch(
       return leaveOneChat(input, args);
     case "tag":
       return setOneMemberTag(input, args);
+    case "delstickers":
+      return deleteGroupStickerSet(input, args);
   }
 }
 
@@ -1970,6 +1974,46 @@ function rejectTag(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "tag",
+  });
+}
+
+async function deleteGroupStickerSet(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.delstickers.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deleteStickerSet;
+  if (!remove) {
+    rejectStickers(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectStickers(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.delstickers.done", { chatId });
+}
+
+function rejectStickers(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "delstickers",
   });
 }
 
