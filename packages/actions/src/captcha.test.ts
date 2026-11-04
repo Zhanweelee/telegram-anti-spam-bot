@@ -113,6 +113,7 @@ function moderator(
     async unpinMessage() {},
     async removeReaction() {},
     async deletePhoto() {},
+    async leaveChat() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

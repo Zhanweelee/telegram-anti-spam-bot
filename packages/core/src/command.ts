@@ -101,6 +101,7 @@ const COMMAND_NAMES = [
   "unpinmsg",
   "unreact",
   "delphoto",
+  "leave",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -144,6 +145,7 @@ export interface OperatorCommandInput {
       | "deletePhoto"
       | "deleteTopic"
       | "hideGeneral"
+      | "leaveChat"
       | "lockChat"
       | "muteActor"
       | "openTopic"
@@ -323,6 +325,8 @@ async function dispatch(
       return removeOneReaction(input, args);
     case "delphoto":
       return deleteChatPhoto(input, args);
+    case "leave":
+      return leaveOneChat(input, args);
   }
 }
 
@@ -1867,6 +1871,46 @@ function rejectPhoto(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "delphoto",
+  });
+}
+
+async function leaveOneChat(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.leave.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const leave = input.moderator?.leaveChat;
+  if (!leave) {
+    rejectLeave(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await leave({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectLeave(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.leave.done", { chatId });
+}
+
+function rejectLeave(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "leave",
   });
 }
 

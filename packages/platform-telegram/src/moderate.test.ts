@@ -1199,6 +1199,45 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("leaves a chat and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.leaveChat({ tenantId: "local", chatId: "-100" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/leaveChat`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      title?: string;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.title).toBeUndefined();
+    expect(calls[0]?.method).not.toContain("getChat");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).leaveChat({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("leave_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

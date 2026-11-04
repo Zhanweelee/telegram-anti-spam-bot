@@ -61,6 +61,7 @@ function createOpenModerator(): ModerationPort {
     unpinMessage: (target) => memory.unpinMessage(target),
     removeReaction: (target) => memory.removeReaction(target),
     deletePhoto: (target) => memory.deletePhoto(target),
+    leaveChat: (target) => memory.leaveChat(target),
     unpinTopic: (target) => memory.unpinTopic(target),
     closeTopic: (target) => memory.closeTopic(target),
     openTopic: (target) => memory.openTopic(target),

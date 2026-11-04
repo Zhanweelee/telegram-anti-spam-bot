@@ -4204,6 +4204,121 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("asks the bot to leave a chat and keeps the messages", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/leave -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async leaveChat(target) {
+          seen.push(target.chatId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求退出 -100。之后这个 bot 不再处理它。消息还在。",
+    });
+    expect(seen).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/leave <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/leave -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async leaveChat() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to leave -100. This bot stops handling it. The messages stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/leave -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async leaveChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/leave", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/leave <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/leave -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async leaveChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/leave <chatId>" });
+    expect(seen).toEqual(["-100"]);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/leave ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async leaveChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/leave -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/leave -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async leaveChat() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"leave"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/leave -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async leaveChat() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

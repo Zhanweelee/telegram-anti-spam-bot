@@ -45,6 +45,13 @@ describe("operator command example", () => {
     expect(help).toContain("/unpinmsg");
     expect(help).toContain("/unreact");
     expect(help).toContain("/delphoto");
+    expect(help).toContain("/leave");
+    const left = await runPrivateCommand({
+      text: "/leave -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(left).toBe("已请求退出 -100。之后这个 bot 不再处理它。消息还在。");
     const photo = await runPrivateCommand({
       text: "/delphoto -100",
       actorId: "42",

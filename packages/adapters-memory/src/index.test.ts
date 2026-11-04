@@ -235,6 +235,14 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a left chat without the title", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.leaveChat({ tenantId: "t", chatId: "c" });
+    expect(moderator.chatsLeft).toEqual([{ tenantId: "t", chatId: "c" }]);
+    expect(JSON.stringify(moderator.chatsLeft)).not.toContain("title");
+    expect(JSON.stringify(moderator.chatsLeft)).not.toContain("message");
+  });
+
   it("records a deleted chat photo without the file", async () => {
     const moderator = createMemoryModerator();
     await moderator.deletePhoto({ tenantId: "t", chatId: "c" });
