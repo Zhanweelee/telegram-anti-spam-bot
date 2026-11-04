@@ -104,6 +104,7 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     { threshold: number; windowSeconds: number }
   >();
   const mutes = new Map<string, number>();
+  const captchas = new Map<string, number>();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -247,6 +248,21 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async clearMuteDuration(tenantId, chatId) {
       mutes.delete(`${tenantId}:${chatId}`);
+    },
+    async getCaptchaTtl(tenantId, chatId) {
+      return captchas.get(`${tenantId}:${chatId}`) ?? null;
+    },
+    async setCaptchaTtl(tenantId, chatId, seconds) {
+      const id = `${tenantId}:${chatId}`;
+      if (seconds === 300) {
+        captchas.delete(id);
+        return true;
+      }
+      captchas.set(id, seconds);
+      return true;
+    },
+    async clearCaptchaTtl(tenantId, chatId) {
+      captchas.delete(`${tenantId}:${chatId}`);
     },
   };
 }
@@ -7426,7 +7442,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(96);
+    expect(menu).toHaveLength(97);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7538,6 +7554,10 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
+      command: "verifyfor",
+      description: "/verifyfor <chatId> [seconds|reset]",
+    });
+    expect(menu.find((item) => item.command === "rulemute")).toEqual({
       command: "rulemute",
       description: "/rulemute <chatId> [seconds|reset]",
     });
@@ -17628,6 +17648,222 @@ describe("runOperatorCommand", () => {
     expect(help).toMatchObject({ status: "reply" });
     if (help.status === "reply") {
       expect(help.text).toContain("/rulemute <chatId> [seconds|reset]");
+    }
+  });
+
+  it("lets one chat shorten verification and uses that window for /captcha", async () => {
+    const deps = kit();
+    const scoped = directory(["-100"]);
+    const shown = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(shown).toMatchObject({
+      status: "reply",
+      command: "verifyfor",
+      text: "-100 验证 300 秒",
+    });
+    const set = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 120", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(set).toMatchObject({ text: "已设置 -100 验证 120 秒" });
+    const again = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(again).toMatchObject({ text: "-100 验证 120 秒" });
+    const other = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -200", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(other).toMatchObject({ text: "-200 验证 300 秒" });
+    const low = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 29", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(low).toMatchObject({ text: "参数无效" });
+    const still = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(still).toMatchObject({ text: "-100 验证 120 秒" });
+    const day = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 86400", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(day).toMatchObject({ text: "已设置 -100 验证 86400 秒" });
+    const tooLong = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 86401", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(tooLong).toMatchObject({ text: "参数无效" });
+    const kept = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(kept).toMatchObject({ text: "-100 验证 86400 秒" });
+    const reset = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 reset", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(reset).toMatchObject({ text: "已设置 -100 验证 300 秒" });
+    await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 120", direct: true }),
+      adminActorIds: ["42"],
+    });
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english).toMatchObject({ text: "Verification for -100 is 120s" });
+    const englishSet = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -300 90", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(englishSet).toMatchObject({
+      text: "Set verification for -300 to 90s",
+    });
+    const usage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 120 extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/verifyfor <chatId> [seconds|reset]",
+    });
+    const resetUsage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 reset extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(resetUsage).toMatchObject({
+      text: "用法：/verifyfor <chatId> [seconds|reset]",
+    });
+    const group = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 120" }),
+      adminActorIds: ["42"],
+    });
+    expect(group).toMatchObject({ status: "skip" });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/verifyfor -200 120",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const noisy = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: `/verifyfor -100 ${phrase}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+    });
+    expect(noisy).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(noisy)).not.toContain(phrase);
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100 90", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async setCaptchaTtl() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("captcha_ttl_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfor -100", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async getCaptchaTtl() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const store = memoryCaptcha();
+    const restricted: { chatId: string; durationSeconds: number }[] = [];
+    const challenged = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/captcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => "0123456789abcdef",
+      moderator: {
+        async restrictActor(target) {
+          restricted.push({
+            chatId: target.chatId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+    });
+    expect(challenged).toMatchObject({ text: "已要求验证 -100 77" });
+    expect(restricted).toEqual([{ chatId: "-100", durationSeconds: 120 }]);
+    expect((await store.get("local", "-100", "77"))?.expiresAt).toBe(
+      "2026-11-01T00:02:00.000Z",
+    );
+    const untouched: { durationSeconds: number }[] = [];
+    const failedChallenge = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/captcha -200 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: memoryCaptcha(),
+      clock: createFixedClock("2026-11-01T00:00:00.000Z"),
+      createNonce: () => "fedcba9876543210",
+      moderator: {
+        async restrictActor(target) {
+          untouched.push({ durationSeconds: target.durationSeconds });
+        },
+      },
+      runtime: {
+        ...deps.runtime,
+        async getCaptchaTtl() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(failedChallenge).toMatchObject({ text: "参数无效" });
+    expect(untouched).toEqual([]);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const help = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text).toContain("/verifyfor <chatId> [seconds|reset]");
     }
   });
 

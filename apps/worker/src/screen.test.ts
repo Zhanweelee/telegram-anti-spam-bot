@@ -2237,6 +2237,76 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(text);
   });
 
+  it("restricts a new member for that chat's verification window", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.setCaptchaTtl("local", "-100cap", 120)).toBe(true);
+    function join(chatId: string, id: string) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "chat_member",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "77", isAdmin: false },
+        membership: "join",
+      });
+    }
+    const moderator = createMemoryModerator();
+    const hit = await screenTelegramEvent(await join("-100cap", "cap_1"), {
+      runtime,
+      moderator,
+      captchaStore: createMemoryCaptchaStore(),
+      createNonce: () => "ab".repeat(8),
+      storage: createMemoryStorage(),
+      cache: createMemoryCache(),
+    });
+    expect(hit.decision.action).toBe("captcha");
+    expect(moderator.restricted).toEqual([
+      expect.objectContaining({
+        chatId: "-100cap",
+        actorId: "77",
+        durationSeconds: 120,
+      }),
+    ]);
+    const otherMod = createMemoryModerator();
+    const other = await screenTelegramEvent(await join("-200cap", "cap_2"), {
+      runtime,
+      moderator: otherMod,
+      captchaStore: createMemoryCaptchaStore(),
+      createNonce: () => "cd".repeat(8),
+      storage: createMemoryStorage(),
+      cache: createMemoryCache(),
+    });
+    expect(other.decision.action).toBe("captcha");
+    expect(otherMod.restricted).toEqual([
+      expect.objectContaining({ durationSeconds: 300 }),
+    ]);
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failedMod = createMemoryModerator();
+    const failed = await screenTelegramEvent(await join("-300cap", "cap_3"), {
+      logger,
+      moderator: failedMod,
+      captchaStore: createMemoryCaptchaStore(),
+      createNonce: () => "ef".repeat(8),
+      storage: createMemoryStorage(),
+      cache: createMemoryCache(),
+      runtime: {
+        ...broken,
+        async getCaptchaTtl() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(failed.decision.action).toBe("captcha");
+    expect(failedMod.restricted).toEqual([
+      expect.objectContaining({ durationSeconds: 300 }),
+    ]);
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+
   it("deletes a contact card URL and keeps the vCard out of logs", async () => {
     const phone = "13800138118";
     const path = "card118";

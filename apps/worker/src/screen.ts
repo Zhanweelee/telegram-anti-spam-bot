@@ -18,6 +18,7 @@ import { degradeRules, type QuotaPolicy, type QuotaStore } from "@tasb/cloud";
 import {
   type Action,
   type BlocklistStore,
+  CAPTCHA_TTL_SECONDS,
   type Cache,
   type CaptchaStore,
   type Clock,
@@ -310,6 +311,21 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let captchaTtlSeconds = CAPTCHA_TTL_SECONDS;
+  try {
+    const captchaTtl = await runtime.getCaptchaTtl(
+      event.tenantId,
+      event.chatId,
+    );
+    if (captchaTtl !== null) {
+      captchaTtlSeconds = captchaTtl;
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -480,7 +496,7 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.captcha,
         value: createCaptchaAction({
-          ttlSeconds: 300,
+          ttlSeconds: captchaTtlSeconds,
           createNonce: deps.createNonce ?? createCaptchaNonce,
           store: deps.captchaStore ?? workerCaptcha,
           clock: deps.clock ?? createSystemClock(),
