@@ -61,6 +61,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `call_notice` 在 `packages/detectors-call`。只在 `message.call` 是开始、结束或预约时返回 score 1。证据是 `call:` 加这一种。时长和开始时间不进证据。规则默认关闭。私聊 `/rule` 打开后删除视频聊天的开始、结束和预约。邀请名单不带这个标记。见 ADR 0475。
 
+`chat_title` 在 `packages/detectors-title`。只在 `message.asTitle` 为 true 时返回 score 1。证据是 `title:rename`。新群名不进证据。规则默认关闭。私聊 `/rule` 打开后删除改名服务消息。换头像不带这个标记。见 ADR 0476。
+
 洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。同一条事件 id 在这个 key 最近 32 次计数里只计一次。见 ADR 0010、ADR 0050、ADR 0052、ADR 0338 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 
 链接检测在 `packages/detectors-link`。默认只认短链域名、denylist 和 IPv4 主机。`ReputationSource` 不传就不会发请求。本地已命中时也不调用它。超时或抛错记 `reputation_failed`，返回 null。证据里只留主机名。抽主机名之前的折叠，以及每种字段怎么留下主机名，见 [message-surface.md](message-surface.md)。`tg://join?invite=` 和 `tg://addlist?slug=` 记成 `t.me` 邀请。`tg://resolve` 仍当公开用户名。邀请码不进证据。见 ADR 0102。

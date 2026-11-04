@@ -93,6 +93,8 @@ export const messageSchema = z
     asGiveaway: z.literal(true).optional(),
     /** Video-chat service line. Durations and start times stay out. */
     call: z.enum(["started", "ended", "scheduled"]).optional(),
+    /** Chat was renamed. The new name stays out. */
+    asTitle: z.literal(true).optional(),
   })
   .refine(
     (message) =>

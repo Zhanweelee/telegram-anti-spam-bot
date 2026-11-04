@@ -161,6 +161,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> call_notice on` 删这个群里视频聊天的开始、结束和预约。默认关闭。邀请名单仍留下。见 ADR 0475。
 
+`/rule <chatId> chat_title on` 删这个群里的改名服务消息。默认关闭。新群名不进证据，群名本身不变。见 ADR 0476。
+
 ## 确认
 
 ```sh

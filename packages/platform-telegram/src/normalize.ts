@@ -145,6 +145,7 @@ async function messageEvent(
   const asLocation = bareLocation(message);
   const asGiveaway = sharedGiveaway(message);
   const call = callNotice(message);
+  const asTitle = renamedChat(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -179,8 +180,16 @@ async function messageEvent(
       ...(asLocation ? { asLocation: true as const } : {}),
       ...(asGiveaway ? { asGiveaway: true as const } : {}),
       ...(call === undefined ? {} : { call }),
+      ...(asTitle ? { asTitle: true as const } : {}),
     },
   });
+}
+
+function renamedChat(message: Record<string, unknown>): boolean {
+  return (
+    typeof message.new_chat_title === "string" &&
+    message.new_chat_title.length > 0
+  );
 }
 
 function callNotice(

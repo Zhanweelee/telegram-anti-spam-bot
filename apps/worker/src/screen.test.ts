@@ -4701,6 +4701,149 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("991442");
   });
 
+  it("keeps a renamed chat until that chat asks", async () => {
+    const title = "改名广告标题";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      renamed?: boolean;
+      blank?: boolean;
+      photo?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.renamed ? { new_chat_title: title } : {}),
+            ...(input.blank ? { new_chat_title: "" } : {}),
+            ...(input.photo
+              ? {
+                  new_chat_photo: [
+                    {
+                      file_id: "wallfile4993",
+                      file_unique_id: "uniq4993",
+                      width: 1,
+                      height: 1,
+                    },
+                  ],
+                }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7400,
+      chatId: -100770,
+      renamed: true,
+    });
+    expect(idle.message?.asTitle).toBe(true);
+    expect(idle.message?.text).toBe("");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "chat_title",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["chat_title"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7401, chatId: -100771, renamed: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("chat_title");
+    expect(removed.decision.ruleIds).toContain("chat_title");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "title:rename" },
+    ]);
+    const blank = await screenTelegramEvent(
+      await posted({ updateId: 7402, chatId: -100772, blank: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(blank.decision.action).toBe("allow");
+    const photo = await screenTelegramEvent(
+      await posted({ updateId: 7403, chatId: -100773, photo: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(photo.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7404,
+        chatId: -100774,
+        renamed: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      blank: blank.decision,
+      photo: photo.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain("wallfile4993");
+    expect(dumped).not.toContain("uniq4993");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";
