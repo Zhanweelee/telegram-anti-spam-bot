@@ -1444,6 +1444,77 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("deletes a chat photo and drops the file id", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const fileId = "AgADBAAD";
+    await handleIncomingEvent(
+      await incoming({ text: "/delphoto -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: true,
+              title: phrase,
+              photo: [{ file_id: fileId }],
+              invite_link: "https://t.me/+AbCdEfGhIjKlMnOp",
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求删除 -100 的头像。标题和简介还在。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["deleteChatPhoto"]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      photo?: string;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.photo).toBeUndefined();
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(fileId);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("t.me/+");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(fileId);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/delphoto -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/delphoto -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

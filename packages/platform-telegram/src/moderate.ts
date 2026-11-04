@@ -506,6 +506,18 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async deletePhoto(target) {
+      await postTelegram({
+        token: input.token,
+        method: "deleteChatPhoto",
+        fetchImpl: input.fetchImpl,
+        missing: "delphoto_unavailable",
+        failed: "delphoto_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+    },
   };
 }
 

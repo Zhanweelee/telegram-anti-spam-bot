@@ -44,6 +44,13 @@ describe("operator command example", () => {
     expect(help).toContain("/pin");
     expect(help).toContain("/unpinmsg");
     expect(help).toContain("/unreact");
+    expect(help).toContain("/delphoto");
+    const photo = await runPrivateCommand({
+      text: "/delphoto -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(photo).toBe("已请求删除 -100 的头像。标题和简介还在。");
     const unreacted = await runPrivateCommand({
       text: "/unreact -100 55 77",
       actorId: "42",

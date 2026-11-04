@@ -4089,6 +4089,121 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("deletes a chat photo and leaves the title", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/delphoto -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deletePhoto(target) {
+          seen.push(target.chatId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求删除 -100 的头像。标题和简介还在。",
+    });
+    expect(seen).toEqual(["-100"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/delphoto <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/delphoto -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async deletePhoto() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to delete the photo of -100. The title and description stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/delphoto -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deletePhoto() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/delphoto", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/delphoto <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/delphoto -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deletePhoto() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/delphoto <chatId>" });
+    expect(seen).toEqual(["-100"]);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/delphoto ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deletePhoto() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/delphoto -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/delphoto -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deletePhoto() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"delphoto"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/delphoto -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deletePhoto() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

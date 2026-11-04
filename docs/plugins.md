@@ -111,6 +111,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/unreact <chatId> <messageId> <actorId>` 调用 `removeReaction`。配了 token 时使用 `deleteMessageReaction`。正数编号带 `user_id`，负数编号带 `actor_chat_id`。不传表情。别人的反应还在。其它消息上的反应还在。少一个参数不发出请求。没有 token、消息号不合法或调用失败时回复「参数无效」，不把内存记录当成已经撤下。不调用 `deleteAllMessageReactions`，也不改黑名单、封禁或禁言。见 ADR 0389。
 
+`/delphoto <chatId>` 调用 `deletePhoto`。配了 token 时使用 `deleteChatPhoto`，只带群号。标题和简介还在。不上传新头像，也不读文件号。多出来的参数不发出请求。没有 token、群号不合法或调用失败时回复「参数无效」，不把内存记录当成已经删除。不调用 `setChatPhoto`，也不改黑名单、封禁或禁言。见 ADR 0390。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

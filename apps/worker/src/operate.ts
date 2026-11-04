@@ -97,6 +97,9 @@ function commandModerator(
     async removeReaction() {
       throw new Error("unreact_unavailable");
     },
+    async deletePhoto() {
+      throw new Error("delphoto_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

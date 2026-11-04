@@ -171,6 +171,8 @@ export const messageKeys = [
   "command.unpinmsg.done",
   "command.unreact.usage",
   "command.unreact.done",
+  "command.delphoto.usage",
+  "command.delphoto.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -231,6 +233,7 @@ const syntax = [
   "/pin <chatId> <messageId>",
   "/unpinmsg <chatId> <messageId>",
   "/unreact <chatId> <messageId> <actorId>",
+  "/delphoto <chatId>",
 ].join("\n");
 
 const zh = {
@@ -426,6 +429,8 @@ const zh = {
   "command.unreact.usage": "用法：/unreact <chatId> <messageId> <actorId>",
   "command.unreact.done":
     "已请求撤下 {actorId} 在 {chatId} 消息 {messageId} 上的反应。别人的反应还在。其它消息上的反应还在。",
+  "command.delphoto.usage": "用法：/delphoto <chatId>",
+  "command.delphoto.done": "已请求删除 {chatId} 的头像。标题和简介还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -633,6 +638,9 @@ const en = {
   "command.unreact.usage": "Usage: /unreact <chatId> <messageId> <actorId>",
   "command.unreact.done":
     "Asked to remove the reaction of {actorId} on message {messageId} of {chatId}. Other people's reactions stay. Reactions on other messages stay.",
+  "command.delphoto.usage": "Usage: /delphoto <chatId>",
+  "command.delphoto.done":
+    "Asked to delete the photo of {chatId}. The title and description stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
