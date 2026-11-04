@@ -464,6 +464,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readReactions() {
       throw new Error("reactions_unavailable");
     },
+    async readCommunity() {
+      throw new Error("community_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

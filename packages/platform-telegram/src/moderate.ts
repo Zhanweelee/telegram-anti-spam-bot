@@ -3,6 +3,7 @@ import type {
   BanTarget,
   BotIdentity,
   ChatAdministrator,
+  ChatCommunity,
   ChatGuard,
   DefaultAdministratorRights,
   DefaultChatPermissions,
@@ -391,6 +392,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readReactionAllowlist(chat, target.chatId);
+    },
+    async readCommunity(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "community_unavailable",
+        failed: "community_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readChatCommunity(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1204,6 +1218,48 @@ function readGuardBot(value: unknown): JoinBot {
     id: String(id),
     username: readJoinBotUsername(user.username),
   };
+}
+
+function readChatCommunity(body: unknown, chatId: string): ChatCommunity {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("community_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("community_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("community_failed");
+  }
+  return { id: readCommunityId(record.community) };
+}
+
+function readCommunityId(value: unknown): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("community_failed");
+  }
+  const community = value as Record<string, unknown>;
+  if (typeof community.name !== "string") {
+    throw new Error("community_failed");
+  }
+  const id = community.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+    throw new Error("community_failed");
+  }
+  const text = String(id);
+  if (!/^[1-9]\d{0,15}$/.test(text)) {
+    throw new Error("community_failed");
+  }
+  return text;
 }
 
 function readReactionAllowlist(

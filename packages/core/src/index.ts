@@ -181,6 +181,7 @@ export {
   type BotShortDescriptionQuery,
   type BotShortDescriptionTarget,
   type ChatAdministrator,
+  type ChatCommunity,
   type ChatDescriptionTarget,
   type ChatGuard,
   type ChatKind,

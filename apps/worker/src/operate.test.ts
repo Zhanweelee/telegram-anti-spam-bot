@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(75);
+    expect(body.commands).toHaveLength(76);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2860,9 +2860,13 @@ describe("handleIncomingEvent", () => {
       command: "joinbot",
       description: "/joinbot <chatId>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "reactions")).toEqual({
       command: "reactions",
       description: "/reactions <chatId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "community",
+      description: "/community <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -5035,6 +5039,156 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/reactions -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the chat community and drops the name", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const invite = `https://t.me/+${phrase}`;
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                invite_link: invite,
+                community: { id: 82002, name: phrase },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "社区 82002"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
+    const none = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      {
+        ...none,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(none.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "社区 无"].join("\n"),
+    ]);
+    expect(JSON.stringify(none.reply.sent)).not.toContain(phrase);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, title: phrase, community: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const wide = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      {
+        ...wide,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                invite_link: invite,
+                community: { id: 82002, name: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(invite);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/community -100", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",
