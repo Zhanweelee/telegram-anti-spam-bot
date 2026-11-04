@@ -106,6 +106,22 @@ export const repeatPolicyDocumentSchema = floodPolicyDocumentSchema;
 
 export type RepeatPolicy = FloodPolicy;
 
+/** Default rule mute: one hour. The manual /mute command keeps its own default. */
+export const MUTE_DURATION_SECONDS = 60 * 60;
+export const MIN_MUTE_DURATION_SECONDS = 30;
+export const MAX_MUTE_DURATION_SECONDS = 366 * 24 * 60 * 60;
+
+/** One automatic mute length per chat. A bad document is ignored by the adapter. */
+export const muteDurationDocumentSchema = z.strictObject({
+  seconds: z
+    .number()
+    .int()
+    .min(MIN_MUTE_DURATION_SECONDS)
+    .max(MAX_MUTE_DURATION_SECONDS),
+});
+
+export type MuteDurationDocument = z.output<typeof muteDurationDocumentSchema>;
+
 /** Extra keywords for one chat. The built-in list stays in the detector. */
 export const MAX_CHAT_KEYWORDS = 32;
 
@@ -233,4 +249,17 @@ export interface RuntimeStore {
     policy: RepeatPolicy,
   ): Promise<boolean>;
   clearRepeatPolicy(tenantId: string, chatId: string): Promise<void>;
+  /** Null when rule mute still lasts one hour. */
+  getMuteDuration(tenantId: string, chatId: string): Promise<number | null>;
+  /**
+   * Returns false when the seconds are outside 30 to 366 days, or a new chat
+   * would exceed the memory cap. 3600 clears the row. Updating a chat that is
+   * already stored still succeeds.
+   */
+  setMuteDuration(
+    tenantId: string,
+    chatId: string,
+    seconds: number,
+  ): Promise<boolean>;
+  clearMuteDuration(tenantId: string, chatId: string): Promise<void>;
 }

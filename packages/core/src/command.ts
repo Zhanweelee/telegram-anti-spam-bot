@@ -81,6 +81,9 @@ import {
   FLOOD_THRESHOLD,
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
+  MAX_MUTE_DURATION_SECONDS,
+  MIN_MUTE_DURATION_SECONDS,
+  MUTE_DURATION_SECONDS,
   REPEAT_THRESHOLD,
   REPEAT_WINDOW_SECONDS,
   type RepeatPolicy,
@@ -192,6 +195,7 @@ const COMMAND_NAMES = [
   "flood",
   "keyword",
   "repeat",
+  "rulemute",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -551,6 +555,8 @@ async function dispatch(
       return editKeyword(input, args);
     case "repeat":
       return editRepeat(input, args);
+    case "rulemute":
+      return editRuleMute(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5896,6 +5902,133 @@ function rejectRepeat(input: OperatorCommandInput): void {
     chatId: input.event.chatId,
     command: "repeat",
   });
+}
+
+async function editRuleMute(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 2) {
+    return say(input, "command.rulemute.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatRuleMute(input, chatId);
+  }
+  if (requested === "reset") {
+    const cleared = await removeMuteDuration(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.rulemute.done", {
+      chatId,
+      seconds: MUTE_DURATION_SECONDS,
+    });
+  }
+  const seconds = parseRuleMuteSeconds(requested);
+  if (seconds === undefined) {
+    return say(input, "command.invalid");
+  }
+  const saved = await writeMuteDuration(input, chatId, seconds);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("mute_duration_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "rulemute",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.rulemute.done", { chatId, seconds });
+}
+
+async function formatRuleMute(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const seconds = await readMuteDuration(input, chatId);
+  if (seconds === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.rulemute.show", {
+    chatId,
+    seconds: seconds ?? MUTE_DURATION_SECONDS,
+  });
+}
+
+async function readMuteDuration(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<number | null | undefined> {
+  try {
+    return await input.runtime.getMuteDuration(input.event.tenantId, chatId);
+  } catch {
+    rejectRuleMute(input);
+    return undefined;
+  }
+}
+
+async function writeMuteDuration(
+  input: OperatorCommandInput,
+  chatId: string,
+  seconds: number,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setMuteDuration(
+      input.event.tenantId,
+      chatId,
+      seconds,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectRuleMute(input);
+    return "invalid";
+  }
+}
+
+async function removeMuteDuration(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearMuteDuration(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectRuleMute(input);
+    return false;
+  }
+}
+
+function rejectRuleMute(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "rulemute",
+  });
+}
+
+function parseRuleMuteSeconds(value: string): number | undefined {
+  if (!/^[1-9]\d{0,7}$/.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (
+    seconds < MIN_MUTE_DURATION_SECONDS ||
+    seconds > MAX_MUTE_DURATION_SECONDS
+  ) {
+    return undefined;
+  }
+  return seconds;
 }
 
 async function editKeyword(

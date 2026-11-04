@@ -433,6 +433,52 @@ describe("memory adapter", () => {
     expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
   });
 
+  it("keeps a rule mute duration apart from repeat policy", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.getMuteDuration("tenant_a", "chat_1")).toBeNull();
+    expect(
+      await runtime.setRepeatPolicy("tenant_a", "chat_1", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(true);
+    expect(await runtime.setMuteDuration("tenant_a", "chat_1", 120)).toBe(true);
+    expect(await runtime.getMuteDuration("tenant_a", "chat_1")).toBe(120);
+    expect(await runtime.getMuteDuration("tenant_a", "chat_2")).toBeNull();
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+    expect(await runtime.setMuteDuration("tenant_a", "chat_1", 3600)).toBe(
+      true,
+    );
+    expect(await runtime.getMuteDuration("tenant_a", "chat_1")).toBeNull();
+    expect(await runtime.setMuteDuration("tenant_a", "chat_1", 29)).toBe(false);
+    expect(await runtime.setMuteDuration("tenant_a", "chat_1", 31622401)).toBe(
+      false,
+    );
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.setMuteDuration("tenant_a", `chat_${index}`, 120),
+      ).toBe(true);
+    }
+    expect(await runtime.setMuteDuration("tenant_a", "overflow", 120)).toBe(
+      false,
+    );
+    expect(await runtime.setMuteDuration("tenant_a", "overflow", 3600)).toBe(
+      true,
+    );
+    expect(await runtime.getMuteDuration("tenant_a", "overflow")).toBeNull();
+    await runtime.clearMuteDuration("tenant_a", "chat_0");
+    expect(await runtime.setMuteDuration("tenant_a", "overflow", 90)).toBe(
+      true,
+    );
+    expect(await runtime.getRepeatPolicy("tenant_a", "chat_1")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

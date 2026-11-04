@@ -31,6 +31,7 @@ import {
   type Logger,
   loadPolicy,
   type ModerationPort,
+  MUTE_DURATION_SECONDS,
   type Notifier,
   type PipelineResult,
   type PolicyStore,
@@ -294,6 +295,21 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let muteDurationSeconds = MUTE_DURATION_SECONDS;
+  try {
+    const muteDuration = await runtime.getMuteDuration(
+      event.tenantId,
+      event.chatId,
+    );
+    if (muteDuration !== null) {
+      muteDurationSeconds = muteDuration;
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -436,7 +452,7 @@ export async function screenTelegramEvent(
       {
         source: "builtin",
         manifest: builtinManifests.mute,
-        value: createMuteAction({ durationSeconds: 60 * 60 }),
+        value: createMuteAction({ durationSeconds: muteDurationSeconds }),
       },
       {
         source: "builtin",

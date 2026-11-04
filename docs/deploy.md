@@ -73,6 +73,8 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 `/repeat <chatId> [count [seconds]|reset]` 改这个群的重复窗口。不设置时仍是 60 秒 3 条。只写条数时秒数保持现状。写成 3 和 60，或 `reset`，都回到默认。条数是 2 到 32，秒数是 1 到 300。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，重启后回到默认。配了之后写进 `runtime-repeat` 键，重启还在。见 ADR 0010 和 ADR 0462。
 
+`/rulemute <chatId> [seconds|reset]` 改这个群在规则命中后的禁言时长。不设置时仍是 3600 秒。写成 3600，或 `reset`，都回到默认。秒数是 30 到 366 天。私聊 `/mute` 不写秒数时仍是 3600 秒。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，重启后回到默认。配了之后写进 `runtime-mute` 键，重启还在。见 ADR 0004 和 ADR 0463。
+
 配了 `DB` 之后，入群验证的挑战写在同一份 D1 里。另一个 isolate 收到按钮时仍能对上 nonce。没配 `DB` 时挑战留在 isolate 内存，重启后丢失。Cron 只删除已经到期的行，一次最多 64 条，不提前解除 Telegram 限制。表用 `CREATE TABLE IF NOT EXISTS`，再执行一次迁移只会补上缺的表。不新增绑定。见 ADR 0009 和 ADR 0051。
 
 哪些可见字段会进检测，写在 [message-surface.md](message-surface.md)。
