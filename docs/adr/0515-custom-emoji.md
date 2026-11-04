@@ -1,0 +1,39 @@
+# ADR 0515：自定义表情按群删除
+
+- 状态：已接受
+- 日期：2026-11-05
+
+## 背景
+
+自定义表情的编号和看得见的字可以不同。投票题干和投票选项只允许这种实体，所以编号是那里唯一的隐藏内容。ADR 0126 已经拒绝把编号抄进事件。富文本的替代文字仍是正文。普通消息上的按标识提及由 `text_mention` 决定。打开那条规则不会删除自定义表情。
+
+日期时间的 Unix 时间仍留在事件外面。论坛话题图标编号仍由 `topic_notice` 表示话题本身。
+
+## 决策
+
+- `entities`、`caption_entities`、投票 `question_entities`、投票 `explanation_entities`、投票选项 `text_entities`、清单 `title_entities`、清单任务 `text_entities`、礼物 `entities`、游戏 `text_entities`，或富文本里 `type` 正好是 `custom_emoji`，并且 `custom_emoji_id` 去掉空白后非空时，事件带 `asCustomEmoji: true`。
+- 空白、布尔值和缺编号不带这个标记。加粗不带。按标识提及不带。手动引用不带。日期时间不带。论坛话题的 `icon_custom_emoji_id` 不带。
+- 编号不进事件，也不进证据。看得见的字和替代文字仍是正文。已有 `text` 或 `caption` 时正文不变，编号不并进去。
+- 检测器在 `@tasb/detector-emoji`，id 是 `custom_emoji`。只在 `message.asCustomEmoji` 为 true 时返回 score 1。证据是 `entity:custom_emoji`。
+- 默认规则关闭。私聊 `/rule <chatId> custom_emoji on` 之后删除这种正文，`off` 回到留下。
+- 不并进 `text_mention`。不调用 `getCustomEmojiStickers`。付费帖仍不删除。
+- 不新增命令。菜单仍是 99 条。
+- 不改 ADR 0026 的基础检测器名单。`custom_emoji` 不在里面。
+
+## 备选
+
+| 方案 | 放弃原因 |
+| --- | --- |
+| 并进按标识提及 | 只想删点名的群会把表情也删掉。 |
+| 把编号接到正文后面 | 同一条消息的哈希会变，编号也会进事件。 |
+| 把编号写进证据 | 编号不进事件。 |
+| 默认打开 | 有的群会用自定义表情。打开之前不改现有群。 |
+| 新命令 `/emoji` | 菜单还剩 1 个位置，留给以后的操作命令。 |
+
+## 后果
+
+- 规则关闭时，自定义表情留下。看得见的字和替代文字仍参与关键词。编号仍不进事件。
+- 打开 `custom_emoji` 后，这个群里的这种表情会删除。打开 `text_mention` 仍不删除它。付费帖仍留下。
+- 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `custom_emoji` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
+- `chats.json` 整份替换的群要自己加上 `custom_emoji`，否则 `/rule` 会拒绝。
+- 30 天保留期没有改。

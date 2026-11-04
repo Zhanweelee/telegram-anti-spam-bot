@@ -65,6 +65,7 @@ import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
 import { createCreatedDetector } from "@tasb/detector-created";
 import { createDeclineDetector } from "@tasb/detector-decline";
+import { createCustomEmojiDetector } from "@tasb/detector-emoji";
 import { createFolderDetector } from "@tasb/detector-folder";
 import { createForumDetector } from "@tasb/detector-forum";
 import {
@@ -765,6 +766,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.textMention,
         value: createTextMentionDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.customEmoji,
+        value: createCustomEmojiDetector(),
       },
       {
         source: "builtin",

@@ -1,0 +1,5 @@
+{
+  "detector": "custom_emoji",
+  "precision": 1,
+  "recall": 1
+}
