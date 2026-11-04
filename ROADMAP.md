@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-405 共用编号的商业和访客会话先忽略 — done
+
+验收：`message` 或 `edited_message` 上 `business_connection_id` 或 `guest_query_id` 是长度大于 0 的字符串时，在读取正文、主机名和摘要之前忽略。空字符串仍收成普通消息。不是字符串的值不忽略，也不写进事件。只含空白的字符串同样忽略。独立的 `business_message`、`edited_business_message`、`deleted_business_messages`、`guest_message` 和 `stopped_message_generation` 继续忽略。连接编号、访客查询编号、草稿编号和正文不进事件，也不进日志。示例 webhook 返回 `{ "ok": true, "ignored": true }`，`events` 为空。不新增命令。不调用 `getBusinessConnection`。不开始审核 `channel_post`。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-404 机器人还不能管理时私聊提醒 — done
 
 验收：群和超级群的 `my_chat_member` 仍把目录记成 `admin` 或 `gone`。普通成员，以及 `restricted` 且 `is_member` 为 true 或缺了这个字段，事件另带 `botSeat: "in"`，目录清掉这一群，并给操作者发一条私聊。`is_member` 为 false 或不是布尔值时不带这个标记，也不发。`left` 和 `kicked` 不发。`creator` 的删除和限制都记成 on，不读 `can_*`。`administrator` 只在 `can_delete_messages` 和 `can_restrict_members` 都是布尔值时写入；缺一个或不是布尔值时两个都不写，事件仍是 `admin`，不发私聊。只缺删除、只缺限制、两条都缺时各发一句，正文带群 id，并指向私聊 `/cani`。两条都是 on 时不发。群 id 或操作者 id 不合规则时不发。没有回复端口时跳过。发送失败记 `bot_setup_notice_failed`，只带事件 id 和群 id，不写正文、异常文本和 token，目录不回滚。名字、用户名和群名不进事件。不新增命令，不调用 `promoteChatMember`，不改 `/cani`。规则、白名单、额度和 30 天保留期不动。
@@ -1852,6 +1856,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-405
+
+- 做了什么：商业连接和访客查询如果和某个对话共用同一个编号，这条消息在读正文前忽略。
+- 学到什么：Telegram 把这两种会话写成独立对话。按 `chat.id` 删除或封禁会打到另一段对话。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-404
 

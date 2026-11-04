@@ -117,6 +117,9 @@ async function messageEvent(
   if (!isRecord(message)) {
     return { status: "ignored" };
   }
+  if (foreignChat(message)) {
+    return { status: "ignored" };
+  }
   const chatId = nestedId(message.chat);
   const audienceId = positiveId(nestedId(message.receiver_user));
   const ephemeralId = positiveId(message.ephemeral_message_id);
@@ -160,6 +163,17 @@ async function messageEvent(
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
     },
   });
+}
+
+function foreignChat(message: Record<string, unknown>): boolean {
+  return (
+    nonEmptyString(message.business_connection_id) ||
+    nonEmptyString(message.guest_query_id)
+  );
+}
+
+function nonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.length > 0;
 }
 
 function forwardKind(
