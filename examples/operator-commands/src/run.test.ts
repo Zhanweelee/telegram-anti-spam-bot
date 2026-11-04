@@ -67,6 +67,7 @@ describe("operator command example", () => {
     expect(help).toContain("/menubutton <commands|default>");
     expect(help).toContain("/button");
     expect(help).toContain("/botname [name]");
+    expect(help).toContain("/myname");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -226,6 +227,12 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(buttonState).toBe("参数无效");
+    const currentName = await runPrivateCommand({
+      text: "/myname",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(currentName).toBe("参数无效");
     const topic = await runPrivateCommand({
       text: "/newtopic -100 hello",
       actorId: "42",

@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(65);
+    expect(menu).toHaveLength(66);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7326,9 +7326,13 @@ describe("runOperatorCommand", () => {
       command: "button",
       description: "/button",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "botname")).toEqual({
       command: "botname",
       description: "/botname [name]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "myname",
+      description: "/myname",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -8313,6 +8317,165 @@ describe("runOperatorCommand", () => {
     });
     expect(called).toBe(false);
     expect(foreignLong).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the default bot name", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const names = [phrase, "", "Ada"] as const;
+    const remember = {
+      async readBotName(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+        return names[seen.length - 1] ?? "";
+      },
+    };
+    const named = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(named).toMatchObject({ text: `名字 ${phrase}` });
+    expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({ text: "名字 空" });
+    const short = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "名字 Ada" });
+    expect(seen).toHaveLength(3);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/myname");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotName() {
+          return phrase;
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: `name ${phrase}` });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotName() {
+          return "";
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({ text: "name empty" });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/myname", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotName() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/myname extra more", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotName() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/myname" });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/myname ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotName() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/myname", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotName() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"myname"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/myname",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotName() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/myname ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotName() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
     expect(seen).toHaveLength(3);
   });
 

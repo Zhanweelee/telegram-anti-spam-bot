@@ -337,6 +337,10 @@ export interface BotNameTarget {
   readonly name: string;
 }
 
+export interface BotNameQuery {
+  readonly tenantId: string;
+}
+
 export interface MenuCommandSnapshot {
   readonly command: string;
   readonly description: string;
@@ -380,6 +384,7 @@ export interface ModerationPort {
     query: CommandMenuQuery,
   ): Promise<readonly MenuCommandSnapshot[]>;
   readMenuButton(query: MenuButtonQuery): Promise<MenuButtonState>;
+  readBotName(query: BotNameQuery): Promise<string>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;

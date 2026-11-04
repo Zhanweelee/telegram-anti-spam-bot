@@ -228,6 +228,9 @@ export const messageKeys = [
   "command.button.web_app",
   "command.botname.done",
   "command.botname.cleared",
+  "command.myname.usage",
+  "command.myname.body",
+  "command.myname.empty",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -311,6 +314,7 @@ const syntax = [
   "/menubutton <commands|default>",
   "/button",
   "/botname [name]",
+  "/myname",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -595,6 +599,9 @@ const zh = {
     "已请求设置这个 bot 的名字。已有单独语言名字的人不受影响。",
   "command.botname.cleared":
     "已请求清掉这个 bot 的默认名字。已有单独语言名字的人不受影响。",
+  "command.myname.usage": "用法：/myname",
+  "command.myname.body": "名字 {name}",
+  "command.myname.empty": "名字 空",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -888,6 +895,9 @@ const en = {
     "Asked to set this bot's name. People who already have a language-specific name are unchanged.",
   "command.botname.cleared":
     "Asked to clear this bot's default name. People who already have a language-specific name are unchanged.",
+  "command.myname.usage": "Usage: /myname",
+  "command.myname.body": "name {name}",
+  "command.myname.empty": "name empty",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -112,6 +112,9 @@ describe("delete action", () => {
           async readMenuButton() {
             throw new Error("button_unavailable");
           },
+          async readBotName() {
+            throw new Error("myname_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -227,6 +230,9 @@ describe("delete action", () => {
         },
         async readMenuButton() {
           throw new Error("button_unavailable");
+        },
+        async readBotName() {
+          throw new Error("myname_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -345,6 +351,9 @@ describe("delete action", () => {
         },
         async readMenuButton() {
           throw new Error("button_unavailable");
+        },
+        async readBotName() {
+          throw new Error("myname_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -465,6 +474,9 @@ function ports(): ModerationPort & {
     },
     async readMenuButton() {
       throw new Error("button_unavailable");
+    },
+    async readBotName() {
+      throw new Error("myname_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");
