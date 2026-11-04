@@ -936,6 +936,61 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads a member count and drops every other chat field", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: 42 }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.readMemberCount({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toBe(42);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChatMemberCount`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      invite_link?: string;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.invite_link).toBeUndefined();
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    const fractional: typeof fetch = async () =>
+      new Response(JSON.stringify({ ok: true, result: 1.5 }), { status: 200 });
+    await expect(
+      createTelegramModerator({ token, fetchImpl: fractional }).readMemberCount(
+        { tenantId: "local", chatId: "-100" },
+      ),
+    ).rejects.toThrow("count_failed");
+    const negative: typeof fetch = async () =>
+      new Response(JSON.stringify({ ok: true, result: -1 }), { status: 200 });
+    await expect(
+      createTelegramModerator({ token, fetchImpl: negative }).readMemberCount({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("count_failed");
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readMemberCount({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("count_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

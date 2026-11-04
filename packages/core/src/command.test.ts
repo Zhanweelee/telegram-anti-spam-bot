@@ -3509,6 +3509,134 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("reports a chat member count", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/count -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteMessage() {
+          throw new Error("called");
+        },
+        async readMemberCount(target) {
+          seen.push(target.chatId);
+          return 42;
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "-100 有 42 人" });
+    expect(seen).toEqual(["-100"]);
+    const empty = await runOperatorCommand({
+      event: event({ text: "/count -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberCount() {
+          return 0;
+        },
+      },
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "-100 有 0 人" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/count <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/count -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readMemberCount() {
+          return 42;
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "-100 has 42 members" });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/count -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberCount() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/count", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/count <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/count -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/count <chatId>" });
+    expect(seen).toEqual(["-100"]);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/count ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/count -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/count -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberCount() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"count"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/count -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readMemberCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

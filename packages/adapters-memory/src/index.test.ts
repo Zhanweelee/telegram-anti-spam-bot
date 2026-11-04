@@ -234,4 +234,11 @@ describe("memory adapter", () => {
       { tenantId: "t", chatId: "c", threadId: "55" },
     ]);
   });
+
+  it("does not invent a member count", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readMemberCount({ tenantId: "t", chatId: "c" }),
+    ).rejects.toThrow("count_unavailable");
+  });
 });

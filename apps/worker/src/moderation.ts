@@ -51,6 +51,9 @@ function createOpenModerator(): ModerationPort {
     async readAdministrators() {
       throw new Error("admins_unavailable");
     },
+    async readMemberCount() {
+      throw new Error("count_unavailable");
+    },
     clearReactions: (target) => memory.clearReactions(target),
     revokeInvite: (target) => memory.revokeInvite(target),
     unpinChat: (target) => memory.unpinChat(target),

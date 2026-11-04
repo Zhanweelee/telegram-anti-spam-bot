@@ -163,6 +163,8 @@ export const messageKeys = [
   "command.showgeneral.done",
   "command.deltopic.usage",
   "command.deltopic.done",
+  "command.count.usage",
+  "command.count.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -219,6 +221,7 @@ const syntax = [
   "/hidegeneral <chatId>",
   "/showgeneral <chatId>",
   "/deltopic <chatId> <threadId>",
+  "/count <chatId>",
 ].join("\n");
 
 const zh = {
@@ -403,6 +406,8 @@ const zh = {
   "command.deltopic.usage": "用法：/deltopic <chatId> <threadId>",
   "command.deltopic.done":
     "已请求删除 {chatId} 话题 {threadId} 和里面的消息。其它话题不在这次里",
+  "command.count.usage": "用法：/count <chatId>",
+  "command.count.done": "{chatId} 有 {count} 人",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -599,6 +604,8 @@ const en = {
   "command.deltopic.usage": "Usage: /deltopic <chatId> <threadId>",
   "command.deltopic.done":
     "Asked to delete topic {threadId} of {chatId} and the messages inside it. Other topics are not part of this call.",
+  "command.count.usage": "Usage: /count <chatId>",
+  "command.count.done": "{chatId} has {count} members",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
