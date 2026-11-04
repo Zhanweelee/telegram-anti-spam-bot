@@ -570,6 +570,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setReaction(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setMessageReaction",
+        fetchImpl: input.fetchImpl,
+        missing: "react_unavailable",
+        failed: "react_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+          reaction: [{ type: "emoji", emoji: target.emoji }],
+        },
+      });
+    },
   };
 }
 

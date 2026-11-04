@@ -1407,6 +1407,52 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets one emoji reaction and keeps the other reactions", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setReaction({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "55",
+      emoji: "👍",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setMessageReaction`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      message_id: 55,
+      reaction: [{ type: "emoji", emoji: "👍" }],
+    });
+    expect(calls[0]?.body).not.toContain("is_big");
+    expect(calls[0]?.method).not.toContain("deleteMessageReaction");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setReaction({
+        tenantId: "local",
+        chatId: "-100",
+        messageId: "55",
+        emoji: "👍",
+      }),
+    ).rejects.toThrow("react_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

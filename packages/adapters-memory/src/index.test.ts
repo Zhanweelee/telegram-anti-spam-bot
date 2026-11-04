@@ -235,6 +235,21 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one set emoji reaction", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setReaction({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "55",
+      emoji: "👍",
+    });
+    expect(moderator.reactionsSet).toEqual([
+      { tenantId: "t", chatId: "c", messageId: "55", emoji: "👍" },
+    ]);
+    expect(JSON.stringify(moderator.reactionsSet)).not.toContain("is_big");
+    expect(JSON.stringify(moderator.reactionsSet)).not.toContain("custom");
+  });
+
   it("records a deleted group sticker set without the name", async () => {
     const moderator = createMemoryModerator();
     await moderator.deleteStickerSet({ tenantId: "t", chatId: "c" });

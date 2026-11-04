@@ -105,6 +105,7 @@ const COMMAND_NAMES = [
   "tag",
   "delstickers",
   "boosts",
+  "react",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -116,6 +117,82 @@ const TOKEN_LIMIT = 80;
 const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
+
+const REACTION_EMOJI = new Set<string>([
+  "\u2764",
+  "\ud83d\udc4d",
+  "\ud83d\udc4e",
+  "\ud83d\udd25",
+  "\ud83e\udd70",
+  "\ud83d\udc4f",
+  "\ud83d\ude01",
+  "\ud83e\udd14",
+  "\ud83e\udd2f",
+  "\ud83d\ude31",
+  "\ud83e\udd2c",
+  "\ud83d\ude22",
+  "\ud83c\udf89",
+  "\ud83e\udd29",
+  "\ud83e\udd2e",
+  "\ud83d\udca9",
+  "\ud83d\ude4f",
+  "\ud83d\udc4c",
+  "\ud83d\udd4a",
+  "\ud83e\udd21",
+  "\ud83e\udd71",
+  "\ud83e\udd74",
+  "\ud83d\ude0d",
+  "\ud83d\udc33",
+  "\u2764\u200d\ud83d\udd25",
+  "\ud83c\udf1a",
+  "\ud83c\udf2d",
+  "\ud83d\udcaf",
+  "\ud83e\udd23",
+  "\u26a1",
+  "\ud83c\udf4c",
+  "\ud83c\udfc6",
+  "\ud83d\udc94",
+  "\ud83e\udd28",
+  "\ud83d\ude10",
+  "\ud83c\udf53",
+  "\ud83c\udf7e",
+  "\ud83d\udc8b",
+  "\ud83d\udd95",
+  "\ud83d\ude08",
+  "\ud83d\ude34",
+  "\ud83d\ude2d",
+  "\ud83e\udd13",
+  "\ud83d\udc7b",
+  "\ud83d\udc68\u200d\ud83d\udcbb",
+  "\ud83d\udc40",
+  "\ud83c\udf83",
+  "\ud83d\ude48",
+  "\ud83d\ude07",
+  "\ud83d\ude28",
+  "\ud83e\udd1d",
+  "\u270d",
+  "\ud83e\udd17",
+  "\ud83e\udee1",
+  "\ud83c\udf85",
+  "\ud83c\udf84",
+  "\u2603",
+  "\ud83d\udc85",
+  "\ud83e\udd2a",
+  "\ud83d\uddff",
+  "\ud83c\udd92",
+  "\ud83d\udc98",
+  "\ud83d\ude49",
+  "\ud83e\udd84",
+  "\ud83d\ude18",
+  "\ud83d\udc8a",
+  "\ud83d\ude4a",
+  "\ud83d\ude0e",
+  "\ud83d\udc7e",
+  "\ud83e\udd37\u200d\u2642",
+  "\ud83e\udd37",
+  "\ud83e\udd37\u200d\u2640",
+  "\ud83d\ude21",
+]);
 
 export interface OperatorCommandInput {
   readonly event: Event;
@@ -163,6 +240,7 @@ export interface OperatorCommandInput {
       | "removeReaction"
       | "revokeInvite"
       | "setMemberTag"
+      | "setReaction"
       | "showGeneral"
       | "unbanActor"
       | "unbanSenderChat"
@@ -340,6 +418,8 @@ async function dispatch(
       return deleteGroupStickerSet(input, args);
     case "boosts":
       return showBoostCount(input, args);
+    case "react":
+      return setOneReaction(input, args);
   }
 }
 
@@ -2069,6 +2149,57 @@ function rejectBoosts(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "boosts",
+  });
+}
+
+async function setOneReaction(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 3) {
+    return say(input, "command.react.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  const emoji = args[2];
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    emoji === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId) ||
+    !REACTION_EMOJI.has(emoji)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setReaction;
+  if (!set) {
+    rejectReact(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+      emoji,
+    });
+  } catch {
+    rejectReact(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.react.done", { chatId, messageId, emoji });
+}
+
+function rejectReact(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "react",
   });
 }
 

@@ -49,6 +49,7 @@ describe("operator command example", () => {
     expect(help).toContain("/tag");
     expect(help).toContain("/delstickers");
     expect(help).toContain("/boosts");
+    expect(help).toContain("/react <chatId> <messageId> <emoji>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -190,6 +191,14 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(boosts).toBe("参数无效");
+    const reacted = await runPrivateCommand({
+      text: "/react -100 55 👍",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(reacted).toBe(
+      "已请求在 -100 的消息 55 上设置 👍。别人的反应还在。一组媒体里会落到还在的第一条。",
+    );
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",

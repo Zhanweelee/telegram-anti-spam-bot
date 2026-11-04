@@ -121,6 +121,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/boosts <chatId> <userId>` 调用 `readBoostCount`。配了 token 时使用 `getUserChatBoosts`，带群号和成员号。回复只有助推次数。0 也是次数。名字、助推号和到期时间不进回复。少一个编号不发出请求。没有 token、编号不合法或调用失败时回复「参数无效」，不编一个数字。不改黑名单、封禁或禁言。见 ADR 0394。
 
+`/react <chatId> <messageId> <emoji>` 调用 `setReaction`。配了 token 时使用 `setMessageReaction`，只送名单里的一个表情。不送 `is_big`，也不送自定义或付费反应。别人的反应还在。一组媒体会落到还在的第一条。少一个参数、变体选择符或名单外的表情都不发出请求。没有 token、消息号不合法或调用失败时回复「参数无效」，不把内存记录当成已经设置。不调用 `deleteMessageReaction`，也不改黑名单、封禁或禁言。见 ADR 0395。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。
