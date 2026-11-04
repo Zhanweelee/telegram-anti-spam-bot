@@ -52,6 +52,7 @@ describe("operator command example", () => {
     expect(help).toContain("/react <chatId> <messageId> <emoji>");
     expect(help).toContain("/title <chatId> <title>");
     expect(help).toContain("/desc <chatId> [description]");
+    expect(help).toContain("/newtopic <chatId> <name>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -193,6 +194,13 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(boosts).toBe("参数无效");
+    const topic = await runPrivateCommand({
+      text: "/newtopic -100 hello",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(topic).toBe("参数无效");
+    expect(topic).not.toContain("hello");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

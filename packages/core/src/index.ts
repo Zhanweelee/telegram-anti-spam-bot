@@ -188,6 +188,7 @@ export {
   type ModerationPort,
   type MuteTarget,
   type NamedForumTopicTarget,
+  type NewTopicTarget,
   type PermissionState,
   type PinnedMessageTarget,
   parseAuditQuery,

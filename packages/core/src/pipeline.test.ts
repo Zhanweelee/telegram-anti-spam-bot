@@ -173,6 +173,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readBoostCount() {
       throw new Error("boosts_unavailable");
     },
+    async createTopic() {
+      throw new Error("newtopic_unavailable");
+    },
     async clearReactions() {},
     async revokeInvite() {},
     async unpinChat() {},

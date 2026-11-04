@@ -235,6 +235,17 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent a forum topic id", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.createTopic({
+        tenantId: "t",
+        chatId: "c",
+        name: "请免费领取礼品",
+      }),
+    ).rejects.toThrow("newtopic_unavailable");
+  });
+
   it("records one changed chat description including an empty one", async () => {
     const moderator = createMemoryModerator();
     await moderator.setDescription({
