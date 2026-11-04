@@ -217,6 +217,8 @@ export const messageKeys = [
   "command.commands.usage",
   "command.commands.header",
   "command.commands.more",
+  "command.delcommands.usage",
+  "command.delcommands.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -296,6 +298,7 @@ const syntax = [
   "/botrights [channels]",
   "/setcommands [private]",
   "/commands [private]",
+  "/delcommands [private]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -564,6 +567,9 @@ const zh = {
   "command.commands.usage": "用法：/commands [private]",
   "command.commands.header": "命令 {count}",
   "command.commands.more": "+{count}",
+  "command.delcommands.usage": "用法：/delcommands [private]",
+  "command.delcommands.done":
+    "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -841,6 +847,9 @@ const en = {
   "command.commands.usage": "Usage: /commands [private]",
   "command.commands.header": "commands {count}",
   "command.commands.more": "+{count}",
+  "command.delcommands.usage": "Usage: /delcommands [private]",
+  "command.delcommands.done":
+    "Asked to clear the command menu in private chats. A higher-level menu will show. Group menus stay. People who already have a language-specific list are unchanged.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

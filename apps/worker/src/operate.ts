@@ -166,6 +166,9 @@ function commandModerator(
     async deleteMessages() {
       throw new Error("deletes_unavailable");
     },
+    async deleteCommandMenu() {
+      throw new Error("delcommands_unavailable");
+    },
     async declineJoin() {
       throw new Error("decline_unavailable");
     },

@@ -67,6 +67,7 @@ describe("delete action", () => {
             deleted.push(target);
           },
           async deleteMessages() {},
+          async deleteCommandMenu() {},
           async muteActor() {},
           async banActor() {},
           async banSenderChat() {},
@@ -177,6 +178,7 @@ describe("delete action", () => {
           deleted.push(target);
         },
         async deleteMessages() {},
+        async deleteCommandMenu() {},
         async muteActor() {},
         async banActor() {},
         async banSenderChat() {},
@@ -289,6 +291,7 @@ describe("delete action", () => {
           deleted.push(target);
         },
         async deleteMessages() {},
+        async deleteCommandMenu() {},
         async muteActor() {},
         async banActor() {},
         async banSenderChat() {},
@@ -399,6 +402,7 @@ function ports(): ModerationPort & {
     banned,
     async deleteMessage() {},
     async deleteMessages() {},
+    async deleteCommandMenu() {},
     async muteActor(target) {
       muted.push(target);
     },

@@ -328,6 +328,7 @@ export interface MenuCommandSnapshot {
 export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
   deleteMessages(target: DeleteMessagesTarget): Promise<void>;
+  deleteCommandMenu(query: CommandMenuQuery): Promise<void>;
   muteActor(target: MuteTarget): Promise<void>;
   banActor(target: BanTarget): Promise<void>;
   banSenderChat(target: SenderChatTarget): Promise<void>;

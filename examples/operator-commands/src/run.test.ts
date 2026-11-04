@@ -63,6 +63,7 @@ describe("operator command example", () => {
     expect(help).toContain("/botrights [channels]");
     expect(help).toContain("/setcommands [private]");
     expect(help).toContain("/commands [private]");
+    expect(help).toContain("/delcommands [private]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -290,6 +291,15 @@ describe("operator command example", () => {
       "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
     );
     expect(menu).not.toContain("/help");
+    const clearedMenu = await runPrivateCommand({
+      text: "/delcommands",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(clearedMenu).toBe(
+      "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
+    );
+    expect(clearedMenu).not.toContain("/help");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

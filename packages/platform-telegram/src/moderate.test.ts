@@ -1567,6 +1567,45 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("clears the private command menu without a language", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.deleteCommandMenu({ tenantId: "local" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/deleteMyCommands`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      scope: { type: "all_private_chats" },
+    });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(calls[0]?.body).not.toContain("commands");
+    expect(calls[0]?.method).not.toContain("setMyCommands");
+    expect(calls[0]?.method).not.toContain("getMyCommands");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).deleteCommandMenu({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("delcommands_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads the private command menu and drops extra fields", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

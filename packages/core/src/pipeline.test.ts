@@ -143,6 +143,7 @@ function harness(options?: { failStorage?: boolean }) {
       deleted.push(target);
     },
     async deleteMessages() {},
+    async deleteCommandMenu() {},
     async muteActor() {},
     async banActor() {},
     async banSenderChat() {},

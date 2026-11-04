@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(61);
+    expect(menu).toHaveLength(62);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7310,9 +7310,13 @@ describe("runOperatorCommand", () => {
       command: "setcommands",
       description: "/setcommands [private]",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "commands")).toEqual({
       command: "commands",
       description: "/commands [private]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "delcommands",
+      description: "/delcommands [private]",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -7655,6 +7659,149 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
+  it("clears the private command menu", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const remember = {
+      async deleteCommandMenu(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/delcommands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
+    });
+    expect(seen).toEqual([{ tenantId: "local", keys: ["tenantId"] }]);
+    expect(JSON.stringify(done)).not.toContain("/help");
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/delcommands private", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(named).toMatchObject({
+      text: "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
+    });
+    expect(seen[1]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/delcommands [private]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/delcommands", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: remember,
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to clear the command menu in private chats. A higher-level menu will show. Group menus stay. People who already have a language-specific list are unchanged.",
+    });
+    expect(seen).toHaveLength(3);
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/delcommands", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/delcommands private extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/delcommands [private]",
+    });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/delcommands ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/delcommands", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/delcommands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async deleteCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"delcommands"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/delcommands",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/delcommands ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async deleteCommandMenu() {
           throw new Error("called");
         },
       },
