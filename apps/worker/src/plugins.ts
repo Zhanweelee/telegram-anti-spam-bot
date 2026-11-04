@@ -307,6 +307,12 @@ export const builtinManifests = {
     integrity:
       "2af6f13de72b56377559c043f91c46559b7da2c4dcb1afc0f209e8932b2e271c",
   }),
+  groupCreated: manifest({
+    id: "group_created",
+    kind: "detector",
+    integrity:
+      "62920f4e40fe6772148d88af786e6c127e6d3c0e030aaa9060457f87c7ac3983",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

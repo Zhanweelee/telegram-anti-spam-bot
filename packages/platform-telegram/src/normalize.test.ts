@@ -20614,6 +20614,93 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a created group and leaves the sender out", async () => {
+    const actor = "建群的人";
+    const created = await normalize({
+      update_id: 4700,
+      message: {
+        message_id: 750,
+        date: 1761955200,
+        chat: { id: -100499700, type: "group" },
+        from: { id: 106, first_name: actor },
+        group_chat_created: true,
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.asGroupCreated).toBe(true);
+    expect(created.event.message?.text).toBe("");
+    expect(JSON.stringify(created.event)).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4701,
+      message: {
+        message_id: 751,
+        date: 1761955200,
+        chat: { id: -100499701, type: "group" },
+        from: { id: 106, first_name: actor },
+        text: "今天站会",
+        group_chat_created: true,
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asGroupCreated).toBe(true);
+
+    const supergroup = await normalize({
+      update_id: 4702,
+      message: {
+        message_id: 752,
+        date: 1761955200,
+        chat: { id: -100499702, type: "supergroup" },
+        from: { id: 106 },
+        supergroup_chat_created: true,
+      },
+    });
+    expect(supergroup.status).toBe("event");
+    if (supergroup.status !== "event") {
+      return;
+    }
+    expect(supergroup.event.message?.asGroupCreated).toBeUndefined();
+
+    const channel = await normalize({
+      update_id: 4703,
+      message: {
+        message_id: 753,
+        date: 1761955200,
+        chat: { id: -100499703, type: "channel" },
+        sender_chat: { id: -100499703, type: "channel" },
+        channel_chat_created: true,
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.asGroupCreated).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4704,
+      message: {
+        message_id: 754,
+        date: 1761955200,
+        chat: { id: -100499704, type: "group" },
+        from: { id: 106 },
+        group_chat_created: false,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asGroupCreated).toBeUndefined();
+  });
+
   it("marks a declined suggested post and keeps the comment", async () => {
     const comment = "拒绝说明广告";
     const original = "原建议帖广告";

@@ -166,6 +166,7 @@ async function messageEvent(
   const asChecklistAdded = addedChecklist(message);
   const topicNotice = changedTopic(message);
   const asPostDeclined = declinedPost(message);
+  const asGroupCreated = createdGroup(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -223,6 +224,7 @@ async function messageEvent(
       ...(asChecklistAdded ? { asChecklistAdded: true as const } : {}),
       ...(topicNotice === undefined ? {} : { topicNotice }),
       ...(asPostDeclined ? { asPostDeclined: true as const } : {}),
+      ...(asGroupCreated ? { asGroupCreated: true as const } : {}),
     },
   });
 }
@@ -245,6 +247,10 @@ function hasPollOptionText(value: unknown): boolean {
     typeof value.option_text === "string" &&
     value.option_text.length > 0
   );
+}
+
+function createdGroup(message: Record<string, unknown>): boolean {
+  return message.group_chat_created === true;
 }
 
 function declinedPost(message: Record<string, unknown>): boolean {

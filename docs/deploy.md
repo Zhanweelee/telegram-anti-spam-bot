@@ -205,6 +205,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> post_declined on` 删这个群里建议帖被拒绝的提示。默认关闭。原帖不进证据。拒绝说明仍参与关键词。没有说明时这行也会删除。通过、失败、付款和退款仍看 `post_notice`。见 ADR 0497。
 
+`/rule <chatId> group_created on` 删这个群里普通群刚建好的提示。默认关闭。发送者名字不进证据。超级群和频道的创建字段不带这个标记。入群和退群仍看 `service_notice`。见 ADR 0498。
+
 ## 确认
 
 ```sh

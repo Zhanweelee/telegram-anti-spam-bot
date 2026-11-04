@@ -5675,6 +5675,156 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a created group until that chat asks", async () => {
+    const actor = "建群的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      created?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "group" },
+            from: { id: 106, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.created ? { group_chat_created: true } : {}),
+            ...(input.flag ? { group_chat_created: false } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10490,
+      chatId: -1001090,
+      created: true,
+    });
+    expect(idle.message?.asGroupCreated).toBe(true);
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "group_created",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["group_created"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10491, chatId: -1001091, created: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("group_created");
+    expect(removed.decision.ruleIds).toContain("group_created");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "group:created" },
+    ]);
+    const noticeOnly: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "service_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const keptByNotice = await screenTelegramEvent(
+      await posted({ updateId: 10492, chatId: -1001092, created: true }),
+      {
+        source: noticeOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByNotice.decision.action).toBe("allow");
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10493, chatId: -1001093, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10494,
+        chatId: -1001094,
+        created: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByNotice: keptByNotice.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a declined suggested post until that chat asks", async () => {
     const comment = "拒绝说明广告";
     const original = "原建议帖广告";

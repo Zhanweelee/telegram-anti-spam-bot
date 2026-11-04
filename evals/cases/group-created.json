@@ -1,0 +1,18 @@
+[
+  {
+    "id": "group_created_spam",
+    "kind": "message",
+    "label": "spam",
+    "asGroupCreated": true
+  },
+  {
+    "id": "group_created_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "group_created_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
