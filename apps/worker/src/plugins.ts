@@ -259,6 +259,12 @@ export const builtinManifests = {
     integrity:
       "933a7f29b640ee65aad9d1ee03c532fe194ee191853a214126b2ff4b07493756",
   }),
+  checklistNotice: manifest({
+    id: "checklist_notice",
+    kind: "detector",
+    integrity:
+      "4c9709b19970ae3c61a32a5fced4e2302baaa9a9d5101a439bc5369d00d4b368",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

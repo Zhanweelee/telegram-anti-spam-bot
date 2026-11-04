@@ -36,6 +36,7 @@ export default defineConfig({
       "packages/detectors-autodelete",
       "packages/detectors-price",
       "packages/detectors-post",
+      "packages/detectors-checklist",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

@@ -20614,6 +20614,255 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a checklist notice and leaves the tasks out", async () => {
+    const title = "勾完的广告事项";
+    const actor = "勾任务的人";
+    const doneId = 90196;
+    const undoneId = 90197;
+    const done = await normalize({
+      update_id: 4590,
+      message: {
+        message_id: 650,
+        date: 1761955200,
+        chat: { id: -100499570, type: "supergroup" },
+        from: { id: 97, first_name: actor },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [doneId],
+          checklist_message: {
+            message_id: 1,
+            text: title,
+            chat: { id: 1, type: "private" },
+            date: 1,
+          },
+        },
+      },
+    });
+    expect(done.status).toBe("event");
+    if (done.status !== "event") {
+      return;
+    }
+    expect(done.event.message?.checklistNotice).toBe("done");
+    expect(done.event.message?.text).toBe("");
+    const doneDump = JSON.stringify(done.event);
+    expect(doneDump).not.toContain(title);
+    expect(doneDump).not.toContain(actor);
+    expect(doneDump).not.toContain(String(doneId));
+
+    const undone = await normalize({
+      update_id: 4591,
+      message: {
+        message_id: 651,
+        date: 1761955200,
+        chat: { id: -100499571, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: {
+          marked_as_not_done_task_ids: [undoneId],
+          checklist_message: { text: title },
+        },
+      },
+    });
+    expect(undone.status).toBe("event");
+    if (undone.status !== "event") {
+      return;
+    }
+    expect(undone.event.message?.checklistNotice).toBe("undone");
+    expect(JSON.stringify(undone.event)).not.toContain(String(undoneId));
+    expect(JSON.stringify(undone.event)).not.toContain(title);
+
+    const both = await normalize({
+      update_id: 4592,
+      message: {
+        message_id: 652,
+        date: 1761955200,
+        chat: { id: -100499572, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [doneId],
+          marked_as_not_done_task_ids: [undoneId],
+        },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.checklistNotice).toBe("done");
+
+    const fallthrough = await normalize({
+      update_id: 4593,
+      message: {
+        message_id: 653,
+        date: 1761955200,
+        chat: { id: -100499573, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [-1],
+          marked_as_not_done_task_ids: [undoneId],
+        },
+      },
+    });
+    expect(fallthrough.status).toBe("event");
+    if (fallthrough.status !== "event") {
+      return;
+    }
+    expect(fallthrough.event.message?.checklistNotice).toBe("undone");
+
+    const kept = await normalize({
+      update_id: 4594,
+      message: {
+        message_id: 654,
+        date: 1761955200,
+        chat: { id: -100499574, type: "supergroup" },
+        from: { id: 97 },
+        text: "今天站会",
+        checklist_tasks_done: { marked_as_done_task_ids: [doneId] },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.checklistNotice).toBe("done");
+    expect(kept.event.message?.text).toBe("今天站会");
+
+    const added = await normalize({
+      update_id: 4595,
+      message: {
+        message_id: 655,
+        date: 1761955200,
+        chat: { id: -100499575, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_added: {
+          tasks: [{ id: doneId, text: "新加的事项" }],
+          checklist_message: { text: title },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.checklistNotice).toBeUndefined();
+    expect(added.event.message?.text).toBe("新加的事项");
+    expect(JSON.stringify(added.event)).not.toContain(title);
+    expect(JSON.stringify(added.event)).not.toContain(String(doneId));
+
+    const empty = await normalize({
+      update_id: 4596,
+      message: {
+        message_id: 656,
+        date: 1761955200,
+        chat: { id: -100499576, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.checklistNotice).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4597,
+      message: {
+        message_id: 657,
+        date: 1761955200,
+        chat: { id: -100499577, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.checklistNotice).toBeUndefined();
+
+    const fractional = await normalize({
+      update_id: 4598,
+      message: {
+        message_id: 658,
+        date: 1761955200,
+        chat: { id: -100499578, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: { marked_as_done_task_ids: [1.5] },
+      },
+    });
+    expect(fractional.status).toBe("event");
+    if (fractional.status !== "event") {
+      return;
+    }
+    expect(fractional.event.message?.checklistNotice).toBeUndefined();
+
+    const named = await normalize({
+      update_id: 4599,
+      message: {
+        message_id: 659,
+        date: 1761955200,
+        chat: { id: -100499579, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: { marked_as_done_task_ids: ["90196"] },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.checklistNotice).toBeUndefined();
+
+    const zero = await normalize({
+      update_id: 4600,
+      message: {
+        message_id: 660,
+        date: 1761955200,
+        chat: { id: -100499580, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: { marked_as_done_task_ids: [0] },
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.checklistNotice).toBeUndefined();
+
+    const negative = await normalize({
+      update_id: 4601,
+      message: {
+        message_id: 661,
+        date: 1761955200,
+        chat: { id: -100499581, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: { marked_as_not_done_task_ids: [-3] },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.checklistNotice).toBeUndefined();
+
+    const blank = await normalize({
+      update_id: 4602,
+      message: {
+        message_id: 662,
+        date: 1761955200,
+        chat: { id: -100499582, type: "supergroup" },
+        from: { id: 97 },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [],
+          marked_as_not_done_task_ids: [],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.checklistNotice).toBeUndefined();
+  });
+
   it("marks a suggested-post notice and leaves the post out", async () => {
     const title = "建议帖广告正文";
     const actor = "过稿的人";
