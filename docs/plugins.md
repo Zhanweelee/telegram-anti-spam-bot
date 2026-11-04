@@ -155,6 +155,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/button` 调用 `readMenuButton`。配了 token 时使用 `getChatMenuButton`，不送 `chat_id`，所以读的是默认按钮。`commands` 写命令，`default` 写默认，`web_app` 写应用。按钮文字和地址不进回复。别的类型整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一个状态。不调用 `setChatMenuButton`。见 ADR 0411。
 
+`/botname [name]` 调用 `setBotName`。配了 token 时使用 `setMyName`。名字按空白折成一段，1 到 64 个字符才送出。不写名字时送空字符串，清掉默认名字。不送 `language_code`，所以已有单独语言名字的人不受影响。回复不重复名字。只有配置里的管理员可以改。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经设置。不调用 `getMyName`，也不改黑名单、封禁或禁言。见 ADR 0412。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

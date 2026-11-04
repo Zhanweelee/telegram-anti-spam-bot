@@ -127,6 +127,7 @@ const COMMAND_NAMES = [
   "delcommands",
   "menubutton",
   "button",
+  "botname",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -139,6 +140,7 @@ const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
+const BOT_NAME_LIMIT = 64;
 const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
 const STICKER_SET_NAME_LIMIT = 64;
@@ -275,6 +277,7 @@ export interface OperatorCommandInput {
       | "renameTopic"
       | "revokeInvite"
       | "setAdminTitle"
+      | "setBotName"
       | "setCommandMenu"
       | "setDefaultRights"
       | "setDescription"
@@ -494,6 +497,8 @@ async function dispatch(
       return setMenuButton(input, args);
     case "button":
       return showMenuButton(input, args);
+    case "botname":
+      return setBotName(input, args);
   }
 }
 
@@ -3187,6 +3192,42 @@ function rejectReadMenuButton(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "button",
+  });
+}
+
+async function setBotName(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const name = args.join(" ");
+  if (name.length > BOT_NAME_LIMIT) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const set = input.moderator?.setBotName;
+  if (!set) {
+    rejectBotName(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({ tenantId: input.event.tenantId, name });
+  } catch {
+    rejectBotName(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    name.length === 0 ? "command.botname.cleared" : "command.botname.done",
+  );
+}
+
+function rejectBotName(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "botname",
   });
 }
 

@@ -84,6 +84,7 @@ function moderator(
     async setDefaultRights() {},
     async setCommandMenu() {},
     async setMenuButton() {},
+    async setBotName() {},
     async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {

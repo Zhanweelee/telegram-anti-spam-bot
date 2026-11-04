@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(64);
+    expect(menu).toHaveLength(65);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7322,9 +7322,13 @@ describe("runOperatorCommand", () => {
       command: "menubutton",
       description: "/menubutton <commands|default>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "button")).toEqual({
       command: "button",
       description: "/button",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "botname",
+      description: "/botname [name]",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -8139,6 +8143,177 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
+  it("sets the bot name without a language", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; name: string; keys: readonly string[] }[] =
+      [];
+    const remember = {
+      async setBotName(target: { tenantId: string; name: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          name: target.name,
+          keys: Object.keys(target),
+        });
+      },
+    };
+    const named = await runOperatorCommand({
+      event: event({ text: `/botname ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(named).toMatchObject({
+      text: "已请求设置这个 bot 的名字。已有单独语言名字的人不受影响。",
+    });
+    expect(seen).toEqual([
+      { tenantId: "local", name: phrase, keys: ["tenantId", "name"] },
+    ]);
+    expect(JSON.stringify(named)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/botname", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: "已请求清掉这个 bot 的默认名字。已有单独语言名字的人不受影响。",
+    });
+    expect(seen[1]).toEqual({
+      tenantId: "local",
+      name: "",
+      keys: ["tenantId", "name"],
+    });
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/botname  alpha   beta", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求设置这个 bot 的名字。已有单独语言名字的人不受影响。",
+    });
+    expect(seen[2]?.name).toBe("alpha beta");
+    expect(JSON.stringify(spaced)).not.toContain("alpha");
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/botname [name]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/botname hello", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setBotName() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set this bot's name. People who already have a language-specific name are unchanged.",
+    });
+    expect(JSON.stringify(english)).not.toContain("hello");
+    const englishClear = await runOperatorCommand({
+      event: event({ text: "/botname", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setBotName() {},
+      },
+      ...kit(),
+    });
+    expect(englishClear).toMatchObject({
+      text: "Asked to clear this bot's default name. People who already have a language-specific name are unchanged.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: `/botname ${phrase}`, chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setBotName() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const tooLong = `${phrase}${"x".repeat(64)}`;
+    let called = false;
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/botname ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setBotName() {
+          called = true;
+        },
+      },
+      ...kit(),
+    });
+    expect(called).toBe(false);
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    expect(seen).toHaveLength(3);
+    const missing = await runOperatorCommand({
+      event: event({ text: `/botname ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/botname ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setBotName() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"botname"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: `/botname ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setBotName() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignLong = await runOperatorCommand({
+      event: event({
+        text: `/botname ${tooLong}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setBotName() {
+          called = true;
+        },
+      },
+      ...kit(),
+    });
+    expect(called).toBe(false);
+    expect(foreignLong).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
   });
 
   it("reports default speaking permissions without the chat title", async () => {

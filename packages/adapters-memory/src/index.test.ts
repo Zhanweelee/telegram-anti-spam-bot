@@ -171,6 +171,17 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a bot name without a language", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setBotName({ tenantId: "t", name: "ops" });
+    await moderator.setBotName({ tenantId: "t", name: "" });
+    expect(moderator.botNamesSet).toEqual([
+      { tenantId: "t", name: "ops" },
+      { tenantId: "t", name: "" },
+    ]);
+    expect(moderator.botNamesSet[0]).not.toHaveProperty("languageCode");
+  });
+
   it("records a default menu button without a chat", async () => {
     const moderator = createMemoryModerator();
     await moderator.setMenuButton({ tenantId: "t", kind: "commands" });
