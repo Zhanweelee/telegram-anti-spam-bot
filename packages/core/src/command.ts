@@ -78,10 +78,13 @@ import {
   resolveRuleSet,
 } from "./rules-load.js";
 import {
+  CAPTCHA_TTL_SECONDS,
   FLOOD_THRESHOLD,
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
+  MAX_CAPTCHA_TTL_SECONDS,
   MAX_MUTE_DURATION_SECONDS,
+  MIN_CAPTCHA_TTL_SECONDS,
   MIN_MUTE_DURATION_SECONDS,
   MUTE_DURATION_SECONDS,
   REPEAT_THRESHOLD,
@@ -196,11 +199,11 @@ const COMMAND_NAMES = [
   "keyword",
   "repeat",
   "rulemute",
+  "verifyfor",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
 const LOG_LIMIT = 10;
-const CAPTCHA_SECONDS = 300;
 const DEFAULT_MUTE_SECONDS = 60 * 60;
 const MIN_MUTE_SECONDS = 30;
 const MAX_MUTE_SECONDS = 366 * 24 * 60 * 60;
@@ -557,6 +560,8 @@ async function dispatch(
       return editRepeat(input, args);
     case "rulemute":
       return editRuleMute(input, args);
+    case "verifyfor":
+      return editVerifyFor(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5140,13 +5145,17 @@ async function challengeMember(
     rejectCaptcha(input);
     return say(input, "command.invalid");
   }
+  const savedTtl = await readChallengeTtl(input, chatId);
+  if (savedTtl === undefined) {
+    return say(input, "command.invalid");
+  }
   const remove = input.moderator?.deleteMessage;
   try {
     await beginChallenge({
       event: input.event,
       chatId,
       actorId,
-      ttlSeconds: CAPTCHA_SECONDS,
+      ttlSeconds: savedTtl ?? CAPTCHA_TTL_SECONDS,
       nonce,
       ports: {
         store,
@@ -6026,6 +6035,142 @@ function parseRuleMuteSeconds(value: string): number | undefined {
     seconds < MIN_MUTE_DURATION_SECONDS ||
     seconds > MAX_MUTE_DURATION_SECONDS
   ) {
+    return undefined;
+  }
+  return seconds;
+}
+
+async function readChallengeTtl(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<number | null | undefined> {
+  try {
+    return await input.runtime.getCaptchaTtl(input.event.tenantId, chatId);
+  } catch {
+    rejectCaptcha(input);
+    return undefined;
+  }
+}
+
+async function editVerifyFor(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 2) {
+    return say(input, "command.verifyfor.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatVerifyFor(input, chatId);
+  }
+  if (requested === "reset") {
+    const cleared = await removeCaptchaTtl(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.verifyfor.done", {
+      chatId,
+      seconds: CAPTCHA_TTL_SECONDS,
+    });
+  }
+  const seconds = parseVerifySeconds(requested);
+  if (seconds === undefined) {
+    return say(input, "command.invalid");
+  }
+  const saved = await writeCaptchaTtl(input, chatId, seconds);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("captcha_ttl_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "verifyfor",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.verifyfor.done", { chatId, seconds });
+}
+
+async function formatVerifyFor(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const seconds = await readCaptchaTtl(input, chatId);
+  if (seconds === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.verifyfor.show", {
+    chatId,
+    seconds: seconds ?? CAPTCHA_TTL_SECONDS,
+  });
+}
+
+async function readCaptchaTtl(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<number | null | undefined> {
+  try {
+    return await input.runtime.getCaptchaTtl(input.event.tenantId, chatId);
+  } catch {
+    rejectVerifyFor(input);
+    return undefined;
+  }
+}
+
+async function writeCaptchaTtl(
+  input: OperatorCommandInput,
+  chatId: string,
+  seconds: number,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setCaptchaTtl(
+      input.event.tenantId,
+      chatId,
+      seconds,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectVerifyFor(input);
+    return "invalid";
+  }
+}
+
+async function removeCaptchaTtl(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearCaptchaTtl(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectVerifyFor(input);
+    return false;
+  }
+}
+
+function rejectVerifyFor(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "verifyfor",
+  });
+}
+
+function parseVerifySeconds(value: string): number | undefined {
+  if (!/^[1-9]\d{0,4}$/.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (seconds < MIN_CAPTCHA_TTL_SECONDS || seconds > MAX_CAPTCHA_TTL_SECONDS) {
     return undefined;
   }
   return seconds;

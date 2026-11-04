@@ -122,6 +122,22 @@ export const muteDurationDocumentSchema = z.strictObject({
 
 export type MuteDurationDocument = z.output<typeof muteDurationDocumentSchema>;
 
+/** Default verification window. Join checks and /captcha share it. See ADR 0450. */
+export const CAPTCHA_TTL_SECONDS = 300;
+export const MIN_CAPTCHA_TTL_SECONDS = 30;
+export const MAX_CAPTCHA_TTL_SECONDS = 24 * 60 * 60;
+
+/** One verification length per chat. A bad document is ignored by the adapter. */
+export const captchaTtlDocumentSchema = z.strictObject({
+  seconds: z
+    .number()
+    .int()
+    .min(MIN_CAPTCHA_TTL_SECONDS)
+    .max(MAX_CAPTCHA_TTL_SECONDS),
+});
+
+export type CaptchaTtlDocument = z.output<typeof captchaTtlDocumentSchema>;
+
 /** Extra keywords for one chat. The built-in list stays in the detector. */
 export const MAX_CHAT_KEYWORDS = 32;
 
@@ -262,4 +278,17 @@ export interface RuntimeStore {
     seconds: number,
   ): Promise<boolean>;
   clearMuteDuration(tenantId: string, chatId: string): Promise<void>;
+  /** Null when verification still lasts five minutes. */
+  getCaptchaTtl(tenantId: string, chatId: string): Promise<number | null>;
+  /**
+   * Returns false when the seconds are outside 30 to one day, or a new chat
+   * would exceed the memory cap. 300 clears the row. Updating a chat that is
+   * already stored still succeeds.
+   */
+  setCaptchaTtl(
+    tenantId: string,
+    chatId: string,
+    seconds: number,
+  ): Promise<boolean>;
+  clearCaptchaTtl(tenantId: string, chatId: string): Promise<void>;
 }

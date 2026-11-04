@@ -4,8 +4,10 @@ import {
   type BlocklistStore,
   blocklistDocumentSchema,
   blocklistEntrySchema,
+  CAPTCHA_TTL_SECONDS,
   type ChatDirectory,
   type ChatDirectoryDocument,
+  captchaTtlDocumentSchema,
   chatDirectoryDocumentSchema,
   chatKeywordDocumentSchema,
   chatKeywordSchema,
@@ -144,6 +146,10 @@ export function createKvRuntimeStore(
     { readonly policy: RepeatPolicy | null; readonly expiresAt: number }
   >();
   const muteCache = new Map<
+    string,
+    { readonly seconds: number | null; readonly expiresAt: number }
+  >();
+  const captchaCache = new Map<
     string,
     { readonly seconds: number | null; readonly expiresAt: number }
   >();
@@ -344,6 +350,35 @@ export function createKvRuntimeStore(
         : JSON.stringify(muteDurationDocumentSchema.parse({ seconds }));
     await kv.put(id, body);
     muteCache.set(id, { seconds, expiresAt: now() + ttlMs });
+  }
+
+  async function loadCaptcha(
+    tenantId: string,
+    chatId: string,
+  ): Promise<number | null> {
+    const id = runtimeCaptchaKey(tenantId, chatId);
+    const at = now();
+    const hit = captchaCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.seconds;
+    }
+    const seconds = parseCaptcha(await kv.get(id));
+    captchaCache.set(id, { seconds, expiresAt: at + ttlMs });
+    return seconds;
+  }
+
+  async function saveCaptcha(
+    tenantId: string,
+    chatId: string,
+    seconds: number | null,
+  ): Promise<void> {
+    const id = runtimeCaptchaKey(tenantId, chatId);
+    const body =
+      seconds === null
+        ? "{}"
+        : JSON.stringify(captchaTtlDocumentSchema.parse({ seconds }));
+    await kv.put(id, body);
+    captchaCache.set(id, { seconds, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -559,6 +594,32 @@ export function createKvRuntimeStore(
       }
       await saveMute(tenantId, chatId, null);
     },
+    async getCaptchaTtl(tenantId, chatId) {
+      return loadCaptcha(tenantId, chatId);
+    },
+    async setCaptchaTtl(tenantId, chatId, seconds) {
+      const parsed = captchaTtlDocumentSchema.safeParse({ seconds });
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadCaptcha(tenantId, chatId);
+      const next =
+        parsed.data.seconds === CAPTCHA_TTL_SECONDS
+          ? null
+          : parsed.data.seconds;
+      if (current === next) {
+        return true;
+      }
+      await saveCaptcha(tenantId, chatId, next);
+      return true;
+    },
+    async clearCaptchaTtl(tenantId, chatId) {
+      const current = await loadCaptcha(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveCaptcha(tenantId, chatId, null);
+    },
   };
 }
 
@@ -604,6 +665,22 @@ function runtimeRepeatKey(tenantId: string, chatId: string): string {
 
 function runtimeMuteKey(tenantId: string, chatId: string): string {
   return `runtime-mute\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeCaptchaKey(tenantId: string, chatId: string): string {
+  return `runtime-captcha\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseCaptcha(raw: string | null): number | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = captchaTtlDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.seconds : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseMute(raw: string | null): number | null {

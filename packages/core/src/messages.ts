@@ -124,6 +124,9 @@ export const messageKeys = [
   "command.rulemute.usage",
   "command.rulemute.show",
   "command.rulemute.done",
+  "command.verifyfor.usage",
+  "command.verifyfor.show",
+  "command.verifyfor.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -483,6 +486,7 @@ const syntax = [
   "/keyword <chatId> [add|remove <token>|reset]",
   "/repeat <chatId> [count [seconds]|reset]",
   "/rulemute <chatId> [seconds|reset]",
+  "/verifyfor <chatId> [seconds|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -628,6 +632,9 @@ const zh = {
   "command.rulemute.usage": "用法：/rulemute <chatId> [seconds|reset]",
   "command.rulemute.show": "{chatId} 规则禁言 {seconds} 秒",
   "command.rulemute.done": "已设置 {chatId} 规则禁言 {seconds} 秒",
+  "command.verifyfor.usage": "用法：/verifyfor <chatId> [seconds|reset]",
+  "command.verifyfor.show": "{chatId} 验证 {seconds} 秒",
+  "command.verifyfor.done": "已设置 {chatId} 验证 {seconds} 秒",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1058,6 +1065,9 @@ const en = {
   "command.rulemute.usage": "Usage: /rulemute <chatId> [seconds|reset]",
   "command.rulemute.show": "Rule mute for {chatId} is {seconds}s",
   "command.rulemute.done": "Set rule mute for {chatId} to {seconds}s",
+  "command.verifyfor.usage": "Usage: /verifyfor <chatId> [seconds|reset]",
+  "command.verifyfor.show": "Verification for {chatId} is {seconds}s",
+  "command.verifyfor.done": "Set verification for {chatId} to {seconds}s",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":
