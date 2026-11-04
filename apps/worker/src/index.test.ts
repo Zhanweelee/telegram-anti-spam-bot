@@ -1,3 +1,4 @@
+import { createMemoryModerator } from "@tasb/adapter-memory";
 import { createMemoryLogger } from "@tasb/core";
 import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { describe, expect, it } from "vitest";
@@ -11,7 +12,7 @@ import {
   parseAdminUserIds,
   runScheduled,
 } from "./index.js";
-import { workerStorage } from "./screen.js";
+import { workerRuntime, workerStorage } from "./screen.js";
 
 const SECRET = "dev-secret";
 
@@ -469,5 +470,38 @@ describe("POST /telegram/webhook", () => {
       await workerCaptcha.get("cron_tenant", "cron_chat", "cron_actor"),
     ).toBe(null);
     await workerStorage.deleteAudits({ tenantId: "cron_tenant" });
+  });
+
+  it("kicks from the scheduled handler when that chat asked", async () => {
+    const nonce = "fedcba9876543210";
+    const moderator = createMemoryModerator();
+    await workerCaptcha.put({
+      tenantId: "cron_tenant",
+      chatId: "cron_chat",
+      actorId: "cron_kick",
+      nonce,
+      expiresAt: "2020-01-01T00:00:00.000Z",
+    });
+    expect(
+      await workerRuntime.setCaptchaFail("cron_tenant", "cron_chat", "kick"),
+    ).toBe(true);
+    try {
+      await runScheduled({}, { moderator });
+      expect(moderator.kicked).toEqual([
+        {
+          tenantId: "cron_tenant",
+          chatId: "cron_chat",
+          actorId: "cron_kick",
+        },
+      ]);
+      expect(moderator.banned).toEqual([]);
+      const rows = await workerStorage.exportAudits({
+        tenantId: "cron_tenant",
+      });
+      expect(JSON.stringify(rows)).not.toContain(nonce);
+    } finally {
+      await workerRuntime.clearCaptchaFail("cron_tenant", "cron_chat");
+      await workerStorage.deleteAudits({ tenantId: "cron_tenant" });
+    }
   });
 });

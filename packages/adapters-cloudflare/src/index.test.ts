@@ -568,6 +568,57 @@ describe("kv runtime store", () => {
     expect(await second.getCaptchaTtl("local", "-100")).toBeNull();
     expect(backing.values.get(captchaKey ?? "")).toBe("{}");
   });
+
+  it("keeps a verification failure in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.getCaptchaFail("local", "-100")).toBeNull();
+    expect(await first.setCaptchaFail("local", "-100", "kick")).toBe(true);
+    const written = puts;
+    expect(await first.setCaptchaFail("local", "-100", "kick")).toBe(true);
+    expect(puts).toBe(written);
+    expect(await first.setCaptchaTtl("local", "-100", 90)).toBe(true);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getCaptchaFail("local", "-100")).toBe("kick");
+    expect(await second.getCaptchaTtl("local", "-100")).toBe(90);
+    const keys = [...backing.values.keys()];
+    const failKey = keys.find((key) => key.startsWith("runtime-captcha-fail"));
+    const ttlKey = keys.find(
+      (key) =>
+        key.startsWith("runtime-captcha") &&
+        !key.startsWith("runtime-captcha-fail"),
+    );
+    expect(failKey).toBeDefined();
+    expect(failKey).not.toBe(ttlKey);
+    expect(backing.values.get(ttlKey ?? "")).not.toContain("kick");
+    if (failKey !== undefined) {
+      backing.values.set(failKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getCaptchaFail("local", "-100")).toBeNull();
+    expect(await fresh.getCaptchaTtl("local", "-100")).toBe(90);
+    expect(String(await fresh.getCaptchaFail("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(await fresh.setCaptchaFail("local", "-100", "leave")).toBe(false);
+    expect(await fresh.getCaptchaFail("local", "-100")).toBeNull();
+    expect(await fresh.setCaptchaFail("local", "-100", "stay")).toBe(true);
+    expect(await fresh.getCaptchaFail("local", "-100")).toBeNull();
+    await second.clearCaptchaFail("local", "-100");
+    expect(await second.getCaptchaFail("local", "-100")).toBeNull();
+    expect(backing.values.get(failKey ?? "")).toBe("{}");
+  });
 });
 
 describe("kv chat directory", () => {

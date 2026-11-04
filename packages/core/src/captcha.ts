@@ -9,6 +9,7 @@ import {
   parseAuditRecord,
   type Storage,
 } from "./ports.js";
+import type { CaptchaFailAction } from "./runtime.js";
 
 const isoSchema = z
   .string()
@@ -86,6 +87,16 @@ export interface CaptchaPorts {
   readonly clock: Clock;
   readonly logger: Logger;
   readonly removePrompt?: (target: CaptchaPromptTarget) => Promise<void>;
+  readonly expiryAction?: (
+    tenantId: string,
+    chatId: string,
+  ) => Promise<CaptchaFailAction | null>;
+  readonly dismissExpired?: (target: {
+    readonly tenantId: string;
+    readonly chatId: string;
+    readonly actorId: string;
+    readonly action: CaptchaFailAction;
+  }) => Promise<void>;
 }
 
 export function parseCaptchaChallenge(input: unknown): CaptchaChallenge {
@@ -357,6 +368,7 @@ export async function expireChallenges(ports: CaptchaPorts): Promise<number> {
       eventId,
       chatId: challenge.chatId,
     });
+    await dismissIfAsked(challenge, ports, eventId);
     await forgetPrompt(challenge, ports, eventId);
   }
   return taken.length;
@@ -375,7 +387,50 @@ async function expireTaken(
     eventId,
     chatId: challenge.chatId,
   });
+  await dismissIfAsked(challenge, ports, eventId);
   await forgetPrompt(challenge, ports, eventId);
+}
+
+async function dismissIfAsked(
+  challenge: CaptchaChallenge,
+  ports: CaptchaPorts,
+  eventId: string,
+): Promise<void> {
+  const read = ports.expiryAction;
+  if (!read) {
+    return;
+  }
+  let action: CaptchaFailAction | null;
+  try {
+    const value = await read(challenge.tenantId, challenge.chatId);
+    action = value === "kick" || value === "ban" ? value : null;
+  } catch {
+    ports.logger.warn("runtime_failed", {
+      eventId,
+      chatId: challenge.chatId,
+    });
+    return;
+  }
+  if (action === null) {
+    return;
+  }
+  const dismiss = ports.dismissExpired;
+  if (!dismiss) {
+    return;
+  }
+  try {
+    await dismiss({
+      tenantId: challenge.tenantId,
+      chatId: challenge.chatId,
+      actorId: challenge.actorId,
+      action,
+    });
+  } catch {
+    ports.logger.warn("captcha_expire_action_failed", {
+      eventId,
+      chatId: challenge.chatId,
+    });
+  }
 }
 
 async function forgetPrompt(

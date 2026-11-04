@@ -20,7 +20,11 @@ import {
 } from "@tasb/core";
 import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
-import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
+import {
+  captchaExpiryHooks,
+  createCaptchaNonce,
+  workerCaptcha,
+} from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { adminNotifier } from "./report.js";
@@ -386,6 +390,7 @@ export async function handleIncomingEvent(
               chatId: target.chatId,
               messageId: target.messageId,
             }),
+          ...captchaExpiryHooks(runtime, moderator),
         },
       });
     } catch {

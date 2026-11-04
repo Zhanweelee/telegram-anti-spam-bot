@@ -138,6 +138,17 @@ export const captchaTtlDocumentSchema = z.strictObject({
 
 export type CaptchaTtlDocument = z.output<typeof captchaTtlDocumentSchema>;
 
+/** What to do when verification expires. Missing means the member stays. */
+export const captchaFailActionSchema = z.enum(["kick", "ban"]);
+
+export const captchaFailDocumentSchema = z.strictObject({
+  action: captchaFailActionSchema,
+});
+
+export type CaptchaFailAction = z.output<typeof captchaFailActionSchema>;
+
+export type CaptchaFailDocument = z.output<typeof captchaFailDocumentSchema>;
+
 /** Extra keywords for one chat. The built-in list stays in the detector. */
 export const MAX_CHAT_KEYWORDS = 32;
 
@@ -291,4 +302,20 @@ export interface RuntimeStore {
     seconds: number,
   ): Promise<boolean>;
   clearCaptchaTtl(tenantId: string, chatId: string): Promise<void>;
+  /** Null when a missed verification still leaves the member in the chat. */
+  getCaptchaFail(
+    tenantId: string,
+    chatId: string,
+  ): Promise<CaptchaFailAction | null>;
+  /**
+   * Returns false when the action is not stay, kick, or ban, or a new chat
+   * would exceed the memory cap. stay clears the row. Updating a chat that
+   * is already stored still succeeds.
+   */
+  setCaptchaFail(
+    tenantId: string,
+    chatId: string,
+    action: string,
+  ): Promise<boolean>;
+  clearCaptchaFail(tenantId: string, chatId: string): Promise<void>;
 }

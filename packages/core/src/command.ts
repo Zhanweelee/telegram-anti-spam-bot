@@ -200,6 +200,7 @@ const COMMAND_NAMES = [
   "repeat",
   "rulemute",
   "verifyfor",
+  "verifyfail",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -562,6 +563,8 @@ async function dispatch(
       return editRuleMute(input, args);
     case "verifyfor":
       return editVerifyFor(input, args);
+    case "verifyfail":
+      return editVerifyFail(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -6174,6 +6177,136 @@ function parseVerifySeconds(value: string): number | undefined {
     return undefined;
   }
   return seconds;
+}
+
+async function editVerifyFail(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 2) {
+    return say(input, "command.verifyfail.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    return formatVerifyFail(input, chatId);
+  }
+  if (requested === "reset") {
+    const cleared = await removeCaptchaFail(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.verifyfail.done", {
+      chatId,
+      action: failWord(input, "stay"),
+    });
+  }
+  const action = parseFailAction(requested);
+  if (action === undefined) {
+    return say(input, "command.invalid");
+  }
+  const saved = await writeCaptchaFail(input, chatId, action);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("captcha_fail_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "verifyfail",
+    });
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.verifyfail.done", {
+    chatId,
+    action: failWord(input, action),
+  });
+}
+
+async function formatVerifyFail(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const action = await readCaptchaFail(input, chatId);
+  if (action === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.verifyfail.show", {
+    chatId,
+    action: failWord(input, action ?? "stay"),
+  });
+}
+
+async function readCaptchaFail(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<"kick" | "ban" | null | undefined> {
+  try {
+    return await input.runtime.getCaptchaFail(input.event.tenantId, chatId);
+  } catch {
+    rejectVerifyFail(input);
+    return undefined;
+  }
+}
+
+async function writeCaptchaFail(
+  input: OperatorCommandInput,
+  chatId: string,
+  action: "stay" | "kick" | "ban",
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setCaptchaFail(
+      input.event.tenantId,
+      chatId,
+      action,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectVerifyFail(input);
+    return "invalid";
+  }
+}
+
+async function removeCaptchaFail(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearCaptchaFail(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectVerifyFail(input);
+    return false;
+  }
+}
+
+function rejectVerifyFail(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "verifyfail",
+  });
+}
+
+function parseFailAction(value: string): "stay" | "kick" | "ban" | undefined {
+  if (value === "stay" || value === "kick" || value === "ban") {
+    return value;
+  }
+  return undefined;
+}
+
+function failWord(
+  input: OperatorCommandInput,
+  action: "stay" | "kick" | "ban",
+): string {
+  return say(input, `command.verifyfail.${action}`);
 }
 
 async function editKeyword(

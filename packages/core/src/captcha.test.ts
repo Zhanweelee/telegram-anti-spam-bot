@@ -1189,6 +1189,119 @@ describe("captcha flow", () => {
     expect(await kit.store.get("local", "-100", "77")).toBeNull();
     expect(kit.restricted).toEqual([]);
   });
+
+  it("removes a member only when that chat asked", async () => {
+    const kit = harness();
+    const dismissed: { action: string; actorId: string }[] = [];
+    let action: "kick" | "ban" | null = "kick";
+    let failRead = false;
+    const ports = {
+      ...kit.ports,
+      async expiryAction() {
+        if (failRead) {
+          throw new Error(secret);
+        }
+        return action;
+      },
+      async dismissExpired(target: { action: string; actorId: string }) {
+        dismissed.push({ action: target.action, actorId: target.actorId });
+      },
+    };
+    await beginChallenge({
+      event: joinEvent(),
+      ttlSeconds: 60,
+      nonce: "ab".repeat(8),
+      ports,
+    });
+    kit.clock.iso = "2026-11-01T00:02:00.000Z";
+    expect(await expireChallenges(ports)).toBe(1);
+    expect(dismissed).toEqual([{ action: "kick", actorId: "77" }]);
+    expect(kit.released).toEqual([]);
+    expect(kit.records[0]?.reasons).toEqual(["captcha_expired"]);
+    expect(JSON.stringify(kit.records)).not.toContain(secret);
+
+    action = null;
+    await beginChallenge({
+      event: joinEvent("evt_stay"),
+      ttlSeconds: 60,
+      nonce: "cd".repeat(8),
+      ports,
+    });
+    kit.clock.iso = "2026-11-01T00:04:00.000Z";
+    expect(await expireChallenges(ports)).toBe(1);
+    expect(dismissed).toEqual([{ action: "kick", actorId: "77" }]);
+
+    action = "ban";
+    await beginChallenge({
+      event: joinEvent("evt_ban"),
+      ttlSeconds: 60,
+      nonce: "ef".repeat(8),
+      ports,
+    });
+    kit.clock.iso = "2026-11-01T00:06:00.000Z";
+    expect(
+      await resolveChallenge({
+        event: answerEvent("ef".repeat(8)),
+        ports,
+      }),
+    ).toBe("expired");
+    expect(dismissed).toEqual([
+      { action: "kick", actorId: "77" },
+      { action: "ban", actorId: "77" },
+    ]);
+    expect(kit.released).toEqual([]);
+
+    failRead = true;
+    await beginChallenge({
+      event: joinEvent("evt_read"),
+      ttlSeconds: 60,
+      nonce: "12".repeat(8),
+      ports,
+    });
+    kit.clock.iso = "2026-11-01T00:08:00.000Z";
+    expect(await expireChallenges(ports)).toBe(1);
+    expect(dismissed).toHaveLength(2);
+    expect(JSON.stringify(kit.logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+
+    failRead = false;
+    action = "kick";
+    const failing = {
+      ...ports,
+      async dismissExpired() {
+        throw new Error(secret);
+      },
+    };
+    await beginChallenge({
+      event: joinEvent("evt_dismiss"),
+      ttlSeconds: 60,
+      nonce: "34".repeat(8),
+      ports: failing,
+    });
+    kit.clock.iso = "2026-11-01T00:10:00.000Z";
+    expect(await expireChallenges(failing)).toBe(1);
+    expect(JSON.stringify(kit.logger.entries)).toContain(
+      "captcha_expire_action_failed",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(secret);
+
+    kit.clock.iso = "2026-11-01T00:00:00.000Z";
+    const before = dismissed.length;
+    await beginChallenge({
+      event: joinEvent("evt_pass"),
+      ttlSeconds: 300,
+      nonce: "56".repeat(8),
+      ports,
+    });
+    expect(
+      await resolveChallenge({
+        event: answerEvent("56".repeat(8)),
+        ports,
+      }),
+    ).toBe("passed");
+    expect(dismissed).toHaveLength(before);
+    expect(kit.released).toHaveLength(1);
+  });
 });
 
 function joinEvent(id = "evt_join") {

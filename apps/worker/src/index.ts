@@ -6,6 +6,7 @@ import {
   expireChallenges,
   type Locale,
   type Logger,
+  type ModerationPort,
 } from "@tasb/core";
 import {
   createTelegramReply,
@@ -13,6 +14,7 @@ import {
 } from "@tasb/platform-telegram";
 import { Hono } from "hono";
 import { type WebhookBudget, workerWebhookBudget } from "./budget.js";
+import { captchaExpiryHooks } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { handleIncomingEvent } from "./operate.js";
 import { workerRulePacks } from "./pack-runtime.js";
@@ -185,10 +187,14 @@ export function createApp(
 
 const app = createApp();
 
-export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
+export async function runScheduled(
+  env: WorkerBindings = {},
+  deps: { readonly moderator?: ModerationPort } = {},
+): Promise<void> {
   const logger = createWorkerLogger();
   const stores = resolveStores(env);
-  const moderator = moderatorFor({ token: env.TELEGRAM_BOT_TOKEN });
+  const moderator =
+    deps.moderator ?? moderatorFor({ token: env.TELEGRAM_BOT_TOKEN });
   try {
     await expireChallenges({
       store: stores.captcha,
@@ -203,6 +209,7 @@ export async function runScheduled(env: WorkerBindings = {}): Promise<void> {
           chatId: target.chatId,
           messageId: target.messageId,
         }),
+      ...captchaExpiryHooks(stores.runtime, moderator),
     });
   } catch {
     logger.error("captcha_expire_failed", {});

@@ -105,6 +105,7 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
   >();
   const mutes = new Map<string, number>();
   const captchas = new Map<string, number>();
+  const captchaFails = new Map<string, "kick" | "ban">();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -263,6 +264,24 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async clearCaptchaTtl(tenantId, chatId) {
       captchas.delete(`${tenantId}:${chatId}`);
+    },
+    async getCaptchaFail(tenantId, chatId) {
+      return captchaFails.get(`${tenantId}:${chatId}`) ?? null;
+    },
+    async setCaptchaFail(tenantId, chatId, action) {
+      const id = `${tenantId}:${chatId}`;
+      if (action === "stay") {
+        captchaFails.delete(id);
+        return true;
+      }
+      if (action !== "kick" && action !== "ban") {
+        return false;
+      }
+      captchaFails.set(id, action);
+      return true;
+    },
+    async clearCaptchaFail(tenantId, chatId) {
+      captchaFails.delete(`${tenantId}:${chatId}`);
     },
   };
 }
@@ -7442,7 +7461,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(97);
+    expect(menu).toHaveLength(98);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7554,6 +7573,10 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
+      command: "verifyfail",
+      description: "/verifyfail <chatId> [stay|kick|ban|reset]",
+    });
+    expect(menu.find((item) => item.command === "verifyfor")).toEqual({
       command: "verifyfor",
       description: "/verifyfor <chatId> [seconds|reset]",
     });
@@ -17864,6 +17887,177 @@ describe("runOperatorCommand", () => {
     expect(help).toMatchObject({ status: "reply" });
     if (help.status === "reply") {
       expect(help.text).toContain("/verifyfor <chatId> [seconds|reset]");
+    }
+  });
+
+  it("lets one chat kick people who miss verification", async () => {
+    const deps = kit();
+    const scoped = directory(["-100"]);
+    const shown = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(shown).toMatchObject({
+      status: "reply",
+      command: "verifyfail",
+      text: "-100 验证失败后留下",
+    });
+    const set = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 kick", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(set).toMatchObject({ text: "已设置 -100 验证失败后移出" });
+    const again = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(again).toMatchObject({ text: "-100 验证失败后移出" });
+    const other = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -200", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(other).toMatchObject({ text: "-200 验证失败后留下" });
+    const bad = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 leave", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const still = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(still).toMatchObject({ text: "-100 验证失败后移出" });
+    const ban = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 ban", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(ban).toMatchObject({ text: "已设置 -100 验证失败后封禁" });
+    const stay = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 stay", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(stay).toMatchObject({ text: "已设置 -100 验证失败后留下" });
+    await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 kick", direct: true }),
+      adminActorIds: ["42"],
+    });
+    const reset = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 reset", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(reset).toMatchObject({ text: "已设置 -100 验证失败后留下" });
+    await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 kick", direct: true }),
+      adminActorIds: ["42"],
+    });
+    const english = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(english).toMatchObject({
+      text: "Verification failure for -100 is kick",
+    });
+    const englishSet = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -300 ban", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+    });
+    expect(englishSet).toMatchObject({
+      text: "Set verification failure for -300 to ban",
+    });
+    const usage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 kick extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/verifyfail <chatId> [stay|kick|ban|reset]",
+    });
+    const resetUsage = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 reset extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(resetUsage).toMatchObject({
+      text: "用法：/verifyfail <chatId> [stay|kick|ban|reset]",
+    });
+    const group = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 kick" }),
+      adminActorIds: ["42"],
+    });
+    expect(group).toMatchObject({ status: "skip" });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/verifyfail -200 kick",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const noisy = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: `/verifyfail -100 ${phrase}`,
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+    });
+    expect(noisy).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(noisy)).not.toContain(phrase);
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100 ban", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async setCaptchaFail() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("captcha_fail_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/verifyfail -100", direct: true }),
+      adminActorIds: ["42"],
+      runtime: {
+        ...deps.runtime,
+        async getCaptchaFail() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const help = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(help).toMatchObject({ status: "reply" });
+    if (help.status === "reply") {
+      expect(help.text).toContain("/verifyfail <chatId> [stay|kick|ban|reset]");
     }
   });
 

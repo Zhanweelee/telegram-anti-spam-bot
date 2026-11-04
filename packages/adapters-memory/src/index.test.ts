@@ -507,6 +507,45 @@ describe("memory adapter", () => {
     expect(await runtime.getMuteDuration("tenant_a", "chat_1")).toBe(120);
   });
 
+  it("keeps a verification failure apart from the verification window", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.getCaptchaFail("tenant_a", "chat_1")).toBeNull();
+    expect(await runtime.setCaptchaTtl("tenant_a", "chat_1", 120)).toBe(true);
+    expect(await runtime.setCaptchaFail("tenant_a", "chat_1", "kick")).toBe(
+      true,
+    );
+    expect(await runtime.getCaptchaFail("tenant_a", "chat_1")).toBe("kick");
+    expect(await runtime.getCaptchaFail("tenant_a", "chat_2")).toBeNull();
+    expect(await runtime.getCaptchaTtl("tenant_a", "chat_1")).toBe(120);
+    expect(await runtime.setCaptchaFail("tenant_a", "chat_1", "stay")).toBe(
+      true,
+    );
+    expect(await runtime.getCaptchaFail("tenant_a", "chat_1")).toBeNull();
+    expect(await runtime.setCaptchaFail("tenant_a", "chat_1", "leave")).toBe(
+      false,
+    );
+    expect(await runtime.setCaptchaFail("tenant_a", "chat_1", "ban")).toBe(
+      true,
+    );
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.setCaptchaFail("tenant_a", `chat_${index}`, "kick"),
+      ).toBe(true);
+    }
+    expect(await runtime.setCaptchaFail("tenant_a", "overflow", "kick")).toBe(
+      false,
+    );
+    expect(await runtime.setCaptchaFail("tenant_a", "overflow", "stay")).toBe(
+      true,
+    );
+    expect(await runtime.getCaptchaFail("tenant_a", "overflow")).toBeNull();
+    await runtime.clearCaptchaFail("tenant_a", "chat_0");
+    expect(await runtime.setCaptchaFail("tenant_a", "overflow", "ban")).toBe(
+      true,
+    );
+    expect(await runtime.getCaptchaTtl("tenant_a", "chat_1")).toBe(120);
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

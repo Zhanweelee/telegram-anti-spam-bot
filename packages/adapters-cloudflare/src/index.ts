@@ -7,6 +7,7 @@ import {
   CAPTCHA_TTL_SECONDS,
   type ChatDirectory,
   type ChatDirectoryDocument,
+  captchaFailDocumentSchema,
   captchaTtlDocumentSchema,
   chatDirectoryDocumentSchema,
   chatKeywordDocumentSchema,
@@ -152,6 +153,10 @@ export function createKvRuntimeStore(
   const captchaCache = new Map<
     string,
     { readonly seconds: number | null; readonly expiresAt: number }
+  >();
+  const captchaFailCache = new Map<
+    string,
+    { readonly action: "kick" | "ban" | null; readonly expiresAt: number }
   >();
 
   async function load(
@@ -379,6 +384,35 @@ export function createKvRuntimeStore(
         : JSON.stringify(captchaTtlDocumentSchema.parse({ seconds }));
     await kv.put(id, body);
     captchaCache.set(id, { seconds, expiresAt: now() + ttlMs });
+  }
+
+  async function loadCaptchaFail(
+    tenantId: string,
+    chatId: string,
+  ): Promise<"kick" | "ban" | null> {
+    const id = runtimeCaptchaFailKey(tenantId, chatId);
+    const at = now();
+    const hit = captchaFailCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.action;
+    }
+    const action = parseCaptchaFail(await kv.get(id));
+    captchaFailCache.set(id, { action, expiresAt: at + ttlMs });
+    return action;
+  }
+
+  async function saveCaptchaFail(
+    tenantId: string,
+    chatId: string,
+    action: "kick" | "ban" | null,
+  ): Promise<void> {
+    const id = runtimeCaptchaFailKey(tenantId, chatId);
+    const body =
+      action === null
+        ? "{}"
+        : JSON.stringify(captchaFailDocumentSchema.parse({ action }));
+    await kv.put(id, body);
+    captchaFailCache.set(id, { action, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -620,6 +654,36 @@ export function createKvRuntimeStore(
       }
       await saveCaptcha(tenantId, chatId, null);
     },
+    async getCaptchaFail(tenantId, chatId) {
+      return loadCaptchaFail(tenantId, chatId);
+    },
+    async setCaptchaFail(tenantId, chatId, action) {
+      if (action === "stay") {
+        const current = await loadCaptchaFail(tenantId, chatId);
+        if (current === null) {
+          return true;
+        }
+        await saveCaptchaFail(tenantId, chatId, null);
+        return true;
+      }
+      const parsed = captchaFailDocumentSchema.safeParse({ action });
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadCaptchaFail(tenantId, chatId);
+      if (current === parsed.data.action) {
+        return true;
+      }
+      await saveCaptchaFail(tenantId, chatId, parsed.data.action);
+      return true;
+    },
+    async clearCaptchaFail(tenantId, chatId) {
+      const current = await loadCaptchaFail(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveCaptchaFail(tenantId, chatId, null);
+    },
   };
 }
 
@@ -669,6 +733,22 @@ function runtimeMuteKey(tenantId: string, chatId: string): string {
 
 function runtimeCaptchaKey(tenantId: string, chatId: string): string {
   return `runtime-captcha\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeCaptchaFailKey(tenantId: string, chatId: string): string {
+  return `runtime-captcha-fail\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseCaptchaFail(raw: string | null): "kick" | "ban" | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = captchaFailDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.action : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseCaptcha(raw: string | null): number | null {
