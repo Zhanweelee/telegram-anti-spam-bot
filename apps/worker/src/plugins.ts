@@ -397,6 +397,12 @@ export const builtinManifests = {
     integrity:
       "cbba73b6d3f0aa4e86e8764e16a908e5e80b92d0d7bbcbfffb7c339c2b41c1d7",
   }),
+  richReferenceLink: manifest({
+    id: "rich_reference_link",
+    kind: "detector",
+    integrity:
+      "9ad010cdd308deba08153962a6465e12f0370f0b90377feefc6aed00ebdaed24",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

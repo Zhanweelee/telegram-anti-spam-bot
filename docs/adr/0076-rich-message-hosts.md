@@ -49,3 +49,4 @@
 - 非空的锚点名字可以另开 `rich_anchor`。名字仍不进事件。看得见的字仍是正文。行情标签仍由 `rich_cashtag` 决定。见 ADR 0510。
 - 非空的锚点链接名字可以另开 `rich_anchor_link`。名字仍不进事件。看得见的字仍是正文。锚点仍由 `rich_anchor` 决定。见 ADR 0511。
 - 非空的引用名字可以另开 `rich_reference`。名字仍不进事件。看得见的字仍是正文。锚点链接仍由 `rich_anchor_link` 决定。见 ADR 0512。
+- 非空的引用链接名字可以另开 `rich_reference_link`。名字仍不进事件。看得见的字仍是正文。引用仍由 `rich_reference` 决定。见 ADR 0513。

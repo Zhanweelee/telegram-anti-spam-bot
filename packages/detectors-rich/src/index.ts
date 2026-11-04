@@ -13,6 +13,7 @@ export const richContacts = [
   "anchor",
   "anchor_link",
   "reference",
+  "reference_link",
 ] as const;
 export type RichContact = (typeof richContacts)[number];
 
@@ -28,6 +29,10 @@ const richSpecs = {
   anchor: { id: "rich_anchor", summary: "rich:anchor" },
   anchor_link: { id: "rich_anchor_link", summary: "rich:anchor_link" },
   reference: { id: "rich_reference", summary: "rich:reference" },
+  reference_link: {
+    id: "rich_reference_link",
+    summary: "rich:reference_link",
+  },
 } as const;
 
 const richMarks = {
@@ -42,6 +47,7 @@ const richMarks = {
   anchor: "asRichAnchor",
   anchor_link: "asRichAnchorLink",
   reference: "asRichReference",
+  reference_link: "asRichReferenceLink",
 } as const;
 
 export function createRichDetector(kind: RichContact): Detector {
