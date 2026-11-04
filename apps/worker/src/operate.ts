@@ -118,6 +118,9 @@ function commandModerator(
     async readCommunity() {
       throw new Error("community_unavailable");
     },
+    async readStickerSetRight() {
+      throw new Error("canstickers_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

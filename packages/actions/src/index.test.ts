@@ -141,6 +141,9 @@ describe("delete action", () => {
           async readCommunity() {
             throw new Error("community_unavailable");
           },
+          async readStickerSetRight() {
+            throw new Error("canstickers_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -285,6 +288,9 @@ describe("delete action", () => {
         },
         async readCommunity() {
           throw new Error("community_unavailable");
+        },
+        async readStickerSetRight() {
+          throw new Error("canstickers_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -432,6 +438,9 @@ describe("delete action", () => {
         },
         async readCommunity() {
           throw new Error("community_unavailable");
+        },
+        async readStickerSetRight() {
+          throw new Error("canstickers_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -581,6 +590,9 @@ function ports(): ModerationPort & {
     },
     async readCommunity() {
       throw new Error("community_unavailable");
+    },
+    async readStickerSetRight() {
+      throw new Error("canstickers_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");

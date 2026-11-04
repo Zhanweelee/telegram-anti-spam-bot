@@ -295,6 +295,9 @@ export const messageKeys = [
   "command.community.header",
   "command.community.id",
   "command.community.none",
+  "command.canstickers.usage",
+  "command.canstickers.header",
+  "command.canstickers.flag",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -389,6 +392,7 @@ const syntax = [
   "/joinbot <chatId>",
   "/reactions <chatId>",
   "/community <chatId>",
+  "/canstickers <chatId>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -744,6 +748,9 @@ const zh = {
   "command.community.header": "群 {chatId}",
   "command.community.id": "社区 {id}",
   "command.community.none": "社区 无",
+  "command.canstickers.usage": "用法：/canstickers <chatId>",
+  "command.canstickers.header": "群 {chatId}",
+  "command.canstickers.flag": "贴纸",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -1108,6 +1115,9 @@ const en = {
   "command.community.header": "chat {chatId}",
   "command.community.id": "community {id}",
   "command.community.none": "community none",
+  "command.canstickers.usage": "Usage: /canstickers <chatId>",
+  "command.canstickers.header": "chat {chatId}",
+  "command.canstickers.flag": "stickers",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

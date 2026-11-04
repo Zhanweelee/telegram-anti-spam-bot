@@ -1700,6 +1700,134 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("community_failed");
   });
 
+  it("reads whether the bot can change the sticker set and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const setName = `pack_${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            invite_link: invite,
+            sticker_set_name: setName,
+            custom_emoji_sticker_set_name: phrase,
+            can_set_sticker_set: true,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readStickerSetRight({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ canSet: "on" });
+    expect(resolved).not.toHaveProperty("sticker_set_name");
+    expect(resolved).not.toHaveProperty("name");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(JSON.stringify(resolved)).not.toContain(setName);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatStickerSet");
+    expect(calls[0]?.method).not.toContain("deleteChatStickerSet");
+    expect("getChat").not.toContain("setChatStickerSet");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readStickerSetRight({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ canSet: "unknown" });
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, can_set_sticker_set: false },
+            }),
+            { status: 200 },
+          ),
+      }).readStickerSetRight({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ canSet: "off" });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readStickerSetRight({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("canstickers_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                sticker_set_name: setName,
+                can_set_sticker_set: true,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readStickerSetRight({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("canstickers_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                sticker_set_name: phrase,
+                can_set_sticker_set: "yes",
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readStickerSetRight({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("canstickers_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readStickerSetRight({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("canstickers_failed");
+  });
+
   it("reads the allowed reactions and drops the emoji", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
