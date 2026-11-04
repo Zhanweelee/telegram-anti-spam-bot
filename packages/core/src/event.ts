@@ -95,6 +95,8 @@ export const messageSchema = z
     call: z.enum(["started", "ended", "scheduled"]).optional(),
     /** Chat was renamed. The new name stays out. */
     asTitle: z.literal(true).optional(),
+    /** Community service line. Names and ids stay out. */
+    community: z.enum(["added", "joined", "removed"]).optional(),
   })
   .refine(
     (message) =>

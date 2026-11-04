@@ -179,6 +179,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "community_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["community_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

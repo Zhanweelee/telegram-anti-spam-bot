@@ -1,0 +1,18 @@
+[
+  {
+    "id": "community_notice",
+    "kind": "message",
+    "label": "spam",
+    "community": "added"
+  },
+  {
+    "id": "community_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "community_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

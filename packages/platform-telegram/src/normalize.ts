@@ -146,6 +146,7 @@ async function messageEvent(
   const asGiveaway = sharedGiveaway(message);
   const call = callNotice(message);
   const asTitle = renamedChat(message);
+  const community = communityNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -181,8 +182,28 @@ async function messageEvent(
       ...(asGiveaway ? { asGiveaway: true as const } : {}),
       ...(call === undefined ? {} : { call }),
       ...(asTitle ? { asTitle: true as const } : {}),
+      ...(community === undefined ? {} : { community }),
     },
   });
+}
+
+function communityNotice(
+  message: Record<string, unknown>,
+): "added" | "joined" | "removed" | undefined {
+  if (communityRecord(message.community_chat_added)) {
+    return "added";
+  }
+  if (communityRecord(message.community_chat_joined)) {
+    return "joined";
+  }
+  if (isRecord(message.community_chat_removed)) {
+    return "removed";
+  }
+  return undefined;
+}
+
+function communityRecord(value: unknown): boolean {
+  return isRecord(value) && isRecord(value.community);
 }
 
 function renamedChat(message: Record<string, unknown>): boolean {
