@@ -1,0 +1,18 @@
+[
+  {
+    "id": "login_forward_spam",
+    "kind": "message",
+    "label": "spam",
+    "asLoginForward": true
+  },
+  {
+    "id": "login_forward_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "login_forward_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

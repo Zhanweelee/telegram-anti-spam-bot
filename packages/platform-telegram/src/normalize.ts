@@ -174,6 +174,7 @@ async function messageEvent(
   const asCustomEmoji = customEmojiMark(message);
   const asCopyText = copyTextMark(message);
   const asSwitchQuery = switchQueryMark(message);
+  const asLoginForward = loginForwardMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -254,6 +255,7 @@ async function messageEvent(
       ...(asCustomEmoji ? { asCustomEmoji: true as const } : {}),
       ...(asCopyText ? { asCopyText: true as const } : {}),
       ...(asSwitchQuery ? { asSwitchQuery: true as const } : {}),
+      ...(asLoginForward ? { asLoginForward: true as const } : {}),
     },
   });
 }
@@ -654,6 +656,64 @@ function richSwitchQuery(value: unknown): boolean {
   }
   for (const nested of Object.values(value)) {
     if (richSwitchQuery(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function loginForwardMark(message: Record<string, unknown>): boolean {
+  if (inlineLoginForward(message.reply_markup)) {
+    return true;
+  }
+  const rich = message.rich_message;
+  return isRecord(rich) && richLoginForward(rich);
+}
+
+function inlineLoginForward(markup: unknown): boolean {
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return false;
+  }
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (buttonForwardsLogin(button)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function buttonForwardsLogin(button: unknown): boolean {
+  if (!isRecord(button)) {
+    return false;
+  }
+  const login = button.login_url;
+  return isRecord(login) && hiddenSecret(login.forward_text);
+}
+
+function richLoginForward(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richLoginForward(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "button" && buttonForwardsLogin(value.button)) {
+    return true;
+  }
+  if (value.type === "buttons" && Array.isArray(value.buttons)) {
+    for (const button of value.buttons) {
+      if (buttonForwardsLogin(button)) {
+        return true;
+      }
+    }
+  }
+  for (const nested of Object.values(value)) {
+    if (richLoginForward(nested)) {
       return true;
     }
   }

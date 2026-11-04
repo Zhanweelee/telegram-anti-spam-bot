@@ -23,6 +23,7 @@
     "@tasb/detector-contact": "workspace:*",
     "@tasb/detector-copy": "workspace:*",
     "@tasb/detector-query": "workspace:*",
+    "@tasb/detector-login": "workspace:*",
     "@tasb/detector-folder": "workspace:*",
     "@tasb/detector-media": "workspace:*",
     "@tasb/detector-mention": "workspace:*",

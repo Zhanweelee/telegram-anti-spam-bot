@@ -427,6 +427,12 @@ export const builtinManifests = {
     integrity:
       "cd73bddb9430a17daa8bf8a9aa33a19766606d30be1a9811b6fd0f97ae5a7001",
   }),
+  loginForward: manifest({
+    id: "login_forward",
+    kind: "detector",
+    integrity:
+      "ededc096d00552ca55ffedae398303078746a7478592c00a971323b520c7e999",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

@@ -6005,6 +6005,193 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a login forward until that chat asks", async () => {
+    const sentence = "口令90261";
+    const actor = "发登录的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "login_forward" | "switch_query";
+      paid?: boolean;
+    }) {
+      const message =
+        input.kind === "switch_query"
+          ? {
+              text: "查询留下",
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "查询广告", switch_inline_query: "口令90265" }],
+                ],
+              },
+            }
+          : input.kind === "login_forward"
+            ? {
+                reply_markup: {
+                  inline_keyboard: [
+                    [
+                      {
+                        text: "登录广告",
+                        login_url: {
+                          url: "https://example.com/keep",
+                          forward_text: sentence,
+                        },
+                      },
+                    ],
+                  ],
+                },
+              }
+            : { text: "今天站会" };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 127, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "login_forward" | "switch_query"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10690,
+      chatId: -1001290,
+      kind: "login_forward",
+    });
+    expect(idle.message?.asLoginForward).toBe(true);
+    expect(idle.message?.asSwitchQuery).toBeUndefined();
+    expect(idle.message?.text).toBe("登录广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(sentence);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10691,
+        chatId: -1001291,
+        kind: "login_forward",
+      }),
+      {
+        source: rule("login_forward"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("login_forward");
+    expect(removed.decision.ruleIds).toContain("login_forward");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "button:login_forward" },
+    ]);
+    const keptByQuery = await screenTelegramEvent(
+      await posted({
+        updateId: 10692,
+        chatId: -1001292,
+        kind: "login_forward",
+      }),
+      {
+        source: rule("switch_query"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByQuery.decision.action).toBe("allow");
+    const keptQuery = await screenTelegramEvent(
+      await posted({
+        updateId: 10693,
+        chatId: -1001293,
+        kind: "switch_query",
+      }),
+      {
+        source: rule("login_forward"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptQuery.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10694, chatId: -1001294 }),
+      {
+        source: rule("login_forward"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10695,
+        chatId: -1001295,
+        kind: "login_forward",
+        paid: true,
+      }),
+      {
+        source: rule("login_forward"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByQuery: keptByQuery.decision,
+      keptQuery: keptQuery.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(sentence);
+    expect(dumped).not.toContain("90261");
+    expect(dumped).not.toContain("90265");
+    expect(dumped).not.toContain("登录广告");
+    expect(dumped).not.toContain("查询广告");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a switch query until that chat asks", async () => {
     const sentence = "口令90255";
     const actor = "发查询的人";

@@ -175,6 +175,8 @@ export const messageSchema = z
     asCopyText: z.literal(true).optional(),
     /** Inline query inserted on tap. The query stays out. The visible label stays in the message. */
     asSwitchQuery: z.literal(true).optional(),
+    /** Login button text shown after a forward. The sentence stays out. The visible label stays in the message. */
+    asLoginForward: z.literal(true).optional(),
   })
   .refine(
     (message) =>

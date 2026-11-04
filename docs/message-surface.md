@@ -125,3 +125,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 内联键盘或富文本按钮的 `copy_text.text` 去掉空白后非空时，消息带 `asCopyText`。空白、布尔值、缺句子、只有网址的按钮、回调数据和回复键盘不带这个标记。复制句子不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `copy_text` 默认关闭。见 ADR 0516。
 
 内联键盘或富文本按钮的 `switch_inline_query`、`switch_inline_query_current_chat` 或 `switch_inline_query_chosen_chat.query` 去掉空白后非空时，消息带 `asSwitchQuery`。空白、空字符串、布尔值、缺查询、只有网址的按钮、回调数据、挑选范围和回复键盘不带这个标记。查询不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `switch_query` 默认关闭。见 ADR 0517。
+
+内联键盘或富文本按钮的 `login_url.forward_text` 去掉空白后非空时，消息带 `asLoginForward`。空白、空字符串、布尔值、缺句子、只有网址的登录按钮、只有用户名、回调数据和回复键盘不带这个标记。替换文字和用户名不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `login_forward` 默认关闭。见 ADR 0518。
