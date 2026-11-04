@@ -169,6 +169,7 @@ async function messageEvent(
   const asGroupCreated = createdGroup(message);
   const asPostPending = pendingPost(message);
   const asSpoiler = coveredMedia(message);
+  const richContact = richContactMark(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -229,6 +230,8 @@ async function messageEvent(
       ...(asGroupCreated ? { asGroupCreated: true as const } : {}),
       ...(asPostPending ? { asPostPending: true as const } : {}),
       ...(asSpoiler ? { asSpoiler: true as const } : {}),
+      ...(richContact.phone ? { asRichPhone: true as const } : {}),
+      ...(richContact.card ? { asRichCard: true as const } : {}),
     },
   });
 }
@@ -264,6 +267,52 @@ function pendingPost(message: Record<string, unknown>): boolean {
 
 function coveredMedia(message: Record<string, unknown>): boolean {
   return message.has_media_spoiler === true;
+}
+
+function richContactMark(message: Record<string, unknown>): {
+  phone: boolean;
+  card: boolean;
+} {
+  const found = { phone: false, card: false };
+  const rich = message.rich_message;
+  if (isRecord(rich)) {
+    walkRichContact(rich.blocks, found);
+  }
+  return found;
+}
+
+function walkRichContact(
+  value: unknown,
+  found: { phone: boolean; card: boolean },
+): void {
+  if (found.phone && found.card) {
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      walkRichContact(item, found);
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  if (value.type === "phone_number" && hiddenSecret(value.phone_number)) {
+    found.phone = true;
+  }
+  if (
+    value.type === "bank_card_number" &&
+    hiddenSecret(value.bank_card_number)
+  ) {
+    found.card = true;
+  }
+  for (const nested of Object.values(value)) {
+    walkRichContact(nested, found);
+  }
+}
+
+function hiddenSecret(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function declinedPost(message: Record<string, unknown>): boolean {

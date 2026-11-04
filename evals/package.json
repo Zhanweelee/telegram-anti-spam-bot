@@ -52,6 +52,7 @@
     "@tasb/detector-created": "workspace:*",
     "@tasb/detector-pending": "workspace:*",
     "@tasb/detector-spoiler": "workspace:*",
+    "@tasb/detector-rich": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

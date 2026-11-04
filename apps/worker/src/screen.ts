@@ -98,6 +98,7 @@ import {
   createRegexDetector,
   defaultRegexPatterns,
 } from "@tasb/detector-regex";
+import { createRichDetector } from "@tasb/detector-rich";
 import { createScriptDetector } from "@tasb/detector-script";
 import { createSenderDetector } from "@tasb/detector-sender";
 import { createSharedChatDetector } from "@tasb/detector-shared-chat";
@@ -690,6 +691,16 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.mediaSpoiler,
         value: createSpoilerDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.richPhone,
+        value: createRichDetector("phone"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.richCard,
+        value: createRichDetector("card"),
       },
       {
         source: "builtin",

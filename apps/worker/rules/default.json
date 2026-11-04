@@ -363,6 +363,22 @@
       "actions": ["delete"]
     },
     {
+      "id": "rich_phone",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_phone"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "rich_card",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_card"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

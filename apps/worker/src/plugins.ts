@@ -325,6 +325,18 @@ export const builtinManifests = {
     integrity:
       "d0cfd88bf2fe25574ba3d3e57e41ca9132bdc33717ac725d6def44d11275a629",
   }),
+  richPhone: manifest({
+    id: "rich_phone",
+    kind: "detector",
+    integrity:
+      "b1de5c941dc48eb20aa548d49d850adf216dc8dfeb176b8203ac0ec8e7efc428",
+  }),
+  richCard: manifest({
+    id: "rich_card",
+    kind: "detector",
+    integrity:
+      "7cf0093e9927f7a2bc3a6b4addd8d4a5dfb2e6f27bbcb176a115598131625d35",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

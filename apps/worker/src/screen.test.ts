@@ -5675,6 +5675,186 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a rich phone or card until that chat asks", async () => {
+    const phoneNumber = "+9021190011";
+    const cardNumber = "9021190099990000";
+    const actor = "留号码的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "phone" | "card";
+      paid?: boolean;
+    }) {
+      const secret =
+        input.kind === "card"
+          ? {
+              type: "bank_card_number",
+              text: "付款卡",
+              bank_card_number: cardNumber,
+            }
+          : {
+              type: "phone_number",
+              text: "联系方式",
+              phone_number: phoneNumber,
+            };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 109, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind
+              ? {
+                  rich_message: {
+                    blocks: [{ type: "paragraph", text: secret }],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_phone" | "rich_card"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10520,
+      chatId: -1001120,
+      kind: "phone",
+    });
+    expect(idle.message?.asRichPhone).toBe(true);
+    expect(idle.message?.text).toBe("联系方式");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(phoneNumber);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10521, chatId: -1001121, kind: "phone" }),
+      {
+        source: rule("rich_phone"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_phone");
+    expect(removed.decision.ruleIds).toContain("rich_phone");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:phone" },
+    ]);
+    const removedCard = await screenTelegramEvent(
+      await posted({ updateId: 10522, chatId: -1001122, kind: "card" }),
+      {
+        source: rule("rich_card"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removedCard.decision.action).toBe("delete");
+    expect(removedCard.decision.reasons).toContain("rich_card");
+    expect(removedCard.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:card" },
+    ]);
+    const keptByCard = await screenTelegramEvent(
+      await posted({ updateId: 10523, chatId: -1001123, kind: "phone" }),
+      {
+        source: rule("rich_card"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByCard.decision.action).toBe("allow");
+    const keptByPhone = await screenTelegramEvent(
+      await posted({ updateId: 10524, chatId: -1001124, kind: "card" }),
+      {
+        source: rule("rich_phone"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByPhone.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10525, chatId: -1001125 }),
+      {
+        source: rule("rich_phone"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10526,
+        chatId: -1001126,
+        kind: "phone",
+        paid: true,
+      }),
+      {
+        source: rule("rich_phone"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      removedCard: removedCard.decision,
+      keptByCard: keptByCard.decision,
+      keptByPhone: keptByPhone.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(phoneNumber);
+    expect(dumped).not.toContain(cardNumber);
+    expect(dumped).not.toContain("联系方式");
+    expect(dumped).not.toContain("付款卡");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps spoiler media until that chat asks", async () => {
     const caption = "剧透说明广告";
     const actor = "发剧透的人";

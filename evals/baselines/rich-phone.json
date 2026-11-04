@@ -1,0 +1,5 @@
+{
+  "detector": "rich_phone",
+  "precision": 1,
+  "recall": 1
+}
