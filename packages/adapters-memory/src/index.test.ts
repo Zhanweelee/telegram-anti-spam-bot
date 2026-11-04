@@ -171,6 +171,46 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records default administrator rights without inventing a chat", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setDefaultRights({
+      tenantId: "t",
+      forChannels: false,
+    });
+    await moderator.setDefaultRights({
+      tenantId: "t",
+      forChannels: true,
+      rights: {
+        anonymous: false,
+        manageChat: true,
+        deleteMessages: false,
+        manageVideoChats: false,
+        restrictMembers: false,
+        promoteMembers: false,
+        changeInfo: false,
+        inviteUsers: false,
+        postStories: false,
+        editStories: false,
+        deleteStories: false,
+        postMessages: false,
+        editMessages: false,
+        pinMessages: false,
+        manageTopics: false,
+        manageDirectMessages: false,
+        manageTags: false,
+        sendWelcomeMessages: false,
+      },
+    });
+    expect(moderator.defaultRightsSet[0]).toEqual({
+      tenantId: "t",
+      forChannels: false,
+    });
+    expect(moderator.defaultRightsSet[0]).not.toHaveProperty("rights");
+    expect(moderator.defaultRightsSet[0]).not.toHaveProperty("chatId");
+    expect(moderator.defaultRightsSet[1]?.rights?.manageChat).toBe(true);
+    expect(moderator.defaultRightsSet[1]?.forChannels).toBe(true);
+  });
+
   it("records a revoked invite without the link", async () => {
     const moderator = createMemoryModerator();
     const code = "AbCdEfGhIjKlMnOp";

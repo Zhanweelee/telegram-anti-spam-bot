@@ -141,6 +141,33 @@ export interface ChatAdministrator {
 
 export type PermissionState = "on" | "off" | "unknown";
 
+export interface DefaultAdministratorRights {
+  readonly anonymous: boolean;
+  readonly manageChat: boolean;
+  readonly deleteMessages: boolean;
+  readonly manageVideoChats: boolean;
+  readonly restrictMembers: boolean;
+  readonly promoteMembers: boolean;
+  readonly changeInfo: boolean;
+  readonly inviteUsers: boolean;
+  readonly postStories: boolean;
+  readonly editStories: boolean;
+  readonly deleteStories: boolean;
+  readonly postMessages: boolean;
+  readonly editMessages: boolean;
+  readonly pinMessages: boolean;
+  readonly manageTopics: boolean;
+  readonly manageDirectMessages: boolean;
+  readonly manageTags: boolean;
+  readonly sendWelcomeMessages: boolean;
+}
+
+export interface DefaultRightsTarget {
+  readonly tenantId: string;
+  readonly forChannels: boolean;
+  readonly rights?: DefaultAdministratorRights;
+}
+
 export interface DefaultChatPermissions {
   readonly sendMessages: PermissionState;
   readonly sendAudios: PermissionState;
@@ -311,6 +338,7 @@ export interface ModerationPort {
   setReaction(target: ReactionChoice): Promise<void>;
   setStickerSet(target: ChatStickerSetTarget): Promise<void>;
   setTitle(target: ChatTitleTarget): Promise<void>;
+  setDefaultRights(target: DefaultRightsTarget): Promise<void>;
   setDescription(target: ChatDescriptionTarget): Promise<void>;
   createTopic(target: NewTopicTarget): Promise<string>;
   renameTopic(target: RenamedTopicTarget): Promise<void>;

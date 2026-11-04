@@ -23,6 +23,7 @@ import {
   administratorRights,
   auditExportDocument,
   type ChatAdministrator,
+  type DefaultAdministratorRights,
   type DefaultChatPermissions,
   fitAuditExportDocument,
   type MemberStanding,
@@ -115,6 +116,7 @@ const COMMAND_NAMES = [
   "admintitle",
   "declinepost",
   "delephemeral",
+  "myrights",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -259,6 +261,7 @@ export interface OperatorCommandInput {
       | "renameTopic"
       | "revokeInvite"
       | "setAdminTitle"
+      | "setDefaultRights"
       | "setDescription"
       | "setMemberTag"
       | "setReaction"
@@ -461,6 +464,8 @@ async function dispatch(
       return declineOnePost(input, args);
     case "delephemeral":
       return deleteEphemeral(input, args);
+    case "myrights":
+      return setMyRights(input, args);
   }
 }
 
@@ -2711,6 +2716,120 @@ function rejectDeleteEphemeral(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "delephemeral",
+  });
+}
+
+const defaultRightTokens = {
+  anonymous: "anonymous",
+  manage_chat: "manageChat",
+  delete_messages: "deleteMessages",
+  manage_video_chats: "manageVideoChats",
+  restrict_members: "restrictMembers",
+  promote_members: "promoteMembers",
+  change_info: "changeInfo",
+  invite_users: "inviteUsers",
+  post_stories: "postStories",
+  edit_stories: "editStories",
+  delete_stories: "deleteStories",
+  post_messages: "postMessages",
+  edit_messages: "editMessages",
+  pin_messages: "pinMessages",
+  manage_topics: "manageTopics",
+  manage_direct_messages: "manageDirectMessages",
+  manage_tags: "manageTags",
+  send_welcome_messages: "sendWelcomeMessages",
+} as const satisfies Record<string, keyof DefaultAdministratorRights>;
+
+function chosenDefaultRights(
+  tokens: readonly string[],
+): DefaultAdministratorRights | undefined {
+  const rights: { -readonly [K in keyof DefaultAdministratorRights]: boolean } =
+    {
+      anonymous: false,
+      manageChat: false,
+      deleteMessages: false,
+      manageVideoChats: false,
+      restrictMembers: false,
+      promoteMembers: false,
+      changeInfo: false,
+      inviteUsers: false,
+      postStories: false,
+      editStories: false,
+      deleteStories: false,
+      postMessages: false,
+      editMessages: false,
+      pinMessages: false,
+      manageTopics: false,
+      manageDirectMessages: false,
+      manageTags: false,
+      sendWelcomeMessages: false,
+    };
+  const seen = new Set<string>();
+  for (const token of tokens) {
+    const field = defaultRightTokens[token as keyof typeof defaultRightTokens];
+    if (field === undefined || token === "clear" || seen.has(token)) {
+      return undefined;
+    }
+    seen.add(token);
+    rights[field] = true;
+  }
+  return rights;
+}
+
+async function setMyRights(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length === 0) {
+    return say(input, "command.myrights.usage");
+  }
+  const forChannels = args[0] === "channels";
+  const rest = forChannels ? args.slice(1) : args;
+  if (rest.length === 0) {
+    return say(input, "command.myrights.usage");
+  }
+  const clearing = rest.length === 1 && rest[0] === "clear";
+  const rights = clearing ? undefined : chosenDefaultRights(rest);
+  if (!clearing && rights === undefined) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const set = input.moderator?.setDefaultRights;
+  if (!set) {
+    rejectDefaultRights(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      forChannels,
+      ...(rights === undefined ? {} : { rights }),
+    });
+  } catch {
+    rejectDefaultRights(input);
+    return say(input, "command.invalid");
+  }
+  if (rights === undefined) {
+    return say(
+      input,
+      forChannels
+        ? "command.myrights.channels_cleared"
+        : "command.myrights.cleared",
+    );
+  }
+  return say(
+    input,
+    forChannels ? "command.myrights.channels" : "command.myrights.done",
+  );
+}
+
+function rejectDefaultRights(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "myrights",
   });
 }
 

@@ -11,6 +11,7 @@ import {
   type ChatTarget,
   type ChatTitleTarget,
   captchaChallengeSchema,
+  type DefaultRightsTarget,
   type DeleteMessagesTarget,
   type DeleteTarget,
   type ForumTopicTarget,
@@ -134,6 +135,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly senderUnbanned: readonly SenderChatTarget[];
   readonly declined: readonly JoinTarget[];
   readonly suggestedPostsDeclined: readonly SuggestedPostTarget[];
+  readonly defaultRightsSet: readonly DefaultRightsTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
@@ -174,6 +176,7 @@ export function createMemoryModerator(): ModerationPort & {
   const senderUnbanned: SenderChatTarget[] = [];
   const declined: JoinTarget[] = [];
   const suggestedPostsDeclined: SuggestedPostTarget[] = [];
+  const defaultRightsSet: DefaultRightsTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
@@ -214,6 +217,7 @@ export function createMemoryModerator(): ModerationPort & {
     senderUnbanned,
     declined,
     suggestedPostsDeclined,
+    defaultRightsSet,
     approved,
     deferred,
     restricted,
@@ -281,6 +285,17 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
       });
+    },
+    async setDefaultRights(target) {
+      defaultRightsSet.push(
+        target.rights === undefined
+          ? { tenantId: target.tenantId, forChannels: target.forChannels }
+          : {
+              tenantId: target.tenantId,
+              forChannels: target.forChannels,
+              rights: { ...target.rights },
+            },
+      );
     },
     async declinePost(target) {
       suggestedPostsDeclined.push(

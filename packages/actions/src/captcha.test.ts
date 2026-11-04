@@ -80,6 +80,7 @@ function moderator(
     async approveJoin() {},
     async declineJoin() {},
     async declinePost() {},
+    async setDefaultRights() {},
     async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {

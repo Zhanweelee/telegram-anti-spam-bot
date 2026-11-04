@@ -204,6 +204,11 @@ export const messageKeys = [
   "command.declinepost.done",
   "command.delephemeral.usage",
   "command.delephemeral.done",
+  "command.myrights.usage",
+  "command.myrights.done",
+  "command.myrights.channels",
+  "command.myrights.cleared",
+  "command.myrights.channels_cleared",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -279,6 +284,7 @@ const syntax = [
   "/admintitle <chatId> <userId> [title]",
   "/declinepost <chatId> <messageId> [comment]",
   "/delephemeral <chatId> <userId> <messageId>",
+  "/myrights [channels] <clear|right...>",
 ].join("\n");
 
 const zh = {
@@ -517,6 +523,15 @@ const zh = {
     "用法：/delephemeral <chatId> <userId> <messageId>",
   "command.delephemeral.done":
     "已请求删除 {chatId} 里发给 {actorId} 的临时消息 {messageId}。对方离线时可能收不到这次删除。其它消息还在。",
+  "command.myrights.usage": "用法：/myrights [channels] <clear|right...>",
+  "command.myrights.done":
+    "已请求设置这个 bot 在群和超级群里的默认管理员权限。加入时仍可修改。已有群不受影响。",
+  "command.myrights.channels":
+    "已请求设置这个 bot 在频道里的默认管理员权限。加入时仍可修改。已有频道不受影响。",
+  "command.myrights.cleared":
+    "已请求清掉这个 bot 在群和超级群里的默认管理员权限。已有群不受影响。",
+  "command.myrights.channels_cleared":
+    "已请求清掉这个 bot 在频道里的默认管理员权限。已有频道不受影响。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -776,6 +791,15 @@ const en = {
     "Usage: /delephemeral <chatId> <userId> <messageId>",
   "command.delephemeral.done":
     "Asked to delete ephemeral message {messageId} sent to {actorId} in {chatId}. An offline recipient may not see the deletion. The other messages stay.",
+  "command.myrights.usage": "Usage: /myrights [channels] <clear|right...>",
+  "command.myrights.done":
+    "Asked to set this bot's default admin rights for groups and supergroups. People can still change the list before adding the bot. Existing groups stay.",
+  "command.myrights.channels":
+    "Asked to set this bot's default admin rights for channels. People can still change the list before adding the bot. Existing channels stay.",
+  "command.myrights.cleared":
+    "Asked to clear this bot's default admin rights for groups and supergroups. Existing groups stay.",
+  "command.myrights.channels_cleared":
+    "Asked to clear this bot's default admin rights for channels. Existing channels stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

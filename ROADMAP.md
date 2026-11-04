@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-373 私聊设置这个 bot 的默认管理员权限 — done
+
+验收：私聊 `/myrights [channels] <clear|right...>` 调用 `setMyDefaultAdministratorRights`。`channels` 才送 `for_channels: true`。`clear` 不送 `rights`。写出的权限把 `is_anonymous` 和十七项 `can_*` 全部送出，点名的是 true，其余是 false。不认识的名字、重复的名字、`clear` 和其它名字混在一起，都不发出请求。回复不重复权限名，并写明加入时仍可修改、已有群不受影响。只有配置里的管理员可以改。接入目录里的人即使管着自己的群也不能改。群聊里的同样文本不执行。没有 token 或调用失败时回复「参数无效」，日志不含异常文本、token 和原文，也不把内存记录当成已经设置。不调用 `promoteChatMember` 或 `getMyDefaultAdministratorRights`。不改黑名单、封禁或禁言。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-372 私聊删除一条临时消息 — done
 
 验收：私聊 `/delephemeral <chatId> <userId> <messageId>` 调用 `deleteMessage`，并带上 `audienceId`。配了 token 时适配器调用 `deleteEphemeralMessage`，参数是 `chat_id`、`receiver_user_id` 和 `ephemeral_message_id`。消息号 `1` 原样送出。正数群号也原样送出。前导零的消息号不发出请求。参数不是正好三个时不发出请求。回复写明对方离线时可能收不到这次删除，其它消息还在。`/delete` 仍然不带 `audienceId`，也不调用 `deleteEphemeralMessage`。配置中的管理员可以操作任意群。接入目录里的人不能操作别人的群。群聊里的同样文本不执行。没有 token 或调用失败时回复「参数无效」，日志不含异常文本、token 和原文，也不把内存记录当成已经删除。不改黑名单、封禁或禁言。规则、白名单、额度和 30 天保留期不动。
@@ -1724,6 +1728,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-373
+
+- 做了什么：配置里的管理员可以在私聊设置或清掉这个 bot 加入群或频道时建议的默认管理员权限。一次请求。已有群不受影响。
+- 学到什么：`rights` 不送表示清掉默认值。送的时候要把每一项布尔值写全，避免 Telegram 自己补默认。`for_channels` 只在改频道时送出。这不是立即提升某个成员。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-372
 

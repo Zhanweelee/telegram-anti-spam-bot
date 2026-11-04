@@ -59,6 +59,7 @@ describe("operator command example", () => {
     expect(help).toContain("/admintitle <chatId> <userId> [title]");
     expect(help).toContain("/declinepost <chatId> <messageId> [comment]");
     expect(help).toContain("/delephemeral <chatId> <userId> <messageId>");
+    expect(help).toContain("/myrights [channels] <clear|right...>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -256,6 +257,15 @@ describe("operator command example", () => {
     expect(ephemeral).toBe(
       "已请求删除 -100 里发给 77 的临时消息 55。对方离线时可能收不到这次删除。其它消息还在。",
     );
+    const rights = await runPrivateCommand({
+      text: "/myrights manage_chat",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(rights).toBe(
+      "已请求设置这个 bot 在群和超级群里的默认管理员权限。加入时仍可修改。已有群不受影响。",
+    );
+    expect(rights).not.toContain("manage_chat");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

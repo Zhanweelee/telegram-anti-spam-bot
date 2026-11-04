@@ -150,6 +150,7 @@ function harness(options?: { failStorage?: boolean }) {
     async approveJoin() {},
     async declineJoin() {},
     async declinePost() {},
+    async setDefaultRights() {},
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},
