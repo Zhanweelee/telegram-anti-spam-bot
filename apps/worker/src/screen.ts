@@ -65,6 +65,7 @@ import {
   defaultRegexPatterns,
 } from "@tasb/detector-regex";
 import { createViaDetector } from "@tasb/detector-via";
+import { type AlbumWatch, sweepAlbum, workerAlbumWatch } from "./album.js";
 import { workerBlocklist } from "./blocklist-runtime.js";
 import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
@@ -144,6 +145,7 @@ export interface ScreenDeps {
     readonly policy: QuotaPolicy;
     readonly store: QuotaStore;
   };
+  readonly albumWatch?: AlbumWatch;
 }
 
 async function subscribedPack(
@@ -439,6 +441,14 @@ export async function screenTelegramEvent(
       });
     }
   }
+  await sweepAlbum({
+    event,
+    result,
+    dryRun,
+    moderator,
+    logger,
+    watch: deps.albumWatch ?? workerAlbumWatch,
+  });
   logger.info("webhook_screened", {
     eventId: result.eventId,
     chatId: event.chatId,

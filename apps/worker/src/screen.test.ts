@@ -26,6 +26,7 @@ import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createMemoryRateWindow } from "@tasb/detector-rate";
 import { normalizeUpdate, sha256Hex } from "@tasb/platform-telegram";
 import { describe, expect, it } from "vitest";
+import { createAlbumWatch } from "./album.js";
 import { filePackSource } from "./rules.js";
 import { screenTelegramEvent, workerStorage } from "./screen.js";
 
@@ -67,6 +68,362 @@ function countingStorage(): Storage & { reads: number } {
 }
 
 describe("screenTelegramEvent", () => {
+  it("deletes the other known photos once one album message is removed", async () => {
+    const phrase = "请免费领取礼品";
+    const albumId = "12532140322504850";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const logger = createMemoryLogger();
+    const storage = createMemoryStorage();
+    const chatId = "-100880";
+
+    async function photo(
+      id: string,
+      messageId: string,
+      text: string,
+      extra: { readonly paid?: true; readonly audienceId?: string } = {},
+    ) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8805", isAdmin: false },
+        message: {
+          id: messageId,
+          text,
+          textSha256: await sha256Hex(text),
+          albumId,
+          ...(extra.paid ? { paid: true as const } : {}),
+          ...(extra.audienceId ? { audienceId: extra.audienceId } : {}),
+        },
+      });
+    }
+
+    const clean = await screenTelegramEvent(
+      await photo("tg_album_880_11", "11", "今天站会"),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(clean.decision.action).toBe("allow");
+    expect(moderator.deleted).toEqual([]);
+
+    const spam = await screenTelegramEvent(
+      await photo("tg_album_880_12", "12", phrase),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(spam.decision.action).toBe("delete");
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
+      "12",
+      "11",
+    ]);
+
+    const later = await screenTelegramEvent(
+      await photo("tg_album_880_13", "13", "今天站会"),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(later.decision.action).toBe("allow");
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
+      "12",
+      "11",
+      "13",
+    ]);
+
+    const paid = await screenTelegramEvent(
+      await photo("tg_album_880_14", "14", phrase, { paid: true }),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(paid.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(moderator.deleted.map((item) => item.messageId)).not.toContain("14");
+
+    const other = await screenTelegramEvent(
+      await parseEvent({
+        id: "tg_album_880_21",
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8805", isAdmin: false },
+        message: {
+          id: "21",
+          text: "下午对一下",
+          textSha256: await sha256Hex("下午对一下"),
+          albumId: "12532140322504851",
+        },
+      }),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(other.decision.action).toBe("allow");
+    expect(moderator.deleted.map((item) => item.messageId)).not.toContain("21");
+
+    const dumped = JSON.stringify({
+      logs: logger.entries,
+      deleted: moderator.deleted,
+    });
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(albumId);
+    expect(dumped).not.toContain("bit.ly");
+  });
+
+  it("keeps a paid album photo and does not condemn the group from it", async () => {
+    const phrase = "请免费领取礼品";
+    const albumId = "12532140322504852";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const storage = createMemoryStorage();
+    const chatId = "-100882";
+
+    async function photo(
+      id: string,
+      messageId: string,
+      text: string,
+      paid = false,
+    ) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8806", isAdmin: false },
+        message: {
+          id: messageId,
+          text,
+          textSha256: await sha256Hex(text),
+          albumId,
+          ...(paid ? { paid: true as const } : {}),
+        },
+      });
+    }
+
+    await screenTelegramEvent(
+      await photo("tg_album_882_14", "14", phrase, true),
+      {
+        moderator,
+        storage,
+        albumWatch: watch,
+      },
+    );
+    await screenTelegramEvent(
+      await photo("tg_album_882_11", "11", "今天站会"),
+      { moderator, storage, albumWatch: watch },
+    );
+    expect(moderator.deleted).toEqual([]);
+
+    await screenTelegramEvent(await photo("tg_album_882_12", "12", phrase), {
+      moderator,
+      storage,
+      albumWatch: watch,
+    });
+    expect(moderator.deleted.map((item) => item.messageId).sort()).toEqual([
+      "11",
+      "12",
+    ]);
+  });
+
+  it("does not condemn an album during dry-run", async () => {
+    const phrase = "请免费领取礼品";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const storage = createMemoryStorage();
+    const runtime = createMemoryRuntimeStore();
+    const chatId = "-100881";
+    await runtime.setDryRun("local", chatId, true);
+
+    async function photo(id: string, messageId: string, text: string) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8807", isAdmin: false },
+        message: {
+          id: messageId,
+          text,
+          textSha256: await sha256Hex(text),
+          albumId: "12532140322504853",
+        },
+      });
+    }
+
+    const spam = await screenTelegramEvent(
+      await photo("tg_album_881_12", "12", phrase),
+      { moderator, storage, runtime, albumWatch: watch },
+    );
+    expect(spam.dryRun).toBe(true);
+    expect(spam.decision.action).toBe("delete");
+    expect(moderator.deleted).toEqual([]);
+
+    const runtimeOff = createMemoryRuntimeStore();
+    const clean = await screenTelegramEvent(
+      await photo("tg_album_881_13", "13", "今天站会"),
+      {
+        moderator,
+        storage,
+        runtime: runtimeOff,
+        albumWatch: watch,
+      },
+    );
+    expect(clean.dryRun).toBe(false);
+    expect(clean.decision.action).toBe("allow");
+    expect(moderator.deleted).toEqual([]);
+  });
+
+  it("keeps album deletes inside one chat and retries a sibling after a failure", async () => {
+    const phrase = "请免费领取礼品";
+    const albumId = "12532140322504854";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const logger = createMemoryLogger();
+    const storage = createMemoryStorage();
+
+    async function photo(
+      id: string,
+      messageId: string,
+      chatId: string,
+      text: string,
+    ) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8808", isAdmin: false },
+        message: {
+          id: messageId,
+          text,
+          textSha256: await sha256Hex(text),
+          albumId,
+          audienceId: "7",
+        },
+      });
+    }
+
+    await screenTelegramEvent(
+      await photo("tg_album_884_11", "11", "-100884", "今天站会"),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    const throwing = {
+      ...moderator,
+      async deleteMessage(target: {
+        readonly tenantId: string;
+        readonly chatId: string;
+        readonly messageId: string;
+        readonly audienceId?: string;
+      }) {
+        if (target.messageId === "11") {
+          throw new Error(phrase);
+        }
+        await moderator.deleteMessage(target);
+      },
+    };
+    const spam = await screenTelegramEvent(
+      await photo("tg_album_884_12", "12", "-100884", phrase),
+      { logger, moderator: throwing, storage, albumWatch: watch },
+    );
+    expect(spam.decision.action).toBe("delete");
+    expect(spam.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "executed",
+    });
+    expect(moderator.deleted).toEqual([
+      {
+        tenantId: "local",
+        chatId: "-100884",
+        messageId: "12",
+        audienceId: "7",
+      },
+    ]);
+    const failed = JSON.stringify(logger.entries);
+    expect(failed).toContain("album_delete_failed");
+    expect(failed).not.toContain(phrase);
+    expect(failed).not.toContain(albumId);
+    expect(failed).not.toContain("bit.ly");
+
+    await screenTelegramEvent(
+      await photo("tg_album_885_31", "31", "-100885", "今天站会"),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    await screenTelegramEvent(
+      await photo("tg_album_884_13", "13", "-100884", "今天站会"),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
+      "12",
+      "13",
+      "11",
+    ]);
+    expect(moderator.deleted.map((item) => item.messageId)).not.toContain("31");
+
+    const again = await screenTelegramEvent(
+      await photo("tg_album_884_12", "12", "-100884", phrase),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(again.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "duplicate",
+    });
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
+      "12",
+      "13",
+      "11",
+    ]);
+  });
+
+  it("leaves a phrase-shaped message id out of the album list", async () => {
+    const phrase = "请免费领取礼品";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const logger = createMemoryLogger();
+    const storage = createMemoryStorage();
+    const chatId = "-100886";
+    const albumId = "12532140322504855";
+
+    await screenTelegramEvent(
+      await parseEvent({
+        id: "tg_album_886_bad",
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8809", isAdmin: false },
+        message: {
+          id: phrase,
+          text: "今天站会",
+          textSha256: await sha256Hex("今天站会"),
+          albumId,
+        },
+      }),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    await screenTelegramEvent(
+      await parseEvent({
+        id: "tg_album_886_12",
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8809", isAdmin: false },
+        message: {
+          id: "12",
+          text: phrase,
+          textSha256: await sha256Hex(phrase),
+          albumId,
+        },
+      }),
+      { logger, moderator, storage, albumWatch: watch },
+    );
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+  });
+
   it("decides delete for a keyword without keeping the raw text in logs", async () => {
     const text = "请免费领取礼品";
     const logger = createMemoryLogger();
