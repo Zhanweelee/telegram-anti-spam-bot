@@ -576,6 +576,17 @@ export function createTelegramModerator(input: {
       });
       return readMenuButtonState(button);
     },
+    async readBotName() {
+      const named = await postTelegram({
+        token: input.token,
+        method: "getMyName",
+        fetchImpl: input.fetchImpl,
+        missing: "myname_unavailable",
+        failed: "myname_failed",
+        body: {},
+      });
+      return readBotNameValue(named);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -1033,6 +1044,21 @@ function telegramDefaultRights(
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
   };
+}
+
+function readBotNameValue(body: unknown): string {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("myname_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("myname_failed");
+  }
+  const name = (result as Record<string, unknown>).name;
+  if (typeof name !== "string" || name.length > 64 || /[\r\n]/.test(name)) {
+    throw new Error("myname_failed");
+  }
+  return name;
 }
 
 function readMenuButtonState(body: unknown): MenuButtonState {

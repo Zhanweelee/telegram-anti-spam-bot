@@ -420,6 +420,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readMenuButton() {
       throw new Error("button_unavailable");
     },
+    async readBotName() {
+      throw new Error("myname_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

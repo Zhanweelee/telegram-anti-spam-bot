@@ -171,6 +171,13 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent a bot name", async () => {
+    const moderator = createMemoryModerator();
+    await expect(moderator.readBotName({ tenantId: "t" })).rejects.toThrow(
+      "myname_unavailable",
+    );
+  });
+
   it("records a bot name without a language", async () => {
     const moderator = createMemoryModerator();
     await moderator.setBotName({ tenantId: "t", name: "ops" });

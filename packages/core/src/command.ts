@@ -128,6 +128,7 @@ const COMMAND_NAMES = [
   "menubutton",
   "button",
   "botname",
+  "myname",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -265,6 +266,7 @@ export interface OperatorCommandInput {
       | "openTopic"
       | "pinMessage"
       | "readAdministrators"
+      | "readBotName"
       | "readBoostCount"
       | "readCommandMenu"
       | "readDefaultRights"
@@ -499,6 +501,8 @@ async function dispatch(
       return showMenuButton(input, args);
     case "botname":
       return setBotName(input, args);
+    case "myname":
+      return showBotName(input, args);
   }
 }
 
@@ -3228,6 +3232,51 @@ function rejectBotName(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "botname",
+  });
+}
+
+async function showBotName(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.myname.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readBotName;
+  if (!read) {
+    rejectReadBotName(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const name = await read({ tenantId: input.event.tenantId });
+    if (!isBotName(name)) {
+      rejectReadBotName(input);
+      return say(input, "command.invalid");
+    }
+    return name.length === 0
+      ? say(input, "command.myname.empty")
+      : say(input, "command.myname.body", { name });
+  } catch {
+    rejectReadBotName(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isBotName(name: string): boolean {
+  return name.length <= BOT_NAME_LIMIT && !/[\r\n]/.test(name);
+}
+
+function rejectReadBotName(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "myname",
   });
 }
 
