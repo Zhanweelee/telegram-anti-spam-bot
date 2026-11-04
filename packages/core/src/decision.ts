@@ -7,6 +7,7 @@ export const punitiveActions = [
   "captcha",
   "decline",
   "delete",
+  "warn",
   "mute",
   "ban",
 ] as const;
@@ -22,8 +23,9 @@ const severity: Record<DecisionAction, number> = {
   captcha: 3,
   decline: 4,
   delete: 5,
-  mute: 6,
-  ban: 7,
+  warn: 6,
+  mute: 7,
+  ban: 8,
 };
 
 export function moreSevere(

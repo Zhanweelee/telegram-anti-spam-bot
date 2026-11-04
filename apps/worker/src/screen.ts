@@ -6,6 +6,7 @@ import {
   createLogAction,
   createMuteAction,
   createReportAction,
+  createWarnAction,
 } from "@tasb/actions";
 import {
   createMemoryCache,
@@ -41,6 +42,7 @@ import {
   resolveRuleSet,
   runPipeline,
   type Storage,
+  type WarnStore,
   wrapLogger,
 } from "@tasb/core";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
@@ -76,6 +78,7 @@ import {
 } from "./plugins.js";
 import { workerRateWindow } from "./rate-runtime.js";
 import { fileRuleSource } from "./rules.js";
+import { workerWarns } from "./warn-runtime.js";
 
 /**
  * Isolate-local fallback when D1 and KV are not bound. A rule miss
@@ -125,6 +128,7 @@ export interface ScreenDeps {
   readonly runtime?: RuntimeStore;
   readonly moderator?: ModerationPort;
   readonly captchaStore?: CaptchaStore;
+  readonly warnStore?: WarnStore;
   readonly clock?: Clock;
   readonly createNonce?: () => string;
   readonly botToken?: string;
@@ -359,6 +363,13 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.delete,
         value: createDeleteAction(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.warn,
+        value: createWarnAction({
+          store: deps.warnStore ?? workerWarns,
+        }),
       },
       {
         source: "builtin",

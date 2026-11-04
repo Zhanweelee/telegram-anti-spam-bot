@@ -4,12 +4,15 @@ import { fileURLToPath } from "node:url";
 import {
   type BanTarget,
   createMemoryLogger,
+  createMemoryWarnStore,
   type DeleteTarget,
   type Event,
   type JoinTarget,
   type ModerationPort,
   type MuteTarget,
   parseEvent,
+  WARN_LIMIT,
+  type WarnStore,
 } from "@tasb/core";
 import { describe, expect, it } from "vitest";
 import {
@@ -19,6 +22,7 @@ import {
   createLogAction,
   createMuteAction,
   createReportAction,
+  createWarnAction,
 } from "./index.js";
 
 const fixtures = JSON.parse(
@@ -1041,5 +1045,283 @@ describe("decline action", () => {
       detail: "dry_run",
     });
     expect(declined).toHaveLength(1);
+  });
+});
+
+describe("warn action", () => {
+  const phrase = "请免费领取礼品";
+
+  function countingStore(): WarnStore & { readonly reads: number } {
+    const store = createMemoryWarnStore();
+    let reads = 0;
+    return {
+      get reads() {
+        return reads;
+      },
+      async read(target) {
+        reads += 1;
+        return store.read(target);
+      },
+      increment: (target) => store.increment(target),
+      write: (target, count) => store.write(target, count),
+      clear: (target) => store.clear(target),
+    };
+  }
+
+  function warnModerator(input?: {
+    readonly failBan?: boolean;
+    readonly failDelete?: boolean;
+  }): ModerationPort & {
+    readonly deleted: DeleteTarget[];
+    readonly banned: BanTarget[];
+  } {
+    const base = ports();
+    const deleted: DeleteTarget[] = [];
+    return {
+      ...base,
+      deleted,
+      async deleteMessage(target) {
+        if (input?.failDelete) {
+          throw new Error("delete_failed");
+        }
+        deleted.push(target);
+      },
+      async banActor(target) {
+        if (input?.failBan) {
+          throw new Error("ban_failed");
+        }
+        base.banned.push(target);
+      },
+    };
+  }
+
+  function warnContext(
+    event: Event,
+    moderator: ModerationPort,
+    dryRun = false,
+  ) {
+    return {
+      event,
+      decision: {
+        action: "warn" as const,
+        ruleIds: ["spam_keywords"],
+        score: 1,
+        reasons: [],
+        evidence: [],
+      },
+      dryRun,
+      moderator,
+      logger: { info() {}, warn() {}, error() {} },
+      signal: { aborted: false },
+    };
+  }
+
+  it("deletes the first two messages and bans on the third", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    for (const step of [1, 2]) {
+      const result = await action.execute(
+        warnContext(messageEvent(), moderator),
+      );
+      expect(result, String(step)).toEqual({
+        actionId: "warn",
+        status: "executed",
+      });
+    }
+    expect(moderator.deleted).toHaveLength(2);
+    expect(moderator.banned).toEqual([]);
+    expect(
+      await store.read({
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      }),
+    ).toBe(2);
+    const third = await action.execute(warnContext(messageEvent(), moderator));
+    expect(third).toEqual({ actionId: "warn", status: "executed" });
+    expect(moderator.deleted).toHaveLength(3);
+    expect(moderator.banned).toEqual([
+      {
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      },
+    ]);
+    expect(JSON.stringify(third)).not.toContain(phrase);
+    expect(JSON.stringify(moderator.banned)).not.toContain("spam");
+  });
+
+  it("puts the count back when the third ban fails", async () => {
+    const store = createMemoryWarnStore();
+    const action = createWarnAction({ store });
+    const target = {
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      actorId: "user_1",
+    };
+    await store.write(target, WARN_LIMIT - 1);
+    const moderator = warnModerator({ failBan: true });
+    await expect(
+      action.execute(warnContext(messageEvent(), moderator)),
+    ).rejects.toThrow("ban_failed");
+    expect(await store.read(target)).toBe(WARN_LIMIT - 1);
+    expect(moderator.deleted).toHaveLength(1);
+    expect(moderator.banned).toEqual([]);
+  });
+
+  it("still throws the ban error when the rollback write fails", async () => {
+    const store = createMemoryWarnStore();
+    const action = createWarnAction({
+      store: {
+        read: (target) => store.read(target),
+        increment: (target) => store.increment(target),
+        async write() {
+          throw new Error("write_failed");
+        },
+        clear: (target) => store.clear(target),
+      },
+    });
+    const target = {
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      actorId: "user_1",
+    };
+    await store.write(target, WARN_LIMIT - 1);
+    const moderator = warnModerator({ failBan: true });
+    await expect(
+      action.execute(warnContext(messageEvent(), moderator)),
+    ).rejects.toThrow("ban_failed");
+  });
+
+  it("skips a paid post without counting or deleting", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    const event = messageEvent();
+    const result = await action.execute(
+      warnContext(
+        {
+          ...event,
+          message: event.message ? { ...event.message, paid: true } : undefined,
+        },
+        moderator,
+      ),
+    );
+    expect(result).toEqual({
+      actionId: "warn",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(moderator.deleted).toEqual([]);
+    expect(store.reads).toBe(0);
+    expect(
+      await store.read({
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      }),
+    ).toBe(0);
+  });
+
+  it("skips a dry run without touching the store or the moderator", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    const result = await action.execute(
+      warnContext(messageEvent(), moderator, true),
+    );
+    expect(result).toEqual({
+      actionId: "warn",
+      status: "skipped",
+      detail: "dry_run",
+    });
+    expect(moderator.deleted).toEqual([]);
+    expect(moderator.banned).toEqual([]);
+    expect(store.reads).toBe(0);
+  });
+
+  it("fails a missing actor without deleting", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    const result = await action.execute(
+      warnContext(actorEvent(false), moderator),
+    );
+    expect(result).toEqual({
+      actionId: "warn",
+      status: "failed",
+      detail: "missing_actor",
+    });
+    expect(moderator.deleted).toEqual([]);
+    expect(store.reads).toBe(0);
+  });
+
+  it("bans again without incrementing once the limit is already reached", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const target = {
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      actorId: "user_1",
+    };
+    await store.write(target, WARN_LIMIT);
+    const moderator = warnModerator();
+    const result = await action.execute(warnContext(messageEvent(), moderator));
+    expect(result).toEqual({ actionId: "warn", status: "executed" });
+    expect(moderator.banned).toEqual([target]);
+    expect(await store.read(target)).toBe(WARN_LIMIT);
+  });
+
+  it("counts a hit that has no message id", async () => {
+    const store = createMemoryWarnStore();
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    const event = messageEvent();
+    const result = await action.execute(
+      warnContext({ ...event, message: undefined }, moderator),
+    );
+    expect(result).toEqual({ actionId: "warn", status: "executed" });
+    expect(moderator.deleted).toEqual([]);
+    expect(
+      await store.read({
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      }),
+    ).toBe(1);
+  });
+
+  it("forwards the audience and does not count when delete throws", async () => {
+    const store = countingStore();
+    const action = createWarnAction({ store });
+    const kept = warnModerator();
+    const event = messageEvent();
+    const withAudience = {
+      ...event,
+      message: event.message
+        ? { ...event.message, audienceId: "user_9" }
+        : undefined,
+    };
+    await action.execute(warnContext(withAudience, kept));
+    expect(kept.deleted).toEqual([
+      {
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        messageId: "msg_1",
+        audienceId: "user_9",
+      },
+    ]);
+    const failing = warnModerator({ failDelete: true });
+    await expect(
+      action.execute(warnContext(messageEvent(), failing)),
+    ).rejects.toThrow("delete_failed");
+    expect(
+      await store.read({
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      }),
+    ).toBe(1);
   });
 });

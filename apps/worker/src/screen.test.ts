@@ -15,6 +15,7 @@ import {
   type BlocklistStore,
   canonicalPluginPayload,
   createMemoryLogger,
+  createMemoryWarnStore,
   type Detector,
   type LlmClassifier,
   type Notifier,
@@ -599,6 +600,75 @@ describe("screenTelegramEvent", () => {
       "executed",
       "executed",
     ]);
+  });
+
+  it("warns on an opt-in rule and bans the third hit", async () => {
+    const text = "请免费领取礼品";
+    const warns = createMemoryWarnStore();
+    const moderator = createMemoryModerator();
+    const source: RuleSource = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "caution",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["warn"],
+            },
+          ],
+        };
+      },
+    };
+    for (const step of [1, 2, 3, 4]) {
+      const result = await screenTelegramEvent(
+        await parseEvent({
+          id: `tg_warn_${step}`,
+          tenantId: "local",
+          chatId: "-100",
+          kind: "message",
+          occurredAt: "2026-11-01T00:00:00.000Z",
+          actor: { id: "5", isAdmin: false },
+          message: {
+            id: String(step),
+            text,
+            textSha256: await sha256Hex(text),
+          },
+        }),
+        {
+          cache: createMemoryCache(),
+          storage: createMemoryStorage(),
+          source,
+          moderator,
+          warnStore: warns,
+          logger: createMemoryLogger(),
+        },
+      );
+      expect(result.decision.action, String(step)).toBe("warn");
+      expect(result.actionResults).toEqual([
+        { actionId: "warn", status: "executed" },
+      ]);
+      expect(JSON.stringify(result)).not.toContain(text);
+    }
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+    ]);
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-100", actorId: "5" },
+      { tenantId: "local", chatId: "-100", actorId: "5" },
+    ]);
+    expect(
+      await warns.read({ tenantId: "local", chatId: "-100", actorId: "5" }),
+    ).toBe(3);
   });
 
   it("allows ordinary text and empty text", async () => {

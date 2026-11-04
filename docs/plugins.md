@@ -35,7 +35,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 }
 ```
 
-动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。不足 30 秒或超过 366 天的限制先收到这个区间，避免被当成永久限制。见 ADR 0354。付费帖不删除。见 ADR 0356。
+动作只调用 `ctx.moderator`，或者 core 已经导出的领域函数。dry-run 返回 `{ status: "skipped", detail: "dry_run" }`。缺消息或 actor 时返回 `failed`，不要抛给流水线。mute 带 `durationSeconds`，ban 不顺带删除。见 ADR 0004。`warn` 删掉当前这条未付费消息并累计次数，满 3 次再封禁。次数和 `/warn` 共用。默认规则仍是 delete。见 ADR 0454。Telegram 适配器在有 token 时把这三步各发成一次 Bot API 请求。失败由流水线记成 `action_failed`，不把响应正文写进日志。见 ADR 0020。同一条事件先占住审计再调用动作。已经有记录就不再调用。见 ADR 0335 和 ADR 0336。不足 30 秒或超过 366 天的限制先收到这个区间，避免被当成永久限制。见 ADR 0354。付费帖不删除。见 ADR 0356。
 
 `log` 只写标识、分数和 reason。`report` 把同一份通知交给 `Notifier`。没有通知端口时返回 `report_unavailable`。见 ADR 0021。
 
@@ -77,7 +77,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/uncaptcha <chatId> <actorId>` 取消尚未完成的验证。先取走挑战，再 `restrictChatMember` 把每一项权限打开，不带 `until_date`，然后 `deleteMessage` 删掉按钮。没有待验证时不调用。放行失败时把挑战放回去，不删按钮。nonce 不进回复，也不进日志。不改 `/unmute`。见 ADR 0451。
 
-`/warn <chatId> <actorId>` 给同一个人记一次警告。未满 3 次不调用 Telegram。第 3 次调用 `banActor`，也就是 `banChatMember`，`revoke_messages` 仍是 false，不带 `until_date`。封禁失败时次数退回，回复「参数无效」。已经满 3 次时不再封禁。`/unwarn` 只把次数清掉，不调用 `unbanChatMember`。`/warns` 只读次数。配了 DB 时次数在 D1，没配时仍在内存，重启后从 0 开始。名字不进回复，也不进日志。见 ADR 0453。
+`/warn <chatId> <actorId>` 给同一个人记一次警告。未满 3 次不调用 Telegram。第 3 次调用 `banActor`，也就是 `banChatMember`，`revoke_messages` 仍是 false，不带 `until_date`。封禁失败时次数退回，回复「参数无效」。已经满 3 次时不再封禁。`/unwarn` 只把次数清掉，不调用 `unbanChatMember`。`/warns` 只读次数。配了 DB 时次数在 D1，没配时仍在内存，重启后从 0 开始。名字不进回复，也不进日志。见 ADR 0453。规则动作 `warn` 见 ADR 0454。已经满 3 次时，流水线再命中会再封禁；这条命令不再封禁。
 
 机器人还在群里但不是管理员，或管理员缺删除、缺限制时，给改了它的那个人发一条私聊。已经离开或被移出时不发。两条权限都在时不发。不发到群里。见 ADR 0436。
 
