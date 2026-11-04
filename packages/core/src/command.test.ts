@@ -904,8 +904,164 @@ describe("runOperatorCommand", () => {
       source,
     });
     expect(usage).toMatchObject({
-      text: "用法：/rules [chatId] [skip <count>]",
+      text: "用法：/rules [chatId] [on|off] [skip <count>]",
     });
+  });
+
+  it("lists only enabled or disabled rules", async () => {
+    const deps = kit();
+    const rule = (
+      id: string,
+      enabled: boolean,
+      actions: readonly string[] = ["delete"],
+    ) => ({
+      id,
+      enabled,
+      detectorIds: ["keyword"],
+      threshold: 1,
+      actions,
+    });
+    const source = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max" as const,
+          rules: [
+            rule("spam_keywords", true),
+            rule("sticker_emoji", false),
+            rule("new_member", true, ["captcha"]),
+          ],
+        };
+      },
+    };
+    const listed = await runOperatorCommand({
+      event: event({ text: "/rules -100 on", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(listed.status).toBe("reply");
+    if (listed.status !== "reply") {
+      return;
+    }
+    expect(listed.text).toBe(
+      [
+        "rules -100 on",
+        "spam_keywords enabled file threshold 1 actions delete",
+        "new_member enabled file threshold 1 actions captcha",
+      ].join("\n"),
+    );
+    expect(listed.text).not.toContain("sticker_emoji");
+    expect(listed.text).not.toContain(phrase);
+    const disabled = await runOperatorCommand({
+      event: event({ text: "/rules -100 off", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(disabled).toMatchObject({
+      text: [
+        "rules -100 off",
+        "sticker_emoji disabled file threshold 1 actions delete",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/rules -100 on skip 1", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(skipped).toMatchObject({
+      text: [
+        "rules -100 on",
+        "new_member enabled file threshold 1 actions captcha",
+      ].join("\n"),
+    });
+    const same = await runOperatorCommand({
+      event: event({ text: "/rules -100 on skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(same).toEqual(listed);
+    const past = await runOperatorCommand({
+      event: event({ text: "/rules -100 on skip 2", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const full = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(full.status).toBe("reply");
+    if (full.status !== "reply") {
+      return;
+    }
+    expect(full.text.startsWith("rules -100\n")).toBe(true);
+    expect(full.text).toContain("sticker_emoji");
+    expect(full.text).toContain("new_member");
+    const english = await runOperatorCommand({
+      event: event({ text: "/rules -100 on", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+      source,
+    });
+    expect(english).toMatchObject({
+      text: [
+        "rules -100 on",
+        "spam_keywords enabled file threshold 1 actions delete",
+        "new_member enabled file threshold 1 actions captcha",
+      ].join("\n"),
+    });
+    const directory = {
+      async noteBot() {
+        return "ok" as const;
+      },
+      async noteMember() {
+        return "ok" as const;
+      },
+      async chatsFor() {
+        return ["-100"];
+      },
+      async list() {
+        return ["-100"];
+      },
+    };
+    const granted = await runOperatorCommand({
+      event: event({ text: "/rules on", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+      source,
+    });
+    expect(granted).toEqual(listed);
+    const refused = await runOperatorCommand({
+      event: event({ text: "/rules -200 on", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+      source,
+    });
+    expect(refused).toMatchObject({ text: "没有权限" });
+    const word = await runOperatorCommand({
+      event: event({ text: `/rules -100 on ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(word).toMatchObject({
+      text: "用法：/rules [chatId] [on|off] [skip <count>]",
+    });
+    expect(JSON.stringify(word)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
   it("shows rules and help without echoing extra text", async () => {
@@ -1254,7 +1410,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(rulesUsage).toMatchObject({
-      text: "用法：/rules [chatId] [skip <count>]",
+      text: "用法：/rules [chatId] [on|off] [skip <count>]",
     });
     const badRules = await runOperatorCommand({
       event: event({ text: "/rules", direct: true, chatId: "abc" }),

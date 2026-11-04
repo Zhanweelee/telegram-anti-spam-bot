@@ -806,25 +806,34 @@ async function showRules(
   const header = pack
     ? say(input, "command.rules.pack", { chatId, pack: pack.id })
     : say(input, "command.rules.header", { chatId });
+  const titled =
+    parsed.view === undefined ? header : `${header} ${parsed.view}`;
   const lines = [
     mark.resetsAt === undefined
-      ? header
+      ? titled
       : say(input, "command.rules.until", {
-          status: header,
+          status: titled,
           resetsAt: mark.resetsAt,
         }),
   ];
-  if (rules.rules.length === 0) {
+  const selected = rules.rules.filter((rule) =>
+    parsed.view === undefined
+      ? true
+      : parsed.view === "on"
+        ? rule.enabled
+        : !rule.enabled,
+  );
+  if (selected.length === 0) {
     if (parsed.skip > 0) {
       return say(input, "command.invalid");
     }
     lines.push(say(input, "command.rules.empty"));
     return lines.join("\n");
   }
-  if (parsed.skip >= rules.rules.length) {
+  if (parsed.skip >= selected.length) {
     return say(input, "command.invalid");
   }
-  for (const rule of rules.rules) {
+  for (const rule of selected) {
     const state = say(
       input,
       rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
@@ -849,29 +858,49 @@ async function showRules(
   return fitRuleLines(input, lines, parsed.skip);
 }
 
-function parseRulesArgs(
-  args: readonly string[],
-): "usage" | "invalid" | { readonly chatId?: string; readonly skip: number } {
-  if (args.length === 0) {
-    return { skip: 0 };
+function parseRulesArgs(args: readonly string[]):
+  | "usage"
+  | "invalid"
+  | {
+      readonly chatId?: string;
+      readonly skip: number;
+      readonly view?: "on" | "off";
+    } {
+  let index = 0;
+  let chatId: string | undefined;
+  const first = args[0];
+  if (first !== undefined && isTargetId(first)) {
+    chatId = first;
+    index = 1;
   }
-  if (args.length === 1) {
-    const chatId = args[0];
-    return chatId === undefined ? "usage" : { chatId, skip: 0 };
+  let view: "on" | "off" | undefined;
+  const viewToken = args[index];
+  if (viewToken === "on" || viewToken === "off") {
+    view = viewToken;
+    index += 1;
   }
-  if (args.length === 2 && args[0] === "skip") {
-    const skip = rulesSkipCount(args[1] ?? "");
-    return skip === undefined ? "invalid" : { skip };
-  }
-  if (args.length === 3 && args[1] === "skip") {
-    const chatId = args[0];
-    const skip = rulesSkipCount(args[2] ?? "");
-    if (chatId === undefined || skip === undefined) {
+  let skip = 0;
+  if (index < args.length) {
+    if (args[index] !== "skip") {
+      return "usage";
+    }
+    const countToken = args[index + 1];
+    if (countToken === undefined) {
       return "invalid";
     }
-    return { chatId, skip };
+    const count = rulesSkipCount(countToken);
+    if (count === undefined || args.length !== index + 2) {
+      return count === undefined && args.length === index + 2
+        ? "invalid"
+        : "usage";
+    }
+    skip = count;
   }
-  return "usage";
+  return {
+    ...(chatId === undefined ? {} : { chatId }),
+    skip,
+    ...(view === undefined ? {} : { view }),
+  };
 }
 
 function rulesSkipCount(value: string): number | undefined {

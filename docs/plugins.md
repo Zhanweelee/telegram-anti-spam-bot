@@ -329,6 +329,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 私聊 `/rules <chatId> skip <count>` 跳过前面的 `count` 条，再按原顺序往下列。不写 `skip` 时仍从第一条开始。见 ADR 0521。
 
+私聊 `/rules <chatId> on` 只列打开的规则，`off` 只列关闭的规则。不写时仍列出全部。见 ADR 0522。
+
 私聊 `/repeat` 改这个群的重复条数和秒数。不设置时仍是 60 秒 3 条。见 ADR 0462。
 
 私聊 `/rulemute` 改这个群在规则命中后的禁言秒数。不设置时仍是 3600 秒。见 ADR 0463。
