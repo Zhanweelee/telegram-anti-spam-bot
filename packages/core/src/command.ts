@@ -4,7 +4,9 @@ import {
   blocklistEntrySchema,
 } from "./blocklist.js";
 import type { Cache } from "./cache.js";
+import { beginChallenge, type CaptchaStore } from "./captcha.js";
 import type { ChatDirectory } from "./chats.js";
+import type { Clock } from "./clock.js";
 import type { Event } from "./event.js";
 import { fitFeedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
@@ -162,10 +164,12 @@ const COMMAND_NAMES = [
   "canadmin",
   "kick",
   "cani",
+  "captcha",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
 const LOG_LIMIT = 10;
+const CAPTCHA_SECONDS = 300;
 const DEFAULT_MUTE_SECONDS = 60 * 60;
 const MIN_MUTE_SECONDS = 30;
 const MAX_MUTE_SECONDS = 366 * 24 * 60 * 60;
@@ -268,6 +272,9 @@ export interface OperatorCommandInput {
   readonly source: RuleSource;
   readonly storage: Storage;
   readonly logger: Logger;
+  readonly captcha?: CaptchaStore;
+  readonly clock?: Clock;
+  readonly createNonce?: () => string;
   readonly fallback?: PrefilterPolicy;
   readonly blocklist?: BlocklistStore;
   readonly review?: ReviewQueue;
@@ -300,6 +307,7 @@ export interface OperatorCommandInput {
       | "leaveChat"
       | "lockChat"
       | "muteActor"
+      | "restrictActor"
       | "openTopic"
       | "pinMessage"
       | "readAdministrators"
@@ -366,6 +374,11 @@ export type OperatorCommandResult =
       readonly status: "reply";
       readonly command: CommandName;
       readonly text: string;
+      readonly issuedChallenge?: {
+        readonly chatId: string;
+        readonly actorId: string;
+      };
+      readonly failureText?: string;
     };
 
 export async function runOperatorCommand(
@@ -400,7 +413,16 @@ export async function runOperatorCommand(
     parsed.name,
     parsed.args,
   );
-  return { status: "reply", command: parsed.name, text: textReply };
+  if (typeof textReply === "string") {
+    return { status: "reply", command: parsed.name, text: textReply };
+  }
+  return {
+    status: "reply",
+    command: parsed.name,
+    text: textReply.text,
+    issuedChallenge: textReply.issuedChallenge,
+    failureText: textReply.failureText,
+  };
 }
 
 export function parseOperatorCommand(
@@ -419,11 +441,22 @@ export function parseOperatorCommand(
   return { name, args: parts.slice(1) };
 }
 
+type CommandReply =
+  | string
+  | {
+      readonly text: string;
+      readonly failureText: string;
+      readonly issuedChallenge: {
+        readonly chatId: string;
+        readonly actorId: string;
+      };
+    };
+
 async function dispatch(
   input: OperatorCommandInput,
   name: CommandName,
   args: readonly string[],
-): Promise<string> {
+): Promise<CommandReply> {
   switch (name) {
     case "help":
       return say(input, "command.help");
@@ -469,6 +502,8 @@ async function dispatch(
       return kickMember(input, args);
     case "cani":
       return showOwnAdmin(input, args);
+    case "captcha":
+      return challengeMember(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5011,6 +5046,90 @@ async function kickMember(
     return say(input, "command.invalid");
   }
   return say(input, "command.kick.done", { chatId, actorId });
+}
+
+async function challengeMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<CommandReply> {
+  if (args.length !== 2) {
+    return say(input, "command.captcha.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const restrict = input.moderator?.restrictActor;
+  const store = input.captcha;
+  const clock = input.clock;
+  const createNonce = input.createNonce;
+  if (!restrict || !store || !clock || !createNonce) {
+    rejectCaptcha(input);
+    return say(input, "command.invalid");
+  }
+  const nonce = createNonce();
+  if (!/^[a-f0-9]{16}$/.test(nonce)) {
+    rejectCaptcha(input);
+    return say(input, "command.invalid");
+  }
+  const remove = input.moderator?.deleteMessage;
+  try {
+    await beginChallenge({
+      event: input.event,
+      chatId,
+      actorId,
+      ttlSeconds: CAPTCHA_SECONDS,
+      nonce,
+      ports: {
+        store,
+        storage: input.storage,
+        restrict: (target) => restrict(target),
+        release: () => Promise.reject(new Error("captcha_release")),
+        clock,
+        logger: input.logger,
+        ...(remove
+          ? {
+              removePrompt: (target: {
+                readonly tenantId: string;
+                readonly chatId: string;
+                readonly messageId: string;
+              }) =>
+                remove({
+                  tenantId: target.tenantId,
+                  chatId: target.chatId,
+                  messageId: target.messageId,
+                }),
+            }
+          : {}),
+      },
+    });
+  } catch {
+    rejectCaptcha(input);
+    return say(input, "command.invalid");
+  }
+  return {
+    text: say(input, "command.captcha.done", { chatId, actorId }),
+    failureText: say(input, "command.invalid"),
+    issuedChallenge: { chatId, actorId },
+  };
+}
+
+function rejectCaptcha(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "captcha",
+  });
 }
 
 function rejectKick(input: OperatorCommandInput): void {

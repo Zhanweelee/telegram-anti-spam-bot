@@ -114,12 +114,14 @@ export async function beginChallenge(input: {
   readonly ttlSeconds: number;
   readonly nonce: string;
   readonly ports: CaptchaPorts;
+  readonly chatId?: string;
+  readonly actorId?: string;
 }): Promise<CaptchaChallenge> {
   const nowIso = input.ports.clock.nowIso();
   const challenge = parseCaptchaChallenge({
     tenantId: input.event.tenantId,
-    chatId: input.event.chatId,
-    actorId: input.event.actor.id,
+    chatId: input.chatId ?? input.event.chatId,
+    actorId: input.actorId ?? input.event.actor.id,
     nonce: input.nonce,
     expiresAt: addSeconds(nowIso, input.ttlSeconds),
   });

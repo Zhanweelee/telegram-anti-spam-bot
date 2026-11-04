@@ -1,11 +1,13 @@
 import {
   botSetupNotice,
+  type CaptchaStore,
   type ChatDirectory,
   cancelChallenge,
   createSystemClock,
   type Event,
   type Locale,
   type Logger,
+  type ModerationPort,
   promoteChallenge,
   type ReplyPort,
   type ReviewQueue,
@@ -15,7 +17,7 @@ import {
 } from "@tasb/core";
 import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
-import { workerCaptcha } from "./captcha-runtime.js";
+import { createCaptchaNonce, workerCaptcha } from "./captcha-runtime.js";
 import { moderatorFor } from "./moderation.js";
 import { workerRulePacks } from "./pack-runtime.js";
 import { adminNotifier } from "./report.js";
@@ -431,10 +433,32 @@ export async function handleIncomingEvent(
         }
       : {}),
     ...(chats ? { chats } : {}),
+    captcha: captchaStore,
+    clock: deps.clock ?? createSystemClock(),
+    createNonce: deps.createNonce ?? createCaptchaNonce,
     moderator: commandModerator(moderator, deps),
   });
   if (outcome.status === "reply") {
-    await sendReply(event, outcome.text, outcome.command, deps.reply, logger);
+    let text = outcome.text;
+    const issued = outcome.issuedChallenge;
+    if (issued) {
+      const sent = await deliverCaptchaPrompt({
+        tenantId: event.tenantId,
+        chatId: issued.chatId,
+        actorId: issued.actorId,
+        eventId: event.id,
+        ownsPrompt: true,
+        token: deps.botToken,
+        ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+        store: captchaStore,
+        moderator,
+        logger,
+      });
+      if (!sent) {
+        text = outcome.failureText ?? "参数无效";
+      }
+    }
+    await sendReply(event, text, outcome.command, deps.reply, logger);
     return;
   }
   const result = await screenTelegramEvent(event, {
@@ -474,61 +498,87 @@ export async function handleIncomingEvent(
   if (!ownsPrompt && !repeatsPrompt) {
     return;
   }
-  const challenge = await captchaStore.get(
-    event.tenantId,
-    event.chatId,
-    event.actor.id,
+  await deliverCaptchaPrompt({
+    tenantId: event.tenantId,
+    chatId: event.chatId,
+    actorId: event.actor.id,
+    eventId: event.id,
+    ownsPrompt,
+    token: deps.botToken,
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    store: captchaStore,
+    moderator,
+    logger,
+  });
+}
+
+async function deliverCaptchaPrompt(input: {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly actorId: string;
+  readonly eventId: string;
+  readonly ownsPrompt: boolean;
+  readonly token: string | undefined;
+  readonly fetchImpl?: typeof fetch;
+  readonly store: CaptchaStore;
+  readonly moderator: ModerationPort;
+  readonly logger: Logger;
+}): Promise<boolean> {
+  const challenge = await input.store.get(
+    input.tenantId,
+    input.chatId,
+    input.actorId,
   );
   if (!challenge) {
-    return;
+    return false;
   }
   let messageId: string | null;
   try {
     messageId = await sendCaptchaButton({
-      token: deps.botToken,
-      chatId: event.chatId,
+      token: input.token,
+      chatId: input.chatId,
       nonce: challenge.nonce,
-      ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+      ...(input.fetchImpl ? { fetchImpl: input.fetchImpl } : {}),
     });
   } catch {
-    if (ownsPrompt) {
+    if (input.ownsPrompt) {
       try {
-        await moderator.releaseActor({
-          tenantId: event.tenantId,
-          chatId: event.chatId,
-          actorId: event.actor.id,
+        await input.moderator.releaseActor({
+          tenantId: input.tenantId,
+          chatId: input.chatId,
+          actorId: input.actorId,
         });
-        await captchaStore.delete(event.tenantId, event.chatId, event.actor.id);
+        await input.store.delete(input.tenantId, input.chatId, input.actorId);
       } catch {
-        logger.warn("captcha_prompt_failed", {
-          eventId: event.id,
-          chatId: event.chatId,
+        input.logger.warn("captcha_prompt_failed", {
+          eventId: input.eventId,
+          chatId: input.chatId,
         });
-        return;
+        return false;
       }
     }
-    logger.warn("captcha_prompt_failed", {
-      eventId: event.id,
-      chatId: event.chatId,
+    input.logger.warn("captcha_prompt_failed", {
+      eventId: input.eventId,
+      chatId: input.chatId,
     });
-    return;
+    return false;
   }
   if (messageId === null) {
-    return;
+    return true;
   }
   let attached = false;
   try {
-    attached = await captchaStore.attachPrompt(
-      event.tenantId,
-      event.chatId,
-      event.actor.id,
+    attached = await input.store.attachPrompt(
+      input.tenantId,
+      input.chatId,
+      input.actorId,
       challenge.nonce,
       messageId,
     );
   } catch {
-    logger.warn("captcha_prompt_failed", {
-      eventId: event.id,
-      chatId: event.chatId,
+    input.logger.warn("captcha_prompt_failed", {
+      eventId: input.eventId,
+      chatId: input.chatId,
     });
   }
   let dropId: string | undefined;
@@ -542,18 +592,19 @@ export async function handleIncomingEvent(
   }
   if (dropId !== undefined) {
     try {
-      await moderator.deleteMessage({
-        tenantId: event.tenantId,
-        chatId: event.chatId,
+      await input.moderator.deleteMessage({
+        tenantId: input.tenantId,
+        chatId: input.chatId,
         messageId: dropId,
       });
     } catch {
-      logger.warn("captcha_prompt_delete_failed", {
-        eventId: event.id,
-        chatId: event.chatId,
+      input.logger.warn("captcha_prompt_delete_failed", {
+        eventId: input.eventId,
+        chatId: input.chatId,
       });
     }
   }
+  return true;
 }
 
 async function sendBotSetupNotice(

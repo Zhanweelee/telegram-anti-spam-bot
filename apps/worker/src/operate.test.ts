@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(85);
+    expect(body.commands).toHaveLength(86);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2903,8 +2903,8 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
-      command: "cani",
-      description: "/cani <chatId>",
+      command: "captcha",
+      description: "/captcha <chatId> <actorId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -8692,5 +8692,164 @@ describe("handleIncomingEvent", () => {
     expect(kit.reply.sent.at(-1)?.text).toBe("chats\n-100586 2/1");
     expect(await store.read(usage)).toEqual(before);
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("asks a member already in the chat to pass the button check", async () => {
+    const kit = deps();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    const calls: { method: string; body: string }[] = [];
+    const started = Math.floor(Date.now() / 1000);
+    await handleIncomingEvent(
+      await incoming({ text: "/captcha -100 77", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        captchaStore,
+        createNonce: () => nonce,
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          const method = url.slice(url.lastIndexOf("/") + 1);
+          calls.push({ method, body: String(init?.body ?? "") });
+          if (method === "sendMessage") {
+            return new Response(
+              JSON.stringify({ ok: true, result: { message_id: 55 } }),
+              { status: 200 },
+            );
+          }
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已要求验证 -100 77",
+    ]);
+    expect(kit.reply.sent[0]?.chatId).toBe("42");
+    expect(calls.map((call) => call.method)).toEqual([
+      "restrictChatMember",
+      "sendMessage",
+    ]);
+    const restricted = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id: number;
+      user_id: number;
+      until_date: number;
+      use_independent_chat_permissions: boolean;
+      permissions: { can_send_messages: boolean };
+    };
+    expect(restricted.chat_id).toBe(-100);
+    expect(restricted.user_id).toBe(77);
+    expect(restricted.use_independent_chat_permissions).toBe(true);
+    expect(restricted.permissions.can_send_messages).toBe(false);
+    expect(restricted.until_date).toBeGreaterThanOrEqual(started + 300);
+    expect(restricted.until_date).toBeLessThanOrEqual(started + 305);
+    const sent = JSON.parse(calls[1]?.body ?? "{}") as {
+      chat_id: number;
+      disable_notification: boolean;
+      reply_markup: {
+        inline_keyboard: { callback_data: string }[][];
+      };
+    };
+    expect(sent.chat_id).toBe(-100);
+    expect(sent.disable_notification).toBe(true);
+    expect(sent.reply_markup.inline_keyboard[0]?.[0]?.callback_data).toBe(
+      `n:${nonce}`,
+    );
+    expect(sent.reply_markup.inline_keyboard[1]?.[0]?.callback_data).toBe(
+      `c:${nonce}`,
+    );
+    expect((await captchaStore.get("local", "-100", "77"))?.messageId).toBe(
+      "55",
+    );
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+
+    const grouped = deps();
+    const groupedCalls: string[] = [];
+    await handleIncomingEvent(await incoming({ text: "/captcha -100 77" }), {
+      ...grouped,
+      botToken: "bot-token",
+      createNonce: () => nonce,
+      fetchImpl: async (input) => {
+        groupedCalls.push(String(input));
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
+      },
+    });
+    expect(groupedCalls).toEqual([]);
+    expect(grouped.reply.sent).toEqual([]);
+
+    const extra = deps();
+    const extraCalls: string[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/captcha -100 77 1", direct: true }),
+      {
+        ...extra,
+        botToken: "bot-token",
+        createNonce: () => nonce,
+        fetchImpl: async (input) => {
+          extraCalls.push(String(input));
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(extra.reply.sent.map((message) => message.text)).toEqual([
+      "用法：/captcha <chatId> <actorId>",
+    ]);
+    expect(extraCalls).toEqual([]);
+
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/captcha -100 77", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+
+    const failed = deps();
+    const failedStore = createMemoryCaptchaStore();
+    const failedCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/captcha -100 77", direct: true }),
+      {
+        ...failed,
+        botToken: "bot-token",
+        captchaStore: failedStore,
+        createNonce: () => nonce,
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          const method = url.slice(url.lastIndexOf("/") + 1);
+          failedCalls.push({ method, body: String(init?.body ?? "") });
+          if (method === "sendMessage") {
+            throw new Error(phrase);
+          }
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(failed.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(failedCalls.map((call) => call.method)).toEqual([
+      "restrictChatMember",
+      "sendMessage",
+      "restrictChatMember",
+    ]);
+    const released = JSON.parse(failedCalls[2]?.body ?? "{}") as {
+      permissions: { can_send_messages: boolean };
+    };
+    expect(released.permissions.can_send_messages).toBe(true);
+    expect(await failedStore.get("local", "-100", "77")).toBeNull();
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain("bot-token");
   });
 });
