@@ -20937,6 +20937,221 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich mention and leaves the username out", async () => {
+    const username = "u90221hidden";
+    const actor = "点用户名的人";
+    const mention = await normalize({
+      update_id: 4780,
+      message: {
+        message_id: 820,
+        date: 1761955200,
+        chat: { id: -100499780, type: "supergroup" },
+        from: { id: 113, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "mention",
+                  text: "点名广告",
+                  username,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(mention.status).toBe("event");
+    if (mention.status !== "event") {
+      return;
+    }
+    expect(mention.event.message?.asRichMention).toBe(true);
+    expect(mention.event.message?.asRichEmail).toBeUndefined();
+    expect(mention.event.message?.text).toBe("点名广告");
+    const mentionDump = JSON.stringify(mention.event);
+    expect(mentionDump).not.toContain(username);
+    expect(mentionDump).not.toContain("90221");
+    expect(mentionDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4781,
+      message: {
+        message_id: 821,
+        date: 1761955200,
+        chat: { id: -100499781, type: "supergroup" },
+        from: { id: 113 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "mention",
+                text: "点名广告",
+                username,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichMention).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(username);
+
+    const nested = await normalize({
+      update_id: 4782,
+      message: {
+        message_id: 822,
+        date: 1761955200,
+        chat: { id: -100499782, type: "supergroup" },
+        from: { id: 113 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "mention",
+                    text: "嵌套点名",
+                    username,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichMention).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套点名");
+    expect(JSON.stringify(nested.event)).not.toContain("90221");
+
+    const blank = await normalize({
+      update_id: 4783,
+      message: {
+        message_id: 823,
+        date: 1761955200,
+        chat: { id: -100499783, type: "supergroup" },
+        from: { id: 113 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "mention",
+                text: "空用户名",
+                username: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空用户名");
+    expect(blank.event.message?.asRichMention).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4784,
+      message: {
+        message_id: 824,
+        date: 1761955200,
+        chat: { id: -100499784, type: "supergroup" },
+        from: { id: 113 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "mention",
+                text: "布尔用户名",
+                username: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔用户名");
+    expect(flag.event.message?.asRichMention).toBeUndefined();
+
+    const named = await normalize({
+      update_id: 4785,
+      message: {
+        message_id: 825,
+        date: 1761955200,
+        chat: { id: -100499785, type: "supergroup" },
+        from: { id: 113 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "text_mention",
+                text: "文字提及",
+                user: { id: 88021, is_bot: false, first_name: "某人" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("文字提及");
+    expect(named.event.message?.asRichMention).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4786,
+      message: {
+        message_id: 826,
+        date: 1761955200,
+        chat: { id: -100499786, type: "supergroup" },
+        from: { id: 113 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "mention",
+                text: "缺用户名",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺用户名");
+    expect(missing.event.message?.asRichMention).toBeUndefined();
+  });
+
   it("marks a rich map and leaves the coordinates out", async () => {
     const caption = "地图说明广告";
     const actor = "发地图的人";

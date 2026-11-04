@@ -6005,6 +6005,156 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a rich mention until that chat asks", async () => {
+    const username = "u90221hidden";
+    const actor = "点用户名的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      mention?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 113, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.mention
+              ? {
+                  rich_message: {
+                    blocks: [
+                      {
+                        type: "paragraph",
+                        text: {
+                          type: "mention",
+                          text: "点名广告",
+                          username,
+                        },
+                      },
+                    ],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_mention" | "rich_email"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10560,
+      chatId: -1001160,
+      mention: true,
+    });
+    expect(idle.message?.asRichMention).toBe(true);
+    expect(idle.message?.text).toBe("点名广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(username);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10561, chatId: -1001161, mention: true }),
+      {
+        source: rule("rich_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_mention");
+    expect(removed.decision.ruleIds).toContain("rich_mention");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:mention" },
+    ]);
+    const keptByEmail = await screenTelegramEvent(
+      await posted({ updateId: 10562, chatId: -1001162, mention: true }),
+      {
+        source: rule("rich_email"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByEmail.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10563, chatId: -1001163 }),
+      {
+        source: rule("rich_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10564,
+        chatId: -1001164,
+        mention: true,
+        paid: true,
+      }),
+      {
+        source: rule("rich_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByEmail: keptByEmail.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain("90221");
+    expect(dumped).not.toContain("点名广告");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a rich map until that chat asks", async () => {
     const caption = "地图说明广告";
     const actor = "发地图的人";

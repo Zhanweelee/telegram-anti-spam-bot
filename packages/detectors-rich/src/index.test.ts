@@ -7,6 +7,7 @@ function eventFor(input: {
   asRichPhone?: true;
   asRichCard?: true;
   asRichEmail?: true;
+  asRichMention?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -25,6 +26,7 @@ function eventFor(input: {
             ...(input.asRichPhone ? { asRichPhone: true as const } : {}),
             ...(input.asRichCard ? { asRichCard: true as const } : {}),
             ...(input.asRichEmail ? { asRichEmail: true as const } : {}),
+            ...(input.asRichMention ? { asRichMention: true as const } : {}),
           },
         }
       : {}),
@@ -125,6 +127,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichEmail: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich mention and leaves the username out of the hit", async () => {
+    const mention = createRichDetector("mention");
+    const hit = await mention.detect({
+      event: eventFor({ asRichMention: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_mention",
+      score: 1,
+      reasons: ["rich_mention"],
+      evidence: [{ kind: "feature", summary: "rich:mention" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90221");
+    expect(
+      await mention.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await mention.detect({
+        event: eventFor({ kind: "chat_member", asRichMention: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await mention.detect({
+        event: eventFor({ asRichEmail: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichMention: true }),
         logger,
         signal,
       }),

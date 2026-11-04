@@ -349,6 +349,12 @@ export const builtinManifests = {
     integrity:
       "2f432aa6b76cadb9cee866a1a36ad3a0d552cdc91b0767cd1034d82617acadef",
   }),
+  richMention: manifest({
+    id: "rich_mention",
+    kind: "detector",
+    integrity:
+      "ad3d08913a9a5eb5538f3547194c26020858235f82e269b47227c3f3616fe085",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

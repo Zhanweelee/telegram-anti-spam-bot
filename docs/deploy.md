@@ -219,6 +219,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> rich_map on` 删这个群里的富文本地图。默认关闭。坐标不进证据。说明仍参与关键词。纯位置仍看 `bare_location`。见 ADR 0504。
 
+`/rule <chatId> rich_mention on` 删这个群里的富文本用户名提及。默认关闭。用户名不进证据。看得见的字仍参与关键词。邮箱仍看 `rich_email`。见 ADR 0505。
+
 ## 确认
 
 ```sh

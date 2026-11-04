@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_mention_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichMention": true
+  },
+  {
+    "id": "rich_mention_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_mention_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

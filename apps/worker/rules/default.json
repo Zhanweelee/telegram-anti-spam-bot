@@ -395,6 +395,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "rich_mention",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_mention"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

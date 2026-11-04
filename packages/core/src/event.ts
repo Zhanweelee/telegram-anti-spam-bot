@@ -149,6 +149,8 @@ export const messageSchema = z
     asRichEmail: z.literal(true).optional(),
     /** Rich text map. Coordinates stay out. The caption stays in the message. */
     asRichMap: z.literal(true).optional(),
+    /** Rich text username mention. The username stays out. The visible text stays in the message. */
+    asRichMention: z.literal(true).optional(),
   })
   .refine(
     (message) =>
