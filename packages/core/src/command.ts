@@ -154,6 +154,7 @@ const COMMAND_NAMES = [
   "parent",
   "personal",
   "privacy",
+  "banfor",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -274,6 +275,7 @@ export interface OperatorCommandInput {
       ModerationPort,
       | "approveJoin"
       | "banActor"
+      | "banActorFor"
       | "banSenderChat"
       | "clearReactions"
       | "createTopic"
@@ -446,6 +448,8 @@ async function dispatch(
       return unmuteMember(input, args);
     case "ban":
       return banMember(input, args);
+    case "banfor":
+      return banMemberFor(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -4549,6 +4553,70 @@ function rejectBan(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "ban",
+  });
+}
+
+async function banMemberFor(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 3) {
+    return say(input, "command.banfor.usage");
+  }
+  if (args.length !== 3) {
+    return say(input, "command.invalid");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  const seconds = banSeconds(args[2]);
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    seconds === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const ban = input.moderator?.banActorFor;
+  if (!ban) {
+    rejectTimedBan(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await ban({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+      durationSeconds: seconds,
+    });
+  } catch {
+    rejectTimedBan(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.banfor.done", { chatId, actorId, seconds });
+}
+
+function banSeconds(value: string | undefined): number | undefined {
+  if (value === undefined || !/^[1-9]\d{0,7}$/.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (seconds < MIN_MUTE_SECONDS || seconds > MAX_MUTE_SECONDS) {
+    return undefined;
+  }
+  return seconds;
+}
+
+function rejectTimedBan(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "banfor",
   });
 }
 

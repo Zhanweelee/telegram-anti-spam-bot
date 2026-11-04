@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(80);
+    expect(menu).toHaveLength(81);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7386,9 +7386,13 @@ describe("runOperatorCommand", () => {
       command: "personal",
       description: "/personal <chatId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "privacy")).toEqual({
       command: "privacy",
       description: "/privacy <chatId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "banfor",
+      description: "/banfor <chatId> <actorId> <seconds>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -12474,6 +12478,202 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async banActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("bans a member until a chosen second", async () => {
+    const deps = kit();
+    const banned: {
+      chatId: string;
+      actorId: string;
+      durationSeconds: number;
+    }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 3600", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor(target) {
+          banned.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已限时封禁 -100 77 3600 秒" });
+    expect(banned).toEqual([
+      { chatId: "-100", actorId: "77", durationSeconds: 3600 },
+    ]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/banfor <chatId> <actorId> <seconds>");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 30", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async banActorFor() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Banned 77 in -100 for 30 seconds",
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 3600", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/banfor -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/banfor <chatId> <actorId> <seconds>",
+    });
+
+    const extra = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 3600 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "参数无效" });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/banfor -100 ${phrase} 3600`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const rejectedSeconds: number[] = [];
+    const short = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 29", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor(target) {
+          rejectedSeconds.push(target.durationSeconds);
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "参数无效" });
+
+    const long = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 31622401", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor(target) {
+          rejectedSeconds.push(target.durationSeconds);
+        },
+      },
+      ...kit(),
+    });
+    expect(long).toMatchObject({ text: "参数无效" });
+    expect(rejectedSeconds).toEqual([]);
+
+    const floor = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 30", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor(target) {
+          banned.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(floor).toMatchObject({ text: "已限时封禁 -100 77 30 秒" });
+
+    const ceiling = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 31622400", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor(target) {
+          banned.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            durationSeconds: target.durationSeconds,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(ceiling).toMatchObject({ text: "已限时封禁 -100 77 31622400 秒" });
+    expect(banned).toEqual([
+      { chatId: "-100", actorId: "77", durationSeconds: 3600 },
+      { chatId: "-100", actorId: "77", durationSeconds: 30 },
+      { chatId: "-100", actorId: "77", durationSeconds: 31622400 },
+    ]);
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 3600", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/banfor -100 77 3600", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async banActorFor() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/banfor -200 77 3600",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async banActorFor() {
           throw new Error("called");
         },
       },

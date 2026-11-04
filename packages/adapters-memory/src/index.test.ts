@@ -63,6 +63,20 @@ describe("memory adapter", () => {
     expect(moderator.banned).toEqual([
       { tenantId: "t", chatId: "c", actorId: "u" },
     ]);
+    await moderator.banActorFor({
+      tenantId: "t",
+      chatId: "c",
+      actorId: "u",
+      durationSeconds: 3600,
+    });
+    expect(moderator.bannedFor).toEqual([
+      {
+        tenantId: "t",
+        chatId: "c",
+        actorId: "u",
+        durationSeconds: 3600,
+      },
+    ]);
     expect(moderator.deleted).toEqual([]);
     await moderator.restrictActor({
       tenantId: "t",

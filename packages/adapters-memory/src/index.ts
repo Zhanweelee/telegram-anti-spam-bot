@@ -49,6 +49,7 @@ import {
   type SenderChatTarget,
   type Storage,
   type SuggestedPostTarget,
+  type TimedBanTarget,
   type TopicPinTarget,
 } from "@tasb/core";
 
@@ -137,6 +138,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly deletedMessages: readonly DeleteMessagesTarget[];
   readonly muted: readonly MuteTarget[];
   readonly banned: readonly BanTarget[];
+  readonly bannedFor: readonly TimedBanTarget[];
   readonly senderBanned: readonly SenderChatTarget[];
   readonly senderUnbanned: readonly SenderChatTarget[];
   readonly declined: readonly JoinTarget[];
@@ -184,6 +186,7 @@ export function createMemoryModerator(): ModerationPort & {
   const deletedMessages: DeleteMessagesTarget[] = [];
   const muted: MuteTarget[] = [];
   const banned: BanTarget[] = [];
+  const bannedFor: TimedBanTarget[] = [];
   const senderBanned: SenderChatTarget[] = [];
   const senderUnbanned: SenderChatTarget[] = [];
   const declined: JoinTarget[] = [];
@@ -231,6 +234,7 @@ export function createMemoryModerator(): ModerationPort & {
     deletedMessages,
     muted,
     banned,
+    bannedFor,
     senderBanned,
     senderUnbanned,
     declined,
@@ -288,6 +292,9 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async banActor(target) {
       banned.push({ ...target });
+    },
+    async banActorFor(target) {
+      bannedFor.push({ ...target });
     },
     async banSenderChat(target) {
       senderBanned.push({

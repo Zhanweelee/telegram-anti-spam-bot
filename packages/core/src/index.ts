@@ -232,6 +232,7 @@ export {
   type StickerSetRight,
   type Storage,
   type SuggestedPostTarget,
+  type TimedBanTarget,
   type TopicPinTarget,
   type UnmuteResult,
   type WebhookQuery,
