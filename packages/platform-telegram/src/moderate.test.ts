@@ -2297,6 +2297,8 @@ describe("telegram captcha transport", () => {
             username: "giftbot",
             can_join_groups: true,
             can_read_all_group_messages: false,
+            supports_guest_queries: true,
+            supports_join_request_queries: false,
             note: phrase,
           },
         }),
@@ -2311,6 +2313,8 @@ describe("telegram captcha transport", () => {
       username: "giftbot",
       joinGroups: "on",
       readAllGroupMessages: "off",
+      guestQueries: "on",
+      joinRequestQueries: "off",
     });
     expect(calls.map((call) => call.method)).toEqual([
       `https://api.telegram.org/bot${token}/getMe`,
@@ -2335,6 +2339,8 @@ describe("telegram captcha transport", () => {
       username: "",
       joinGroups: "unknown",
       readAllGroupMessages: "unknown",
+      guestQueries: "unknown",
+      joinRequestQueries: "unknown",
     });
     called = false;
     await expect(
@@ -2384,6 +2390,24 @@ describe("telegram captcha transport", () => {
                 id: 42,
                 is_bot: true,
                 can_join_groups: "yes",
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readBotIdentity({ tenantId: "local" }),
+    ).rejects.toThrow("who_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: 42,
+                is_bot: true,
+                supports_guest_queries: "yes",
+                supports_join_request_queries: 1,
               },
             }),
             { status: 200 },

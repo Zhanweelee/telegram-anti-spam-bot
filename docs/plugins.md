@@ -167,7 +167,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/myshort` 调用 `readBotShortDescription`。配了 token 时使用 `getMyShortDescription`，不送 `language_code`，所以读的是默认短简介。空短简介写空。回复带上短简介，日志不带。换行、超长或非字符串时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份短简介。不调用 `setMyShortDescription`。见 ADR 0417。
 
-`/who` 调用 `readBotIdentity`。配了 token 时使用 `getMe`，不带参数。回复写编号、用户名、能否入群，以及是否看得到全部群消息。缺用户名写空。缺开关写未知。名字和其它字段不进回复，也不进日志。用户名不合规则或不是 bot 时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份身份。不调用 `logOut` 或 `close`。见 ADR 0418。
+`/who` 调用 `readBotIdentity`。配了 token 时使用 `getMe`，不带参数。回复写编号、用户名、能否入群、是否看得到全部群消息、能否做访客查询，以及能否处理入群查询。缺用户名写空。缺开关写未知。名字和其它字段不进回复，也不进日志。用户名不合规则、不是 bot 或开关不是布尔值时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份身份。不调用 `logOut` 或 `close`。见 ADR 0418 和 ADR 0424。
 
 `/hook` 调用 `readWebhook`。配了 token 时使用 `getWebhookInfo`，不带参数。回复写待投递条数、证书、连接上限和上次错误的 unix 秒。缺字段写未知。地址、IP、错误原文和 `allowed_updates` 不进回复，也不进日志。待投递不是非负整数、连接不在 1 到 100、或错误时间不是非负整数时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份状态。不调用 `setWebhook` 或 `deleteWebhook`。见 ADR 0419。
 

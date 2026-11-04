@@ -9219,12 +9219,16 @@ describe("runOperatorCommand", () => {
         username: "giftbot",
         joinGroups: "on" as const,
         readAllGroupMessages: "off" as const,
+        guestQueries: "on" as const,
+        joinRequestQueries: "off" as const,
       },
       {
         id: "7",
         username: "",
         joinGroups: "unknown" as const,
         readAllGroupMessages: "unknown" as const,
+        guestQueries: "unknown" as const,
+        joinRequestQueries: "unknown" as const,
       },
     ];
     const remember = {
@@ -9244,7 +9248,14 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(described).toMatchObject({
-      text: ["机器人 42", "用户名 giftbot", "入群 on", "群消息 off"].join("\n"),
+      text: [
+        "机器人 42",
+        "用户名 giftbot",
+        "入群 on",
+        "群消息 off",
+        "访客 on",
+        "入群查询 off",
+      ].join("\n"),
     });
     expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
     expect(JSON.stringify(deps.logger.entries)).not.toContain("giftbot");
@@ -9256,7 +9267,14 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(cleared).toMatchObject({
-      text: ["机器人 7", "用户名 空", "入群 未知", "群消息 未知"].join("\n"),
+      text: [
+        "机器人 7",
+        "用户名 空",
+        "入群 未知",
+        "群消息 未知",
+        "访客 未知",
+        "入群查询 未知",
+      ].join("\n"),
     });
     expect(seen).toHaveLength(2);
     const help = await runOperatorCommand({
@@ -9280,6 +9298,8 @@ describe("runOperatorCommand", () => {
             username: "giftbot",
             joinGroups: "on" as const,
             readAllGroupMessages: "off" as const,
+            guestQueries: "on" as const,
+            joinRequestQueries: "off" as const,
           };
         },
       },
@@ -9291,6 +9311,8 @@ describe("runOperatorCommand", () => {
         "username giftbot",
         "groups on",
         "group messages off",
+        "guests on",
+        "join queries off",
       ].join("\n"),
     });
     const englishEmpty = await runOperatorCommand({
@@ -9304,6 +9326,8 @@ describe("runOperatorCommand", () => {
             username: "",
             joinGroups: "unknown" as const,
             readAllGroupMessages: "unknown" as const,
+            guestQueries: "unknown" as const,
+            joinRequestQueries: "unknown" as const,
           };
         },
       },
@@ -9315,6 +9339,8 @@ describe("runOperatorCommand", () => {
         "username empty",
         "groups unknown",
         "group messages unknown",
+        "guests unknown",
+        "join queries unknown",
       ].join("\n"),
     });
     const skipped = await runOperatorCommand({
@@ -9362,6 +9388,8 @@ describe("runOperatorCommand", () => {
             username: phrase,
             joinGroups: "on" as const,
             readAllGroupMessages: "off" as const,
+            guestQueries: "on" as const,
+            joinRequestQueries: "off" as const,
           };
         },
       },
@@ -9369,6 +9397,24 @@ describe("runOperatorCommand", () => {
     });
     expect(leaked).toMatchObject({ text: "参数无效" });
     expect(JSON.stringify(leaked)).not.toContain(phrase);
+    const flagged = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          return {
+            id: "42",
+            username: "giftbot",
+            joinGroups: "on",
+            readAllGroupMessages: "off",
+            guestQueries: "maybe",
+            joinRequestQueries: "off",
+          } as never;
+        },
+      },
+      ...kit(),
+    });
+    expect(flagged).toMatchObject({ text: "参数无效" });
     const missing = await runOperatorCommand({
       event: event({ text: "/who", direct: true }),
       adminActorIds: ["42"],

@@ -4169,6 +4169,8 @@ describe("handleIncomingEvent", () => {
               username: "giftbot",
               can_join_groups: true,
               can_read_all_group_messages: false,
+              supports_guest_queries: true,
+              supports_join_request_queries: false,
               note: phrase,
             },
           }),
@@ -4177,7 +4179,14 @@ describe("handleIncomingEvent", () => {
       },
     });
     expect(kit.reply.sent.map((message) => message.text)).toEqual([
-      ["机器人 42", "用户名 giftbot", "入群 on", "群消息 off"].join("\n"),
+      [
+        "机器人 42",
+        "用户名 giftbot",
+        "入群 on",
+        "群消息 off",
+        "访客 on",
+        "入群查询 off",
+      ].join("\n"),
     ]);
     expect(calls.map((call) => call.method)).toEqual(["getMe"]);
     expect(calls[0]?.method).not.toContain("logOut");
@@ -4201,8 +4210,37 @@ describe("handleIncomingEvent", () => {
         ),
     });
     expect(cleared.reply.sent.map((message) => message.text)).toEqual([
-      ["机器人 7", "用户名 空", "入群 未知", "群消息 未知"].join("\n"),
+      [
+        "机器人 7",
+        "用户名 空",
+        "入群 未知",
+        "群消息 未知",
+        "访客 未知",
+        "入群查询 未知",
+      ].join("\n"),
     ]);
+    const flagged = deps();
+    await handleIncomingEvent(await incoming({ text: "/who", direct: true }), {
+      ...flagged,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              id: 42,
+              is_bot: true,
+              first_name: phrase,
+              supports_guest_queries: "yes",
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(flagged.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(flagged.reply.sent)).not.toContain(phrase);
     const broken = deps();
     await handleIncomingEvent(await incoming({ text: "/who", direct: true }), {
       ...broken,
