@@ -403,6 +403,40 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a rich anchor and rejects other marks", () => {
+    const anchor = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        asRichAnchor: true,
+      },
+    });
+    expect(anchor.message?.asRichAnchor).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          asRichAnchor: false,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts a rich cashtag and rejects other marks", () => {
     const cash = parseEvent({
       id: "evt_1",

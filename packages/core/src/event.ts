@@ -159,6 +159,8 @@ export const messageSchema = z
     asRichHashtag: z.literal(true).optional(),
     /** Rich text cashtag. The ticker stays out. The visible text stays in the message. */
     asRichCashtag: z.literal(true).optional(),
+    /** Rich text anchor. The name stays out. The visible text stays in the message. */
+    asRichAnchor: z.literal(true).optional(),
   })
   .refine(
     (message) =>

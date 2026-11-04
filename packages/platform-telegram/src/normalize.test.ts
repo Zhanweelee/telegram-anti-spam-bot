@@ -21150,6 +21150,254 @@ describe("normalizeUpdate", () => {
     expect(tag.event.message?.asRichHashtag).toBe(true);
     expect(tag.event.message?.asRichCashtag).toBeUndefined();
     expect(JSON.stringify(tag.event)).not.toContain("90224");
+
+    const anchor = await normalize({
+      update_id: 4827,
+      message: {
+        message_id: 867,
+        date: 1761955200,
+        chat: { id: -100499827, type: "supergroup" },
+        from: { id: 118 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["锚点留下", { type: "anchor", name: "stay90227" }],
+            },
+          ],
+        },
+      },
+    });
+    expect(anchor.status).toBe("event");
+    if (anchor.status !== "event") {
+      return;
+    }
+    expect(anchor.event.message?.text).toBe("锚点留下");
+    expect(anchor.event.message?.asRichCashtag).toBeUndefined();
+    expect(anchor.event.message?.asRichAnchor).toBe(true);
+    expect(JSON.stringify(anchor.event)).not.toContain("90227");
+  });
+
+  it("marks a rich anchor and leaves the name out", async () => {
+    const name = "anchor90227";
+    const actor = "发锚点的人";
+    const marked = await normalize({
+      update_id: 4830,
+      message: {
+        message_id: 870,
+        date: 1761955200,
+        chat: { id: -100499830, type: "supergroup" },
+        from: { id: 119, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: ["锚点广告", { type: "anchor", name }],
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichAnchor).toBe(true);
+    expect(marked.event.message?.asRichCashtag).toBeUndefined();
+    expect(marked.event.message?.text).toBe("锚点广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(name);
+    expect(markedDump).not.toContain("90227");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4831,
+      message: {
+        message_id: 871,
+        date: 1761955200,
+        chat: { id: -100499831, type: "supergroup" },
+        from: { id: 119 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["锚点广告", { type: "anchor", name }],
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichAnchor).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(name);
+
+    const nested = await normalize({
+      update_id: 4832,
+      message: {
+        message_id: 872,
+        date: 1761955200,
+        chat: { id: -100499832, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: ["嵌套锚点", { type: "anchor", name }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichAnchor).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套锚点");
+    expect(JSON.stringify(nested.event)).not.toContain("90227");
+
+    const blank = await normalize({
+      update_id: 4833,
+      message: {
+        message_id: 873,
+        date: 1761955200,
+        chat: { id: -100499833, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["空锚点", { type: "anchor", name: "   " }],
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空锚点");
+    expect(blank.event.message?.asRichAnchor).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4834,
+      message: {
+        message_id: 874,
+        date: 1761955200,
+        chat: { id: -100499834, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["布尔锚点", { type: "anchor", name: true }],
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔锚点");
+    expect(flag.event.message?.asRichAnchor).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4835,
+      message: {
+        message_id: 875,
+        date: 1761955200,
+        chat: { id: -100499835, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["缺锚点", { type: "anchor" }],
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺锚点");
+    expect(missing.event.message?.asRichAnchor).toBeUndefined();
+
+    const cash = await normalize({
+      update_id: 4836,
+      message: {
+        message_id: 876,
+        date: 1761955200,
+        chat: { id: -100499836, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "cashtag",
+                text: "行情留下",
+                cashtag: "$cash90226",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(cash.status).toBe("event");
+    if (cash.status !== "event") {
+      return;
+    }
+    expect(cash.event.message?.asRichCashtag).toBe(true);
+    expect(cash.event.message?.asRichAnchor).toBeUndefined();
+    expect(JSON.stringify(cash.event)).not.toContain("90226");
+
+    const link = await normalize({
+      update_id: 4837,
+      message: {
+        message_id: 877,
+        date: 1761955200,
+        chat: { id: -100499837, type: "supergroup" },
+        from: { id: 119 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "anchor_link",
+                text: "链接留下",
+                anchor_name: "link90228",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asRichAnchor).toBeUndefined();
+    expect(JSON.stringify(link.event)).not.toContain("90228");
   });
 
   it("marks a rich hashtag and leaves the tag out", async () => {

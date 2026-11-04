@@ -10,6 +10,7 @@ export const richContacts = [
   "command",
   "hashtag",
   "cashtag",
+  "anchor",
 ] as const;
 export type RichContact = (typeof richContacts)[number];
 
@@ -22,6 +23,7 @@ const richSpecs = {
   command: { id: "rich_command", summary: "rich:command" },
   hashtag: { id: "rich_hashtag", summary: "rich:hashtag" },
   cashtag: { id: "rich_cashtag", summary: "rich:cashtag" },
+  anchor: { id: "rich_anchor", summary: "rich:anchor" },
 } as const;
 
 const richMarks = {
@@ -33,6 +35,7 @@ const richMarks = {
   command: "asRichCommand",
   hashtag: "asRichHashtag",
   cashtag: "asRichCashtag",
+  anchor: "asRichAnchor",
 } as const;
 
 export function createRichDetector(kind: RichContact): Detector {

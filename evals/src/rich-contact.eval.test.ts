@@ -17,6 +17,7 @@ interface RichContactCase {
   readonly asRichCommand?: true;
   readonly asRichHashtag?: true;
   readonly asRichCashtag?: true;
+  readonly asRichAnchor?: true;
 }
 
 interface Baseline {
@@ -61,6 +62,7 @@ async function evaluate(
                 ...(item.asRichCommand ? { asRichCommand: true as const } : {}),
                 ...(item.asRichHashtag ? { asRichHashtag: true as const } : {}),
                 ...(item.asRichCashtag ? { asRichCashtag: true as const } : {}),
+                ...(item.asRichAnchor ? { asRichAnchor: true as const } : {}),
               },
             }
           : {}),
@@ -231,6 +233,25 @@ describe("rich contact eval", () => {
     console.info(
       JSON.stringify({
         detector: "rich_cashtag",
+        cases: cases.length,
+        precision: report.precision,
+        recall: report.recall,
+        baseline,
+      }),
+    );
+    expect(report.precision).toBeGreaterThanOrEqual(baseline.precision);
+    expect(report.recall).toBeGreaterThanOrEqual(baseline.recall);
+  });
+
+  it("does not regress anchor precision or recall", async () => {
+    const cases = load("cases/rich-anchor.json");
+    const baseline = JSON.parse(
+      readFileSync(join(root, "baselines/rich-anchor.json"), "utf8"),
+    ) as Baseline;
+    const report = await evaluate("anchor", cases);
+    console.info(
+      JSON.stringify({
+        detector: "rich_anchor",
         cases: cases.length,
         precision: report.precision,
         recall: report.recall,

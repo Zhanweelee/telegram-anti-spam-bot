@@ -12,6 +12,7 @@ function eventFor(input: {
   asRichCommand?: true;
   asRichHashtag?: true;
   asRichCashtag?: true;
+  asRichAnchor?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -37,6 +38,7 @@ function eventFor(input: {
             ...(input.asRichCommand ? { asRichCommand: true as const } : {}),
             ...(input.asRichHashtag ? { asRichHashtag: true as const } : {}),
             ...(input.asRichCashtag ? { asRichCashtag: true as const } : {}),
+            ...(input.asRichAnchor ? { asRichAnchor: true as const } : {}),
           },
         }
       : {}),
@@ -337,6 +339,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichCashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich anchor and leaves the name out of the hit", async () => {
+    const anchor = createRichDetector("anchor");
+    const hit = await anchor.detect({
+      event: eventFor({ asRichAnchor: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_anchor",
+      score: 1,
+      reasons: ["rich_anchor"],
+      evidence: [{ kind: "feature", summary: "rich:anchor" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90227");
+    expect(
+      await anchor.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await anchor.detect({
+        event: eventFor({ kind: "chat_member", asRichAnchor: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await anchor.detect({
+        event: eventFor({ asRichCashtag: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichAnchor: true }),
         logger,
         signal,
       }),
