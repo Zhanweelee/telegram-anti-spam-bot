@@ -45,14 +45,18 @@ import {
   parseCaptchaChallenge,
   parseRuleSet,
   prefilterPolicySchema,
+  REPEAT_THRESHOLD,
+  REPEAT_WINDOW_SECONDS,
   type ReactionActorTarget,
   type ReactionChoice,
   type RenamedTopicTarget,
+  type RepeatPolicy,
   type ReplyMessage,
   type ReplyPort,
   type RuleActionOverride,
   type RuleSet,
   type RuntimeStore,
+  repeatPolicyDocumentSchema,
   type SenderChatTarget,
   type Storage,
   type SuggestedPostTarget,
@@ -831,6 +835,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const reports = new Map<string, string>();
   const floods = new Map<string, FloodPolicy>();
   const keywords = new Map<string, string[]>();
+  const repeats = new Map<string, RepeatPolicy>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -1001,6 +1006,31 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearKeywords(tenantId, chatId) {
       keywords.delete(key(tenantId, chatId));
+    },
+    async getRepeatPolicy(tenantId, chatId) {
+      return repeats.get(key(tenantId, chatId)) ?? null;
+    },
+    async setRepeatPolicy(tenantId, chatId, policy) {
+      const parsed = repeatPolicyDocumentSchema.safeParse(policy);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      if (
+        parsed.data.threshold === REPEAT_THRESHOLD &&
+        parsed.data.windowSeconds === REPEAT_WINDOW_SECONDS
+      ) {
+        repeats.delete(id);
+        return true;
+      }
+      if (!repeats.has(id) && repeats.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      repeats.set(id, parsed.data);
+      return true;
+    },
+    async clearRepeatPolicy(tenantId, chatId) {
+      repeats.delete(key(tenantId, chatId));
     },
   };
 }
