@@ -1567,6 +1567,93 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the default menu button and drops the web app", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: { type: "commands", note: phrase },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(moderator.readMenuButton({ tenantId: "local" })).resolves.toBe(
+      "commands",
+    );
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChatMenuButton`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatMenuButton");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                type: "web_app",
+                text: phrase,
+                web_app: { url: `https://evil.example/${phrase}` },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readMenuButton({ tenantId: "local" }),
+    ).resolves.toBe("web_app");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { type: "default" } }),
+            {
+              status: 200,
+            },
+          ),
+      }).readMenuButton({ tenantId: "local" }),
+    ).resolves.toBe("default");
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readMenuButton({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("button_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: { type: "apps" } }), {
+            status: 200,
+          }),
+      }).readMenuButton({ tenantId: "local" }),
+    ).rejects.toThrow("button_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readMenuButton({ tenantId: "local" }),
+    ).rejects.toThrow("button_failed");
+  });
+
   it("sets the default menu button without a web app", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

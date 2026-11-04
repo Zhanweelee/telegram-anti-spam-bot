@@ -222,6 +222,10 @@ export const messageKeys = [
   "command.menubutton.usage",
   "command.menubutton.commands",
   "command.menubutton.default",
+  "command.button.usage",
+  "command.button.commands",
+  "command.button.default",
+  "command.button.web_app",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -303,6 +307,7 @@ const syntax = [
   "/commands [private]",
   "/delcommands [private]",
   "/menubutton <commands|default>",
+  "/button",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -579,6 +584,10 @@ const zh = {
     "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
   "command.menubutton.default":
     "已请求把默认菜单按钮恢复成默认。某个私聊里单独设过的按钮不受影响。",
+  "command.button.usage": "用法：/button",
+  "command.button.commands": "菜单按钮 命令",
+  "command.button.default": "菜单按钮 默认",
+  "command.button.web_app": "菜单按钮 应用",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -864,6 +873,10 @@ const en = {
     "Asked to set the default menu button to the command list. A button set for one private chat stays.",
   "command.menubutton.default":
     "Asked to restore the default menu button. A button set for one private chat stays.",
+  "command.button.usage": "Usage: /button",
+  "command.button.commands": "menu button commands",
+  "command.button.default": "menu button default",
+  "command.button.web_app": "menu button web app",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

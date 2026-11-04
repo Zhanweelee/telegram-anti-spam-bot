@@ -321,9 +321,15 @@ export interface CommandMenuQuery {
 
 export type MenuButtonKind = "commands" | "default";
 
+export type MenuButtonState = "commands" | "default" | "web_app";
+
 export interface MenuButtonTarget {
   readonly tenantId: string;
   readonly kind: MenuButtonKind;
+}
+
+export interface MenuButtonQuery {
+  readonly tenantId: string;
 }
 
 export interface MenuCommandSnapshot {
@@ -368,6 +374,7 @@ export interface ModerationPort {
   readCommandMenu(
     query: CommandMenuQuery,
   ): Promise<readonly MenuCommandSnapshot[]>;
+  readMenuButton(query: MenuButtonQuery): Promise<MenuButtonState>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;

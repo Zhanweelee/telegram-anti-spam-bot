@@ -560,6 +560,13 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent a menu button", async () => {
+    const moderator = createMemoryModerator();
+    await expect(moderator.readMenuButton({ tenantId: "t" })).rejects.toThrow(
+      "button_unavailable",
+    );
+  });
+
   it("does not invent a command menu", async () => {
     const moderator = createMemoryModerator();
     await expect(moderator.readCommandMenu({ tenantId: "t" })).rejects.toThrow(

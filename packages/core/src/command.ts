@@ -28,6 +28,7 @@ import {
   type DefaultRightsSnapshot,
   fitAuditExportDocument,
   type MemberStanding,
+  type MenuButtonState,
   type MenuCommand,
   type MenuCommandSnapshot,
   type ModerationPort,
@@ -125,6 +126,7 @@ const COMMAND_NAMES = [
   "commands",
   "delcommands",
   "menubutton",
+  "button",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -266,6 +268,7 @@ export interface OperatorCommandInput {
       | "readDefaultRights"
       | "readMember"
       | "readMemberCount"
+      | "readMenuButton"
       | "readPermissions"
       | "removeReaction"
       | "renameGeneral"
@@ -489,6 +492,8 @@ async function dispatch(
       return clearCommandMenu(input, args);
     case "menubutton":
       return setMenuButton(input, args);
+    case "button":
+      return showMenuButton(input, args);
   }
 }
 
@@ -3131,6 +3136,57 @@ function rejectMenuButton(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "menubutton",
+  });
+}
+
+async function showMenuButton(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.button.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readMenuButton;
+  if (!read) {
+    rejectReadMenuButton(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const state = await read({ tenantId: input.event.tenantId });
+    return say(input, menuButtonStateKey(state));
+  } catch {
+    rejectReadMenuButton(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function menuButtonStateKey(
+  state: MenuButtonState,
+):
+  | "command.button.commands"
+  | "command.button.default"
+  | "command.button.web_app" {
+  switch (state) {
+    case "commands":
+      return "command.button.commands";
+    case "default":
+      return "command.button.default";
+    case "web_app":
+      return "command.button.web_app";
+  }
+}
+
+function rejectReadMenuButton(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "button",
   });
 }
 
