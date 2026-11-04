@@ -218,6 +218,7 @@ export interface ModerationPort {
   hideGeneral(target: ChatTarget): Promise<void>;
   showGeneral(target: ChatTarget): Promise<void>;
   deleteTopic(target: NamedForumTopicTarget): Promise<void>;
+  readMemberCount(target: ChatTarget): Promise<number>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

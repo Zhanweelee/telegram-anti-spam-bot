@@ -96,6 +96,7 @@ const COMMAND_NAMES = [
   "hidegeneral",
   "showgeneral",
   "deltopic",
+  "count",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -143,6 +144,7 @@ export interface OperatorCommandInput {
       | "openTopic"
       | "readAdministrators"
       | "readMember"
+      | "readMemberCount"
       | "readPermissions"
       | "revokeInvite"
       | "showGeneral"
@@ -303,6 +305,8 @@ async function dispatch(
       return showGeneralTopic(input, args);
     case "deltopic":
       return deleteOneTopic(input, args);
+    case "count":
+      return showMemberCount(input, args);
   }
 }
 
@@ -1618,6 +1622,46 @@ function rejectDeleteTopic(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "deltopic",
+  });
+}
+
+async function showMemberCount(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.count.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readMemberCount;
+  if (!read) {
+    rejectCount(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const count = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+    return say(input, "command.count.done", { chatId, count: String(count) });
+  } catch {
+    rejectCount(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function rejectCount(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "count",
   });
 }
 

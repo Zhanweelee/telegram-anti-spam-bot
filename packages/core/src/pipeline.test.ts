@@ -167,6 +167,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readAdministrators() {
       throw new Error("admins_unavailable");
     },
+    async readMemberCount() {
+      throw new Error("count_unavailable");
+    },
     async clearReactions() {},
     async revokeInvite() {},
     async unpinChat() {},

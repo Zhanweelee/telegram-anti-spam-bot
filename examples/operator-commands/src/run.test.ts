@@ -40,6 +40,7 @@ describe("operator command example", () => {
     expect(help).toContain("/hidegeneral");
     expect(help).toContain("/showgeneral");
     expect(help).toContain("/deltopic");
+    expect(help).toContain("/count");
     const deletedTopic = await runPrivateCommand({
       text: "/deltopic -100 55",
       actorId: "42",
@@ -120,6 +121,12 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(admins).toBe("参数无效");
+    const members = await runPrivateCommand({
+      text: "/count -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(members).toBe("参数无效");
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",

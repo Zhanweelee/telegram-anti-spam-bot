@@ -451,6 +451,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async readMemberCount(target) {
+      const body = await postTelegram({
+        token: input.token,
+        method: "getChatMemberCount",
+        fetchImpl: input.fetchImpl,
+        missing: "count_unavailable",
+        failed: "count_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return memberCount(body);
+    },
   };
 }
 
@@ -700,6 +713,21 @@ function administratorList(body: unknown): ChatAdministrator[] {
     throw new Error("admins_failed");
   }
   return result.map((item) => oneAdministrator(item));
+}
+
+function memberCount(body: unknown): number {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("count_failed");
+  }
+  const result = body.result;
+  if (
+    typeof result !== "number" ||
+    !Number.isSafeInteger(result) ||
+    result < 0
+  ) {
+    throw new Error("count_failed");
+  }
+  return result;
 }
 
 function oneAdministrator(item: unknown): ChatAdministrator {
