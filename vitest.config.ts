@@ -37,6 +37,7 @@ export default defineConfig({
       "packages/detectors-price",
       "packages/detectors-post",
       "packages/detectors-checklist",
+      "packages/detectors-call-invite",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

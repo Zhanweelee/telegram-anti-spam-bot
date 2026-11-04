@@ -283,6 +283,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "call_invite",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["call_invite"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

@@ -191,6 +191,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 群升级成超级群时，旧编号上的开关、关键词、洪泛、重复、禁言、验证、允许的主机名和白名单会抄到新编号。新编号已经保存的那一项留下。见 ADR 0490。
 
+`/rule <chatId> call_invite on` 删这个群里把人拉进视频聊天的提示。默认关闭。用户编号不进证据。被邀请的名字仍参与关键词。开始、结束和预约仍看 `call_notice`。见 ADR 0491。
+
 ## 确认
 
 ```sh

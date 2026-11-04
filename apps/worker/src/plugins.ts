@@ -265,6 +265,12 @@ export const builtinManifests = {
     integrity:
       "4c9709b19970ae3c61a32a5fced4e2302baaa9a9d5101a439bc5369d00d4b368",
   }),
+  callInvite: manifest({
+    id: "call_invite",
+    kind: "detector",
+    integrity:
+      "27644136ec1eb14856f1df80efac073733d0009d060f33d22d687f757d26d2f3",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

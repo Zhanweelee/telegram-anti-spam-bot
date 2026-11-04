@@ -121,6 +121,8 @@ export const messageSchema = z
     postNotice: z.enum(["approved", "failed", "paid", "refunded"]).optional(),
     /** Checklist done or undone service line. Task ids stay out. */
     checklistNotice: z.enum(["done", "undone"]).optional(),
+    /** Video-chat invite. User ids stay out. Invited names stay in the text. */
+    asCallInvite: z.literal(true).optional(),
   })
   .refine(
     (message) =>

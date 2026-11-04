@@ -20614,6 +20614,142 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a video-chat invite and keeps the invited name", async () => {
+    const name = "视频邀请广告名";
+    const actor = "拉人的人";
+    const userId = 90198;
+    const invited = await normalize({
+      update_id: 4630,
+      message: {
+        message_id: 680,
+        date: 1761955200,
+        chat: { id: -100499620, type: "supergroup" },
+        from: { id: 99, first_name: actor },
+        video_chat_participants_invited: {
+          users: [{ id: userId, first_name: name }],
+        },
+      },
+    });
+    expect(invited.status).toBe("event");
+    if (invited.status !== "event") {
+      return;
+    }
+    expect(invited.event.message?.asCallInvite).toBe(true);
+    expect(invited.event.message?.call).toBeUndefined();
+    expect(invited.event.message?.text).toBe(name);
+    const dump = JSON.stringify(invited.event);
+    expect(dump).not.toContain(actor);
+    expect(dump).not.toContain(String(userId));
+
+    const nameless = await normalize({
+      update_id: 4631,
+      message: {
+        message_id: 681,
+        date: 1761955200,
+        chat: { id: -100499621, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_participants_invited: { users: [{ id: userId }] },
+      },
+    });
+    expect(nameless.status).toBe("event");
+    if (nameless.status !== "event") {
+      return;
+    }
+    expect(nameless.event.message?.asCallInvite).toBe(true);
+    expect(nameless.event.message?.text).toBe("");
+    expect(JSON.stringify(nameless.event)).not.toContain(String(userId));
+
+    const kept = await normalize({
+      update_id: 4632,
+      message: {
+        message_id: 682,
+        date: 1761955200,
+        chat: { id: -100499622, type: "supergroup" },
+        from: { id: 99 },
+        text: "今天站会",
+        video_chat_participants_invited: {
+          users: [{ id: userId, first_name: name }],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.asCallInvite).toBe(true);
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(kept.event)).not.toContain(String(userId));
+
+    const started = await normalize({
+      update_id: 4633,
+      message: {
+        message_id: 683,
+        date: 1761955200,
+        chat: { id: -100499623, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_started: {},
+        video_chat_participants_invited: {
+          users: [{ id: userId, first_name: name }],
+        },
+      },
+    });
+    expect(started.status).toBe("event");
+    if (started.status !== "event") {
+      return;
+    }
+    expect(started.event.message?.call).toBe("started");
+    expect(started.event.message?.asCallInvite).toBe(true);
+    expect(started.event.message?.text).toBe(name);
+
+    const empty = await normalize({
+      update_id: 4634,
+      message: {
+        message_id: 684,
+        date: 1761955200,
+        chat: { id: -100499624, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_participants_invited: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asCallInvite).toBeUndefined();
+
+    const blank = await normalize({
+      update_id: 4635,
+      message: {
+        message_id: 685,
+        date: 1761955200,
+        chat: { id: -100499625, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_participants_invited: { users: [] },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.asCallInvite).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4636,
+      message: {
+        message_id: 686,
+        date: 1761955200,
+        chat: { id: -100499626, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_participants_invited: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asCallInvite).toBeUndefined();
+  });
+
   it("marks a group migration and leaves the new id out of the text", async () => {
     const nextId = -100880441;
     const previousId = -100880442;

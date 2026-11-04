@@ -59,6 +59,7 @@ import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBoostDetector } from "@tasb/detector-boost";
 import { createBotDetector } from "@tasb/detector-bot";
 import { createCallDetector } from "@tasb/detector-call";
+import { createCallInviteDetector } from "@tasb/detector-call-invite";
 import { createChecklistDetector } from "@tasb/detector-checklist";
 import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
@@ -630,6 +631,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.checklistNotice,
         value: createChecklistDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.callInvite,
+        value: createCallInviteDetector(),
       },
       {
         source: "builtin",

@@ -1,0 +1,5 @@
+{
+  "detector": "call_invite",
+  "precision": 1,
+  "recall": 1
+}
