@@ -1495,6 +1495,58 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("changes a chat description and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setDescription({
+      tenantId: "local",
+      chatId: "-100",
+      description: "",
+    });
+    await moderator.setDescription({
+      tenantId: "local",
+      chatId: "-100",
+      description: phrase,
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatDescription`,
+      `https://api.telegram.org/bot${token}/setChatDescription`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      description: "",
+    });
+    expect(JSON.parse(calls[1]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      description: phrase,
+    });
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect(calls[0]?.body).not.toContain("title");
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setDescription({
+        tenantId: "local",
+        chatId: "-100",
+        description: phrase,
+      }),
+    ).rejects.toThrow("desc_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

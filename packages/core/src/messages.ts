@@ -186,6 +186,9 @@ export const messageKeys = [
   "command.react.done",
   "command.title.usage",
   "command.title.done",
+  "command.desc.usage",
+  "command.desc.done",
+  "command.desc.cleared",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -253,6 +256,7 @@ const syntax = [
   "/boosts <chatId> <userId>",
   "/react <chatId> <messageId> <emoji>",
   "/title <chatId> <title>",
+  "/desc <chatId> [description]",
 ].join("\n");
 
 const zh = {
@@ -465,6 +469,9 @@ const zh = {
     "已请求在 {chatId} 的消息 {messageId} 上设置 {emoji}。别人的反应还在。一组媒体里会落到还在的第一条。",
   "command.title.usage": "用法：/title <chatId> <title>",
   "command.title.done": "已请求修改 {chatId} 的标题。简介和头像还在。",
+  "command.desc.usage": "用法：/desc <chatId> [description]",
+  "command.desc.done": "已请求修改 {chatId} 的简介。标题和头像还在。",
+  "command.desc.cleared": "已请求清掉 {chatId} 的简介。标题和头像还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -694,6 +701,11 @@ const en = {
   "command.title.usage": "Usage: /title <chatId> <title>",
   "command.title.done":
     "Asked to change the title of {chatId}. The description and photo stay.",
+  "command.desc.usage": "Usage: /desc <chatId> [description]",
+  "command.desc.done":
+    "Asked to change the description of {chatId}. The title and photo stay.",
+  "command.desc.cleared":
+    "Asked to clear the description of {chatId}. The title and photo stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -5137,6 +5137,197 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("changes a chat description and keeps the title", async () => {
+    const deps = kit();
+    const seen: { chatId: string; description: string }[] = [];
+    const remember = {
+      async setDescription(target: { chatId: string; description: string }) {
+        seen.push({
+          chatId: target.chatId,
+          description: target.description,
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/desc -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求修改 -100 的简介。标题和头像还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain("hello");
+    expect(seen).toEqual([{ chatId: "-100", description: "hello" }]);
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/desc -100 hello world", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求修改 -100 的简介。标题和头像还在。",
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+    expect(seen[1]).toEqual({
+      chatId: "-100",
+      description: "hello world",
+    });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/desc -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: "已请求清掉 -100 的简介。标题和头像还在。",
+    });
+    expect(seen[2]).toEqual({ chatId: "-100", description: "" });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/desc 42 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求修改 42 的简介。标题和头像还在。",
+    });
+    expect(seen[3]).toEqual({ chatId: "42", description: "hello" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/desc <chatId> [description]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/desc -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setDescription() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to change the description of -100. The title and photo stay.",
+    });
+    expect(JSON.stringify(english)).not.toContain("hello");
+    const englishClear = await runOperatorCommand({
+      event: event({ text: "/desc -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setDescription() {},
+      },
+      ...kit(),
+    });
+    expect(englishClear).toMatchObject({
+      text: "Asked to clear the description of -100. The title and photo stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/desc -100 hello", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDescription() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/desc", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/desc <chatId> [description]",
+    });
+    const exact = "a".repeat(255);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/desc -100 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求修改 -100 的简介。标题和头像还在。",
+    });
+    expect(seen[4]?.description).toBe(exact);
+    const tooLong = "a".repeat(256);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/desc -100 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(5);
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/desc -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(hidden).toMatchObject({
+      text: "已请求修改 -100 的简介。标题和头像还在。",
+    });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(seen[5]?.description).toBe(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/desc ${phrase} hello`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/desc -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/desc -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDescription() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain('"command":"desc"');
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/desc -200 hello", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

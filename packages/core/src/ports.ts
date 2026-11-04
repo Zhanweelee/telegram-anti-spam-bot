@@ -97,6 +97,12 @@ export interface ChatTitleTarget {
   readonly title: string;
 }
 
+export interface ChatDescriptionTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly description: string;
+}
+
 export const administratorRights = [
   "manageChat",
   "deleteMessages",
@@ -263,6 +269,7 @@ export interface ModerationPort {
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
   setTitle(target: ChatTitleTarget): Promise<void>;
+  setDescription(target: ChatDescriptionTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {
