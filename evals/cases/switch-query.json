@@ -1,0 +1,18 @@
+[
+  {
+    "id": "switch_query_spam",
+    "kind": "message",
+    "label": "spam",
+    "asSwitchQuery": true
+  },
+  {
+    "id": "switch_query_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "switch_query_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

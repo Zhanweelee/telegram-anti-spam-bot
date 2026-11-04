@@ -243,6 +243,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> copy_text on` 删这个群里复制到剪贴板的按钮。默认关闭。复制句子不进证据。看得见的按钮文字仍参与关键词。自定义表情仍看 `custom_emoji`。见 ADR 0516。
 
+`/rule <chatId> switch_query on` 删这个群里按下后把查询插进输入框的按钮。默认关闭。查询不进证据。看得见的按钮文字仍参与关键词。复制按钮仍看 `copy_text`。见 ADR 0517。
+
 ## 确认
 
 ```sh

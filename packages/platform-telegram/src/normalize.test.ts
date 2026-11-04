@@ -21178,6 +21178,405 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a switch query and leaves the sentence out", async () => {
+    const sentence = "口令90255";
+    const actor = "发查询的人";
+    const marked = await normalize({
+      update_id: 79040,
+      message: {
+        message_id: 79040,
+        date: 1761955200,
+        chat: { id: -100499940, type: "supergroup" },
+        from: { id: 126, first_name: actor },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "查询广告", switch_inline_query: sentence }],
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asSwitchQuery).toBe(true);
+    expect(marked.event.message?.asCopyText).toBeUndefined();
+    expect(marked.event.message?.text).toBe("查询广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(sentence);
+    expect(markedDump).not.toContain("90255");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 79041,
+      message: {
+        message_id: 79041,
+        date: 1761955200,
+        chat: { id: -100499941, type: "supergroup" },
+        from: { id: 126 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "查询广告", switch_inline_query: sentence }],
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asSwitchQuery).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90255");
+
+    const blank = await normalize({
+      update_id: 79042,
+      message: {
+        message_id: 79042,
+        date: 1761955200,
+        chat: { id: -100499942, type: "supergroup" },
+        from: { id: 126 },
+        text: "空查询",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "空按钮", switch_inline_query_current_chat: "   " }],
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空查询");
+    expect(blank.event.message?.asSwitchQuery).toBeUndefined();
+
+    const empty = await normalize({
+      update_id: 79043,
+      message: {
+        message_id: 79043,
+        date: 1761955200,
+        chat: { id: -100499943, type: "supergroup" },
+        from: { id: 126 },
+        text: "空串查询",
+        reply_markup: {
+          inline_keyboard: [[{ text: "只要用户名", switch_inline_query: "" }]],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空串查询");
+    expect(empty.event.message?.asSwitchQuery).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 79044,
+      message: {
+        message_id: 79044,
+        date: 1761955200,
+        chat: { id: -100499944, type: "supergroup" },
+        from: { id: 126 },
+        text: "布尔查询",
+        reply_markup: {
+          inline_keyboard: [[{ text: "布尔按钮", switch_inline_query: true }]],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔查询");
+    expect(flag.event.message?.asSwitchQuery).toBeUndefined();
+
+    const scope = await normalize({
+      update_id: 79045,
+      message: {
+        message_id: 79045,
+        date: 1761955200,
+        chat: { id: -100499945, type: "supergroup" },
+        from: { id: 126 },
+        text: "范围留下",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "选群",
+                switch_inline_query_chosen_chat: { allow_group_chats: true },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(scope.status).toBe("event");
+    if (scope.status !== "event") {
+      return;
+    }
+    expect(scope.event.message?.text).toBe("范围留下");
+    expect(scope.event.message?.asSwitchQuery).toBeUndefined();
+
+    const chosen = await normalize({
+      update_id: 79046,
+      message: {
+        message_id: 79046,
+        date: 1761955200,
+        chat: { id: -100499946, type: "supergroup" },
+        from: { id: 126 },
+        text: "挑选留下",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "挑选",
+                switch_inline_query_chosen_chat: { query: sentence },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(chosen.status).toBe("event");
+    if (chosen.status !== "event") {
+      return;
+    }
+    expect(chosen.event.message?.text).toBe("挑选留下");
+    expect(chosen.event.message?.asSwitchQuery).toBe(true);
+    expect(JSON.stringify(chosen.event)).not.toContain("90255");
+
+    const current = await normalize({
+      update_id: 79047,
+      message: {
+        message_id: 79047,
+        date: 1761955200,
+        chat: { id: -100499947, type: "supergroup" },
+        from: { id: 126 },
+        text: "当前留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "当前", switch_inline_query_current_chat: sentence }],
+          ],
+        },
+      },
+    });
+    expect(current.status).toBe("event");
+    if (current.status !== "event") {
+      return;
+    }
+    expect(current.event.message?.text).toBe("当前留下");
+    expect(current.event.message?.asSwitchQuery).toBe(true);
+    expect(JSON.stringify(current.event)).not.toContain("90255");
+
+    const link = await normalize({
+      update_id: 79048,
+      message: {
+        message_id: 79048,
+        date: 1761955200,
+        chat: { id: -100499948, type: "supergroup" },
+        from: { id: 126 },
+        text: "链接留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: "https://example.com/keep" }],
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asSwitchQuery).toBeUndefined();
+
+    const callback = await normalize({
+      update_id: 79049,
+      message: {
+        message_id: 79049,
+        date: 1761955200,
+        chat: { id: -100499949, type: "supergroup" },
+        from: { id: 126 },
+        text: "回调留下",
+        reply_markup: {
+          inline_keyboard: [[{ text: "点我", callback_data: "cb90256" }]],
+        },
+      },
+    });
+    expect(callback.status).toBe("event");
+    if (callback.status !== "event") {
+      return;
+    }
+    expect(callback.event.message?.text).toBe("回调留下");
+    expect(callback.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(callback.event)).not.toContain("90256");
+
+    const keyboard = await normalize({
+      update_id: 79050,
+      message: {
+        message_id: 79050,
+        date: 1761955200,
+        chat: { id: -100499950, type: "supergroup" },
+        from: { id: 126 },
+        text: "键盘留下",
+        reply_markup: {
+          keyboard: [[{ text: "键盘按钮", switch_inline_query: "口令90257" }]],
+        },
+      },
+    });
+    expect(keyboard.status).toBe("event");
+    if (keyboard.status !== "event") {
+      return;
+    }
+    expect(keyboard.event.message?.text).toBe("键盘留下");
+    expect(keyboard.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(keyboard.event)).not.toContain("90257");
+
+    const rich = await normalize({
+      update_id: 79051,
+      message: {
+        message_id: 79051,
+        date: 1761955200,
+        chat: { id: -100499951, type: "supergroup" },
+        from: { id: 126 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "buttons",
+                  buttons: [
+                    { text: "嵌套查询", switch_inline_query: sentence },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("嵌套查询");
+    expect(rich.event.message?.asSwitchQuery).toBe(true);
+    expect(rich.event.message?.asCopyText).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90255");
+
+    const paragraph = await normalize({
+      update_id: 79052,
+      message: {
+        message_id: 79052,
+        date: 1761955200,
+        chat: { id: -100499952, type: "supergroup" },
+        from: { id: 126 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "button",
+                button: {
+                  text: "段内查询",
+                  switch_inline_query_current_chat: sentence,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(paragraph.status).toBe("event");
+    if (paragraph.status !== "event") {
+      return;
+    }
+    expect(paragraph.event.message?.text).toBe("段内查询");
+    expect(paragraph.event.message?.asSwitchQuery).toBe(true);
+    expect(JSON.stringify(paragraph.event)).not.toContain("90255");
+
+    const copied = await normalize({
+      update_id: 79053,
+      message: {
+        message_id: 79053,
+        date: 1761955200,
+        chat: { id: -100499953, type: "supergroup" },
+        from: { id: 126 },
+        text: "复制留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "复制广告", copy_text: { text: "口令90258" } }],
+          ],
+        },
+      },
+    });
+    expect(copied.status).toBe("event");
+    if (copied.status !== "event") {
+      return;
+    }
+    expect(copied.event.message?.text).toBe("复制留下");
+    expect(copied.event.message?.asCopyText).toBe(true);
+    expect(copied.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(copied.event)).not.toContain("90258");
+
+    const emoji = await normalize({
+      update_id: 79054,
+      message: {
+        message_id: 79054,
+        date: 1761955200,
+        chat: { id: -100499954, type: "supergroup" },
+        from: { id: 126 },
+        text: "表情留下",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji90259",
+          },
+        ],
+      },
+    });
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.text).toBe("表情留下");
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("90259");
+
+    const dated = await normalize({
+      update_id: 79055,
+      message: {
+        message_id: 79055,
+        date: 1761955200,
+        chat: { id: -100499955, type: "supergroup" },
+        from: { id: 126 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90260,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asSwitchQuery).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90260");
+  });
+
   it("marks a copy button and leaves the sentence out", async () => {
     const sentence = "口令90251";
     const actor = "发复制的人";

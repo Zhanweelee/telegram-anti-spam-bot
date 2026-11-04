@@ -50,6 +50,7 @@ export default defineConfig({
       "packages/detectors-mention",
       "packages/detectors-emoji",
       "packages/detectors-copy",
+      "packages/detectors-query",
       "packages/detectors-rich",
       "packages/detectors-forward",
       "packages/actions",
