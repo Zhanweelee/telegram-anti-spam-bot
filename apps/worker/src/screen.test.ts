@@ -6005,6 +6005,239 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a sticker emoji until that chat asks", async () => {
+    const emojiId = "emoji90276";
+    const actor = "发表情贴纸的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "sticker_emoji" | "custom_emoji" | "sticker";
+      paid?: boolean;
+    }) {
+      const message =
+        input.kind === "custom_emoji"
+          ? {
+              text: "表情留下",
+              entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji90279",
+                },
+              ],
+            }
+          : input.kind === "sticker"
+            ? {
+                sticker: {
+                  file_id: "file-regular",
+                  file_unique_id: "uniq-regular",
+                  type: "regular",
+                  width: 512,
+                  height: 512,
+                  is_animated: false,
+                  is_video: false,
+                },
+              }
+            : input.kind === "sticker_emoji"
+              ? {
+                  sticker: {
+                    file_id: "file-emoji",
+                    file_unique_id: `uniq-${input.updateId}`,
+                    type: "custom_emoji",
+                    width: 100,
+                    height: 100,
+                    is_animated: false,
+                    is_video: false,
+                    custom_emoji_id: emojiId,
+                  },
+                }
+              : { text: "今天站会" };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 129, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(
+      id: "sticker_emoji" | "custom_emoji" | "media_sticker",
+    ): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10710,
+      chatId: -1001320,
+      kind: "sticker_emoji",
+    });
+    expect(idle.message?.asStickerEmoji).toBe(true);
+    expect(idle.message?.asCustomEmoji).toBeUndefined();
+    expect(idle.message?.media).toBe("sticker");
+    expect(idle.message?.text).toBe("");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(emojiId);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10711,
+        chatId: -1001321,
+        kind: "sticker_emoji",
+      }),
+      {
+        source: rule("sticker_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("sticker_emoji");
+    expect(removed.decision.ruleIds).toContain("sticker_emoji");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "sticker:sticker_emoji" },
+    ]);
+    const keptByEmoji = await screenTelegramEvent(
+      await posted({
+        updateId: 10712,
+        chatId: -1001322,
+        kind: "sticker_emoji",
+      }),
+      {
+        source: rule("custom_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByEmoji.decision.action).toBe("allow");
+    const removedByMedia = await screenTelegramEvent(
+      await posted({
+        updateId: 10713,
+        chatId: -1001323,
+        kind: "sticker_emoji",
+      }),
+      {
+        source: rule("media_sticker"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removedByMedia.decision.action).toBe("delete");
+    expect(removedByMedia.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:sticker" },
+    ]);
+    const keptEmoji = await screenTelegramEvent(
+      await posted({
+        updateId: 10714,
+        chatId: -1001324,
+        kind: "custom_emoji",
+      }),
+      {
+        source: rule("sticker_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptEmoji.decision.action).toBe("allow");
+    const keptSticker = await screenTelegramEvent(
+      await posted({
+        updateId: 10715,
+        chatId: -1001325,
+        kind: "sticker",
+      }),
+      {
+        source: rule("sticker_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptSticker.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10716, chatId: -1001326 }),
+      {
+        source: rule("sticker_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10717,
+        chatId: -1001327,
+        kind: "sticker_emoji",
+        paid: true,
+      }),
+      {
+        source: rule("sticker_emoji"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByEmoji: keptByEmoji.decision,
+      removedByMedia: removedByMedia.decision,
+      keptEmoji: keptEmoji.decision,
+      keptSticker: keptSticker.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(emojiId);
+    expect(dumped).not.toContain("90276");
+    expect(dumped).not.toContain("90279");
+    expect(dumped).not.toContain("表情留下");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a button emoji until that chat asks", async () => {
     const emojiId = "emoji90269";
     const actor = "发图标的人";

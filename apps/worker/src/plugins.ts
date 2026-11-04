@@ -439,6 +439,12 @@ export const builtinManifests = {
     integrity:
       "07c8c7b233ceee4d88a6ba8b38715d87a1ac8a98c330c800c7f737a4ba90f254",
   }),
+  stickerEmoji: manifest({
+    id: "sticker_emoji",
+    kind: "detector",
+    integrity:
+      "52d516dca92be283c5eba60530c6a7107415afcb5c4f2c578dc0c4307614ea62",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

@@ -53,6 +53,7 @@ export default defineConfig({
       "packages/detectors-query",
       "packages/detectors-login",
       "packages/detectors-icon",
+      "packages/detectors-emoji-sticker",
       "packages/detectors-rich",
       "packages/detectors-forward",
       "packages/actions",

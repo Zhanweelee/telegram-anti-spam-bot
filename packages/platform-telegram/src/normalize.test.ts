@@ -21178,6 +21178,362 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a sticker emoji and leaves the id out", async () => {
+    const emojiId = "emoji90276";
+    const actor = "发表情贴纸的人";
+    const marked = await normalize({
+      update_id: 79100,
+      message: {
+        message_id: 79100,
+        date: 1761955200,
+        chat: { id: -100500100, type: "supergroup" },
+        from: { id: 129, first_name: actor },
+        sticker: {
+          file_id: "file-emoji",
+          file_unique_id: "uniq-emoji",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+          emoji: "😀",
+          set_name: "pack90277",
+          custom_emoji_id: emojiId,
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asStickerEmoji).toBe(true);
+    expect(marked.event.message?.asCustomEmoji).toBeUndefined();
+    expect(marked.event.message?.asButtonEmoji).toBeUndefined();
+    expect(marked.event.message?.media).toBe("sticker");
+    expect(marked.event.message?.text).toBe("");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(emojiId);
+    expect(markedDump).not.toContain("90276");
+    expect(markedDump).not.toContain("90277");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 79101,
+      message: {
+        message_id: 79101,
+        date: 1761955200,
+        chat: { id: -100500101, type: "supergroup" },
+        from: { id: 129 },
+        text: "今天站会",
+        sticker: {
+          file_id: "file-emoji",
+          file_unique_id: "uniq-emoji-kept",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+          custom_emoji_id: emojiId,
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asStickerEmoji).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90276");
+
+    const blank = await normalize({
+      update_id: 79102,
+      message: {
+        message_id: 79102,
+        date: 1761955200,
+        chat: { id: -100500102, type: "supergroup" },
+        from: { id: 129 },
+        text: "空贴纸",
+        sticker: {
+          file_id: "file-blank",
+          file_unique_id: "uniq-blank",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+          custom_emoji_id: "   ",
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空贴纸");
+    expect(blank.event.message?.asStickerEmoji).toBeUndefined();
+
+    const empty = await normalize({
+      update_id: 79103,
+      message: {
+        message_id: 79103,
+        date: 1761955200,
+        chat: { id: -100500103, type: "supergroup" },
+        from: { id: 129 },
+        text: "空串贴纸",
+        sticker: {
+          file_id: "file-empty",
+          file_unique_id: "uniq-empty",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+          custom_emoji_id: "",
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空串贴纸");
+    expect(empty.event.message?.asStickerEmoji).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 79104,
+      message: {
+        message_id: 79104,
+        date: 1761955200,
+        chat: { id: -100500104, type: "supergroup" },
+        from: { id: 129 },
+        text: "布尔贴纸",
+        sticker: {
+          file_id: "file-flag",
+          file_unique_id: "uniq-flag",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+          custom_emoji_id: true,
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔贴纸");
+    expect(flag.event.message?.asStickerEmoji).toBeUndefined();
+
+    const regular = await normalize({
+      update_id: 79105,
+      message: {
+        message_id: 79105,
+        date: 1761955200,
+        chat: { id: -100500105, type: "supergroup" },
+        from: { id: 129 },
+        text: "普通贴纸",
+        sticker: {
+          file_id: "file-regular",
+          file_unique_id: "uniq-regular",
+          type: "regular",
+          width: 512,
+          height: 512,
+          is_animated: false,
+          is_video: false,
+          emoji: "😀",
+          set_name: "pack90277",
+        },
+      },
+    });
+    expect(regular.status).toBe("event");
+    if (regular.status !== "event") {
+      return;
+    }
+    expect(regular.event.message?.text).toBe("普通贴纸");
+    expect(regular.event.message?.media).toBe("sticker");
+    expect(regular.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(regular.event)).not.toContain("90277");
+
+    const mask = await normalize({
+      update_id: 79106,
+      message: {
+        message_id: 79106,
+        date: 1761955200,
+        chat: { id: -100500106, type: "supergroup" },
+        from: { id: 129 },
+        text: "遮罩留下",
+        sticker: {
+          file_id: "file-mask",
+          file_unique_id: "uniq-mask",
+          type: "mask",
+          width: 512,
+          height: 512,
+          is_animated: false,
+          is_video: false,
+        },
+      },
+    });
+    expect(mask.status).toBe("event");
+    if (mask.status !== "event") {
+      return;
+    }
+    expect(mask.event.message?.text).toBe("遮罩留下");
+    expect(mask.event.message?.asStickerEmoji).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 79107,
+      message: {
+        message_id: 79107,
+        date: 1761955200,
+        chat: { id: -100500107, type: "supergroup" },
+        from: { id: 129 },
+        text: "缺编号",
+        sticker: {
+          file_id: "file-missing",
+          file_unique_id: "uniq-missing",
+          type: "custom_emoji",
+          width: 100,
+          height: 100,
+          is_animated: false,
+          is_video: false,
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺编号");
+    expect(missing.event.message?.asStickerEmoji).toBeUndefined();
+
+    const button = await normalize({
+      update_id: 79108,
+      message: {
+        message_id: 79108,
+        date: 1761955200,
+        chat: { id: -100500108, type: "supergroup" },
+        from: { id: 129 },
+        text: "按钮留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "图标广告", icon_custom_emoji_id: "emoji90278" }],
+          ],
+        },
+      },
+    });
+    expect(button.status).toBe("event");
+    if (button.status !== "event") {
+      return;
+    }
+    expect(button.event.message?.text).toBe("按钮留下");
+    expect(button.event.message?.asButtonEmoji).toBe(true);
+    expect(button.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(button.event)).not.toContain("90278");
+
+    const emoji = await normalize({
+      update_id: 79109,
+      message: {
+        message_id: 79109,
+        date: 1761955200,
+        chat: { id: -100500109, type: "supergroup" },
+        from: { id: 129 },
+        text: "表情留下",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji90279",
+          },
+        ],
+      },
+    });
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.text).toBe("表情留下");
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("90279");
+
+    const gift = await normalize({
+      update_id: 79110,
+      message: {
+        message_id: 79110,
+        date: 1761955200,
+        chat: { id: -100500110, type: "supergroup" },
+        from: { id: 129 },
+        text: "礼物留下",
+        unique_gift: {
+          gift: {
+            base_name: "收藏留下",
+            model: { name: "型号留下" },
+          },
+          colors: { model_custom_emoji_id: "emoji90280" },
+        },
+      },
+    });
+    expect(gift.status).toBe("event");
+    if (gift.status !== "event") {
+      return;
+    }
+    expect(gift.event.message?.text).toBe("礼物留下");
+    expect(gift.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(gift.event)).not.toContain("90280");
+
+    const topic = await normalize({
+      update_id: 79111,
+      message: {
+        message_id: 79111,
+        date: 1761955200,
+        chat: { id: -100500111, type: "supergroup" },
+        from: { id: 129 },
+        forum_topic_edited: {
+          name: "话题留下",
+          icon_custom_emoji_id: "emoji90281",
+        },
+      },
+    });
+    expect(topic.status).toBe("event");
+    if (topic.status !== "event") {
+      return;
+    }
+    expect(topic.event.message?.text).toBe("话题留下");
+    expect(topic.event.message?.topicNotice).toBe("edited");
+    expect(topic.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(topic.event)).not.toContain("90281");
+
+    const dated = await normalize({
+      update_id: 79112,
+      message: {
+        message_id: 79112,
+        date: 1761955200,
+        chat: { id: -100500112, type: "supergroup" },
+        from: { id: 129 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90282,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asStickerEmoji).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90282");
+  });
+
   it("marks a button emoji and leaves the id out", async () => {
     const emojiId = "emoji90269";
     const actor = "发图标的人";
