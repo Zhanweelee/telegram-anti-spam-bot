@@ -191,6 +191,8 @@ export const messageKeys = [
   "command.desc.cleared",
   "command.newtopic.usage",
   "command.newtopic.done",
+  "command.rentopic.usage",
+  "command.rentopic.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -260,6 +262,7 @@ const syntax = [
   "/title <chatId> <title>",
   "/desc <chatId> [description]",
   "/newtopic <chatId> <name>",
+  "/rentopic <chatId> <threadId> <name>",
 ].join("\n");
 
 const zh = {
@@ -477,6 +480,9 @@ const zh = {
   "command.desc.cleared": "已请求清掉 {chatId} 的简介。标题和头像还在。",
   "command.newtopic.usage": "用法：/newtopic <chatId> <name>",
   "command.newtopic.done": "已在 {chatId} 建好话题 {threadId}。其它话题还在。",
+  "command.rentopic.usage": "用法：/rentopic <chatId> <threadId> <name>",
+  "command.rentopic.done":
+    "已请求修改 {chatId} 里话题 {threadId} 的名字。消息还在。其它话题还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -714,6 +720,9 @@ const en = {
   "command.newtopic.usage": "Usage: /newtopic <chatId> <name>",
   "command.newtopic.done":
     "Created topic {threadId} in {chatId}. The other topics stay.",
+  "command.rentopic.usage": "Usage: /rentopic <chatId> <threadId> <name>",
+  "command.rentopic.done":
+    "Asked to change the name of topic {threadId} in {chatId}. The messages stay. The other topics stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

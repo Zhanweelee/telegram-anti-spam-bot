@@ -624,6 +624,20 @@ export function createTelegramModerator(input: {
       });
       return createdTopicId(body);
     },
+    async renameTopic(target) {
+      await postTelegram({
+        token: input.token,
+        method: "editForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "rentopic_unavailable",
+        failed: "rentopic_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_thread_id: telegramId(target.threadId),
+          name: target.name,
+        },
+      });
+    },
   };
 }
 

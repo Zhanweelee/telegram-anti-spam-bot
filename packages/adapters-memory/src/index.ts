@@ -31,6 +31,7 @@ import {
   prefilterPolicySchema,
   type ReactionActorTarget,
   type ReactionChoice,
+  type RenamedTopicTarget,
   type ReplyMessage,
   type ReplyPort,
   type RuleSet,
@@ -155,6 +156,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly reactionsSet: readonly ReactionChoice[];
   readonly titlesSet: readonly ChatTitleTarget[];
   readonly descriptionsSet: readonly ChatDescriptionTarget[];
+  readonly topicsRenamed: readonly RenamedTopicTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -190,6 +192,7 @@ export function createMemoryModerator(): ModerationPort & {
   const reactionsSet: ReactionChoice[] = [];
   const titlesSet: ChatTitleTarget[] = [];
   const descriptionsSet: ChatDescriptionTarget[] = [];
+  const topicsRenamed: RenamedTopicTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -225,6 +228,7 @@ export function createMemoryModerator(): ModerationPort & {
     reactionsSet,
     titlesSet,
     descriptionsSet,
+    topicsRenamed,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -418,6 +422,14 @@ export function createMemoryModerator(): ModerationPort & {
         tenantId: target.tenantId,
         chatId: target.chatId,
         description: target.description,
+      });
+    },
+    async renameTopic(target) {
+      topicsRenamed.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        threadId: target.threadId,
+        name: target.name,
       });
     },
     async unpinTopic(target) {
