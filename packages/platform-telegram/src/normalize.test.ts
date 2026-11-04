@@ -21178,6 +21178,380 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a text mention and leaves the user id out", async () => {
+    const userId = 90238038;
+    const username = "user90238";
+    const hiddenName = "名90238";
+    const actor = "发点名的人";
+    const user = { id: userId, first_name: hiddenName, username };
+    const marked = await normalize({
+      update_id: 4870,
+      message: {
+        message_id: 910,
+        date: 1761955200,
+        chat: { id: -100499870, type: "supergroup" },
+        from: { id: 123, first_name: actor },
+        text: "点名广告",
+        entities: [{ type: "text_mention", offset: 0, length: 4, user }],
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asTextMention).toBe(true);
+    expect(marked.event.message?.asRichTextMention).toBeUndefined();
+    expect(marked.event.message?.text).toBe("点名广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain("90238");
+    expect(markedDump).not.toContain(username);
+    expect(markedDump).not.toContain(hiddenName);
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4871,
+      message: {
+        message_id: 911,
+        date: 1761955200,
+        chat: { id: -100499871, type: "supergroup" },
+        from: { id: 123 },
+        text: "今天站会",
+        entities: [{ type: "text_mention", offset: 0, length: 2, user }],
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90238");
+
+    const caption = await normalize({
+      update_id: 4872,
+      message: {
+        message_id: 912,
+        date: 1761955200,
+        chat: { id: -100499872, type: "supergroup" },
+        from: { id: 123 },
+        photo: [{ file_id: "photofile", width: 1, height: 1 }],
+        caption: "图片点名",
+        caption_entities: [
+          { type: "text_mention", offset: 0, length: 4, user },
+        ],
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.text).toBe("图片点名");
+    expect(caption.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(caption.event)).not.toContain("90238");
+
+    const missing = await normalize({
+      update_id: 4873,
+      message: {
+        message_id: 913,
+        date: 1761955200,
+        chat: { id: -100499873, type: "supergroup" },
+        from: { id: 123 },
+        text: "缺用户",
+        entities: [{ type: "text_mention", offset: 0, length: 3 }],
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺用户");
+    expect(missing.event.message?.asTextMention).toBeUndefined();
+
+    const zero = await normalize({
+      update_id: 4874,
+      message: {
+        message_id: 914,
+        date: 1761955200,
+        chat: { id: -100499874, type: "supergroup" },
+        from: { id: 123 },
+        text: "零编号",
+        entities: [
+          { type: "text_mention", offset: 0, length: 3, user: { id: 0 } },
+        ],
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("零编号");
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+
+    const textual = await normalize({
+      update_id: 4875,
+      message: {
+        message_id: 915,
+        date: 1761955200,
+        chat: { id: -100499875, type: "supergroup" },
+        from: { id: 123 },
+        text: "字符串编号",
+        entities: [
+          {
+            type: "text_mention",
+            offset: 0,
+            length: 5,
+            user: { id: "90238038" },
+          },
+        ],
+      },
+    });
+    expect(textual.status).toBe("event");
+    if (textual.status !== "event") {
+      return;
+    }
+    expect(textual.event.message?.text).toBe("字符串编号");
+    expect(textual.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(textual.event)).not.toContain("90238");
+
+    const flag = await normalize({
+      update_id: 4876,
+      message: {
+        message_id: 916,
+        date: 1761955200,
+        chat: { id: -100499876, type: "supergroup" },
+        from: { id: 123 },
+        text: "布尔用户",
+        entities: [{ type: "text_mention", offset: 0, length: 4, user: true }],
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔用户");
+    expect(flag.event.message?.asTextMention).toBeUndefined();
+
+    const usernameMention = await normalize({
+      update_id: 4877,
+      message: {
+        message_id: 917,
+        date: 1761955200,
+        chat: { id: -100499877, type: "supergroup" },
+        from: { id: 123 },
+        text: "用户名留下",
+        entities: [{ type: "mention", offset: 0, length: 5 }],
+      },
+    });
+    expect(usernameMention.status).toBe("event");
+    if (usernameMention.status !== "event") {
+      return;
+    }
+    expect(usernameMention.event.message?.text).toBe("用户名留下");
+    expect(usernameMention.event.message?.asTextMention).toBeUndefined();
+    expect(usernameMention.event.message?.asRichMention).toBeUndefined();
+
+    const rich = await normalize({
+      update_id: 4878,
+      message: {
+        message_id: 918,
+        date: 1761955200,
+        chat: { id: -100499878, type: "supergroup" },
+        from: { id: 123 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "text_mention",
+                text: "富文本留下",
+                user: {
+                  id: 90240,
+                  first_name: "富90240",
+                  username: "rich90240",
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("富文本留下");
+    expect(rich.event.message?.asRichTextMention).toBe(true);
+    expect(rich.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90240");
+
+    const quoted = await normalize({
+      update_id: 4879,
+      message: {
+        message_id: 919,
+        date: 1761955200,
+        chat: { id: -100499879, type: "supergroup" },
+        from: { id: 123 },
+        text: "引用点名留下",
+        quote: {
+          text: "另一条",
+          is_manual: true,
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 3,
+              user: { id: 90241, first_name: "引90241" },
+            },
+          ],
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.text).toBe("引用点名留下");
+    expect(quoted.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(quoted.event)).not.toContain("90241");
+
+    const poll = await normalize({
+      update_id: 4880,
+      message: {
+        message_id: 920,
+        date: 1761955200,
+        chat: { id: -100499880, type: "supergroup" },
+        from: { id: 123 },
+        poll: {
+          id: "pollq",
+          question: "投票点名",
+          question_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90242, first_name: "票90242" },
+            },
+          ],
+          options: [{ text: "选项留下" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(poll.status).toBe("event");
+    if (poll.status !== "event") {
+      return;
+    }
+    expect(poll.event.message?.text).toBe("投票点名");
+    expect(poll.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(poll.event)).not.toContain("90242");
+
+    const option = await normalize({
+      update_id: 4881,
+      message: {
+        message_id: 921,
+        date: 1761955200,
+        chat: { id: -100499881, type: "supergroup" },
+        from: { id: 123 },
+        poll: {
+          id: "pollo",
+          question: "投票留下",
+          options: [
+            {
+              text: "选项点名",
+              text_entities: [
+                {
+                  type: "text_mention",
+                  offset: 0,
+                  length: 4,
+                  user: { id: 90245, first_name: "项90245" },
+                },
+              ],
+            },
+          ],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(option.status).toBe("event");
+    if (option.status !== "event") {
+      return;
+    }
+    expect(option.event.message?.text).toBe("投票留下");
+    expect(option.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(option.event)).not.toContain("90245");
+
+    const checklist = await normalize({
+      update_id: 4882,
+      message: {
+        message_id: 922,
+        date: 1761955200,
+        chat: { id: -100499882, type: "supergroup" },
+        from: { id: 123 },
+        checklist: {
+          title: "清单点名",
+          title_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90243, first_name: "单90243" },
+            },
+          ],
+          tasks: [{ id: 1, text: "任务留下" }],
+        },
+      },
+    });
+    expect(checklist.status).toBe("event");
+    if (checklist.status !== "event") {
+      return;
+    }
+    expect(checklist.event.message?.text).toBe("清单点名");
+    expect(checklist.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(checklist.event)).not.toContain("90243");
+
+    const task = await normalize({
+      update_id: 4883,
+      message: {
+        message_id: 923,
+        date: 1761955200,
+        chat: { id: -100499883, type: "supergroup" },
+        from: { id: 123 },
+        checklist: {
+          title: "清单留下",
+          tasks: [
+            {
+              id: 1,
+              text: "任务点名",
+              text_entities: [
+                {
+                  type: "text_mention",
+                  offset: 0,
+                  length: 4,
+                  user: { id: 90244, first_name: "务90244" },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(task.status).toBe("event");
+    if (task.status !== "event") {
+      return;
+    }
+    expect(task.event.message?.text).toBe("清单留下");
+    expect(task.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(task.event)).not.toContain("90244");
+  });
+
   it("marks a rich reference link and leaves the name out", async () => {
     const referenceName = "cite90235";
     const actor = "发引用链接的人";

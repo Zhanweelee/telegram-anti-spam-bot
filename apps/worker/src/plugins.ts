@@ -403,6 +403,12 @@ export const builtinManifests = {
     integrity:
       "9ad010cdd308deba08153962a6465e12f0370f0b90377feefc6aed00ebdaed24",
   }),
+  textMention: manifest({
+    id: "text_mention",
+    kind: "detector",
+    integrity:
+      "811a859b7853aee0ceeab6334ee667b989968a8defc96e8201cf8d1f61c7ab2a",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

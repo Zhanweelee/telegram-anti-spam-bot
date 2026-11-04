@@ -117,3 +117,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `rich_message` 里 `type` 为 `reference` 且名字去掉空白后非空时，消息带 `asRichReference`。空白、布尔值和缺名字不带这个标记。锚点链接和指向引用的链接不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_reference` 默认关闭。见 ADR 0512。
 
 `rich_message` 里 `type` 为 `reference_link` 且 `reference_name` 去掉空白后非空时，消息带 `asRichReferenceLink`。空白、布尔值和缺名字不带这个标记。引用和日期时间不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_reference_link` 默认关闭。见 ADR 0513。
+
+`entities`、`caption_entities`、投票 `question_entities` 或清单 `title_entities` 里 `type` 为 `text_mention` 且 `user.id` 是大于 0 的安全整数时，消息带 `asTextMention`。缺用户、布尔值、字符串编号和 0 不带这个标记。用户名实体、富文本按标识提及、手动引用、投票选项和清单任务不带。用户编号和名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `text_mention` 默认关闭。见 ADR 0514。

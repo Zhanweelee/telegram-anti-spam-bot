@@ -170,6 +170,7 @@ async function messageEvent(
   const asPostPending = pendingPost(message);
   const asSpoiler = coveredMedia(message);
   const richContact = richContactMark(message);
+  const asTextMention = textMentionMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -246,6 +247,7 @@ async function messageEvent(
       ...(richContact.referenceLink
         ? { asRichReferenceLink: true as const }
         : {}),
+      ...(asTextMention ? { asTextMention: true as const } : {}),
     },
   });
 }
@@ -431,6 +433,33 @@ function walkRichContact(
 
 function hiddenSecret(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function textMentionMark(message: Record<string, unknown>): boolean {
+  const lists: unknown[] = [message.entities, message.caption_entities];
+  const poll = message.poll;
+  if (isRecord(poll)) {
+    lists.push(poll.question_entities);
+  }
+  const checklist = message.checklist;
+  if (isRecord(checklist)) {
+    lists.push(checklist.title_entities);
+  }
+  for (const list of lists) {
+    if (!Array.isArray(list)) {
+      continue;
+    }
+    for (const entity of list) {
+      if (
+        isRecord(entity) &&
+        entity.type === "text_mention" &&
+        mentionedUser(entity.user)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function mentionedUser(value: unknown): boolean {

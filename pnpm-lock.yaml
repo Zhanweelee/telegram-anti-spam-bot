@@ -125,6 +125,9 @@ importers:
       '@tasb/detector-media':
         specifier: workspace:*
         version: link:../../packages/detectors-media
+      '@tasb/detector-mention':
+        specifier: workspace:*
+        version: link:../../packages/detectors-mention
       '@tasb/detector-notice':
         specifier: workspace:*
         version: link:../../packages/detectors-notice
@@ -276,6 +279,9 @@ importers:
       '@tasb/detector-media':
         specifier: workspace:*
         version: link:../packages/detectors-media
+      '@tasb/detector-mention':
+        specifier: workspace:*
+        version: link:../packages/detectors-mention
       '@tasb/detector-notice':
         specifier: workspace:*
         version: link:../packages/detectors-notice
@@ -620,6 +626,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-media:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-mention:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

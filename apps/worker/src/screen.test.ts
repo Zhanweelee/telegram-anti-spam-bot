@@ -6005,6 +6005,206 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a text mention until that chat asks", async () => {
+    const username = "user90238";
+    const actor = "发点名的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "text_mention" | "rich" | "mention";
+      paid?: boolean;
+    }) {
+      const message =
+        input.kind === "rich"
+          ? {
+              rich_message: {
+                blocks: [
+                  {
+                    type: "paragraph",
+                    text: {
+                      type: "text_mention",
+                      text: "富文本留下",
+                      user: {
+                        id: 90240,
+                        first_name: "富90240",
+                        username: "rich90240",
+                      },
+                    },
+                  },
+                ],
+              },
+            }
+          : input.kind === "mention"
+            ? {
+                text: "用户名留下",
+                entities: [{ type: "mention", offset: 0, length: 5 }],
+              }
+            : input.kind === "text_mention"
+              ? {
+                  text: "点名广告",
+                  entities: [
+                    {
+                      type: "text_mention",
+                      offset: 0,
+                      length: 4,
+                      user: {
+                        id: 90238038,
+                        first_name: "名90238",
+                        username,
+                      },
+                    },
+                  ],
+                }
+              : { text: "今天站会" };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 123, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "text_mention" | "rich_text_mention"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10650,
+      chatId: -1001250,
+      kind: "text_mention",
+    });
+    expect(idle.message?.asTextMention).toBe(true);
+    expect(idle.message?.asRichTextMention).toBeUndefined();
+    expect(idle.message?.text).toBe("点名广告");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain("90238");
+    expect(idleDump).not.toContain(username);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 10651,
+        chatId: -1001251,
+        kind: "text_mention",
+      }),
+      {
+        source: rule("text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("text_mention");
+    expect(removed.decision.ruleIds).toContain("text_mention");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "entity:text_mention" },
+    ]);
+    const keptByRich = await screenTelegramEvent(
+      await posted({
+        updateId: 10652,
+        chatId: -1001252,
+        kind: "text_mention",
+      }),
+      {
+        source: rule("rich_text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByRich.decision.action).toBe("allow");
+    const keptRich = await screenTelegramEvent(
+      await posted({ updateId: 10653, chatId: -1001253, kind: "rich" }),
+      {
+        source: rule("text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptRich.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10654, chatId: -1001254, kind: "mention" }),
+      {
+        source: rule("text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10655,
+        chatId: -1001255,
+        kind: "text_mention",
+        paid: true,
+      }),
+      {
+        source: rule("text_mention"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByRich: keptByRich.decision,
+      keptRich: keptRich.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain("90238");
+    expect(dumped).not.toContain("90240");
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain("点名广告");
+    expect(dumped).not.toContain("富文本留下");
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain("rich90240");
+  });
+
   it("keeps a rich reference link until that chat asks", async () => {
     const referenceName = "cite90235";
     const actor = "发引用链接的人";
