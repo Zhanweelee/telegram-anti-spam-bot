@@ -22414,6 +22414,222 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps hostnames from a linked channel mirror's author signature", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "机密频道";
+    const code = "MIR93";
+    const labeled = await normalize({
+      update_id: 4930,
+      message: {
+        message_id: 4930,
+        date: 1761955200,
+        chat: { id: -1004930, type: "supergroup" },
+        from: { id: 4930 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        sender_chat: { id: -10049300, type: "channel", title },
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: {
+            id: -10049300,
+            type: "channel",
+            title: `https://bit.ly/${title}`,
+          },
+          author_signature: `${phrase} https://bit.ly/sig93 https://t.me/+${code}.`,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.forward).toBeUndefined();
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("sig93");
+    expect(labeledDump).not.toContain(title);
+    expect(labeledDump).not.toContain("automatic");
+
+    const asBody = `${phrase} https://cutt.ly/body93`;
+    const body = await normalize({
+      update_id: 4931,
+      message: {
+        message_id: 4931,
+        date: 1761955200,
+        chat: { id: -1004931, type: "supergroup" },
+        from: { id: 4931 },
+        photo: [
+          {
+            file_id: "ph-4931",
+            file_unique_id: "ph-4931",
+            width: 1,
+            height: 1,
+          },
+        ],
+        is_automatic_forward: true,
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: -10049310, type: "channel", title },
+          author_signature: asBody,
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.forward).toBeUndefined();
+    expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.hosts).toEqual(["cutt.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain(title);
+    expect(JSON.stringify(body.event)).not.toContain("ph-4931");
+
+    const own = "自己的签名";
+    const both = await normalize({
+      update_id: 4932,
+      message: {
+        message_id: 4932,
+        date: 1761955200,
+        chat: { id: -1004932, type: "supergroup" },
+        from: { id: 4932 },
+        author_signature: own,
+        is_automatic_forward: true,
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: -10049320, type: "channel", title },
+          author_signature: "https://tinyurl.com/orig93",
+        },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.text).toBe(own);
+    expect(both.event.message?.textSha256).toBe(await sha256Hex(own));
+    expect(both.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const bothDump = JSON.stringify(both.event);
+    expect(bothDump).not.toContain("orig93");
+    expect(bothDump).not.toContain(title);
+
+    const manual = await normalize({
+      update_id: 4933,
+      message: {
+        message_id: 4933,
+        date: 1761955200,
+        chat: { id: -1004933, type: "supergroup" },
+        from: { id: 4933 },
+        text: "今天站会",
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: -10049330, type: "channel", title },
+          author_signature: "https://tinyurl.com/man93",
+        },
+      },
+    });
+    expect(manual.status).toBe("event");
+    if (manual.status !== "event") {
+      return;
+    }
+    expect(manual.event.message?.forward).toBe("channel");
+    expect(manual.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(manual.event)).not.toContain("tinyurl.com");
+    expect(JSON.stringify(manual.event)).not.toContain(title);
+
+    const chat = await normalize({
+      update_id: 4934,
+      message: {
+        message_id: 4934,
+        date: 1761955200,
+        chat: { id: -1004934, type: "supergroup" },
+        from: { id: 4934 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        forward_origin: {
+          type: "chat",
+          date: 1761955200,
+          sender_chat: { id: -10049340, type: "supergroup", title },
+          author_signature: "https://tinyurl.com/chat93",
+        },
+      },
+    });
+    expect(chat.status).toBe("event");
+    if (chat.status !== "event") {
+      return;
+    }
+    expect(chat.event.message?.forward).toBe("chat");
+    expect(chat.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(chat.event)).not.toContain("tinyurl.com");
+    expect(JSON.stringify(chat.event)).not.toContain(title);
+
+    for (const mark of [false, 1, phrase]) {
+      const outcome = await normalize({
+        update_id: 4935,
+        message: {
+          message_id: 4935,
+          date: 1761955200,
+          chat: { id: -1004935, type: "supergroup" },
+          from: { id: 4935 },
+          text: "今天站会",
+          is_automatic_forward: mark,
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: { id: -10049350, type: "channel", title },
+            author_signature: mark,
+          },
+        },
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        return;
+      }
+      expect(outcome.event.message?.forward).toBe("channel");
+      expect(outcome.event.message?.hosts).toBeUndefined();
+      const dump = JSON.stringify(outcome.event);
+      expect(dump).not.toContain(phrase);
+      expect(dump).not.toContain(title);
+    }
+
+    const edited = await normalize({
+      update_id: 4936,
+      edited_message: {
+        message_id: 4936,
+        date: 1761955200,
+        chat: { id: -1004936, type: "supergroup" },
+        from: { id: 4936 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: -10049360, type: "channel", title },
+          author_signature: "https://bit.ly/edit93",
+        },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.forward).toBeUndefined();
+    expect(edited.event.message?.text).toBe("今天站会");
+    expect(edited.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(edited.event)).not.toContain("edit93");
+    expect(JSON.stringify(edited.event)).not.toContain(title);
+  });
+
   it("keeps a numeric album id and leaves other group ids out", async () => {
     const albumId = "12532140322504850";
     const phrase = "请免费领取礼品";
