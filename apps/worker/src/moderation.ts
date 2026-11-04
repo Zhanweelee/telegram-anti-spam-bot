@@ -54,6 +54,9 @@ function createOpenModerator(): ModerationPort {
     async readMember() {
       throw new Error("member_unavailable");
     },
+    async readMemberAllows() {
+      throw new Error("allows_unavailable");
+    },
     async readPermissions() {
       throw new Error("perms_unavailable");
     },

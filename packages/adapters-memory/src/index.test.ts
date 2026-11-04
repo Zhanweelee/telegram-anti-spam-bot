@@ -255,6 +255,17 @@ describe("memory adapter", () => {
     ).rejects.toThrow("personal_unavailable");
   });
 
+  it("does not invent individual allows", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readMemberAllows({
+        tenantId: "t",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("allows_unavailable");
+  });
+
   it("does not invent private-chat privacy", async () => {
     const moderator = createMemoryModerator();
     await expect(
