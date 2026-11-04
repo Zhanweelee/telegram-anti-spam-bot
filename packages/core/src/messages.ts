@@ -89,6 +89,9 @@ export const messageKeys = [
   "command.cani.header",
   "command.captcha.usage",
   "command.captcha.done",
+  "command.uncaptcha.usage",
+  "command.uncaptcha.done",
+  "command.uncaptcha.absent",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -438,6 +441,7 @@ const syntax = [
   "/kick <chatId> <actorId>",
   "/cani <chatId>",
   "/captcha <chatId> <actorId>",
+  "/uncaptcha <chatId> <actorId>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -544,6 +548,9 @@ const zh = {
   "command.cani.header": "群 {chatId} 机器人 {actorId}",
   "command.captcha.usage": "用法：/captcha <chatId> <actorId>",
   "command.captcha.done": "已要求验证 {chatId} {actorId}",
+  "command.uncaptcha.usage": "用法：/uncaptcha <chatId> <actorId>",
+  "command.uncaptcha.done": "已取消验证 {chatId} {actorId}",
+  "command.uncaptcha.absent": "{chatId} {actorId} 没有待验证",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -933,6 +940,9 @@ const en = {
   "command.cani.header": "chat {chatId} bot {actorId}",
   "command.captcha.usage": "Usage: /captcha <chatId> <actorId>",
   "command.captcha.done": "Asked {actorId} in {chatId} to pass the check",
+  "command.uncaptcha.usage": "Usage: /uncaptcha <chatId> <actorId>",
+  "command.uncaptcha.done": "Cancelled the check for {actorId} in {chatId}",
+  "command.uncaptcha.absent": "{actorId} has no pending check in {chatId}",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

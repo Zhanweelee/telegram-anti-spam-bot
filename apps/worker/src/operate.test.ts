@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(86);
+    expect(body.commands).toHaveLength(87);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2903,8 +2903,8 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
-      command: "captcha",
-      description: "/captcha <chatId> <actorId>",
+      command: "uncaptcha",
+      description: "/uncaptcha <chatId> <actorId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -8851,5 +8851,109 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(failed.logger.entries)).not.toContain(nonce);
     expect(JSON.stringify(failed.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("cancels a pending captcha without leaving the button", async () => {
+    const kit = deps();
+    const captchaStore = createMemoryCaptchaStore();
+    const nonce = "0123456789abcdef";
+    await captchaStore.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "55",
+    });
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/uncaptcha -100 77", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        captchaStore,
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已取消验证 -100 77",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "restrictChatMember",
+      "deleteMessage",
+    ]);
+    const released = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id: number;
+      user_id: number;
+      permissions: { can_send_messages: boolean };
+      until_date?: number;
+    };
+    expect(released.chat_id).toBe(-100);
+    expect(released.user_id).toBe(77);
+    expect(released.permissions.can_send_messages).toBe(true);
+    expect(released.until_date).toBeUndefined();
+    const removed = JSON.parse(calls[1]?.body ?? "{}") as {
+      chat_id: number;
+      message_id: number;
+    };
+    expect(removed.chat_id).toBe(-100);
+    expect(removed.message_id).toBe(55);
+    expect(await captchaStore.get("local", "-100", "77")).toBeNull();
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+
+    const empty = deps();
+    const emptyCalls: string[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/uncaptcha -100 88", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        captchaStore,
+        fetchImpl: async (input) => {
+          emptyCalls.push(String(input));
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "-100 88 没有待验证",
+    ]);
+    expect(emptyCalls).toEqual([]);
+
+    const offline = deps();
+    const kept = createMemoryCaptchaStore();
+    await kept.put({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      nonce,
+      expiresAt: "2026-11-01T00:05:00.000Z",
+      messageId: "55",
+    });
+    await handleIncomingEvent(
+      await incoming({ text: "/uncaptcha -100 77", direct: true }),
+      { ...offline, captchaStore: kept },
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(await kept.get("local", "-100", "77")).toMatchObject({
+      nonce,
+      messageId: "55",
+    });
+    expect(JSON.stringify(offline.logger.entries)).not.toContain(nonce);
   });
 });
