@@ -1,6 +1,19 @@
 export const WARN_LIMIT = 3;
+export const MIN_WARN_LIMIT = 1;
+export const MAX_WARN_LIMIT = 10;
 export const MAX_WARN_CHATS = 128;
 export const MAX_WARN_ACTORS = 64;
+
+export function normalizeWarnLimit(value: number): number {
+  if (
+    Number.isInteger(value) &&
+    value >= MIN_WARN_LIMIT &&
+    value <= MAX_WARN_LIMIT
+  ) {
+    return value;
+  }
+  return WARN_LIMIT;
+}
 
 export class WarnCapacityError extends Error {
   constructor() {
@@ -26,6 +39,8 @@ export interface WarnStore {
   write(target: WarnTarget, count: number): Promise<void>;
   clear(target: WarnTarget): Promise<boolean>;
   list(tenantId: string, chatId: string): Promise<readonly WarnCount[]>;
+  readLimit(tenantId: string, chatId: string): Promise<number>;
+  writeLimit(tenantId: string, chatId: string, limit: number): Promise<void>;
 }
 
 export function sortWarnCounts(
@@ -41,6 +56,7 @@ export function sortWarnCounts(
 
 export function createMemoryWarnStore(): WarnStore {
   const chats = new Map<string, Map<string, number>>();
+  const limits = new Map<string, number>();
 
   return {
     async read(target) {
@@ -77,7 +93,32 @@ export function createMemoryWarnStore(): WarnStore {
       }
       return sortWarnCounts(rows);
     },
+    async readLimit(tenantId, chatId) {
+      return limits.get(limitKey(tenantId, chatId)) ?? WARN_LIMIT;
+    },
+    async writeLimit(tenantId, chatId, limit) {
+      if (
+        !Number.isInteger(limit) ||
+        limit < MIN_WARN_LIMIT ||
+        limit > MAX_WARN_LIMIT
+      ) {
+        throw new WarnCapacityError();
+      }
+      const key = limitKey(tenantId, chatId);
+      if (limit === WARN_LIMIT) {
+        limits.delete(key);
+        return;
+      }
+      if (!limits.has(key) && limits.size >= MAX_WARN_CHATS) {
+        throw new WarnCapacityError();
+      }
+      limits.set(key, limit);
+    },
   };
+}
+
+function limitKey(tenantId: string, chatId: string): string {
+  return `${tenantId}\n${chatId}`;
 }
 
 function compareActorId(left: string, right: string): number {

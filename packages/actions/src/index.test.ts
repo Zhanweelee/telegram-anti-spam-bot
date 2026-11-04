@@ -1066,6 +1066,9 @@ describe("warn action", () => {
       write: (target, count) => store.write(target, count),
       clear: (target) => store.clear(target),
       list: (tenantId, chatId) => store.list(tenantId, chatId),
+      readLimit: (tenantId, chatId) => store.readLimit(tenantId, chatId),
+      writeLimit: (tenantId, chatId, limit) =>
+        store.writeLimit(tenantId, chatId, limit),
     };
   }
 
@@ -1153,6 +1156,24 @@ describe("warn action", () => {
     expect(JSON.stringify(moderator.banned)).not.toContain("spam");
   });
 
+  it("bans on the first warning when the chat limit is one", async () => {
+    const store = createMemoryWarnStore();
+    await store.writeLimit("tenant_demo", "chat_demo", 1);
+    const action = createWarnAction({ store });
+    const moderator = warnModerator();
+    const result = await action.execute(warnContext(messageEvent(), moderator));
+    expect(result).toEqual({ actionId: "warn", status: "executed" });
+    expect(moderator.deleted).toHaveLength(1);
+    expect(moderator.banned).toEqual([
+      {
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        actorId: "user_1",
+      },
+    ]);
+    expect(JSON.stringify(result)).not.toContain(phrase);
+  });
+
   it("puts the count back when the third ban fails", async () => {
     const store = createMemoryWarnStore();
     const action = createWarnAction({ store });
@@ -1182,6 +1203,9 @@ describe("warn action", () => {
         },
         clear: (target) => store.clear(target),
         list: (tenantId, chatId) => store.list(tenantId, chatId),
+        readLimit: (tenantId, chatId) => store.readLimit(tenantId, chatId),
+        writeLimit: (tenantId, chatId, limit) =>
+          store.writeLimit(tenantId, chatId, limit),
       },
     });
     const target = {

@@ -2827,7 +2827,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(90);
+    expect(body.commands).toHaveLength(91);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2904,6 +2904,10 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
+      command: "warnlimit",
+      description: "/warnlimit <chatId> [limit|reset]",
+    });
+    expect(body.commands.find((item) => item.command === "warns")).toEqual({
       command: "warns",
       description: "/warns <chatId> [actorId]",
     });

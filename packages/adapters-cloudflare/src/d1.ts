@@ -9,6 +9,9 @@ import {
   MAX_REVIEW_SAMPLES,
   MAX_WARN_ACTORS,
   MAX_WARN_CHATS,
+  MAX_WARN_LIMIT,
+  MIN_WARN_LIMIT,
+  normalizeWarnLimit,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
@@ -23,6 +26,7 @@ import {
   ruleSetSchema,
   type Storage,
   sortWarnCounts,
+  WARN_LIMIT,
   WarnCapacityError,
   type WarnCount,
   type WarnStore,
@@ -93,6 +97,12 @@ export const storageMigrationStatements = [
   actor_id TEXT NOT NULL,
   count INTEGER NOT NULL,
   PRIMARY KEY (tenant_id, chat_id, actor_id)
+)`,
+  `CREATE TABLE IF NOT EXISTS warn_limits (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  limit_count INTEGER NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id)
 )`,
 ] as const;
 
@@ -300,6 +310,25 @@ WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 
 const listWarnSql = `SELECT actor_id, count FROM warn_counts
 WHERE tenant_id = ? AND chat_id = ? AND count > 0`;
+
+const readWarnLimitSql = `SELECT limit_count AS total FROM warn_limits
+WHERE tenant_id = ? AND chat_id = ?`;
+
+const deleteWarnLimitSql = `DELETE FROM warn_limits
+WHERE tenant_id = ? AND chat_id = ?`;
+
+const upsertWarnLimitSql = `INSERT INTO warn_limits (
+  tenant_id, chat_id, limit_count
+)
+SELECT ?, ?, ?
+WHERE EXISTS (
+  SELECT 1 FROM warn_limits WHERE tenant_id = ? AND chat_id = ?
+) OR (
+  SELECT COUNT(*) FROM warn_limits
+) < ?
+ON CONFLICT(tenant_id, chat_id) DO UPDATE SET
+  limit_count = excluded.limit_count
+RETURNING limit_count AS total`;
 
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
 
@@ -519,6 +548,35 @@ export function createD1WarnStore(db: SqlDatabase): WarnStore {
         }
       }
       return sortWarnCounts(counts).slice(0, MAX_WARN_ACTORS);
+    },
+    async readLimit(tenantId, chatId) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(readWarnLimitSql)
+        .bind(tenantId, chatId)
+        .all();
+      return normalizeWarnLimit(readWarnTotal(rows.results?.[0]) ?? WARN_LIMIT);
+    },
+    async writeLimit(tenantId, chatId, limit) {
+      if (
+        !Number.isInteger(limit) ||
+        limit < MIN_WARN_LIMIT ||
+        limit > MAX_WARN_LIMIT
+      ) {
+        throw new WarnCapacityError();
+      }
+      await migrationsFor(db);
+      if (limit === WARN_LIMIT) {
+        await db.prepare(deleteWarnLimitSql).bind(tenantId, chatId).run();
+        return;
+      }
+      const rows = await db
+        .prepare(upsertWarnLimitSql)
+        .bind(tenantId, chatId, limit, tenantId, chatId, MAX_WARN_CHATS)
+        .all();
+      if (readWarnTotal(rows.results?.[0]) !== limit) {
+        throw new WarnCapacityError();
+      }
     },
   };
 }
