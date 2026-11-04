@@ -94,7 +94,7 @@ import {
   type RuleSwitch,
   type RuntimeStore,
 } from "./runtime.js";
-import { normalizeChatKeyword } from "./text.js";
+import { normalizeAllowHost, normalizeChatKeyword } from "./text.js";
 import {
   normalizeWarnLimit,
   WARN_LIMIT,
@@ -201,6 +201,7 @@ const COMMAND_NAMES = [
   "rulemute",
   "verifyfor",
   "verifyfail",
+  "allowhost",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -565,6 +566,8 @@ async function dispatch(
       return editVerifyFor(input, args);
     case "verifyfail":
       return editVerifyFail(input, args);
+    case "allowhost":
+      return editAllowHost(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -6307,6 +6310,164 @@ function failWord(
   action: "stay" | "kick" | "ban",
 ): string {
   return say(input, `command.verifyfail.${action}`);
+}
+
+async function editAllowHost(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 3) {
+    return say(input, "command.allowhost.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const op = args[1];
+  if (op === undefined) {
+    return formatAllowHosts(input, chatId);
+  }
+  if (op === "reset") {
+    if (args.length !== 2) {
+      return say(input, "command.allowhost.usage");
+    }
+    const cleared = await clearAllowHostList(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.allowhost.show", { chatId, count: 0 });
+  }
+  if ((op !== "add" && op !== "remove") || args.length !== 3) {
+    return say(input, "command.allowhost.usage");
+  }
+  const host = normalizeAllowHost(args[2] ?? "");
+  if (host === null) {
+    return say(input, "command.invalid");
+  }
+  if (op === "remove") {
+    const removed = await dropAllowHost(input, chatId, host);
+    if (removed === undefined) {
+      return say(input, "command.invalid");
+    }
+    if (!removed) {
+      return say(input, "command.allowhost.absent");
+    }
+    const list = await readAllowHosts(input, chatId);
+    if (list === undefined) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.allowhost.removed", {
+      chatId,
+      count: list.length,
+    });
+  }
+  const saved = await writeAllowHost(input, chatId, host);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("allow_host_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "allowhost",
+    });
+    return say(input, "command.invalid");
+  }
+  const list = await readAllowHosts(input, chatId);
+  if (list === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.allowhost.added", { chatId, count: list.length });
+}
+
+async function formatAllowHosts(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const list = await readAllowHosts(input, chatId);
+  if (list === undefined) {
+    return say(input, "command.invalid");
+  }
+  const header = say(input, "command.allowhost.show", {
+    chatId,
+    count: list.length,
+  });
+  if (list.length === 0) {
+    return header;
+  }
+  return [header, ...list].join("\n");
+}
+
+async function readAllowHosts(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<readonly string[] | undefined> {
+  try {
+    return await input.runtime.listAllowHosts(input.event.tenantId, chatId);
+  } catch {
+    rejectAllowHost(input);
+    return undefined;
+  }
+}
+
+async function writeAllowHost(
+  input: OperatorCommandInput,
+  chatId: string,
+  host: string,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.addAllowHost(
+      input.event.tenantId,
+      chatId,
+      host,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectAllowHost(input);
+    return "invalid";
+  }
+}
+
+async function dropAllowHost(
+  input: OperatorCommandInput,
+  chatId: string,
+  host: string,
+): Promise<boolean | undefined> {
+  try {
+    return await input.runtime.removeAllowHost(
+      input.event.tenantId,
+      chatId,
+      host,
+    );
+  } catch {
+    rejectAllowHost(input);
+    return undefined;
+  }
+}
+
+async function clearAllowHostList(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearAllowHosts(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectAllowHost(input);
+    return false;
+  }
+}
+
+function rejectAllowHost(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "allowhost",
+  });
 }
 
 async function editKeyword(

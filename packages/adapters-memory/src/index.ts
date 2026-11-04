@@ -2,6 +2,7 @@ import {
   type AdminTitleTarget,
   type AuditQuery,
   type AuditRecord,
+  allowHostSchema,
   type BanTarget,
   type BotDescriptionTarget,
   type BotNameTarget,
@@ -31,6 +32,7 @@ import {
   type GeneralNameTarget,
   isExpired,
   type JoinTarget,
+  MAX_ALLOW_HOSTS,
   MAX_CHAT_KEYWORDS,
   MAX_RULE_SWITCHES,
   type MemberTagTarget,
@@ -840,6 +842,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const reports = new Map<string, string>();
   const floods = new Map<string, FloodPolicy>();
   const keywords = new Map<string, string[]>();
+  const allowHosts = new Map<string, string[]>();
   const repeats = new Map<string, RepeatPolicy>();
   const mutes = new Map<string, number>();
   const captchas = new Map<string, number>();
@@ -1105,6 +1108,49 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearCaptchaFail(tenantId, chatId) {
       captchaFails.delete(key(tenantId, chatId));
+    },
+    async listAllowHosts(tenantId, chatId) {
+      return allowHosts.get(key(tenantId, chatId)) ?? [];
+    },
+    async addAllowHost(tenantId, chatId, host) {
+      const parsed = allowHostSchema.safeParse(host);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      const current = allowHosts.get(id) ?? [];
+      if (current.includes(parsed.data)) {
+        return true;
+      }
+      if (current.length >= MAX_ALLOW_HOSTS) {
+        return false;
+      }
+      if (current.length === 0 && allowHosts.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      allowHosts.set(id, [...current, parsed.data]);
+      return true;
+    },
+    async removeAllowHost(tenantId, chatId, host) {
+      const parsed = allowHostSchema.safeParse(host);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      const current = allowHosts.get(id);
+      if (!current?.includes(parsed.data)) {
+        return false;
+      }
+      const next = current.filter((item) => item !== parsed.data);
+      if (next.length === 0) {
+        allowHosts.delete(id);
+        return true;
+      }
+      allowHosts.set(id, next);
+      return true;
+    },
+    async clearAllowHosts(tenantId, chatId) {
+      allowHosts.delete(key(tenantId, chatId));
     },
   };
 }

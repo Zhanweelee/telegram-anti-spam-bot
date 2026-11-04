@@ -377,6 +377,53 @@ describe("kv runtime store", () => {
     expect(await second.listKeywords("local", "-100")).toEqual([]);
   });
 
+  it("keeps allowed hosts in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.listAllowHosts("local", "-100")).toEqual([]);
+    expect(await first.addAllowHost("local", "-100", "bit.ly")).toBe(true);
+    const written = puts;
+    expect(await first.addAllowHost("local", "-100", "bit.ly")).toBe(true);
+    expect(puts).toBe(written);
+    expect(await first.addKeyword("local", "-100", "发票")).toBe(true);
+    const restarted = createKvRuntimeStore(backing.store);
+    expect(await restarted.listAllowHosts("local", "-100")).toEqual(["bit.ly"]);
+    expect(await restarted.listKeywords("local", "-100")).toEqual(["发票"]);
+    const keys = [...backing.values.keys()];
+    const hostKey = keys.find((key) => key.startsWith("runtime-allow-host"));
+    const keywordKey = keys.find((key) => key.startsWith("runtime-keyword"));
+    expect(hostKey).toBeDefined();
+    expect(hostKey).not.toBe(keywordKey);
+    expect(backing.values.get(keywordKey ?? "")).not.toContain("bit.ly");
+    if (hostKey !== undefined) {
+      backing.values.set(hostKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.listAllowHosts("local", "-100")).toEqual([]);
+    expect(await fresh.listKeywords("local", "-100")).toEqual(["发票"]);
+    expect(
+      JSON.stringify(await fresh.listAllowHosts("local", "-100")),
+    ).not.toContain(secret);
+    expect(await fresh.addAllowHost("local", "-100", "bit.ly/secret")).toBe(
+      false,
+    );
+    expect(await fresh.listAllowHosts("local", "-100")).toEqual([]);
+    await restarted.clearAllowHosts("local", "-100");
+    expect(await restarted.listAllowHosts("local", "-100")).toEqual([]);
+    expect(backing.values.get(hostKey ?? "")).toBe("{}");
+  });
+
   it("keeps a repeat policy in a separate key", async () => {
     const backing = createMapStore();
     const secret = "请免费领取礼品";

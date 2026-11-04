@@ -251,6 +251,7 @@ export async function screenTelegramEvent(
     });
   }
   let keywordDetector = detector;
+  let activeLink = linkDetector;
   try {
     const extras = await runtime.listKeywords(event.tenantId, event.chatId);
     if (extras.length > 0) {
@@ -261,6 +262,20 @@ export async function screenTelegramEvent(
         }
       }
       keywordDetector = createKeywordDetector({ keywords });
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
+  try {
+    const allowHosts = await runtime.listAllowHosts(
+      event.tenantId,
+      event.chatId,
+    );
+    if (allowHosts.length > 0) {
+      activeLink = createLinkDetector({ allowHosts });
     }
   } catch {
     logger.warn("runtime_failed", {
@@ -429,7 +444,7 @@ export async function screenTelegramEvent(
       {
         source: "builtin",
         manifest: builtinManifests.link,
-        value: linkDetector,
+        value: activeLink,
       },
       {
         source: "builtin",

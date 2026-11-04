@@ -1,4 +1,6 @@
 import {
+  allowHostDocumentSchema,
+  allowHostSchema,
   BlocklistCapacityError,
   type BlocklistDocument,
   type BlocklistStore,
@@ -16,6 +18,7 @@ import {
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
   floodPolicyDocumentSchema,
+  MAX_ALLOW_HOSTS,
   MAX_BLOCKLIST_CHATS,
   MAX_BLOCKLIST_ENTRIES,
   MAX_CHAT_KEYWORDS,
@@ -158,6 +161,10 @@ export function createKvRuntimeStore(
     string,
     { readonly action: "kick" | "ban" | null; readonly expiresAt: number }
   >();
+  const allowHostCache = new Map<
+    string,
+    { readonly hosts: readonly string[]; readonly expiresAt: number }
+  >();
 
   async function load(
     tenantId: string,
@@ -297,6 +304,36 @@ export function createKvRuntimeStore(
         : JSON.stringify(chatKeywordDocumentSchema.parse({ keywords }));
     await kv.put(id, body);
     keywordCache.set(id, { keywords, expiresAt: now() + ttlMs });
+  }
+
+  async function loadAllowHosts(
+    tenantId: string,
+    chatId: string,
+  ): Promise<readonly string[]> {
+    const id = runtimeAllowHostKey(tenantId, chatId);
+    const at = now();
+    const hit = allowHostCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.hosts;
+    }
+    const saved = parseAllowHosts(await kv.get(id));
+    allowHostCache.set(id, { hosts: saved, expiresAt: at + ttlMs });
+    return saved;
+  }
+
+  async function saveAllowHosts(
+    tenantId: string,
+    chatId: string,
+    saved: readonly string[] | null,
+  ): Promise<void> {
+    const id = runtimeAllowHostKey(tenantId, chatId);
+    const hosts = saved ?? [];
+    const body =
+      hosts.length === 0
+        ? "{}"
+        : JSON.stringify(allowHostDocumentSchema.parse({ hosts }));
+    await kv.put(id, body);
+    allowHostCache.set(id, { hosts, expiresAt: now() + ttlMs });
   }
 
   async function loadRepeat(
@@ -684,6 +721,47 @@ export function createKvRuntimeStore(
       }
       await saveCaptchaFail(tenantId, chatId, null);
     },
+    async listAllowHosts(tenantId, chatId) {
+      return loadAllowHosts(tenantId, chatId);
+    },
+    async addAllowHost(tenantId, chatId, host) {
+      const parsed = allowHostSchema.safeParse(host);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadAllowHosts(tenantId, chatId);
+      if (current.includes(parsed.data)) {
+        return true;
+      }
+      if (current.length >= MAX_ALLOW_HOSTS) {
+        return false;
+      }
+      await saveAllowHosts(tenantId, chatId, [...current, parsed.data]);
+      return true;
+    },
+    async removeAllowHost(tenantId, chatId, host) {
+      const parsed = allowHostSchema.safeParse(host);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadAllowHosts(tenantId, chatId);
+      if (!current.includes(parsed.data)) {
+        return false;
+      }
+      await saveAllowHosts(
+        tenantId,
+        chatId,
+        current.filter((item) => item !== parsed.data),
+      );
+      return true;
+    },
+    async clearAllowHosts(tenantId, chatId) {
+      const current = await loadAllowHosts(tenantId, chatId);
+      if (current.length === 0) {
+        return;
+      }
+      await saveAllowHosts(tenantId, chatId, null);
+    },
   };
 }
 
@@ -739,6 +817,10 @@ function runtimeCaptchaFailKey(tenantId: string, chatId: string): string {
   return `runtime-captcha-fail\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
 }
 
+function runtimeAllowHostKey(tenantId: string, chatId: string): string {
+  return `runtime-allow-host\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
 function parseCaptchaFail(raw: string | null): "kick" | "ban" | null {
   if (raw === null) {
     return null;
@@ -772,6 +854,18 @@ function parseMute(raw: string | null): number | null {
     return parsed.success ? parsed.data.seconds : null;
   } catch {
     return null;
+  }
+}
+
+function parseAllowHosts(raw: string | null): readonly string[] {
+  if (raw === null) {
+    return [];
+  }
+  try {
+    const parsed = allowHostDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.hosts : [];
+  } catch {
+    return [];
   }
 }
 

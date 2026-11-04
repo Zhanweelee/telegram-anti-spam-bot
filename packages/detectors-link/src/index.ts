@@ -32,6 +32,7 @@ export interface LinkDetectorDeps {
   readonly shorteners?: readonly string[];
   readonly denylist?: readonly string[];
   readonly inviteHosts?: readonly string[];
+  readonly allowHosts?: readonly string[];
   readonly source?: ReputationSource;
   readonly sourceTimeoutMs?: number;
 }
@@ -236,10 +237,17 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       const denied = new Set(
         (parsed.denylist ?? []).map((item) => item.toLowerCase()),
       );
+      const allowed = new Set(
+        (deps.allowHosts ?? []).map((item) => item.toLowerCase()),
+      );
       const reasons: string[] = [];
       const evidence: DetectorHit["evidence"][number][] = [];
       for (const host of invites) {
-        if (!matchesHost(host, inviteNames) || reasons.includes("invite")) {
+        if (
+          isAllowedHost(host, allowed) ||
+          !matchesHost(host, inviteNames) ||
+          reasons.includes("invite")
+        ) {
           continue;
         }
         reasons.push("invite");
@@ -249,6 +257,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
         });
       }
       for (const host of hosts) {
+        if (isAllowedHost(host, allowed)) {
+          continue;
+        }
         const local = localReason(host, shorteners, denied);
         if (!local || reasons.includes(local)) {
           continue;
@@ -270,6 +281,9 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
       }
       const timeoutMs = parsed.sourceTimeoutMs ?? 20;
       for (const host of hosts.slice(0, 3)) {
+        if (isAllowedHost(host, allowed)) {
+          continue;
+        }
         try {
           const verdict = await withTimeout(
             deps.source.lookup(host),
@@ -327,6 +341,24 @@ function localReason(
 
 function summaryFor(reason: string, host: string): string {
   return `${reason}:${host}`.slice(0, 80);
+}
+
+function isAllowedHost(host: string, names: ReadonlySet<string>): boolean {
+  for (const name of names) {
+    if (name.length === 0) {
+      continue;
+    }
+    if (isIp(host) || isIp(name)) {
+      if (host === name) {
+        return true;
+      }
+      continue;
+    }
+    if (host === name || host.endsWith(`.${name}`)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function matchesHost(host: string, names: ReadonlySet<string>): boolean {

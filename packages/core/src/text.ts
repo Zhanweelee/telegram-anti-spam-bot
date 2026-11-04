@@ -58,6 +58,46 @@ export function normalizeChatKeyword(value: string): string | null {
   return folded;
 }
 
+const ALLOW_HOST_LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * Fold a host the link detector would read, and reject a path, port, or user.
+ * An IPv4 address stays exact. A hostname needs at least two labels.
+ */
+export function normalizeAllowHost(value: string): string | null {
+  if (value.length < 1 || value.length > 253 || /[\s:/?@]/u.test(value)) {
+    return null;
+  }
+  const folded = foldHostScan(value).toLowerCase();
+  if (
+    folded.length < 1 ||
+    folded.length > 253 ||
+    /[\s:/?@]/u.test(folded) ||
+    folded.includes("..")
+  ) {
+    return null;
+  }
+  const labels = folded.split(".");
+  if (labels.length === 4 && labels.every(isAllowOctet)) {
+    return folded;
+  }
+  if (
+    labels.length < 2 ||
+    !labels.every((label) => ALLOW_HOST_LABEL.test(label))
+  ) {
+    return null;
+  }
+  return folded;
+}
+
+function isAllowOctet(part: string): boolean {
+  if (!/^\d{1,3}$/.test(part)) {
+    return false;
+  }
+  const value = Number(part);
+  return value >= 0 && value <= 255;
+}
+
 /** Turn dot lookalikes into `.` before a hostname parse. */
 export function foldDotLookalikes(text: string): string {
   return text.replace(DOT_LOOKALIKES, ".");
