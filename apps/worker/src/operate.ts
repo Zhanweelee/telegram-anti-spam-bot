@@ -88,6 +88,9 @@ function commandModerator(
     async unpinChat() {
       throw new Error("unpin_unavailable");
     },
+    async pinMessage() {
+      throw new Error("pin_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

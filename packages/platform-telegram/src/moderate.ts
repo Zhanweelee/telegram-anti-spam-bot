@@ -464,6 +464,19 @@ export function createTelegramModerator(input: {
       });
       return memberCount(body);
     },
+    async pinMessage(target) {
+      await postTelegram({
+        token: input.token,
+        method: "pinChatMessage",
+        fetchImpl: input.fetchImpl,
+        missing: "pin_unavailable",
+        failed: "pin_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+        },
+      });
+    },
   };
 }
 

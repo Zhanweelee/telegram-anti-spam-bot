@@ -41,6 +41,15 @@ describe("operator command example", () => {
     expect(help).toContain("/showgeneral");
     expect(help).toContain("/deltopic");
     expect(help).toContain("/count");
+    expect(help).toContain("/pin");
+    const pinned = await runPrivateCommand({
+      text: "/pin -100 55",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(pinned).toBe(
+      "已请求置顶 -100 的消息 55。群里可能收到通知。频道和私聊不会。消息还在。其它置顶还在。",
+    );
     const deletedTopic = await runPrivateCommand({
       text: "/deltopic -100 55",
       actorId: "42",

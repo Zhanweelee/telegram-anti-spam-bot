@@ -165,6 +165,8 @@ export const messageKeys = [
   "command.deltopic.done",
   "command.count.usage",
   "command.count.done",
+  "command.pin.usage",
+  "command.pin.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -222,6 +224,7 @@ const syntax = [
   "/showgeneral <chatId>",
   "/deltopic <chatId> <threadId>",
   "/count <chatId>",
+  "/pin <chatId> <messageId>",
 ].join("\n");
 
 const zh = {
@@ -408,6 +411,9 @@ const zh = {
     "已请求删除 {chatId} 话题 {threadId} 和里面的消息。其它话题不在这次里",
   "command.count.usage": "用法：/count <chatId>",
   "command.count.done": "{chatId} 有 {count} 人",
+  "command.pin.usage": "用法：/pin <chatId> <messageId>",
+  "command.pin.done":
+    "已请求置顶 {chatId} 的消息 {messageId}。群里可能收到通知。频道和私聊不会。消息还在。其它置顶还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -606,6 +612,9 @@ const en = {
     "Asked to delete topic {threadId} of {chatId} and the messages inside it. Other topics are not part of this call.",
   "command.count.usage": "Usage: /count <chatId>",
   "command.count.done": "{chatId} has {count} members",
+  "command.pin.usage": "Usage: /pin <chatId> <messageId>",
+  "command.pin.done":
+    "Asked to pin message {messageId} of {chatId}. A group may be notified. Channels and private chats stay quiet. The message stays. The other pins stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -16,6 +16,7 @@ import {
   type ModerationPort,
   type MuteTarget,
   type NamedForumTopicTarget,
+  type PinnedMessageTarget,
   type PolicyStore,
   parseAuditQuery,
   parseAuditRecord,
@@ -138,6 +139,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly generalsHidden: readonly ChatTarget[];
   readonly generalsShown: readonly ChatTarget[];
   readonly topicsDeleted: readonly NamedForumTopicTarget[];
+  readonly messagesPinned: readonly PinnedMessageTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -163,6 +165,7 @@ export function createMemoryModerator(): ModerationPort & {
   const generalsHidden: ChatTarget[] = [];
   const generalsShown: ChatTarget[] = [];
   const topicsDeleted: NamedForumTopicTarget[] = [];
+  const messagesPinned: PinnedMessageTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -188,6 +191,7 @@ export function createMemoryModerator(): ModerationPort & {
     generalsHidden,
     generalsShown,
     topicsDeleted,
+    messagesPinned,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -304,6 +308,13 @@ export function createMemoryModerator(): ModerationPort & {
       unpinned.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
+      });
+    },
+    async pinMessage(target) {
+      messagesPinned.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageId: target.messageId,
       });
     },
     async unpinTopic(target) {

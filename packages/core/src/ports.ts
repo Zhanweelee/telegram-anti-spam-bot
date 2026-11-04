@@ -173,6 +173,12 @@ export interface NamedForumTopicTarget {
   readonly threadId: string;
 }
 
+export interface PinnedMessageTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly messageId: string;
+}
+
 export type TopicPinTarget = ForumTopicTarget;
 
 export type UnmuteResult = "lifted" | "absent";
@@ -219,6 +225,7 @@ export interface ModerationPort {
   showGeneral(target: ChatTarget): Promise<void>;
   deleteTopic(target: NamedForumTopicTarget): Promise<void>;
   readMemberCount(target: ChatTarget): Promise<number>;
+  pinMessage(target: PinnedMessageTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {
