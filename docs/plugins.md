@@ -169,6 +169,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/who` 调用 `readBotIdentity`。配了 token 时使用 `getMe`，不带参数。回复写编号、用户名、能否入群，以及是否看得到全部群消息。缺用户名写空。缺开关写未知。名字和其它字段不进回复，也不进日志。用户名不合规则或不是 bot 时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份身份。不调用 `logOut` 或 `close`。见 ADR 0418。
 
+`/hook` 调用 `readWebhook`。配了 token 时使用 `getWebhookInfo`，不带参数。回复写待投递条数、证书、连接上限和上次错误的 unix 秒。缺字段写未知。地址、IP、错误原文和 `allowed_updates` 不进回复，也不进日志。待投递不是非负整数、连接不在 1 到 100、或错误时间不是非负整数时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份状态。不调用 `setWebhook` 或 `deleteWebhook`。见 ADR 0419。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(71);
+    expect(body.commands).toHaveLength(72);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2844,9 +2844,13 @@ describe("handleIncomingEvent", () => {
       command: "myshort",
       description: "/myshort",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "who")).toEqual({
       command: "who",
       description: "/who",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "hook",
+      description: "/hook",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -4228,6 +4232,167 @@ describe("handleIncomingEvent", () => {
     ]);
     const rejected = deps();
     await handleIncomingEvent(await incoming({ text: "/who", direct: true }), {
+      ...rejected,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ ok: false, description: phrase }), {
+          status: 400,
+        }),
+    });
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the webhook backlog and drops the address", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const address = `https://example.invalid/${phrase}`;
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...kit,
+      botToken: "bot-token",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        calls.push({
+          method: url.slice(url.lastIndexOf("/") + 1),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              url: address,
+              has_custom_certificate: false,
+              pending_update_count: 3,
+              ip_address: "203.0.113.1",
+              last_error_date: 1700000000,
+              last_error_message: phrase,
+              max_connections: 40,
+              allowed_updates: ["message"],
+            },
+          }),
+          { status: 200 },
+        );
+      },
+    });
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["待投递 3", "证书 off", "连接 40", "上次错误 1700000000"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getWebhookInfo"]);
+    expect(calls[0]?.method).not.toContain("setWebhook");
+    expect(calls[0]?.method).not.toContain("deleteWebhook");
+    expect("getWebhookInfo").not.toContain("setWebhook");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(address);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("example.invalid");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(address);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("example.invalid");
+    const cleared = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...cleared,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: { url: "", pending_update_count: 0 },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      ["待投递 0", "证书 未知", "连接 未知", "上次错误 未知"].join("\n"),
+    ]);
+    const broken = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...broken,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              url: address,
+              pending_update_count: -1,
+              last_error_message: phrase,
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(address);
+    const wide = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...wide,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              url: address,
+              pending_update_count: 1.5,
+              max_connections: 101,
+              last_error_date: 1.5,
+              last_error_message: phrase,
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain("example.invalid");
+    const zero = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...zero,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              pending_update_count: 0,
+              max_connections: 0,
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(zero.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const empty = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
+      ...empty,
+      botToken: "bot-token",
+      fetchImpl: async () =>
+        new Response(JSON.stringify({ ok: true, result: null }), {
+          status: 200,
+        }),
+    });
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/hook", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(await incoming({ text: "/hook", direct: true }), {
       ...rejected,
       botToken: "bot-token",
       fetchImpl: async () =>

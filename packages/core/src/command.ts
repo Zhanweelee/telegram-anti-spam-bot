@@ -36,6 +36,7 @@ import {
   minimumAuditExportLength,
   type PermissionState,
   type Storage,
+  type WebhookSnapshot,
 } from "./ports.js";
 import type { PrefilterPolicy } from "./prefilter.js";
 import {
@@ -135,6 +136,7 @@ const COMMAND_NAMES = [
   "botshort",
   "myshort",
   "who",
+  "hook",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -285,6 +287,7 @@ export interface OperatorCommandInput {
       | "readMemberCount"
       | "readMenuButton"
       | "readPermissions"
+      | "readWebhook"
       | "removeReaction"
       | "renameGeneral"
       | "renameTopic"
@@ -526,6 +529,8 @@ async function dispatch(
       return showBotShortDescription(input, args);
     case "who":
       return showBotIdentity(input, args);
+    case "hook":
+      return showWebhook(input, args);
   }
 }
 
@@ -3547,6 +3552,91 @@ function rejectBotIdentity(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "who",
+  });
+}
+
+async function showWebhook(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.hook.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readWebhook;
+  if (!read) {
+    rejectWebhook(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const snapshot = await read({ tenantId: input.event.tenantId });
+    if (!isWebhookSnapshot(snapshot)) {
+      rejectWebhook(input);
+      return say(input, "command.invalid");
+    }
+    return describeWebhook(input, snapshot);
+  } catch {
+    rejectWebhook(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isWebhookSnapshot(snapshot: WebhookSnapshot): boolean {
+  return (
+    isPendingCount(snapshot.pendingUpdateCount) &&
+    isPermissionState(snapshot.customCertificate) &&
+    isMaxConnections(snapshot.maxConnections) &&
+    isErrorDate(snapshot.lastErrorDate)
+  );
+}
+
+function isPendingCount(count: number): boolean {
+  return Number.isSafeInteger(count) && count >= 0;
+}
+
+function isMaxConnections(count: number | null): boolean {
+  return (
+    count === null ||
+    (Number.isSafeInteger(count) && count >= 1 && count <= 100)
+  );
+}
+
+function isErrorDate(time: number | null): boolean {
+  return time === null || (Number.isSafeInteger(time) && time >= 0);
+}
+
+function describeWebhook(
+  input: OperatorCommandInput,
+  snapshot: WebhookSnapshot,
+): string {
+  const connections =
+    snapshot.maxConnections === null
+      ? say(input, "command.hook.connections_unknown")
+      : say(input, "command.hook.connections", {
+          count: snapshot.maxConnections,
+        });
+  const error =
+    snapshot.lastErrorDate === null
+      ? say(input, "command.hook.error_unknown")
+      : say(input, "command.hook.error", { time: snapshot.lastErrorDate });
+  return [
+    say(input, "command.hook.pending", { count: snapshot.pendingUpdateCount }),
+    `${say(input, "command.hook.certificate")} ${say(input, permissionStateKey(snapshot.customCertificate))}`,
+    connections,
+    error,
+  ].join("\n");
+}
+
+function rejectWebhook(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "hook",
   });
 }
 

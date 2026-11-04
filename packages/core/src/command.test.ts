@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(71);
+    expect(menu).toHaveLength(72);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7350,9 +7350,13 @@ describe("runOperatorCommand", () => {
       command: "myshort",
       description: "/myshort",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "who")).toEqual({
       command: "who",
       description: "/who",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "hook",
+      description: "/hook",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -9395,6 +9399,220 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readBotIdentity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(2);
+  });
+
+  it("reads the webhook backlog", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const snapshots = [
+      {
+        pendingUpdateCount: 3,
+        customCertificate: "off" as const,
+        maxConnections: 40,
+        lastErrorDate: 1_700_000_000,
+      },
+      {
+        pendingUpdateCount: 0,
+        customCertificate: "unknown" as const,
+        maxConnections: null,
+        lastErrorDate: null,
+      },
+    ];
+    const remember = {
+      async readWebhook(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+        const snapshot = snapshots[seen.length - 1];
+        if (snapshot === undefined) {
+          throw new Error("called");
+        }
+        return snapshot;
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["待投递 3", "证书 off", "连接 40", "上次错误 1700000000"].join(
+        "\n",
+      ),
+    });
+    expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: ["待投递 0", "证书 未知", "连接 未知", "上次错误 未知"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/hook");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readWebhook() {
+          return {
+            pendingUpdateCount: 3,
+            customCertificate: "off" as const,
+            maxConnections: 40,
+            lastErrorDate: 1_700_000_000,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: [
+        "pending 3",
+        "certificate off",
+        "connections 40",
+        "last error 1700000000",
+      ].join("\n"),
+    });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readWebhook() {
+          return {
+            pendingUpdateCount: 0,
+            customCertificate: "unknown" as const,
+            maxConnections: null,
+            lastErrorDate: null,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({
+      text: [
+        "pending 0",
+        "certificate unknown",
+        "connections unknown",
+        "last error unknown",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/hook", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readWebhook() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/hook extra more", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readWebhook() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/hook" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/hook ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readWebhook() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const wide = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readWebhook() {
+          return {
+            pendingUpdateCount: 3,
+            customCertificate: "off" as const,
+            maxConnections: 101,
+            lastErrorDate: 1_700_000_000,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(wide).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/hook", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readWebhook() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain('"command":"hook"');
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/hook",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readWebhook() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/hook ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readWebhook() {
           throw new Error("called");
         },
       },

@@ -370,6 +370,17 @@ export interface BotIdentity {
   readonly readAllGroupMessages: PermissionState;
 }
 
+export interface WebhookQuery {
+  readonly tenantId: string;
+}
+
+export interface WebhookSnapshot {
+  readonly pendingUpdateCount: number;
+  readonly customCertificate: PermissionState;
+  readonly maxConnections: number | null;
+  readonly lastErrorDate: number | null;
+}
+
 export interface MenuCommandSnapshot {
   readonly command: string;
   readonly description: string;
@@ -417,6 +428,7 @@ export interface ModerationPort {
   readBotIdentity(query: BotIdentityQuery): Promise<BotIdentity>;
   readBotName(query: BotNameQuery): Promise<string>;
   readBotShortDescription(query: BotShortDescriptionQuery): Promise<string>;
+  readWebhook(query: WebhookQuery): Promise<WebhookSnapshot>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;

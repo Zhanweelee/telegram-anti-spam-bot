@@ -185,6 +185,13 @@ describe("memory adapter", () => {
     );
   });
 
+  it("does not invent a webhook snapshot", async () => {
+    const moderator = createMemoryModerator();
+    await expect(moderator.readWebhook({ tenantId: "t" })).rejects.toThrow(
+      "hook_unavailable",
+    );
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(
