@@ -38,6 +38,7 @@
     "@tasb/detector-giveaway-notice": "workspace:*",
     "@tasb/detector-boost": "workspace:*",
     "@tasb/detector-forum": "workspace:*",
+    "@tasb/detector-autodelete": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

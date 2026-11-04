@@ -241,6 +241,12 @@ export const builtinManifests = {
     integrity:
       "798de1b35085277d740014a5c1d33668ebbaaa64faae7b8800f3640199d92b22",
   }),
+  autoDeleteNotice: manifest({
+    id: "autodelete_notice",
+    kind: "detector",
+    integrity:
+      "f99bc4982c88c9bc70009e3323a3f340f74229275208e35959980cca072c7d43",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

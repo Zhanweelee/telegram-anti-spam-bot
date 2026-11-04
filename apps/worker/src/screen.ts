@@ -52,6 +52,7 @@ import {
   type WarnStore,
   wrapLogger,
 } from "@tasb/core";
+import { createAutoDeleteDetector } from "@tasb/detector-autodelete";
 import { createBackgroundDetector } from "@tasb/detector-background";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBoostDetector } from "@tasb/detector-boost";
@@ -582,6 +583,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.forumNotice,
         value: createForumDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.autoDeleteNotice,
+        value: createAutoDeleteDetector(),
       },
       {
         source: "builtin",

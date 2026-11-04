@@ -181,6 +181,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> forum_notice on` 删这个群里关掉话题、重开话题、隐藏通用话题和重新显示通用话题的提示。默认关闭。话题名不进证据。话题开关不变。见 ADR 0485。
 
+`/rule <chatId> autodelete_notice on` 删这个群里改自动删除计时的提示。默认关闭。秒数不进证据。计时本身还在。见 ADR 0486。
+
 ## 确认
 
 ```sh

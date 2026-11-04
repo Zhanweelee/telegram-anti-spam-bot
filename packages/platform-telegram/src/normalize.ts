@@ -155,6 +155,7 @@ async function messageEvent(
   const giveawayNotice = scheduledGiveaway(message);
   const asBoost = addedBoost(message);
   const forumNotice = forumService(message);
+  const asAutoDelete = autoDeleteNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -199,8 +200,20 @@ async function messageEvent(
       ...(giveawayNotice === undefined ? {} : { giveawayNotice }),
       ...(asBoost ? { asBoost: true as const } : {}),
       ...(forumNotice === undefined ? {} : { forumNotice }),
+      ...(asAutoDelete ? { asAutoDelete: true as const } : {}),
     },
   });
+}
+
+function autoDeleteNotice(message: Record<string, unknown>): boolean {
+  const changed = message.message_auto_delete_timer_changed;
+  if (!isRecord(changed)) {
+    return false;
+  }
+  const seconds = changed.message_auto_delete_time;
+  return (
+    typeof seconds === "number" && Number.isSafeInteger(seconds) && seconds >= 0
+  );
 }
 
 function forumService(

@@ -251,6 +251,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "autodelete_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["autodelete_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

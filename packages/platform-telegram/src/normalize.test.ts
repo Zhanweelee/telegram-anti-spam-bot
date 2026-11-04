@@ -20614,6 +20614,150 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks an auto-delete notice and leaves the seconds out", async () => {
+    const seconds = 90186;
+    const actor = "改计时的人";
+    const changed = await normalize({
+      update_id: 4540,
+      message: {
+        message_id: 590,
+        date: 1761955200,
+        chat: { id: -100499520, type: "supergroup" },
+        from: { id: 96, first_name: actor },
+        message_auto_delete_timer_changed: {
+          message_auto_delete_time: seconds,
+        },
+      },
+    });
+    expect(changed.status).toBe("event");
+    if (changed.status !== "event") {
+      return;
+    }
+    expect(changed.event.message?.asAutoDelete).toBe(true);
+    expect(changed.event.message?.text).toBe("");
+    const changedDump = JSON.stringify(changed.event);
+    expect(changedDump).not.toContain(String(seconds));
+    expect(changedDump).not.toContain(actor);
+
+    const cleared = await normalize({
+      update_id: 4541,
+      message: {
+        message_id: 591,
+        date: 1761955200,
+        chat: { id: -100499521, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: { message_auto_delete_time: 0 },
+      },
+    });
+    expect(cleared.status).toBe("event");
+    if (cleared.status !== "event") {
+      return;
+    }
+    expect(cleared.event.message?.asAutoDelete).toBe(true);
+    expect(cleared.event.message?.text).toBe("");
+
+    const kept = await normalize({
+      update_id: 4542,
+      message: {
+        message_id: 592,
+        date: 1761955200,
+        chat: { id: -100499522, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        message_auto_delete_timer_changed: { message_auto_delete_time: 90187 },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.asAutoDelete).toBe(true);
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(kept.event)).not.toContain("90187");
+
+    const empty = await normalize({
+      update_id: 4543,
+      message: {
+        message_id: 593,
+        date: 1761955200,
+        chat: { id: -100499523, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asAutoDelete).toBeUndefined();
+
+    const negative = await normalize({
+      update_id: 4544,
+      message: {
+        message_id: 594,
+        date: 1761955200,
+        chat: { id: -100499524, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: { message_auto_delete_time: -1 },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asAutoDelete).toBeUndefined();
+
+    const fraction = await normalize({
+      update_id: 4545,
+      message: {
+        message_id: 595,
+        date: 1761955200,
+        chat: { id: -100499525, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: { message_auto_delete_time: 1.5 },
+      },
+    });
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.asAutoDelete).toBeUndefined();
+
+    const textTime = await normalize({
+      update_id: 4546,
+      message: {
+        message_id: 596,
+        date: 1761955200,
+        chat: { id: -100499526, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: {
+          message_auto_delete_time: "86400",
+        },
+      },
+    });
+    expect(textTime.status).toBe("event");
+    if (textTime.status !== "event") {
+      return;
+    }
+    expect(textTime.event.message?.asAutoDelete).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4547,
+      message: {
+        message_id: 597,
+        date: 1761955200,
+        chat: { id: -100499527, type: "supergroup" },
+        from: { id: 96 },
+        message_auto_delete_timer_changed: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asAutoDelete).toBeUndefined();
+  });
+
   it("marks a forum notice and leaves the topic name out", async () => {
     const title = "关掉广告名";
     const closed = await normalize({

@@ -113,6 +113,8 @@ export const messageSchema = z
     asBoost: z.literal(true).optional(),
     /** Forum service line. Topic names stay out. */
     forumNotice: z.enum(["closed", "reopened", "hidden", "shown"]).optional(),
+    /** Auto-delete timer service line. The seconds stay out. */
+    asAutoDelete: z.literal(true).optional(),
   })
   .refine(
     (message) =>
