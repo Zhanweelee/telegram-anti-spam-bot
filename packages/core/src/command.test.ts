@@ -3934,6 +3934,161 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("removes one actor reaction from one message", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async clearReactions() {
+          throw new Error("called");
+        },
+        async removeReaction(target) {
+          seen.push(
+            `${target.chatId}:${target.messageId}:${target.actorId}:${target.kind}`,
+          );
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求撤下 77 在 -100 消息 55 上的反应。别人的反应还在。其它消息上的反应还在。",
+    });
+    const chatActor = await runOperatorCommand({
+      event: event({ text: "/unreact -100 1 -1005", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction(target) {
+          seen.push(
+            `${target.chatId}:${target.messageId}:${target.actorId}:${target.kind}`,
+          );
+        },
+      },
+      ...kit(),
+    });
+    expect(chatActor).toMatchObject({
+      text: "已请求撤下 -1005 在 -100 消息 1 上的反应。别人的反应还在。其它消息上的反应还在。",
+    });
+    expect(seen).toEqual(["-100:55:77:user", "-100:1:-1005:chat"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/unreact <chatId> <messageId> <actorId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async removeReaction() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to remove the reaction of 77 on message 55 of -100. Other people's reactions stay. Reactions on other messages stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/unreact <chatId> <messageId> <actorId>",
+    });
+    expect(seen).toEqual(["-100:55:77:user", "-100:1:-1005:chat"]);
+    const extra = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/unreact <chatId> <messageId> <actorId>",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: "/unreact -100 01 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    const hiddenText = await runOperatorCommand({
+      event: event({ text: `/unreact ${phrase} 55 77`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(hiddenText).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(hiddenText)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/unreact -100 55 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async removeReaction() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"unreact"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/unreact -200 55 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async removeReaction() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

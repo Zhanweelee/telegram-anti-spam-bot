@@ -43,6 +43,15 @@ describe("operator command example", () => {
     expect(help).toContain("/count");
     expect(help).toContain("/pin");
     expect(help).toContain("/unpinmsg");
+    expect(help).toContain("/unreact");
+    const unreacted = await runPrivateCommand({
+      text: "/unreact -100 55 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(unreacted).toBe(
+      "已请求撤下 77 在 -100 消息 55 上的反应。别人的反应还在。其它消息上的反应还在。",
+    );
     const unpinnedMessage = await runPrivateCommand({
       text: "/unpinmsg -100 55",
       actorId: "42",

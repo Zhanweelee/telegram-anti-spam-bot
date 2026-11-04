@@ -169,6 +169,8 @@ export const messageKeys = [
   "command.pin.done",
   "command.unpinmsg.usage",
   "command.unpinmsg.done",
+  "command.unreact.usage",
+  "command.unreact.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -228,6 +230,7 @@ const syntax = [
   "/count <chatId>",
   "/pin <chatId> <messageId>",
   "/unpinmsg <chatId> <messageId>",
+  "/unreact <chatId> <messageId> <actorId>",
 ].join("\n");
 
 const zh = {
@@ -420,6 +423,9 @@ const zh = {
   "command.unpinmsg.usage": "用法：/unpinmsg <chatId> <messageId>",
   "command.unpinmsg.done":
     "已请求撤下 {chatId} 的消息 {messageId} 的置顶。消息还在。其它置顶还在。",
+  "command.unreact.usage": "用法：/unreact <chatId> <messageId> <actorId>",
+  "command.unreact.done":
+    "已请求撤下 {actorId} 在 {chatId} 消息 {messageId} 上的反应。别人的反应还在。其它消息上的反应还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -624,6 +630,9 @@ const en = {
   "command.unpinmsg.usage": "Usage: /unpinmsg <chatId> <messageId>",
   "command.unpinmsg.done":
     "Asked to unpin message {messageId} of {chatId}. The message stays. The other pins stay.",
+  "command.unreact.usage": "Usage: /unreact <chatId> <messageId> <actorId>",
+  "command.unreact.done":
+    "Asked to remove the reaction of {actorId} on message {messageId} of {chatId}. Other people's reactions stay. Reactions on other messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

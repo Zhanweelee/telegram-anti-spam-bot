@@ -13,6 +13,7 @@ import {
   isExpired,
   type JoinTarget,
   MAX_RULE_SWITCHES,
+  type MessageReactionTarget,
   type ModerationPort,
   type MuteTarget,
   type NamedForumTopicTarget,
@@ -141,6 +142,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly topicsDeleted: readonly NamedForumTopicTarget[];
   readonly messagesPinned: readonly PinnedMessageTarget[];
   readonly messagesUnpinned: readonly PinnedMessageTarget[];
+  readonly messageReactionsRemoved: readonly MessageReactionTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -168,6 +170,7 @@ export function createMemoryModerator(): ModerationPort & {
   const topicsDeleted: NamedForumTopicTarget[] = [];
   const messagesPinned: PinnedMessageTarget[] = [];
   const messagesUnpinned: PinnedMessageTarget[] = [];
+  const messageReactionsRemoved: MessageReactionTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -195,6 +198,7 @@ export function createMemoryModerator(): ModerationPort & {
     topicsDeleted,
     messagesPinned,
     messagesUnpinned,
+    messageReactionsRemoved,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -325,6 +329,15 @@ export function createMemoryModerator(): ModerationPort & {
         tenantId: target.tenantId,
         chatId: target.chatId,
         messageId: target.messageId,
+      });
+    },
+    async removeReaction(target) {
+      messageReactionsRemoved.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageId: target.messageId,
+        actorId: target.actorId,
+        kind: target.kind,
       });
     },
     async unpinTopic(target) {

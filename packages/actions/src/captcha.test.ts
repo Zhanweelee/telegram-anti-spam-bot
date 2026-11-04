@@ -111,6 +111,7 @@ function moderator(
     async unpinChat() {},
     async pinMessage() {},
     async unpinMessage() {},
+    async removeReaction() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},
