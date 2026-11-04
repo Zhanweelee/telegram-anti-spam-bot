@@ -185,6 +185,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> price_notice on` 删这个群里付费发言改价和私信改价的提示。默认关闭。星星数量不进证据。价格和私信开关不变。见 ADR 0487。
 
+`/rule <chatId> post_notice on` 删这个群里建议帖通过、付款失败、付款和退款的提示。默认关闭。原帖和价格不进证据。稿子状态不变。见 ADR 0488。
+
 ## 确认
 
 ```sh

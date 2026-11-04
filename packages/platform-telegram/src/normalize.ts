@@ -157,6 +157,7 @@ async function messageEvent(
   const forumNotice = forumService(message);
   const asAutoDelete = autoDeleteNotice(message);
   const priceNotice = changedPrice(message);
+  const postNotice = suggestedPost(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -203,8 +204,42 @@ async function messageEvent(
       ...(forumNotice === undefined ? {} : { forumNotice }),
       ...(asAutoDelete ? { asAutoDelete: true as const } : {}),
       ...(priceNotice === undefined ? {} : { priceNotice }),
+      ...(postNotice === undefined ? {} : { postNotice }),
     },
   });
+}
+
+function suggestedPost(
+  message: Record<string, unknown>,
+): "approved" | "failed" | "paid" | "refunded" | undefined {
+  const approved = message.suggested_post_approved;
+  if (isRecord(approved)) {
+    const sendDate = approved.send_date;
+    if (
+      typeof sendDate === "number" &&
+      Number.isSafeInteger(sendDate) &&
+      sendDate >= 0
+    ) {
+      return "approved";
+    }
+  }
+  const failed = message.suggested_post_approval_failed;
+  if (isRecord(failed) && isRecord(failed.price)) {
+    return "failed";
+  }
+  const paid = message.suggested_post_paid;
+  if (isRecord(paid) && (paid.currency === "XTR" || paid.currency === "TON")) {
+    return "paid";
+  }
+  const refunded = message.suggested_post_refunded;
+  if (
+    isRecord(refunded) &&
+    (refunded.reason === "post_deleted" ||
+      refunded.reason === "payment_refunded")
+  ) {
+    return "refunded";
+  }
+  return undefined;
 }
 
 function changedPrice(

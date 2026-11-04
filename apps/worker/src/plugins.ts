@@ -253,6 +253,12 @@ export const builtinManifests = {
     integrity:
       "1668d2175b31bc3d3f7ca060086d04fd99cef438a4f378ee783623e30606ad36",
   }),
+  postNotice: manifest({
+    id: "post_notice",
+    kind: "detector",
+    integrity:
+      "933a7f29b640ee65aad9d1ee03c532fe194ee191853a214126b2ff4b07493756",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
