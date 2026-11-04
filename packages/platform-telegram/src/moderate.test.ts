@@ -1567,6 +1567,56 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets the bot short description without a language", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setBotShortDescription({
+      tenantId: "local",
+      shortDescription: phrase,
+    });
+    await moderator.setBotShortDescription({
+      tenantId: "local",
+      shortDescription: "",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setMyShortDescription`,
+      `https://api.telegram.org/bot${token}/setMyShortDescription`,
+    ]);
+    expect(calls[0]?.method).not.toContain("getMyShortDescription");
+    expect("setMyShortDescription").not.toContain("getMyShortDescription");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      short_description: phrase,
+    });
+    expect(JSON.parse(calls[1]?.body ?? "null")).toEqual({
+      short_description: "",
+    });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setBotShortDescription(
+        {
+          tenantId: "local",
+          shortDescription: phrase,
+        },
+      ),
+    ).rejects.toThrow("botshort_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads the default bot description and drops extra fields", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

@@ -5,6 +5,7 @@ import {
   type BanTarget,
   type BotDescriptionTarget,
   type BotNameTarget,
+  type BotShortDescriptionTarget,
   type Cache,
   type CaptchaChallenge,
   type CaptchaStore,
@@ -146,6 +147,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly menuButtonsSet: readonly MenuButtonTarget[];
   readonly botNamesSet: readonly BotNameTarget[];
   readonly botDescriptionsSet: readonly BotDescriptionTarget[];
+  readonly botShortDescriptionsSet: readonly BotShortDescriptionTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
@@ -192,6 +194,7 @@ export function createMemoryModerator(): ModerationPort & {
   const menuButtonsSet: MenuButtonTarget[] = [];
   const botNamesSet: BotNameTarget[] = [];
   const botDescriptionsSet: BotDescriptionTarget[] = [];
+  const botShortDescriptionsSet: BotShortDescriptionTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
@@ -238,6 +241,7 @@ export function createMemoryModerator(): ModerationPort & {
     menuButtonsSet,
     botNamesSet,
     botDescriptionsSet,
+    botShortDescriptionsSet,
     approved,
     deferred,
     restricted,
@@ -316,6 +320,12 @@ export function createMemoryModerator(): ModerationPort & {
       botDescriptionsSet.push({
         tenantId: target.tenantId,
         description: target.description,
+      });
+    },
+    async setBotShortDescription(target) {
+      botShortDescriptionsSet.push({
+        tenantId: target.tenantId,
+        shortDescription: target.shortDescription,
       });
     },
     async deleteCommandMenu(query) {

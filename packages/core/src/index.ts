@@ -176,6 +176,7 @@ export {
   type BotDescriptionTarget,
   type BotNameQuery,
   type BotNameTarget,
+  type BotShortDescriptionTarget,
   type ChatAdministrator,
   type ChatDescriptionTarget,
   type ChatStickerSetTarget,

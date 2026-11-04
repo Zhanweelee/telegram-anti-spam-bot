@@ -2826,15 +2826,19 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(68);
+    expect(body.commands).toHaveLength(69);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
       description: "/botdesc [description]",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "mydesc")).toEqual({
       command: "mydesc",
       description: "/mydesc",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "botshort",
+      description: "/botshort [short]",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -3863,6 +3867,128 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/mydesc", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("sets the bot short description without a language", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: `/botshort ${phrase}`, direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求设置这个 bot 的短简介。已有单独语言短简介的人不受影响。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["setMyShortDescription"]);
+    expect(calls[0]?.method).not.toContain("getMyShortDescription");
+    expect("setMyShortDescription").not.toContain("getMyShortDescription");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      short_description: phrase,
+    });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const cleared = deps();
+    const clearedCalls: { body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/botshort", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async (_input, init) => {
+          clearedCalls.push({ body: String(init?.body ?? "") });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      "已请求清掉这个 bot 的默认短简介。已有单独语言短简介的人不受影响。",
+    ]);
+    expect(JSON.parse(clearedCalls[0]?.body ?? "null")).toEqual({
+      short_description: "",
+    });
+    const exact = deps();
+    const exactCalls: { body: string }[] = [];
+    const exactShort = "y".repeat(120);
+    await handleIncomingEvent(
+      await incoming({ text: `/botshort ${exactShort}`, direct: true }),
+      {
+        ...exact,
+        botToken: "bot-token",
+        fetchImpl: async (_input, init) => {
+          exactCalls.push({ body: String(init?.body ?? "") });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(JSON.parse(exactCalls[0]?.body ?? "null")).toEqual({
+      short_description: exactShort,
+    });
+    const invalid = deps();
+    let called = false;
+    await handleIncomingEvent(
+      await incoming({
+        text: `/botshort ${phrase}${"x".repeat(120)}`,
+        direct: true,
+      }),
+      {
+        ...invalid,
+        botToken: "bot-token",
+        fetchImpl: async () => {
+          called = true;
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(called).toBe(false);
+    expect(invalid.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(invalid.reply.sent)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/botshort ${phrase}`, direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/botshort ${phrase}`, direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

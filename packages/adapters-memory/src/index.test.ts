@@ -185,6 +185,25 @@ describe("memory adapter", () => {
     ).rejects.toThrow("mydesc_unavailable");
   });
 
+  it("records a bot short description without a language", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setBotShortDescription({
+      tenantId: "t",
+      shortDescription: "ops",
+    });
+    await moderator.setBotShortDescription({
+      tenantId: "t",
+      shortDescription: "",
+    });
+    expect(moderator.botShortDescriptionsSet).toEqual([
+      { tenantId: "t", shortDescription: "ops" },
+      { tenantId: "t", shortDescription: "" },
+    ]);
+    expect(moderator.botShortDescriptionsSet[0]).not.toHaveProperty(
+      "languageCode",
+    );
+  });
+
   it("records a bot description without a language", async () => {
     const moderator = createMemoryModerator();
     await moderator.setBotDescription({ tenantId: "t", description: "ops" });
