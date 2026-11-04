@@ -6005,6 +6005,169 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(actor);
   });
 
+  it("keeps a rich map until that chat asks", async () => {
+    const caption = "地图说明广告";
+    const actor = "发地图的人";
+    const latitude = 23.90217;
+    const longitude = 113.90218;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "map" | "pin";
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 112, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind === "pin"
+              ? { location: { latitude, longitude } }
+              : input.kind === "map"
+                ? {
+                    rich_message: {
+                      blocks: [
+                        {
+                          type: "map",
+                          location: { latitude, longitude },
+                          caption: { text: caption },
+                        },
+                      ],
+                    },
+                  }
+                : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_map" | "bare_location"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10550,
+      chatId: -1001150,
+      kind: "map",
+    });
+    expect(idle.message?.asRichMap).toBe(true);
+    expect(idle.message?.asLocation).toBeUndefined();
+    expect(idle.message?.text).toBe(caption);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(String(latitude));
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10551, chatId: -1001151, kind: "map" }),
+      {
+        source: rule("rich_map"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_map");
+    expect(removed.decision.ruleIds).toContain("rich_map");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "map:rich" },
+    ]);
+    const keptByPin = await screenTelegramEvent(
+      await posted({ updateId: 10552, chatId: -1001152, kind: "map" }),
+      {
+        source: rule("bare_location"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByPin.decision.action).toBe("allow");
+    const keptMap = await screenTelegramEvent(
+      await posted({ updateId: 10553, chatId: -1001153, kind: "pin" }),
+      {
+        source: rule("rich_map"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptMap.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10554, chatId: -1001154 }),
+      {
+        source: rule("rich_map"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10555,
+        chatId: -1001155,
+        kind: "map",
+        paid: true,
+      }),
+      {
+        source: rule("rich_map"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByPin: keptByPin.decision,
+      keptMap: keptMap.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(latitude));
+    expect(dumped).not.toContain(String(longitude));
+    expect(dumped).not.toContain("90217");
+    expect(dumped).not.toContain(caption);
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a rich block spoiler until that chat asks", async () => {
     const caption = "富文本剧透广告";
     const actor = "发块剧透的人";

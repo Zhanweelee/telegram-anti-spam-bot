@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_map_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichMap": true
+  },
+  {
+    "id": "rich_map_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_map_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
