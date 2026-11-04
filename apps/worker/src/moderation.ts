@@ -70,6 +70,7 @@ function createOpenModerator(): ModerationPort {
     leaveChat: (target) => memory.leaveChat(target),
     setMemberTag: (target) => memory.setMemberTag(target),
     deleteStickerSet: (target) => memory.deleteStickerSet(target),
+    setStickerSet: (target) => memory.setStickerSet(target),
     setReaction: (target) => memory.setReaction(target),
     setTitle: (target) => memory.setTitle(target),
     setDescription: (target) => memory.setDescription(target),

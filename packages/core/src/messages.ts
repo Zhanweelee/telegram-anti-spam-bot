@@ -195,6 +195,8 @@ export const messageKeys = [
   "command.rentopic.done",
   "command.rengeneral.usage",
   "command.rengeneral.done",
+  "command.stickers.usage",
+  "command.stickers.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -266,6 +268,7 @@ const syntax = [
   "/newtopic <chatId> <name>",
   "/rentopic <chatId> <threadId> <name>",
   "/rengeneral <chatId> <name>",
+  "/stickers <chatId> <name>",
 ].join("\n");
 
 const zh = {
@@ -489,6 +492,8 @@ const zh = {
   "command.rengeneral.usage": "用法：/rengeneral <chatId> <name>",
   "command.rengeneral.done":
     "已请求修改 {chatId} 的通用话题名字。其它话题还在。消息还在。",
+  "command.stickers.usage": "用法：/stickers <chatId> <name>",
+  "command.stickers.done": "已请求设置 {chatId} 的群贴纸包。消息还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -732,6 +737,9 @@ const en = {
   "command.rengeneral.usage": "Usage: /rengeneral <chatId> <name>",
   "command.rengeneral.done":
     "Asked to change the General topic name of {chatId}. The other topics stay. The messages stay.",
+  "command.stickers.usage": "Usage: /stickers <chatId> <name>",
+  "command.stickers.done":
+    "Asked to set the group sticker set of {chatId}. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

@@ -570,6 +570,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setStickerSet(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatStickerSet",
+        fetchImpl: input.fetchImpl,
+        missing: "stickers_unavailable",
+        failed: "stickers_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          sticker_set_name: target.name,
+        },
+      });
+    },
     async setReaction(target) {
       await postTelegram({
         token: input.token,

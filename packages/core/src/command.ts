@@ -111,6 +111,7 @@ const COMMAND_NAMES = [
   "newtopic",
   "rentopic",
   "rengeneral",
+  "stickers",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -125,6 +126,7 @@ const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
 const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
+const STICKER_SET_NAME_LIMIT = 64;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -253,6 +255,7 @@ export interface OperatorCommandInput {
       | "setDescription"
       | "setMemberTag"
       | "setReaction"
+      | "setStickerSet"
       | "setTitle"
       | "showGeneral"
       | "unbanActor"
@@ -443,6 +446,8 @@ async function dispatch(
       return renameOneTopic(input, args);
     case "rengeneral":
       return renameGeneralTopic(input, args);
+    case "stickers":
+      return setGroupStickerSet(input, args);
   }
 }
 
@@ -2465,6 +2470,73 @@ function rejectRenameGeneral(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "rengeneral",
+  });
+}
+
+function isStickerSetName(name: string): boolean {
+  if (name.length < 1 || name.length > STICKER_SET_NAME_LIMIT) {
+    return false;
+  }
+  if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(name) || name.includes("__")) {
+    return false;
+  }
+  const marker = name.toLowerCase().lastIndexOf("_by_");
+  if (marker < 1) {
+    return false;
+  }
+  const username = name.slice(marker + 4);
+  return (
+    username.length >= 5 &&
+    username.length <= 32 &&
+    /^[A-Za-z]/.test(username) &&
+    /bot$/i.test(username)
+  );
+}
+
+async function setGroupStickerSet(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.stickers.usage");
+  }
+  const chatId = args[0];
+  const name = args[1];
+  if (
+    chatId === undefined ||
+    name === undefined ||
+    !isTargetId(chatId) ||
+    !isStickerSetName(name)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setStickerSet;
+  if (!set) {
+    rejectStickerSet(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      name,
+    });
+  } catch {
+    rejectStickerSet(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.stickers.done", { chatId });
+}
+
+function rejectStickerSet(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "stickers",
   });
 }
 
