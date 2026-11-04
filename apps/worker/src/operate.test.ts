@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(72);
+    expect(body.commands).toHaveLength(73);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2848,9 +2848,13 @@ describe("handleIncomingEvent", () => {
       command: "who",
       description: "/who",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "hook")).toEqual({
       command: "hook",
       description: "/hook",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "guard",
+      description: "/guard <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -4400,6 +4404,249 @@ describe("handleIncomingEvent", () => {
           status: 400,
         }),
     });
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the chat guard posture and drops the title", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const invite = `https://t.me/+${phrase}`;
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                username: "giftchat",
+                description: phrase,
+                invite_link: invite,
+                bio: phrase,
+                is_forum: true,
+                is_direct_messages: false,
+                join_by_request: true,
+                join_to_send_messages: false,
+                has_aggressive_anti_spam_enabled: true,
+                slow_mode_delay: 30,
+                message_auto_delete_time: 86400,
+                unrestrict_boost_count: 2,
+                has_protected_content: true,
+                has_hidden_members: false,
+                has_visible_history: true,
+                max_reaction_count: 11,
+                linked_chat_id: -100777,
+                sticker_set_name: phrase,
+                permissions: { can_send_messages: true },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      [
+        "群 -100",
+        "类型 超级群",
+        "话题 on",
+        "频道私聊 off",
+        "审核入群 on",
+        "入群发言 off",
+        "官方反垃圾 on",
+        "慢速 30",
+        "自毁 86400",
+        "加速豁免 2",
+        "防转发 on",
+        "隐藏成员 off",
+        "可见历史 on",
+        "反应 11",
+        "关联 -100777",
+      ].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("giftchat");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("giftchat");
+    const cleared = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "group",
+                title: phrase,
+                max_reaction_count: 0,
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      [
+        "群 -100",
+        "类型 群",
+        "话题 未知",
+        "频道私聊 未知",
+        "审核入群 未知",
+        "入群发言 未知",
+        "官方反垃圾 未知",
+        "慢速 未知",
+        "自毁 未知",
+        "加速豁免 未知",
+        "防转发 未知",
+        "隐藏成员 未知",
+        "可见历史 未知",
+        "反应 0",
+        "关联 未知",
+      ].join("\n"),
+    ]);
+    expect(JSON.stringify(cleared.reply.sent)).not.toContain(phrase);
+    const zero = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard 42", direct: true }),
+      {
+        ...zero,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: 42,
+                type: "private",
+                first_name: phrase,
+                max_reaction_count: 1,
+                slow_mode_delay: 0,
+                message_auto_delete_time: 0,
+                unrestrict_boost_count: 0,
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    const zeroText = zero.reply.sent.map((message) => message.text).join("\n");
+    expect(zeroText).toContain("群 42\n类型 私聊\n");
+    expect(zeroText).toContain("慢速 0\n自毁 0\n加速豁免 0\n");
+    expect(zeroText).toContain("\n反应 1\n");
+    expect(JSON.stringify(zero.reply.sent)).not.toContain(phrase);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: phrase,
+                title: phrase,
+                max_reaction_count: 1,
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const wide = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...wide,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                type: "supergroup",
+                title: phrase,
+                invite_link: invite,
+                slow_mode_delay: -1,
+                max_reaction_count: 1.5,
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(invite);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
     expect(rejected.reply.sent.map((message) => message.text)).toEqual([
       "参数无效",
     ]);

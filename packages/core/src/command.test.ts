@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(72);
+    expect(menu).toHaveLength(73);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7354,9 +7354,13 @@ describe("runOperatorCommand", () => {
       command: "who",
       description: "/who",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "hook")).toEqual({
       command: "hook",
       description: "/hook",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "guard",
+      description: "/guard <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -9620,6 +9624,389 @@ describe("runOperatorCommand", () => {
     });
     expect(foreignPhrase).toMatchObject({ text: "参数无效" });
     expect(seen).toHaveLength(2);
+  });
+
+  it("reads the chat guard posture and drops the title", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      chatId: string;
+      keys: readonly string[];
+    }[] = [];
+    const full = {
+      type: "supergroup" as const,
+      forum: "on" as const,
+      directMessages: "off" as const,
+      joinByRequest: "on" as const,
+      joinToSend: "off" as const,
+      nativeAntiSpam: "on" as const,
+      slowModeSeconds: 30,
+      autoDeleteSeconds: 86400,
+      boostExemption: 2,
+      protectedContent: "on" as const,
+      hiddenMembers: "off" as const,
+      visibleHistory: "on" as const,
+      maxReactions: 11,
+      linkedChatId: "-100777",
+    };
+    const empty = {
+      type: "group" as const,
+      forum: "unknown" as const,
+      directMessages: "unknown" as const,
+      joinByRequest: "unknown" as const,
+      joinToSend: "unknown" as const,
+      nativeAntiSpam: "unknown" as const,
+      slowModeSeconds: null,
+      autoDeleteSeconds: null,
+      boostExemption: null,
+      protectedContent: "unknown" as const,
+      hiddenMembers: "unknown" as const,
+      visibleHistory: "unknown" as const,
+      maxReactions: 0,
+      linkedChatId: null,
+    };
+    const snapshots = [full, empty, full];
+    const remember = {
+      async readChatGuard(target: { tenantId: string; chatId: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          keys: Object.keys(target),
+        });
+        const snapshot = snapshots[seen.length - 1];
+        if (snapshot === undefined) {
+          throw new Error("called");
+        }
+        return snapshot;
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: [
+        "群 -100",
+        "类型 超级群",
+        "话题 on",
+        "频道私聊 off",
+        "审核入群 on",
+        "入群发言 off",
+        "官方反垃圾 on",
+        "慢速 30",
+        "自毁 86400",
+        "加速豁免 2",
+        "防转发 on",
+        "隐藏成员 off",
+        "可见历史 on",
+        "反应 11",
+        "关联 -100777",
+      ].join("\n"),
+    });
+    expect(seen[0]).toEqual({
+      tenantId: "local",
+      chatId: "-100",
+      keys: ["tenantId", "chatId"],
+    });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: [
+        "群 -100",
+        "类型 群",
+        "话题 未知",
+        "频道私聊 未知",
+        "审核入群 未知",
+        "入群发言 未知",
+        "官方反垃圾 未知",
+        "慢速 未知",
+        "自毁 未知",
+        "加速豁免 未知",
+        "防转发 未知",
+        "隐藏成员 未知",
+        "可见历史 未知",
+        "反应 0",
+        "关联 未知",
+      ].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/guard <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readChatGuard() {
+          return {
+            type: "supergroup" as const,
+            forum: "on" as const,
+            directMessages: "off" as const,
+            joinByRequest: "on" as const,
+            joinToSend: "off" as const,
+            nativeAntiSpam: "on" as const,
+            slowModeSeconds: 30,
+            autoDeleteSeconds: 86400,
+            boostExemption: 2,
+            protectedContent: "on" as const,
+            hiddenMembers: "off" as const,
+            visibleHistory: "on" as const,
+            maxReactions: 11,
+            linkedChatId: "-100777",
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: [
+        "chat -100",
+        "type supergroup",
+        "topics on",
+        "direct messages off",
+        "join approval on",
+        "join to send off",
+        "native anti-spam on",
+        "slow mode 30",
+        "auto-delete 86400",
+        "boost exemption 2",
+        "protected on",
+        "hidden members off",
+        "history on",
+        "reactions 11",
+        "linked -100777",
+      ].join("\n"),
+    });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readChatGuard() {
+          return {
+            type: "channel" as const,
+            forum: "unknown" as const,
+            directMessages: "unknown" as const,
+            joinByRequest: "unknown" as const,
+            joinToSend: "unknown" as const,
+            nativeAntiSpam: "unknown" as const,
+            slowModeSeconds: null,
+            autoDeleteSeconds: null,
+            boostExemption: null,
+            protectedContent: "unknown" as const,
+            hiddenMembers: "unknown" as const,
+            visibleHistory: "unknown" as const,
+            maxReactions: 1,
+            linkedChatId: null,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({
+      text: [
+        "chat -100",
+        "type channel",
+        "topics unknown",
+        "direct messages unknown",
+        "join approval unknown",
+        "join to send unknown",
+        "native anti-spam unknown",
+        "slow mode unknown",
+        "auto-delete unknown",
+        "boost exemption unknown",
+        "protected unknown",
+        "hidden members unknown",
+        "history unknown",
+        "reactions 1",
+        "linked unknown",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/guard -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/guard", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/guard <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/guard -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/guard <chatId>" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/guard ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const titled = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, type: phrase };
+        },
+      },
+      ...kit(),
+    });
+    expect(titled).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(titled)).not.toContain(phrase);
+    const linked = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, linkedChatId: phrase };
+        },
+      },
+      ...kit(),
+    });
+    expect(linked).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(linked)).not.toContain(phrase);
+    const negative = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, slowModeSeconds: -1 };
+        },
+      },
+      ...kit(),
+    });
+    expect(negative).toMatchObject({ text: "参数无效" });
+    const fractional = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, maxReactions: 1.5 };
+        },
+      },
+      ...kit(),
+    });
+    expect(fractional).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"guard"',
+    );
+    const owned = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: remember,
+      ...kit(),
+    });
+    expect(owned).toMatchObject({
+      text: [
+        "群 -100",
+        "类型 超级群",
+        "话题 on",
+        "频道私聊 off",
+        "审核入群 on",
+        "入群发言 off",
+        "官方反垃圾 on",
+        "慢速 30",
+        "自毁 86400",
+        "加速豁免 2",
+        "防转发 on",
+        "隐藏成员 off",
+        "可见历史 on",
+        "反应 11",
+        "关联 -100777",
+      ].join("\n"),
+    });
+    expect(seen).toHaveLength(3);
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/guard -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/guard ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readChatGuard() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
   });
 
   it("reports default speaking permissions without the chat title", async () => {

@@ -3,6 +3,7 @@ import type {
   BanTarget,
   BotIdentity,
   ChatAdministrator,
+  ChatGuard,
   DefaultAdministratorRights,
   DefaultChatPermissions,
   DefaultRightsSnapshot,
@@ -349,6 +350,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readDefaultPermissions(chat);
+    },
+    async readChatGuard(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "guard_unavailable",
+        failed: "guard_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readChatGuardValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1033,6 +1047,94 @@ function silencedUntil(
     until_date: nowSeconds() + restrictionSeconds(target.durationSeconds),
     use_independent_chat_permissions: true,
   };
+}
+
+function readChatGuardValue(body: unknown, chatId: string): ChatGuard {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("guard_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("guard_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("guard_failed");
+  }
+  const type = record.type;
+  if (
+    type !== "private" &&
+    type !== "group" &&
+    type !== "supergroup" &&
+    type !== "channel"
+  ) {
+    throw new Error("guard_failed");
+  }
+  return {
+    type,
+    forum: readGuardFlag(record.is_forum),
+    directMessages: readGuardFlag(record.is_direct_messages),
+    joinByRequest: readGuardFlag(record.join_by_request),
+    joinToSend: readGuardFlag(record.join_to_send_messages),
+    nativeAntiSpam: readGuardFlag(record.has_aggressive_anti_spam_enabled),
+    slowModeSeconds: readGuardCount(record.slow_mode_delay),
+    autoDeleteSeconds: readGuardCount(record.message_auto_delete_time),
+    boostExemption: readGuardCount(record.unrestrict_boost_count),
+    protectedContent: readGuardFlag(record.has_protected_content),
+    hiddenMembers: readGuardFlag(record.has_hidden_members),
+    visibleHistory: readGuardFlag(record.has_visible_history),
+    maxReactions: readGuardRequiredCount(record.max_reaction_count),
+    linkedChatId: readLinkedChat(record.linked_chat_id),
+  };
+}
+
+function readGuardFlag(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "unknown";
+  }
+  if (value === true) {
+    return "on";
+  }
+  if (value === false) {
+    return "off";
+  }
+  throw new Error("guard_failed");
+}
+
+function readGuardCount(value: unknown): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("guard_failed");
+  }
+  return value;
+}
+
+function readGuardRequiredCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("guard_failed");
+  }
+  return value;
+}
+
+function readLinkedChat(value: unknown): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
+    throw new Error("guard_failed");
+  }
+  const id = String(value);
+  if (!/^-?\d{1,20}$/.test(id)) {
+    throw new Error("guard_failed");
+  }
+  return id;
 }
 
 function readDefaultPermissions(body: unknown): DefaultChatPermissions {

@@ -91,6 +91,25 @@ export interface ChatTarget {
   readonly chatId: string;
 }
 
+export type ChatKind = "private" | "group" | "supergroup" | "channel";
+
+export interface ChatGuard {
+  readonly type: string;
+  readonly forum: PermissionState;
+  readonly directMessages: PermissionState;
+  readonly joinByRequest: PermissionState;
+  readonly joinToSend: PermissionState;
+  readonly nativeAntiSpam: PermissionState;
+  readonly slowModeSeconds: number | null;
+  readonly autoDeleteSeconds: number | null;
+  readonly boostExemption: number | null;
+  readonly protectedContent: PermissionState;
+  readonly hiddenMembers: PermissionState;
+  readonly visibleHistory: PermissionState;
+  readonly maxReactions: number;
+  readonly linkedChatId: string | null;
+}
+
 export interface ChatStickerSetTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -401,6 +420,7 @@ export interface ModerationPort {
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
+  readChatGuard(target: ChatTarget): Promise<ChatGuard>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   declinePost(target: SuggestedPostTarget): Promise<void>;
