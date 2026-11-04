@@ -144,6 +144,9 @@ describe("delete action", () => {
           async readStickerSetRight() {
             throw new Error("canstickers_unavailable");
           },
+          async readParentChat() {
+            throw new Error("parent_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -291,6 +294,9 @@ describe("delete action", () => {
         },
         async readStickerSetRight() {
           throw new Error("canstickers_unavailable");
+        },
+        async readParentChat() {
+          throw new Error("parent_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -441,6 +447,9 @@ describe("delete action", () => {
         },
         async readStickerSetRight() {
           throw new Error("canstickers_unavailable");
+        },
+        async readParentChat() {
+          throw new Error("parent_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -593,6 +602,9 @@ function ports(): ModerationPort & {
     },
     async readStickerSetRight() {
       throw new Error("canstickers_unavailable");
+    },
+    async readParentChat() {
+      throw new Error("parent_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");

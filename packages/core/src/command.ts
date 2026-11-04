@@ -38,6 +38,7 @@ import {
   type MenuCommandSnapshot,
   type ModerationPort,
   minimumAuditExportLength,
+  type ParentChat,
   type PermissionState,
   type ReactionAllowlist,
   type StickerSetRight,
@@ -148,6 +149,7 @@ const COMMAND_NAMES = [
   "reactions",
   "community",
   "canstickers",
+  "parent",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -300,6 +302,7 @@ export interface OperatorCommandInput {
       | "readMember"
       | "readMemberCount"
       | "readMenuButton"
+      | "readParentChat"
       | "readPermissions"
       | "readReactions"
       | "readStickerSetRight"
@@ -557,6 +560,8 @@ async function dispatch(
       return showCommunity(input, args);
     case "canstickers":
       return showCanStickers(input, args);
+    case "parent":
+      return showParentChat(input, args);
   }
 }
 
@@ -4075,6 +4080,63 @@ function rejectCanStickers(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "canstickers",
+  });
+}
+
+async function showParentChat(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.parent.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readParentChat;
+  if (!read) {
+    rejectParentChat(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const parent = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isParentChat(parent)) {
+      rejectParentChat(input);
+      return say(input, "command.invalid");
+    }
+    return describeParentChat(input, chatId, parent);
+  } catch {
+    rejectParentChat(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isParentChat(parent: ParentChat): boolean {
+  return parent.id === null || isTargetId(parent.id);
+}
+
+function describeParentChat(
+  input: OperatorCommandInput,
+  chatId: string,
+  parent: ParentChat,
+): string {
+  const id =
+    parent.id === null
+      ? say(input, "command.parent.none")
+      : say(input, "command.parent.id", { id: parent.id });
+  return [say(input, "command.parent.header", { chatId }), id].join("\n");
+}
+
+function rejectParentChat(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "parent",
   });
 }
 

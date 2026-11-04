@@ -14,6 +14,7 @@ import type {
   MenuCommandSnapshot,
   ModerationPort,
   MuteTarget,
+  ParentChat,
   PermissionState,
   ReactionAllowlist,
   StickerSetRight,
@@ -419,6 +420,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readStickerSetRightValue(chat, target.chatId);
+    },
+    async readParentChat(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "parent_unavailable",
+        failed: "parent_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readParentChatValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1232,6 +1246,50 @@ function readGuardBot(value: unknown): JoinBot {
     id: String(id),
     username: readJoinBotUsername(user.username),
   };
+}
+
+const chatKinds = new Set(["private", "group", "supergroup", "channel"]);
+
+function readParentChatValue(body: unknown, chatId: string): ParentChat {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("parent_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("parent_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("parent_failed");
+  }
+  return { id: readParentChatId(record.parent_chat) };
+}
+
+function readParentChatId(value: unknown): string | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("parent_failed");
+  }
+  const chat = value as Record<string, unknown>;
+  if (typeof chat.type !== "string" || !chatKinds.has(chat.type)) {
+    throw new Error("parent_failed");
+  }
+  const id = chat.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id)) {
+    throw new Error("parent_failed");
+  }
+  const text = String(id);
+  if (!/^-?\d{1,20}$/.test(text)) {
+    throw new Error("parent_failed");
+  }
+  return text;
 }
 
 function readStickerSetRightValue(

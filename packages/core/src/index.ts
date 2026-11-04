@@ -216,6 +216,7 @@ export {
   type MuteTarget,
   type NamedForumTopicTarget,
   type NewTopicTarget,
+  type ParentChat,
   type PermissionState,
   type PinnedMessageTarget,
   parseAuditQuery,

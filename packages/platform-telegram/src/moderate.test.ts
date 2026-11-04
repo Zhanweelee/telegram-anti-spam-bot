@@ -1828,6 +1828,134 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("canstickers_failed");
   });
 
+  it("reads the parent channel and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "supergroup",
+            title: phrase,
+            username: phrase,
+            invite_link: invite,
+            parent_chat: {
+              id: -100777,
+              type: "channel",
+              title: phrase,
+              username: phrase,
+            },
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readParentChat({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({ id: "-100777" });
+    expect(resolved).not.toHaveProperty("title");
+    expect(resolved).not.toHaveProperty("username");
+    expect(resolved).not.toHaveProperty("type");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readParentChat({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({ id: null });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readParentChat({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("parent_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                parent_chat: { id: -100777, type: "channel", title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readParentChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("parent_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                parent_chat: { id: -100777, title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readParentChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("parent_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, parent_chat: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readParentChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("parent_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readParentChat({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("parent_failed");
+  });
+
   it("reads the allowed reactions and drops the emoji", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
