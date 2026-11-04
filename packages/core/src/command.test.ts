@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(74);
+    expect(menu).toHaveLength(75);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7362,9 +7362,13 @@ describe("runOperatorCommand", () => {
       command: "guard",
       description: "/guard <chatId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "joinbot")).toEqual({
       command: "joinbot",
       description: "/joinbot <chatId>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "reactions",
+      description: "/reactions <chatId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -10243,6 +10247,223 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async readJoinBot() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the allowed reactions and drops the emoji", async () => {
+    const deps = kit();
+    const seen: {
+      tenantId: string;
+      chatId: string;
+      keys: readonly string[];
+    }[] = [];
+    const counts: Array<number | null> = [3, null, 0];
+    const remember = {
+      async readReactions(target: { tenantId: string; chatId: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          chatId: target.chatId,
+          keys: Object.keys(target),
+        });
+        const count = counts[seen.length - 1];
+        if (count === undefined) {
+          throw new Error("called");
+        }
+        return { count };
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["群 -100", "反应 3"].join("\n"),
+    });
+    expect(seen[0]).toEqual({
+      tenantId: "local",
+      chatId: "-100",
+      keys: ["tenantId", "chatId"],
+    });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const all = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(all).toMatchObject({
+      text: ["群 -100", "反应 全部"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/reactions <chatId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readReactions() {
+          return { count: 3 };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100", "reactions 3"].join("\n"),
+    });
+    const englishAll = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readReactions() {
+          return { count: null };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishAll).toMatchObject({
+      text: ["chat -100", "reactions all"].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/reactions -100", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/reactions", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/reactions <chatId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/reactions -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/reactions <chatId>" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/reactions ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const negative = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          return { count: -1 };
+        },
+      },
+      ...kit(),
+    });
+    expect(negative).toMatchObject({ text: "参数无效" });
+    const fraction = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          return { count: 1.5 };
+        },
+      },
+      ...kit(),
+    });
+    expect(fraction).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readReactions() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"reactions"',
+    );
+    const owned = await runOperatorCommand({
+      event: event({ text: "/reactions -100", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: remember,
+      ...kit(),
+    });
+    expect(owned).toMatchObject({
+      text: ["群 -100", "反应 0"].join("\n"),
+    });
+    expect(seen).toHaveLength(3);
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/reactions -200", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readReactions() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/reactions ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readReactions() {
           throw new Error("called");
         },
       },

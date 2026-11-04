@@ -221,6 +221,7 @@ export {
   parseAuditRecord,
   parseAuditScope,
   type ReactionActorTarget,
+  type ReactionAllowlist,
   type ReactionChoice,
   type RenamedTopicTarget,
   type SenderChatTarget,

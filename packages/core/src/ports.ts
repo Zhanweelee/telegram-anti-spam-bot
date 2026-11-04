@@ -115,6 +115,10 @@ export interface JoinBot {
   readonly username: string | null;
 }
 
+export interface ReactionAllowlist {
+  readonly count: number | null;
+}
+
 export interface ChatStickerSetTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -427,6 +431,7 @@ export interface ModerationPort {
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
   readChatGuard(target: ChatTarget): Promise<ChatGuard>;
   readJoinBot(target: ChatTarget): Promise<JoinBot>;
+  readReactions(target: ChatTarget): Promise<ReactionAllowlist>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   declinePost(target: SuggestedPostTarget): Promise<void>;
