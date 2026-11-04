@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-446 每个群可以删掉分享来的聊天 — done
+
+验收：`chat_shared.chat_id` 是有限安全整数时，消息带 `asSharedChat: true`。标题、用户名、请求编号、聊天编号和头像不进事件。空的 `chat_shared` 和 `users_shared` 不带这个标记。已有正文时正文不变。标题和用户名里的主机名仍按 ADR 0320 抽取。默认留下。私聊 `/rule <chatId> shared_chat on` 之后删除这张卡片，`off` 回到留下。证据只有 `chat:shared`。分享来的用户仍留下。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-445 每个群可以删掉社区服务消息 — done
 
 验收：`community_chat_added.community` 是对象时，消息带 `community: "added"`。`community_chat_joined.community` 是对象时带 `joined`。`community_chat_removed` 是对象时带 `removed`。几种同时出现时先认移入，再认加入，再认移出。社区名字和社区 id 不进事件。没有 `community` 对象的移入或加入不带这个标记。移出对象上的其它字段仍不抽主机名。移入和加入的名字里的主机名仍按 ADR 0115 抽取。默认留下。私聊 `/rule <chatId> community_notice on` 之后删除这三种服务消息，`off` 回到留下。证据只有 `community:added`、`community:joined` 或 `community:removed`。群是否留在社区不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2016,6 +2020,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-446
+
+- 做了什么：分享来的聊天有一条默认关闭的规则。私聊 `/rule` 可以打开。标题仍不进事件。
+- 学到什么：标题里的关键词看不见，短链却已经能删。分享来的用户名字已经是正文，不能和聊天卡片放在同一个开关里。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-445
 

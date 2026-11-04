@@ -187,6 +187,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "shared_chat",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["shared_chat"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

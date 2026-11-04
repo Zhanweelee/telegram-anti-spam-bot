@@ -1,0 +1,5 @@
+{
+  "detector": "shared_chat",
+  "precision": 1,
+  "recall": 1
+}

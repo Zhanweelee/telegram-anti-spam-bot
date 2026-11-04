@@ -147,6 +147,7 @@ async function messageEvent(
   const call = callNotice(message);
   const asTitle = renamedChat(message);
   const community = communityNotice(message);
+  const asSharedChat = sharedChatCard(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -183,8 +184,14 @@ async function messageEvent(
       ...(call === undefined ? {} : { call }),
       ...(asTitle ? { asTitle: true as const } : {}),
       ...(community === undefined ? {} : { community }),
+      ...(asSharedChat ? { asSharedChat: true as const } : {}),
     },
   });
+}
+
+function sharedChatCard(message: Record<string, unknown>): boolean {
+  const shared = message.chat_shared;
+  return isRecord(shared) && Number.isSafeInteger(shared.chat_id);
 }
 
 function communityNotice(

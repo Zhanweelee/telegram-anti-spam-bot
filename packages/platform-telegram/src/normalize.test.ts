@@ -20116,6 +20116,108 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(named.event)).not.toContain("周末聚会");
   });
 
+  it("marks a shared chat and leaves the title out", async () => {
+    const title = "分享广告标题";
+    const username = "shareposter446";
+    const requestId = 446446001;
+    const sharedId = -100777446;
+    const shared = await normalize({
+      update_id: 4990,
+      message: {
+        message_id: 508,
+        date: 1761955200,
+        chat: { id: -100499446, type: "supergroup" },
+        from: { id: 96 },
+        chat_shared: {
+          request_id: requestId,
+          chat_id: sharedId,
+          title,
+          username,
+          photo: [{ file_id: "AgADshare446", file_unique_id: "uniqshare446" }],
+        },
+      },
+    });
+    expect(shared.status).toBe("event");
+    if (shared.status !== "event") {
+      return;
+    }
+    expect(shared.event.message?.asSharedChat).toBe(true);
+    expect(shared.event.message?.text).toBe("");
+    expect(shared.event.actor).toEqual({ id: "96", isAdmin: false });
+    const dump = JSON.stringify(shared.event);
+    expect(dump).not.toContain(title);
+    expect(dump).not.toContain(username);
+    expect(dump).not.toContain(String(requestId));
+    expect(dump).not.toContain("100777446");
+    expect(dump).not.toContain("AgADshare446");
+    expect(dump).not.toContain("uniqshare446");
+
+    const alongside = await normalize({
+      update_id: 4991,
+      message: {
+        message_id: 509,
+        date: 1761955200,
+        chat: { id: -100499447, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        chat_shared: {
+          request_id: requestId,
+          chat_id: sharedId,
+          title,
+        },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.asSharedChat).toBe(true);
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(title);
+    expect(JSON.stringify(alongside.event)).not.toContain(String(requestId));
+    expect(JSON.stringify(alongside.event)).not.toContain("100777446");
+
+    const users = await normalize({
+      update_id: 4992,
+      message: {
+        message_id: 510,
+        date: 1761955200,
+        chat: { id: -100499448, type: "supergroup" },
+        from: { id: 96 },
+        users_shared: {
+          request_id: requestId,
+          users: [{ user_id: 991446, first_name: "干净名字" }],
+        },
+      },
+    });
+    expect(users.status).toBe("event");
+    if (users.status !== "event") {
+      return;
+    }
+    expect(users.event.message?.asSharedChat).toBeUndefined();
+    expect(users.event.message?.text).toBe("干净名字");
+    expect(JSON.stringify(users.event)).not.toContain(String(requestId));
+    expect(JSON.stringify(users.event)).not.toContain("991446");
+
+    const empty = await normalize({
+      update_id: 4993,
+      message: {
+        message_id: 511,
+        date: 1761955200,
+        chat: { id: -100499449, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        chat_shared: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asSharedChat).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a shared user name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "INV288";

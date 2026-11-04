@@ -165,6 +165,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> community_notice on` 删这个群里移入、加入和移出社区的服务消息。默认关闭。社区名字不进证据。见 ADR 0477。
 
+`/rule <chatId> shared_chat on` 删这个群里分享来的聊天卡片。默认关闭。标题不进证据。分享来的用户仍留下。见 ADR 0478。
+
 ## 确认
 
 ```sh

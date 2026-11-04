@@ -65,6 +65,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `community_notice` 在 `packages/detectors-community`。`message.community` 是移入、加入或移出时返回 score 1。证据是 `community:` 加这一种。社区名字和社区 id 不进证据。规则默认关闭。私聊 `/rule` 打开后删除这三种服务消息。见 ADR 0477。
 
+`shared_chat` 在 `packages/detectors-shared-chat`。只在 `message.asSharedChat` 为 true 时返回 score 1。证据是 `chat:shared`。标题、用户名和编号不进证据。规则默认关闭。私聊 `/rule` 打开后删除分享来的聊天。分享来的用户不带这个标记。见 ADR 0478。
+
 洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。同一条事件 id 在这个 key 最近 32 次计数里只计一次。见 ADR 0010、ADR 0050、ADR 0052、ADR 0338 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 
 链接检测在 `packages/detectors-link`。默认只认短链域名、denylist 和 IPv4 主机。`ReputationSource` 不传就不会发请求。本地已命中时也不调用它。超时或抛错记 `reputation_failed`，返回 null。证据里只留主机名。抽主机名之前的折叠，以及每种字段怎么留下主机名，见 [message-surface.md](message-surface.md)。`tg://join?invite=` 和 `tg://addlist?slug=` 记成 `t.me` 邀请。`tg://resolve` 仍当公开用户名。邀请码不进证据。见 ADR 0102。
