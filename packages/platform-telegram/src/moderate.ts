@@ -131,6 +131,16 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setMenuButton(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatMenuButton",
+        fetchImpl: input.fetchImpl,
+        missing: "menubutton_unavailable",
+        failed: "menubutton_failed",
+        body: { menu_button: { type: target.kind } },
+      });
+    },
     async setCommandMenu(target) {
       await postTelegram({
         token: input.token,

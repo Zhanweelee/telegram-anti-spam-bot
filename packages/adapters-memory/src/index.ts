@@ -22,6 +22,7 @@ import {
   type JoinTarget,
   MAX_RULE_SWITCHES,
   type MemberTagTarget,
+  type MenuButtonTarget,
   type MessageReactionTarget,
   type ModerationPort,
   type MuteTarget,
@@ -140,6 +141,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly defaultRightsSet: readonly DefaultRightsTarget[];
   readonly commandMenusSet: readonly CommandMenuTarget[];
   readonly commandMenusDeleted: readonly CommandMenuQuery[];
+  readonly menuButtonsSet: readonly MenuButtonTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
@@ -183,6 +185,7 @@ export function createMemoryModerator(): ModerationPort & {
   const defaultRightsSet: DefaultRightsTarget[] = [];
   const commandMenusSet: CommandMenuTarget[] = [];
   const commandMenusDeleted: CommandMenuQuery[] = [];
+  const menuButtonsSet: MenuButtonTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
@@ -226,6 +229,7 @@ export function createMemoryModerator(): ModerationPort & {
     defaultRightsSet,
     commandMenusSet,
     commandMenusDeleted,
+    menuButtonsSet,
     approved,
     deferred,
     restricted,
@@ -293,6 +297,9 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
       });
+    },
+    async setMenuButton(target) {
+      menuButtonsSet.push({ tenantId: target.tenantId, kind: target.kind });
     },
     async deleteCommandMenu(query) {
       commandMenusDeleted.push({ tenantId: query.tenantId });

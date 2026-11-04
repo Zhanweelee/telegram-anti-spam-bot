@@ -219,6 +219,9 @@ export const messageKeys = [
   "command.commands.more",
   "command.delcommands.usage",
   "command.delcommands.done",
+  "command.menubutton.usage",
+  "command.menubutton.commands",
+  "command.menubutton.default",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -299,6 +302,7 @@ const syntax = [
   "/setcommands [private]",
   "/commands [private]",
   "/delcommands [private]",
+  "/menubutton <commands|default>",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -570,6 +574,11 @@ const zh = {
   "command.delcommands.usage": "用法：/delcommands [private]",
   "command.delcommands.done":
     "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
+  "command.menubutton.usage": "用法：/menubutton <commands|default>",
+  "command.menubutton.commands":
+    "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
+  "command.menubutton.default":
+    "已请求把默认菜单按钮恢复成默认。某个私聊里单独设过的按钮不受影响。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -850,6 +859,11 @@ const en = {
   "command.delcommands.usage": "Usage: /delcommands [private]",
   "command.delcommands.done":
     "Asked to clear the command menu in private chats. A higher-level menu will show. Group menus stay. People who already have a language-specific list are unchanged.",
+  "command.menubutton.usage": "Usage: /menubutton <commands|default>",
+  "command.menubutton.commands":
+    "Asked to set the default menu button to the command list. A button set for one private chat stays.",
+  "command.menubutton.default":
+    "Asked to restore the default menu button. A button set for one private chat stays.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

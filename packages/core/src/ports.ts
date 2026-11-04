@@ -319,6 +319,13 @@ export interface CommandMenuQuery {
   readonly tenantId: string;
 }
 
+export type MenuButtonKind = "commands" | "default";
+
+export interface MenuButtonTarget {
+  readonly tenantId: string;
+  readonly kind: MenuButtonKind;
+}
+
 export interface MenuCommandSnapshot {
   readonly command: string;
   readonly description: string;
@@ -369,6 +376,7 @@ export interface ModerationPort {
   setMemberTag(target: MemberTagTarget): Promise<void>;
   setAdminTitle(target: AdminTitleTarget): Promise<void>;
   setCommandMenu(target: CommandMenuTarget): Promise<void>;
+  setMenuButton(target: MenuButtonTarget): Promise<void>;
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
   setStickerSet(target: ChatStickerSetTarget): Promise<void>;

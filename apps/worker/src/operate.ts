@@ -181,6 +181,9 @@ function commandModerator(
     async setCommandMenu() {
       throw new Error("setcommands_unavailable");
     },
+    async setMenuButton() {
+      throw new Error("menubutton_unavailable");
+    },
     async approveJoin() {
       throw new Error("approve_unavailable");
     },

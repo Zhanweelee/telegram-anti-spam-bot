@@ -151,6 +151,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/delcommands [private]` 调用 `deleteCommandMenu`。配了 token 时使用 `deleteMyCommands`，范围是 `all_private_chats`，不送 `language_code`。清掉之后更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。只有配置里的管理员可以改。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经清掉。不调用 `setMyCommands` 或 `getMyCommands`，也不改黑名单、封禁或禁言。见 ADR 0409。
 
+`/menubutton <commands|default>` 调用 `setMenuButton`。配了 token 时使用 `setChatMenuButton`。`commands` 送 `{ type: "commands" }`，`default` 送 `{ type: "default" }`。不送 `chat_id`，所以改的是默认按钮。某个私聊里单独设过的按钮不受影响。只有配置里的管理员可以改。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经设置。不送 `web_app`。不调用 `getChatMenuButton`，也不改黑名单、封禁或禁言。见 ADR 0410。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

@@ -153,6 +153,7 @@ function harness(options?: { failStorage?: boolean }) {
     async declinePost() {},
     async setDefaultRights() {},
     async setCommandMenu() {},
+    async setMenuButton() {},
     async deferJoin() {},
     async restrictActor() {},
     async releaseActor() {},

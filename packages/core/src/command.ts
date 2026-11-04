@@ -124,6 +124,7 @@ const COMMAND_NAMES = [
   "setcommands",
   "commands",
   "delcommands",
+  "menubutton",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -275,6 +276,7 @@ export interface OperatorCommandInput {
       | "setDefaultRights"
       | "setDescription"
       | "setMemberTag"
+      | "setMenuButton"
       | "setReaction"
       | "setStickerSet"
       | "setTitle"
@@ -485,6 +487,8 @@ async function dispatch(
       return showCommandMenu(input, args);
     case "delcommands":
       return clearCommandMenu(input, args);
+    case "menubutton":
+      return setMenuButton(input, args);
   }
 }
 
@@ -3079,6 +3083,54 @@ function rejectClearCommandMenu(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "delcommands",
+  });
+}
+
+function menuButtonKind(token: string): "commands" | "default" | undefined {
+  if (token === "commands" || token === "default") {
+    return token;
+  }
+  return undefined;
+}
+
+async function setMenuButton(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.menubutton.usage");
+  }
+  const kind = menuButtonKind(args[0] ?? "");
+  if (kind === undefined) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const set = input.moderator?.setMenuButton;
+  if (!set) {
+    rejectMenuButton(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({ tenantId: input.event.tenantId, kind });
+  } catch {
+    rejectMenuButton(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    kind === "commands"
+      ? "command.menubutton.commands"
+      : "command.menubutton.default",
+  );
+}
+
+function rejectMenuButton(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "menubutton",
   });
 }
 

@@ -193,6 +193,8 @@ export {
   type JoinTarget,
   type MemberStanding,
   type MemberTagTarget,
+  type MenuButtonKind,
+  type MenuButtonTarget,
   type MenuCommand,
   type MenuCommandSnapshot,
   type MessageReactionTarget,

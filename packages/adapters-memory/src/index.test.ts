@@ -171,6 +171,15 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records a default menu button without a chat", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setMenuButton({ tenantId: "t", kind: "commands" });
+    expect(moderator.menuButtonsSet).toEqual([
+      { tenantId: "t", kind: "commands" },
+    ]);
+    expect(moderator.menuButtonsSet[0]).not.toHaveProperty("chatId");
+  });
+
   it("records a cleared private command menu without a chat", async () => {
     const moderator = createMemoryModerator();
     await moderator.deleteCommandMenu({ tenantId: "t" });
