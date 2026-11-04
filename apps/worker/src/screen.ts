@@ -722,6 +722,11 @@ export async function screenTelegramEvent(
       },
       {
         source: "builtin",
+        manifest: builtinManifests.richTextMention,
+        value: createRichDetector("text_mention"),
+      },
+      {
+        source: "builtin",
         manifest: builtinManifests.flood,
         value: createFloodDetector({
           window: deps.rateWindow ?? workerRateWindow,

@@ -13,6 +13,7 @@ interface RichContactCase {
   readonly asRichCard?: true;
   readonly asRichEmail?: true;
   readonly asRichMention?: true;
+  readonly asRichTextMention?: true;
 }
 
 interface Baseline {
@@ -51,6 +52,9 @@ async function evaluate(
                 ...(item.asRichCard ? { asRichCard: true as const } : {}),
                 ...(item.asRichEmail ? { asRichEmail: true as const } : {}),
                 ...(item.asRichMention ? { asRichMention: true as const } : {}),
+                ...(item.asRichTextMention
+                  ? { asRichTextMention: true as const }
+                  : {}),
               },
             }
           : {}),
@@ -145,6 +149,25 @@ describe("rich contact eval", () => {
     console.info(
       JSON.stringify({
         detector: "rich_mention",
+        cases: cases.length,
+        precision: report.precision,
+        recall: report.recall,
+        baseline,
+      }),
+    );
+    expect(report.precision).toBeGreaterThanOrEqual(baseline.precision);
+    expect(report.recall).toBeGreaterThanOrEqual(baseline.recall);
+  });
+
+  it("does not regress text mention precision or recall", async () => {
+    const cases = load("cases/rich-text-mention.json");
+    const baseline = JSON.parse(
+      readFileSync(join(root, "baselines/rich-text-mention.json"), "utf8"),
+    ) as Baseline;
+    const report = await evaluate("text_mention", cases);
+    console.info(
+      JSON.stringify({
+        detector: "rich_text_mention",
         cases: cases.length,
         precision: report.precision,
         recall: report.recall,

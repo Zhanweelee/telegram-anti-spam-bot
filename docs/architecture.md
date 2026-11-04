@@ -169,6 +169,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 富文本里的用户名提及可以按群删除。规则 `rich_mention` 默认关闭。见 ADR 0505。
 
+富文本里按用户标识的提及可以按群删除。规则 `rich_text_mention` 默认关闭。见 ADR 0506。
+
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 
 `textSha256` 在这个包里用 Web Crypto 计算。`packages/sdk` 的 `sha256Hex` 依赖 `node:crypto`，Worker 不要 import 它。
