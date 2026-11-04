@@ -151,6 +151,7 @@ async function messageEvent(
   const photo = photoNotice(message);
   const background = backgroundNotice(message);
   const gift = giftNotice(message);
+  const asPin = pinnedNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -191,8 +192,18 @@ async function messageEvent(
       ...(photo === undefined ? {} : { photo }),
       ...(background === undefined ? {} : { background }),
       ...(gift === undefined ? {} : { gift }),
+      ...(asPin ? { asPin: true as const } : {}),
     },
   });
+}
+
+function pinnedNotice(message: Record<string, unknown>): boolean {
+  const pinned = message.pinned_message;
+  if (!isRecord(pinned)) {
+    return false;
+  }
+  const id = pinned.message_id;
+  return typeof id === "number" && Number.isSafeInteger(id) && id > 0;
 }
 
 function giftNotice(

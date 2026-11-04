@@ -20614,6 +20614,81 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a pin and leaves the pinned text out", async () => {
+    const pinnedText = "置顶广告正文";
+    const pinnedId = 90182;
+    const pinned = await normalize({
+      update_id: 4500,
+      message: {
+        message_id: 550,
+        date: 1761955200,
+        chat: { id: -100499480, type: "supergroup" },
+        from: { id: 96 },
+        pinned_message: {
+          message_id: pinnedId,
+          date: 1761955100,
+          chat: { id: -100499480, type: "supergroup" },
+          from: { id: 97, first_name: "置顶的人" },
+          text: `${pinnedText} https://bit.ly/pin450`,
+        },
+      },
+    });
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.asPin).toBe(true);
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.hosts).toBeUndefined();
+    expect(pinned.event.actor).toEqual({ id: "96", isAdmin: false });
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain(pinnedText);
+    expect(pinnedDump).not.toContain("pin450");
+    expect(pinnedDump).not.toContain("bit.ly");
+    expect(pinnedDump).not.toContain("置顶的人");
+    expect(pinnedDump).not.toContain(String(pinnedId));
+
+    const alongside = await normalize({
+      update_id: 4501,
+      message: {
+        message_id: 551,
+        date: 1761955200,
+        chat: { id: -100499481, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        pinned_message: {
+          message_id: pinnedId,
+          text: pinnedText,
+        },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.asPin).toBe(true);
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(pinnedText);
+
+    const empty = await normalize({
+      update_id: 4502,
+      message: {
+        message_id: 552,
+        date: 1761955200,
+        chat: { id: -100499482, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        pinned_message: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asPin).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a shared user name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "INV288";

@@ -217,6 +217,12 @@ export const builtinManifests = {
     integrity:
       "55aa4b28c6a3a4c3cd82ff8bad6ad3f9922d6d525c35055fa54e51051ad95f62",
   }),
+  pinNotice: manifest({
+    id: "pin_notice",
+    kind: "detector",
+    integrity:
+      "a91576cecd406d51d3eb6f2a9899723fc9cf21a3fcb88491695c4bb8f4a5de47",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
