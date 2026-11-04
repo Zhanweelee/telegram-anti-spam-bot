@@ -21977,4 +21977,134 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(marked.event)).not.toContain("bit.ly");
     expect(JSON.stringify(marked.event)).not.toContain(path);
   });
+
+  it("ignores a message that belongs to another chat with the same id", async () => {
+    const phrase = "请免费领取礼品";
+    const connection = "bc_secret";
+    const business = await normalize({
+      update_id: 4401,
+      message: {
+        message_id: 4401,
+        date: 1761955200,
+        chat: { id: -1004401, type: "private" },
+        from: { id: 4401 },
+        business_connection_id: connection,
+        text: `${phrase} https://bit.ly/gift4401`,
+      },
+    });
+    expect(business.status).toBe("ignored");
+    const businessDump = JSON.stringify(business);
+    expect(businessDump).not.toContain(phrase);
+    expect(businessDump).not.toContain(connection);
+    expect(businessDump).not.toContain("bit.ly");
+
+    const guest = await normalize({
+      update_id: 4402,
+      edited_message: {
+        message_id: 4402,
+        date: 1761955200,
+        chat: { id: -1004402, type: "supergroup" },
+        from: { id: 4402 },
+        guest_query_id: "gq_secret",
+        text: phrase,
+      },
+    });
+    expect(guest.status).toBe("ignored");
+    const guestDump = JSON.stringify(guest);
+    expect(guestDump).not.toContain(phrase);
+    expect(guestDump).not.toContain("gq_secret");
+
+    const blank = await normalize({
+      update_id: 4403,
+      message: {
+        message_id: 4403,
+        date: 1761955200,
+        chat: { id: -1004403, type: "supergroup" },
+        from: { id: 4403 },
+        guest_query_id: " ",
+        text: phrase,
+      },
+    });
+    expect(blank.status).toBe("ignored");
+    expect(JSON.stringify(blank)).not.toContain(phrase);
+  });
+
+  it("keeps a group message when the foreign id is empty or not a string", async () => {
+    const empty = await normalize({
+      update_id: 4404,
+      message: {
+        message_id: 4404,
+        date: 1761955200,
+        chat: { id: -1004404, type: "supergroup" },
+        from: { id: 4404 },
+        business_connection_id: "",
+        guest_query_id: "",
+        text: "今天站会",
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("今天站会");
+
+    const numeric = await normalize({
+      update_id: 4405,
+      message: {
+        message_id: 4405,
+        date: 1761955200,
+        chat: { id: -1004405, type: "supergroup" },
+        from: { id: 4405 },
+        business_connection_id: 860043,
+        text: "今天站会",
+      },
+    });
+    expect(numeric.status).toBe("event");
+    if (numeric.status !== "event") {
+      return;
+    }
+    expect(numeric.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(numeric)).not.toContain("860043");
+  });
+
+  it("ignores business, guest, and stopped updates that are not ordinary messages", async () => {
+    const phrase = "请免费领取礼品";
+    const cases = [
+      {
+        update_id: 4406,
+        business_message: { text: phrase, business_connection_id: "bc_secret" },
+      },
+      {
+        update_id: 4407,
+        edited_business_message: {
+          text: phrase,
+          business_connection_id: "bc_secret",
+        },
+      },
+      {
+        update_id: 4408,
+        deleted_business_messages: {
+          business_connection_id: "bc_secret",
+          message_ids: [1],
+        },
+      },
+      {
+        update_id: 4409,
+        guest_message: { text: phrase, guest_query_id: "gq_secret" },
+      },
+      {
+        update_id: 4410,
+        stopped_message_generation: { draft_id: "draft_secret" },
+      },
+    ];
+    for (const update of cases) {
+      const outcome = await normalize(update);
+      expect(outcome.status).toBe("ignored");
+      const dumped = JSON.stringify(outcome);
+      expect(dumped).not.toContain(phrase);
+      expect(dumped).not.toContain("bc_secret");
+      expect(dumped).not.toContain("gq_secret");
+      expect(dumped).not.toContain("draft_secret");
+    }
+  });
 });

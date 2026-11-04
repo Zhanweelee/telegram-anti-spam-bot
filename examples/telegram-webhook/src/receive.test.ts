@@ -1417,4 +1417,31 @@ describe("receiveUpdate", () => {
       message: { id: "8", text: "hello" },
     });
   });
+
+  it("ignores a business connection message before it becomes an event", async () => {
+    const phrase = "请免费领取礼品";
+    const connection = "bc_secret";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 4411,
+        message: {
+          message_id: 4411,
+          date: 1761955200,
+          chat: { id: -100 },
+          from: { id: 3 },
+          business_connection_id: connection,
+          text: `${phrase} https://bit.ly/gift4411`,
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events).toEqual([]);
+    expect(result.body).toEqual({ ok: true, ignored: true });
+    const dumped = JSON.stringify(result);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(connection);
+    expect(dumped).not.toContain("bit.ly");
+  });
 });
