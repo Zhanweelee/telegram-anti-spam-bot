@@ -151,6 +151,8 @@ export const messageSchema = z
     asRichMap: z.literal(true).optional(),
     /** Rich text username mention. The username stays out. The visible text stays in the message. */
     asRichMention: z.literal(true).optional(),
+    /** Rich text user mention. The user id stays out. The visible text stays in the message. */
+    asRichTextMention: z.literal(true).optional(),
   })
   .refine(
     (message) =>

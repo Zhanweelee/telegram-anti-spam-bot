@@ -236,6 +236,7 @@ async function messageEvent(
       ...(richContact.email ? { asRichEmail: true as const } : {}),
       ...(asRichMap ? { asRichMap: true as const } : {}),
       ...(richContact.mention ? { asRichMention: true as const } : {}),
+      ...(richContact.textMention ? { asRichTextMention: true as const } : {}),
     },
   });
 }
@@ -303,8 +304,15 @@ function richContactMark(message: Record<string, unknown>): {
   card: boolean;
   email: boolean;
   mention: boolean;
+  textMention: boolean;
 } {
-  const found = { phone: false, card: false, email: false, mention: false };
+  const found = {
+    phone: false,
+    card: false,
+    email: false,
+    mention: false,
+    textMention: false,
+  };
   const rich = message.rich_message;
   if (isRecord(rich)) {
     walkRichContact(rich.blocks, found);
@@ -314,9 +322,21 @@ function richContactMark(message: Record<string, unknown>): {
 
 function walkRichContact(
   value: unknown,
-  found: { phone: boolean; card: boolean; email: boolean; mention: boolean },
+  found: {
+    phone: boolean;
+    card: boolean;
+    email: boolean;
+    mention: boolean;
+    textMention: boolean;
+  },
 ): void {
-  if (found.phone && found.card && found.email && found.mention) {
+  if (
+    found.phone &&
+    found.card &&
+    found.email &&
+    found.mention &&
+    found.textMention
+  ) {
     return;
   }
   if (Array.isArray(value)) {
@@ -343,6 +363,9 @@ function walkRichContact(
   if (value.type === "mention" && hiddenSecret(value.username)) {
     found.mention = true;
   }
+  if (value.type === "text_mention" && mentionedUser(value.user)) {
+    found.textMention = true;
+  }
   for (const nested of Object.values(value)) {
     walkRichContact(nested, found);
   }
@@ -350,6 +373,15 @@ function walkRichContact(
 
 function hiddenSecret(value: unknown): boolean {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function mentionedUser(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    Number.isSafeInteger(value.id) &&
+    value.id > 0
+  );
 }
 
 function declinedPost(message: Record<string, unknown>): boolean {
