@@ -1,0 +1,36 @@
+[
+  {
+    "id": "chat_background_wallpaper",
+    "kind": "message",
+    "label": "spam",
+    "background": "wallpaper"
+  },
+  {
+    "id": "chat_background_pattern",
+    "kind": "message",
+    "label": "spam",
+    "background": "pattern"
+  },
+  {
+    "id": "chat_background_fill",
+    "kind": "message",
+    "label": "spam",
+    "background": "fill"
+  },
+  {
+    "id": "chat_background_theme",
+    "kind": "message",
+    "label": "spam",
+    "background": "theme"
+  },
+  {
+    "id": "chat_background_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "chat_background_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

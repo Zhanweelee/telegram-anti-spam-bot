@@ -27,6 +27,7 @@ export default defineConfig({
       "packages/detectors-community",
       "packages/detectors-shared-chat",
       "packages/detectors-photo",
+      "packages/detectors-background",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

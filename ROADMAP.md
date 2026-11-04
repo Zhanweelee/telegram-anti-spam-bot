@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-448 每个群可以删掉换背景 — done
+
+验收：`chat_background_set.type.type` 是 `wallpaper`、`pattern`、`fill` 或 `chat_theme` 时，消息带 `background`，取值是 `wallpaper`、`pattern`、`fill` 或 `theme`。文件名、文件号、颜色和主题名不进事件。空对象和其它类型不带这个标记。已有正文时正文不变。壁纸和图案文件名里的主机名仍按 ADR 0430 抽取。默认留下。私聊 `/rule <chatId> chat_background on` 之后删除这四种服务消息，`off` 回到留下。证据只有 `background:wallpaper`、`background:pattern`、`background:fill` 或 `background:theme`。背景本身不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-447 每个群可以删掉换头像和删头像 — done
 
 验收：`new_chat_photo` 里至少有一个对象时，消息带 `photo: "set"`。`delete_chat_photo` 正好是 true 时带 `cleared`。几种同时出现时先认换头像。文件号、唯一号和尺寸不进事件。空数组和 false 不带这个标记。已有正文时正文不变。默认留下。私聊 `/rule <chatId> chat_photo on` 之后删除这两种服务消息，`off` 回到留下。证据只有 `photo:set` 或 `photo:cleared`。群头像本身不变，不调用 `deleteChatPhoto`。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2024,6 +2028,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-448
+
+- 做了什么：换背景有一条默认关闭的规则。私聊 `/rule` 可以打开。文件名仍不进事件。
+- 学到什么：壁纸文件名里的关键词看不见，短链却已经能删。纯色和内置主题同样没有正文。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-447
 

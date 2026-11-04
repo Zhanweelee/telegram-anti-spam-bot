@@ -205,6 +205,12 @@ export const builtinManifests = {
     integrity:
       "5217c465c580e1629f8c7c10e5ad54d114209f1b2e5bb62279b1400e8c77c69c",
   }),
+  chatBackground: manifest({
+    id: "chat_background",
+    kind: "detector",
+    integrity:
+      "a00c71d31da2e68833160157dee61947da5f57c64d802a7e844a9504007a498f",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

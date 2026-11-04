@@ -101,6 +101,8 @@ export const messageSchema = z
     asSharedChat: z.literal(true).optional(),
     /** Chat photo service line. File ids and sizes stay out. */
     photo: z.enum(["set", "cleared"]).optional(),
+    /** Chat background service line. Filenames, file ids, and theme names stay out. */
+    background: z.enum(["wallpaper", "pattern", "fill", "theme"]).optional(),
   })
   .refine(
     (message) =>

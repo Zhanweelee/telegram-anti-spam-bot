@@ -32,6 +32,7 @@
     "@tasb/detector-media": "workspace:*",
     "@tasb/detector-notice": "workspace:*",
     "@tasb/detector-photo": "workspace:*",
+    "@tasb/detector-background": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }
