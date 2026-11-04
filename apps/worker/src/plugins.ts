@@ -151,6 +151,24 @@ export const builtinManifests = {
     integrity:
       "bf956e266793601c8878d49d26724b3135f9c5a5e6e02ce9816fb1e33f9c548a",
   }),
+  forwardHidden: manifest({
+    id: "forward_hidden",
+    kind: "detector",
+    integrity:
+      "5c083f460c1eec579cefdd98e1338f3cd33e7cca2a2c03a65403c85019dec867",
+  }),
+  forwardChat: manifest({
+    id: "forward_chat",
+    kind: "detector",
+    integrity:
+      "d9299b72658c7a0266fd36cf0a5f882292206c6d1b7728b2368b009eea931992",
+  }),
+  forwardUser: manifest({
+    id: "forward_user",
+    kind: "detector",
+    integrity:
+      "eb5b5bfb112ac45534dd3306a1570e349b1a2d0ff990e5467ae8c2cc19535a9b",
+  }),
   delete: manifest({
     id: "delete",
     kind: "action",

@@ -3448,6 +3448,141 @@ describe("screenTelegramEvent", () => {
     expect(user.decision.action).toBe("allow");
   });
 
+  it("keeps hidden, chat, and user forwards until that chat asks", async () => {
+    const text = "今天站会改到三点";
+    const title = "机密频道名";
+    const hash = await sha256Hex(text);
+    async function forwarded(
+      id: string,
+      chatId: string,
+      forward: "hidden" | "chat" | "user" | "channel",
+    ) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "5", isAdmin: false },
+        message: {
+          id: "9",
+          text,
+          textSha256: hash,
+          forward,
+        },
+      });
+    }
+    for (const kind of ["hidden", "chat", "user"] as const) {
+      const idle = await screenTelegramEvent(
+        await forwarded(`tg_${kind}`, `-100${kind.length}`, kind),
+        { rateWindow: createMemoryRateWindow() },
+      );
+      expect(idle.decision.action, kind).toBe("allow");
+    }
+    function source(
+      ids: readonly ("hidden_forward" | "chat_forward" | "user_forward")[],
+    ): RuleSource {
+      const detectorFor = {
+        hidden_forward: "forward_hidden",
+        chat_forward: "forward_chat",
+        user_forward: "forward_user",
+      } as const;
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "channel_forward",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["forward"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+              ...ids.map((id) => ({
+                id,
+                enabled: true as const,
+                when: { eventKind: "message" as const },
+                detectorIds: [detectorFor[id]],
+                threshold: 1,
+                actions: ["delete" as const],
+              })),
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const hiddenOnly = source(["hidden_forward"]);
+    const hidden = await screenTelegramEvent(
+      await forwarded("tg_h1", "-100671", "hidden"),
+      {
+        source: hiddenOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(hidden.decision.action).toBe("delete");
+    expect(hidden.decision.reasons).toContain("forward_hidden");
+    expect(hidden.decision.ruleIds).toContain("hidden_forward");
+    expect(hidden.decision.evidence).toEqual([
+      { kind: "feature", summary: "forward:hidden" },
+    ]);
+    const stillUser = await screenTelegramEvent(
+      await forwarded("tg_h2", "-100672", "user"),
+      {
+        source: hiddenOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(stillUser.decision.action).toBe("allow");
+    const channel = await screenTelegramEvent(
+      await forwarded("tg_h3", "-100673", "channel"),
+      {
+        source: hiddenOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(channel.decision.action).toBe("delete");
+    expect(channel.decision.reasons).toContain("forward_channel");
+    const all = source(["hidden_forward", "chat_forward", "user_forward"]);
+    const chat = await screenTelegramEvent(
+      await forwarded("tg_c1", "-100674", "chat"),
+      {
+        source: all,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(chat.decision.evidence).toEqual([
+      { kind: "feature", summary: "forward:chat" },
+    ]);
+    const person = await screenTelegramEvent(
+      await forwarded("tg_u1", "-100675", "user"),
+      {
+        source: all,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(person.decision.evidence).toEqual([
+      { kind: "feature", summary: "forward:user" },
+    ]);
+    const dumped = JSON.stringify({
+      hidden: hidden.decision,
+      chat: chat.decision,
+      person: person.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(text);
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

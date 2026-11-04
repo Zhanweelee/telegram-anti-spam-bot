@@ -217,7 +217,9 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 关键词检测同样先做这层折叠，再做包含判断。除了一层间隔号编码，百分号编码不在这一层解释。只由这些字符组成的关键词不会匹配所有消息。证据里的词也折叠。点状间隔号去掉。全角拉丁字母收成半角。七个西里尔字母和乌克兰语 `і` 收成拉丁字母。普通空格、句号 `。`、全角数字和西里尔 `т` 保留。一层百分号编码的间隔号先收成对应字符再去掉。第二层和句号 `。` 的编码保留。见 ADR 0054、ADR 0060、ADR 0064、ADR 0093、ADR 0094、ADR 0095、ADR 0096、ADR 0098 和 ADR 0099。没有 `text` 和 `caption` 时，投票题干、抽奖奖品说明、清单标题、游戏标题、账单标题、场馆标题、文件名、音频标题、表演者、内联按钮文字或手动引用会先成为这段正文。几个按钮用一个普通空格分开。自动引用、被回复的原消息、选项、任务文字、说明、附加文字、地址、坐标、贴纸包名、文件 id、回复键盘和复制句子不进事件。见 ADR 0056、ADR 0057、ADR 0058、ADR 0059、ADR 0061、ADR 0062、ADR 0063 和 ADR 0092。没有更前面的正文时，作者签名整段成为正文。已有正文时签名不并进去。见 ADR 0101。没有更前面的正文时，成员标签也整段成为正文。已有正文或作者签名时，标签不并进去。见 ADR 0112。没有更前面的正文时，拒绝建议帖的说明也整段成为正文。已有正文时说明不并进去。嵌套的原帖不读。见 ADR 0113。
 
-`forward` 检测器在 `packages/detectors-forward`。它只看 `message.forward`。Worker 默认只把 `channel` 当命中，证据是 `forward:channel`。用户、群和隐藏来源要改配置才会命中。见 ADR 0025。评测在 `evals/cases/forward.json`。
+`forward` 检测器在 `packages/detectors-forward`。它只看 `message.forward`。Worker 默认只把 `channel` 当命中，证据是 `forward:channel`。用户、群和隐藏来源默认不命中。见 ADR 0025 和 ADR 0468。评测在 `evals/cases/forward.json`。
+
+`forward_hidden`、`forward_chat` 和 `forward_user` 各认一种来源。默认规则 `hidden_forward`、`chat_forward`、`user_forward` 关闭。私聊 `/rule` 打开后只删除这一种。来源标题不进证据。见 ADR 0468。
 
 `aggregateMetrics` 读取 `pipeline_completed`、`pipeline_exempt`、检测器失败和存储失败日志。dry-run 不计入拦截率。`log` 和 `report` 计入动作，不计入拦截。结果里没有原文和昵称。见 ADR 0017。最小例子在 `examples/minimal-pipeline`。
 

@@ -16,9 +16,12 @@ export const forwardConfigSchema = z.strictObject({
 
 export type ForwardConfig = z.input<typeof forwardConfigSchema>;
 
-export function createForwardDetector(config: ForwardConfig): Detector {
+export function createForwardDetector(
+  config: ForwardConfig,
+  id = "forward",
+): Detector {
   return defineDetector({
-    id: "forward",
+    id,
     version: "0.1.0",
     capabilities: ["forward"],
     configSchema: forwardConfigSchema,
@@ -28,14 +31,14 @@ export function createForwardDetector(config: ForwardConfig): Detector {
       if (kind === undefined || !parsed.kinds.includes(kind)) {
         return null;
       }
-      return hit(kind);
+      return hit(id, kind);
     },
   });
 }
 
-function hit(kind: ForwardKind) {
+function hit(id: string, kind: ForwardKind) {
   return {
-    detectorId: "forward",
+    detectorId: id,
     score: 1,
     reasons: [`forward_${kind}`],
     evidence: [{ kind: "feature" as const, summary: `forward:${kind}` }],
