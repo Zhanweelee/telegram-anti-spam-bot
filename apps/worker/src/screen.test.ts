@@ -5675,6 +5675,148 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a suggested-post notice until that chat asks", async () => {
+    const title = "建议帖广告正文";
+    const actor = "过稿的人";
+    const sendDate = 90192;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      approved?: boolean;
+      refunded?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "channel" },
+            from: { id: 96, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.approved
+              ? {
+                  suggested_post_approved: {
+                    send_date: sendDate,
+                    suggested_post_message: { text: title },
+                  },
+                }
+              : {}),
+            ...(input.refunded
+              ? {
+                  suggested_post_refunded: {
+                    reason: "payment_refunded",
+                    suggested_post_message: { text: title },
+                  },
+                }
+              : {}),
+            ...(input.flag ? { suggested_post_approved: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8900,
+      chatId: -100890,
+      approved: true,
+    });
+    expect(idle.message?.postNotice).toBe("approved");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    expect(JSON.stringify(idle)).not.toContain(String(sendDate));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "post_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["post_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8901, chatId: -100891, refunded: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("post_notice");
+    expect(removed.decision.ruleIds).toContain("post_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "post:refunded" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 8902, chatId: -100892, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8903,
+        chatId: -100893,
+        approved: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain("payment_refunded");
+    expect(dumped).not.toContain(String(sendDate));
+  });
+
   it("keeps a price notice until that chat asks", async () => {
     const stars = 90188;
     const directStars = 90189;

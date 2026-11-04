@@ -38,4 +38,5 @@
 - 成功只表示 Telegram 接受了这一次 `declineSuggestedPost`。缺少 `can_manage_direct_messages`、目标不是建议帖，或说明不被接受时，回复是「参数无效」。
 - 这条建议帖不会发出。其它建议帖还在。加入申请还在。
 - 一次拒绝是一次 Telegram 子请求。封禁、禁言和黑名单都不变。
+- 删除通过、失败、付款或退款的服务消息不会调用 `declineSuggestedPost` 或 `approveSuggestedPost`。稿子状态仍只由 `/declinepost` 改变。见 ADR 0488。
 - 30 天保留期不动。

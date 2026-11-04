@@ -20614,6 +20614,277 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a suggested-post notice and leaves the post out", async () => {
+    const title = "建议帖广告正文";
+    const actor = "过稿的人";
+    const sendDate = 90192;
+    const amount = 90191;
+    const approved = await normalize({
+      update_id: 4570,
+      message: {
+        message_id: 630,
+        date: 1761955200,
+        chat: { id: -100499550, type: "channel" },
+        from: { id: 96, first_name: actor },
+        suggested_post_approved: {
+          send_date: sendDate,
+          price: { currency: "XTR", amount },
+          suggested_post_message: {
+            message_id: 1,
+            text: title,
+            chat: { id: 1, type: "private" },
+            date: 1,
+          },
+        },
+      },
+    });
+    expect(approved.status).toBe("event");
+    if (approved.status !== "event") {
+      return;
+    }
+    expect(approved.event.message?.postNotice).toBe("approved");
+    expect(approved.event.message?.text).toBe("");
+    const approvedDump = JSON.stringify(approved.event);
+    expect(approvedDump).not.toContain(title);
+    expect(approvedDump).not.toContain(actor);
+    expect(approvedDump).not.toContain(String(sendDate));
+    expect(approvedDump).not.toContain(String(amount));
+
+    const failed = await normalize({
+      update_id: 4571,
+      message: {
+        message_id: 631,
+        date: 1761955200,
+        chat: { id: -100499551, type: "channel" },
+        from: { id: 96 },
+        text: "今天站会",
+        suggested_post_approval_failed: {
+          price: { currency: "TON", amount: 90193 },
+          suggested_post_message: { text: title },
+        },
+      },
+    });
+    expect(failed.status).toBe("event");
+    if (failed.status !== "event") {
+      return;
+    }
+    expect(failed.event.message?.postNotice).toBe("failed");
+    expect(failed.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(failed.event)).not.toContain("90193");
+    expect(JSON.stringify(failed.event)).not.toContain(title);
+
+    const paid = await normalize({
+      update_id: 4572,
+      message: {
+        message_id: 632,
+        date: 1761955200,
+        chat: { id: -100499552, type: "channel" },
+        from: { id: 96 },
+        suggested_post_paid: {
+          currency: "XTR",
+          star_amount: { amount: 90194 },
+          suggested_post_message: { text: title },
+        },
+      },
+    });
+    expect(paid.status).toBe("event");
+    if (paid.status !== "event") {
+      return;
+    }
+    expect(paid.event.message?.postNotice).toBe("paid");
+    expect(JSON.stringify(paid.event)).not.toContain("90194");
+    expect(JSON.stringify(paid.event)).not.toContain(title);
+
+    const ton = await normalize({
+      update_id: 4573,
+      message: {
+        message_id: 633,
+        date: 1761955200,
+        chat: { id: -100499553, type: "channel" },
+        from: { id: 96 },
+        suggested_post_paid: { currency: "TON", amount: 90195 },
+      },
+    });
+    expect(ton.status).toBe("event");
+    if (ton.status !== "event") {
+      return;
+    }
+    expect(ton.event.message?.postNotice).toBe("paid");
+    expect(JSON.stringify(ton.event)).not.toContain("90195");
+
+    const deleted = await normalize({
+      update_id: 4574,
+      message: {
+        message_id: 634,
+        date: 1761955200,
+        chat: { id: -100499554, type: "channel" },
+        from: { id: 96 },
+        suggested_post_refunded: {
+          reason: "post_deleted",
+          suggested_post_message: { text: title },
+        },
+      },
+    });
+    expect(deleted.status).toBe("event");
+    if (deleted.status !== "event") {
+      return;
+    }
+    expect(deleted.event.message?.postNotice).toBe("refunded");
+    expect(JSON.stringify(deleted.event)).not.toContain("post_deleted");
+    expect(JSON.stringify(deleted.event)).not.toContain(title);
+
+    const payer = await normalize({
+      update_id: 4575,
+      message: {
+        message_id: 635,
+        date: 1761955200,
+        chat: { id: -100499555, type: "channel" },
+        from: { id: 96 },
+        suggested_post_refunded: { reason: "payment_refunded" },
+      },
+    });
+    expect(payer.status).toBe("event");
+    if (payer.status !== "event") {
+      return;
+    }
+    expect(payer.event.message?.postNotice).toBe("refunded");
+    expect(JSON.stringify(payer.event)).not.toContain("payment_refunded");
+
+    const both = await normalize({
+      update_id: 4576,
+      message: {
+        message_id: 636,
+        date: 1761955200,
+        chat: { id: -100499556, type: "channel" },
+        from: { id: 96 },
+        suggested_post_approved: { send_date: 1 },
+        suggested_post_refunded: { reason: "post_deleted" },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.postNotice).toBe("approved");
+
+    const declined = await normalize({
+      update_id: 4577,
+      message: {
+        message_id: 637,
+        date: 1761955200,
+        chat: { id: -100499557, type: "channel" },
+        from: { id: 96 },
+        suggested_post_declined: {
+          comment: "今天站会",
+          suggested_post_message: { text: title },
+        },
+      },
+    });
+    expect(declined.status).toBe("event");
+    if (declined.status !== "event") {
+      return;
+    }
+    expect(declined.event.message?.postNotice).toBeUndefined();
+    expect(declined.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(declined.event)).not.toContain(title);
+
+    const empty = await normalize({
+      update_id: 4578,
+      message: {
+        message_id: 638,
+        date: 1761955200,
+        chat: { id: -100499558, type: "channel" },
+        from: { id: 96 },
+        suggested_post_approved: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.postNotice).toBeUndefined();
+
+    const negative = await normalize({
+      update_id: 4579,
+      message: {
+        message_id: 639,
+        date: 1761955200,
+        chat: { id: -100499559, type: "channel" },
+        from: { id: 96 },
+        suggested_post_approved: { send_date: -1 },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.postNotice).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4580,
+      message: {
+        message_id: 640,
+        date: 1761955200,
+        chat: { id: -100499560, type: "channel" },
+        from: { id: 96 },
+        suggested_post_approved: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.postNotice).toBeUndefined();
+
+    const failedEmpty = await normalize({
+      update_id: 4581,
+      message: {
+        message_id: 641,
+        date: 1761955200,
+        chat: { id: -100499561, type: "channel" },
+        from: { id: 96 },
+        suggested_post_approval_failed: {},
+      },
+    });
+    expect(failedEmpty.status).toBe("event");
+    if (failedEmpty.status !== "event") {
+      return;
+    }
+    expect(failedEmpty.event.message?.postNotice).toBeUndefined();
+
+    const otherCurrency = await normalize({
+      update_id: 4582,
+      message: {
+        message_id: 642,
+        date: 1761955200,
+        chat: { id: -100499562, type: "channel" },
+        from: { id: 96 },
+        suggested_post_paid: { currency: "USD" },
+      },
+    });
+    expect(otherCurrency.status).toBe("event");
+    if (otherCurrency.status !== "event") {
+      return;
+    }
+    expect(otherCurrency.event.message?.postNotice).toBeUndefined();
+
+    const otherReason = await normalize({
+      update_id: 4583,
+      message: {
+        message_id: 643,
+        date: 1761955200,
+        chat: { id: -100499563, type: "channel" },
+        from: { id: 96 },
+        suggested_post_refunded: { reason: "other" },
+      },
+    });
+    expect(otherReason.status).toBe("event");
+    if (otherReason.status !== "event") {
+      return;
+    }
+    expect(otherReason.event.message?.postNotice).toBeUndefined();
+  });
+
   it("marks a price notice and leaves the star count out", async () => {
     const stars = 90188;
     const actor = "改价的人";

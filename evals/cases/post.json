@@ -1,0 +1,36 @@
+[
+  {
+    "id": "post_notice_approved",
+    "kind": "message",
+    "label": "spam",
+    "postNotice": "approved"
+  },
+  {
+    "id": "post_notice_failed",
+    "kind": "message",
+    "label": "spam",
+    "postNotice": "failed"
+  },
+  {
+    "id": "post_notice_paid",
+    "kind": "message",
+    "label": "spam",
+    "postNotice": "paid"
+  },
+  {
+    "id": "post_notice_refunded",
+    "kind": "message",
+    "label": "spam",
+    "postNotice": "refunded"
+  },
+  {
+    "id": "post_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "post_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

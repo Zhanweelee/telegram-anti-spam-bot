@@ -117,6 +117,8 @@ export const messageSchema = z
     asAutoDelete: z.literal(true).optional(),
     /** Price-change service line. Star counts stay out. */
     priceNotice: z.enum(["paid", "direct"]).optional(),
+    /** Suggested-post service line. The nested post stays out. */
+    postNotice: z.enum(["approved", "failed", "paid", "refunded"]).optional(),
   })
   .refine(
     (message) =>
