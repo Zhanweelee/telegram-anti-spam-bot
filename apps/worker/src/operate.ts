@@ -97,6 +97,9 @@ function commandModerator(
     async readBotDescription() {
       throw new Error("mydesc_unavailable");
     },
+    async readBotShortDescription() {
+      throw new Error("myshort_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },
