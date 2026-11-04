@@ -337,6 +337,12 @@ export const builtinManifests = {
     integrity:
       "7cf0093e9927f7a2bc3a6b4addd8d4a5dfb2e6f27bbcb176a115598131625d35",
   }),
+  richEmail: manifest({
+    id: "rich_email",
+    kind: "detector",
+    integrity:
+      "618a72804ba95a8627e078416aff8298d8ca9066abb342bca40e1f14323d84b3",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

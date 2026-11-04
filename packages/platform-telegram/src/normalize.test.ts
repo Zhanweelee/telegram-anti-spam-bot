@@ -20614,6 +20614,133 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a rich email and leaves the address out", async () => {
+    const address = "902120011@mail.test";
+    const actor = "留邮箱的人";
+    const email = await normalize({
+      update_id: 4750,
+      message: {
+        message_id: 790,
+        date: 1761955200,
+        chat: { id: -100499750, type: "supergroup" },
+        from: { id: 110, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "email_address",
+                  text: "联系邮箱",
+                  email_address: address,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(email.status).toBe("event");
+    if (email.status !== "event") {
+      return;
+    }
+    expect(email.event.message?.asRichEmail).toBe(true);
+    expect(email.event.message?.asRichPhone).toBeUndefined();
+    expect(email.event.message?.asRichCard).toBeUndefined();
+    expect(email.event.message?.text).toBe("联系邮箱");
+    const emailDump = JSON.stringify(email.event);
+    expect(emailDump).not.toContain(address);
+    expect(emailDump).not.toContain("902120011");
+    expect(emailDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4751,
+      message: {
+        message_id: 791,
+        date: 1761955200,
+        chat: { id: -100499751, type: "supergroup" },
+        from: { id: 110 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "email_address",
+                text: "联系邮箱",
+                email_address: address,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichEmail).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(address);
+
+    const empty = await normalize({
+      update_id: 4752,
+      message: {
+        message_id: 792,
+        date: 1761955200,
+        chat: { id: -100499752, type: "supergroup" },
+        from: { id: 110 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "email_address",
+                text: "空邮箱",
+                email_address: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空邮箱");
+    expect(empty.event.message?.asRichEmail).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4753,
+      message: {
+        message_id: 793,
+        date: 1761955200,
+        chat: { id: -100499753, type: "supergroup" },
+        from: { id: 110 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "email_address",
+                text: "布尔邮箱",
+                email_address: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔邮箱");
+    expect(flag.event.message?.asRichEmail).toBeUndefined();
+  });
+
   it("marks a rich phone or card and leaves the number out", async () => {
     const phoneNumber = "+9021190011";
     const cardNumber = "9021190099990000";

@@ -5675,6 +5675,156 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a rich email until that chat asks", async () => {
+    const address = "902120011@mail.test";
+    const actor = "留邮箱的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      email?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 110, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.email
+              ? {
+                  rich_message: {
+                    blocks: [
+                      {
+                        type: "paragraph",
+                        text: {
+                          type: "email_address",
+                          text: "联系邮箱",
+                          email_address: address,
+                        },
+                      },
+                    ],
+                  },
+                }
+              : { text: "今天站会" }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: "rich_email" | "rich_phone"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 10530,
+      chatId: -1001130,
+      email: true,
+    });
+    expect(idle.message?.asRichEmail).toBe(true);
+    expect(idle.message?.text).toBe("联系邮箱");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(address);
+    expect(idleDump).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10531, chatId: -1001131, email: true }),
+      {
+        source: rule("rich_email"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("rich_email");
+    expect(removed.decision.ruleIds).toContain("rich_email");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "rich:email" },
+    ]);
+    const keptByPhone = await screenTelegramEvent(
+      await posted({ updateId: 10532, chatId: -1001132, email: true }),
+      {
+        source: rule("rich_phone"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByPhone.decision.action).toBe("allow");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 10533, chatId: -1001133 }),
+      {
+        source: rule("rich_email"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10534,
+        chatId: -1001134,
+        email: true,
+        paid: true,
+      }),
+      {
+        source: rule("rich_email"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByPhone: keptByPhone.decision,
+      plain: plain.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(address);
+    expect(dumped).not.toContain("902120011");
+    expect(dumped).not.toContain("联系邮箱");
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a rich phone or card until that chat asks", async () => {
     const phoneNumber = "+9021190011";
     const cardNumber = "9021190099990000";

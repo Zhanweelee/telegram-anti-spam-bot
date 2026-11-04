@@ -1,0 +1,5 @@
+{
+  "detector": "rich_email",
+  "precision": 1,
+  "recall": 1
+}

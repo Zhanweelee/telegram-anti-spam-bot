@@ -704,6 +704,11 @@ export async function screenTelegramEvent(
       },
       {
         source: "builtin",
+        manifest: builtinManifests.richEmail,
+        value: createRichDetector("email"),
+      },
+      {
+        source: "builtin",
         manifest: builtinManifests.flood,
         value: createFloodDetector({
           window: deps.rateWindow ?? workerRateWindow,
