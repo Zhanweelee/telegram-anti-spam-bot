@@ -314,6 +314,45 @@ describe("memory adapter", () => {
     ).toBe(true);
   });
 
+  it("keeps extra keywords apart from flood policy", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual([]);
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "发票")).toBe(true);
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "发票")).toBe(true);
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual(["发票"]);
+    expect(await runtime.listKeywords("tenant_a", "chat_2")).toEqual([]);
+    expect(await runtime.getFloodPolicy("tenant_a", "chat_1")).toBeNull();
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "a".repeat(33))).toBe(
+      false,
+    );
+    expect(await runtime.removeKeyword("tenant_a", "chat_1", "没有")).toBe(
+      false,
+    );
+    expect(await runtime.removeKeyword("tenant_a", "chat_1", "发票")).toBe(
+      true,
+    );
+    expect(await runtime.listKeywords("tenant_a", "chat_1")).toEqual([]);
+    for (let index = 0; index < 32; index += 1) {
+      expect(await runtime.addKeyword("tenant_a", "chat_1", `词${index}`)).toBe(
+        true,
+      );
+    }
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "溢出")).toBe(false);
+    expect(await runtime.removeKeyword("tenant_a", "chat_1", "词0")).toBe(true);
+    expect(await runtime.addKeyword("tenant_a", "chat_1", "溢出")).toBe(true);
+    await runtime.clearKeywords("tenant_a", "chat_1");
+    for (let index = 0; index < 256; index += 1) {
+      expect(
+        await runtime.addKeyword("tenant_a", `chat_${index}`, "发票"),
+      ).toBe(true);
+    }
+    expect(await runtime.addKeyword("tenant_a", "overflow", "发票")).toBe(
+      false,
+    );
+    await runtime.clearKeywords("tenant_a", "chat_0");
+    expect(await runtime.addKeyword("tenant_a", "overflow", "代开")).toBe(true);
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

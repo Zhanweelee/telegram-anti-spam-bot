@@ -157,11 +157,15 @@ describe("resolveStores", () => {
       threshold: 8,
       windowSeconds: 20,
     });
+    expect(await first.runtime.addKeyword("local", "-100", "发票")).toBe(true);
+    expect(await restarted.runtime.listKeywords("local", "-100")).toEqual([
+      "发票",
+    ]);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(5);
+    expect(values.size).toBe(6);
     expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
       true,
     );
@@ -176,6 +180,9 @@ describe("resolveStores", () => {
     ).toBe(true);
     expect(
       [...values.keys()].some((key) => key.startsWith("runtime-flood")),
+    ).toBe(true);
+    expect(
+      [...values.keys()].some((key) => key.startsWith("runtime-keyword")),
     ).toBe(true);
     expect(
       await first.chats.noteBot({

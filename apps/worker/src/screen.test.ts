@@ -2002,6 +2002,79 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(phrase);
   });
 
+  it("deletes a message that matches one chat's extra keyword", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.addKeyword("local", "-100kw", "发票")).toBe(true);
+    const text = "请开发票";
+    const hit = await screenTelegramEvent(
+      await parseEvent({
+        id: "kw_hit",
+        tenantId: "local",
+        chatId: "-100kw",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: "1",
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      }),
+      { runtime },
+    );
+    expect(hit.decision.action).toBe("delete");
+    expect(hit.decision.reasons).toContain("keyword_match");
+    expect(JSON.stringify(hit)).not.toContain(text);
+    const other = await screenTelegramEvent(
+      await parseEvent({
+        id: "kw_other",
+        tenantId: "local",
+        chatId: "-200kw",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: "2",
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      }),
+      { runtime },
+    );
+    expect(other.decision.action).toBe("allow");
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failed = await screenTelegramEvent(
+      await parseEvent({
+        id: "kw_fail",
+        tenantId: "local",
+        chatId: "-300kw",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "9", isAdmin: false },
+        message: {
+          id: "3",
+          text,
+          textSha256: await sha256Hex(text),
+        },
+      }),
+      {
+        logger,
+        runtime: {
+          ...broken,
+          async listKeywords() {
+            throw new Error(phrase);
+          },
+        },
+      },
+    );
+    expect(failed.decision.action).toBe("allow");
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain(text);
+  });
+
   it("deletes a contact card URL and keeps the vCard out of logs", async () => {
     const phone = "13800138118";
     const path = "card118";

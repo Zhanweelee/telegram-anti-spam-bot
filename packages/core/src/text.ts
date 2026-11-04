@@ -30,6 +30,34 @@ export function foldInterpuncts(text: string): string {
   return text.replace(DOT_LOOKALIKES, "");
 }
 
+/** One extra keyword is at most this many characters after folding. */
+export const MAX_CHAT_KEYWORD_LENGTH = 32;
+
+/**
+ * Fold one admin keyword the same way the keyword detector matches.
+ * Empty, spaced, or over-long tokens are rejected.
+ */
+export function normalizeChatKeyword(value: string): string | null {
+  if (
+    value.length < 1 ||
+    value.length > MAX_CHAT_KEYWORD_LENGTH ||
+    /\s/u.test(value)
+  ) {
+    return null;
+  }
+  const folded = foldInterpuncts(
+    foldEncodedMiddleDot(
+      foldMatchText(
+        foldFullwidthLatin(foldCyrillicLookalikes(value.toLocaleLowerCase())),
+      ),
+    ),
+  );
+  if (folded.length < 1 || folded.length > MAX_CHAT_KEYWORD_LENGTH) {
+    return null;
+  }
+  return folded;
+}
+
 /** Turn dot lookalikes into `.` before a hostname parse. */
 export function foldDotLookalikes(text: string): string {
   return text.replace(DOT_LOOKALIKES, ".");

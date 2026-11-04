@@ -97,8 +97,9 @@ export const workerPolicyStore = createMemoryPolicyStore();
 export const workerRuntime = createMemoryRuntimeStore();
 export const workerStorage = createMemoryStorage({ maxAudits: 200 });
 
+const DEFAULT_KEYWORDS = ["免费领取", "加微信"] as const;
 const detector = createKeywordDetector({
-  keywords: ["免费领取", "加微信"],
+  keywords: [...DEFAULT_KEYWORDS],
 });
 const regexDetector = createRegexDetector({
   patterns: [...defaultRegexPatterns],
@@ -245,6 +246,24 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let keywordDetector = detector;
+  try {
+    const extras = await runtime.listKeywords(event.tenantId, event.chatId);
+    if (extras.length > 0) {
+      const keywords: string[] = [...DEFAULT_KEYWORDS];
+      for (const extra of extras) {
+        if (!keywords.includes(extra)) {
+          keywords.push(extra);
+        }
+      }
+      keywordDetector = createKeywordDetector({ keywords });
+    }
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   let floodThreshold = FLOOD_THRESHOLD;
   let floodWindowSeconds = FLOOD_WINDOW_SECONDS;
   try {
@@ -304,7 +323,7 @@ export async function screenTelegramEvent(
       {
         source: "builtin",
         manifest: builtinManifests.keyword,
-        value: detector,
+        value: keywordDetector,
       },
       {
         source: "builtin",

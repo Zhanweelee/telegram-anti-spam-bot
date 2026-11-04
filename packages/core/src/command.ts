@@ -85,6 +85,7 @@ import {
   type RuleSwitch,
   type RuntimeStore,
 } from "./runtime.js";
+import { normalizeChatKeyword } from "./text.js";
 import {
   normalizeWarnLimit,
   WARN_LIMIT,
@@ -186,6 +187,7 @@ const COMMAND_NAMES = [
   "warnlimit",
   "report",
   "flood",
+  "keyword",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -541,6 +543,8 @@ async function dispatch(
       return editReport(input, args);
     case "flood":
       return editFlood(input, args);
+    case "keyword":
+      return editKeyword(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5746,6 +5750,164 @@ function parseFloodWindow(value: string): number | undefined {
     return undefined;
   }
   return Number(value);
+}
+
+async function editKeyword(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 3) {
+    return say(input, "command.keyword.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const op = args[1];
+  if (op === undefined) {
+    return formatKeywords(input, chatId);
+  }
+  if (op === "reset") {
+    if (args.length !== 2) {
+      return say(input, "command.keyword.usage");
+    }
+    const cleared = await clearKeywordList(input, chatId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.keyword.show", { chatId, count: 0 });
+  }
+  if ((op !== "add" && op !== "remove") || args.length !== 3) {
+    return say(input, "command.keyword.usage");
+  }
+  const keyword = normalizeChatKeyword(args[2] ?? "");
+  if (keyword === null) {
+    return say(input, "command.invalid");
+  }
+  if (op === "remove") {
+    const removed = await dropKeyword(input, chatId, keyword);
+    if (removed === undefined) {
+      return say(input, "command.invalid");
+    }
+    if (!removed) {
+      return say(input, "command.keyword.absent");
+    }
+    const list = await readKeywords(input, chatId);
+    if (list === undefined) {
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.keyword.removed", {
+      chatId,
+      count: list.length,
+    });
+  }
+  const saved = await writeKeyword(input, chatId, keyword);
+  if (saved === "invalid") {
+    return say(input, "command.invalid");
+  }
+  if (saved === "full") {
+    input.logger.warn("keyword_full", {
+      eventId: input.event.id,
+      chatId,
+      command: "keyword",
+    });
+    return say(input, "command.invalid");
+  }
+  const list = await readKeywords(input, chatId);
+  if (list === undefined) {
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.keyword.added", { chatId, count: list.length });
+}
+
+async function formatKeywords(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<string> {
+  const list = await readKeywords(input, chatId);
+  if (list === undefined) {
+    return say(input, "command.invalid");
+  }
+  const header = say(input, "command.keyword.show", {
+    chatId,
+    count: list.length,
+  });
+  if (list.length === 0) {
+    return header;
+  }
+  return [header, ...list].join("\n");
+}
+
+async function readKeywords(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<readonly string[] | undefined> {
+  try {
+    return await input.runtime.listKeywords(input.event.tenantId, chatId);
+  } catch {
+    rejectKeyword(input);
+    return undefined;
+  }
+}
+
+async function writeKeyword(
+  input: OperatorCommandInput,
+  chatId: string,
+  keyword: string,
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.addKeyword(
+      input.event.tenantId,
+      chatId,
+      keyword,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectKeyword(input);
+    return "invalid";
+  }
+}
+
+async function dropKeyword(
+  input: OperatorCommandInput,
+  chatId: string,
+  keyword: string,
+): Promise<boolean | undefined> {
+  try {
+    return await input.runtime.removeKeyword(
+      input.event.tenantId,
+      chatId,
+      keyword,
+    );
+  } catch {
+    rejectKeyword(input);
+    return undefined;
+  }
+}
+
+async function clearKeywordList(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearKeywords(input.event.tenantId, chatId);
+    return true;
+  } catch {
+    rejectKeyword(input);
+    return false;
+  }
+}
+
+function rejectKeyword(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "keyword",
+  });
 }
 
 function parseWarnLimit(value: string): number | undefined {

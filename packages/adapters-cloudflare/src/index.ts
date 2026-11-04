@@ -7,12 +7,15 @@ import {
   type ChatDirectory,
   type ChatDirectoryDocument,
   chatDirectoryDocumentSchema,
+  chatKeywordDocumentSchema,
+  chatKeywordSchema,
   FLOOD_THRESHOLD,
   FLOOD_WINDOW_SECONDS,
   type FloodPolicy,
   floodPolicyDocumentSchema,
   MAX_BLOCKLIST_CHATS,
   MAX_BLOCKLIST_ENTRIES,
+  MAX_CHAT_KEYWORDS,
   MAX_DIRECTORY_ACTORS,
   MAX_DIRECTORY_CHATS,
   MAX_RULE_SWITCHES,
@@ -126,6 +129,10 @@ export function createKvRuntimeStore(
     string,
     { readonly policy: FloodPolicy | null; readonly expiresAt: number }
   >();
+  const keywordCache = new Map<
+    string,
+    { readonly keywords: readonly string[]; readonly expiresAt: number }
+  >();
 
   async function load(
     tenantId: string,
@@ -235,6 +242,36 @@ export function createKvRuntimeStore(
         : JSON.stringify(floodPolicyDocumentSchema.parse(policy));
     await kv.put(id, body);
     floodCache.set(id, { policy, expiresAt: now() + ttlMs });
+  }
+
+  async function loadKeywords(
+    tenantId: string,
+    chatId: string,
+  ): Promise<readonly string[]> {
+    const id = runtimeKeywordKey(tenantId, chatId);
+    const at = now();
+    const hit = keywordCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.keywords;
+    }
+    const saved = parseKeywords(await kv.get(id));
+    keywordCache.set(id, { keywords: saved, expiresAt: at + ttlMs });
+    return saved;
+  }
+
+  async function saveKeywords(
+    tenantId: string,
+    chatId: string,
+    saved: readonly string[] | null,
+  ): Promise<void> {
+    const id = runtimeKeywordKey(tenantId, chatId);
+    const keywords = saved ?? [];
+    const body =
+      keywords.length === 0
+        ? "{}"
+        : JSON.stringify(chatKeywordDocumentSchema.parse({ keywords }));
+    await kv.put(id, body);
+    keywordCache.set(id, { keywords, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -360,6 +397,47 @@ export function createKvRuntimeStore(
       }
       await saveFlood(tenantId, chatId, null);
     },
+    async listKeywords(tenantId, chatId) {
+      return loadKeywords(tenantId, chatId);
+    },
+    async addKeyword(tenantId, chatId, keyword) {
+      const parsed = chatKeywordSchema.safeParse(keyword);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadKeywords(tenantId, chatId);
+      if (current.includes(parsed.data)) {
+        return true;
+      }
+      if (current.length >= MAX_CHAT_KEYWORDS) {
+        return false;
+      }
+      await saveKeywords(tenantId, chatId, [...current, parsed.data]);
+      return true;
+    },
+    async removeKeyword(tenantId, chatId, keyword) {
+      const parsed = chatKeywordSchema.safeParse(keyword);
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadKeywords(tenantId, chatId);
+      if (!current.includes(parsed.data)) {
+        return false;
+      }
+      await saveKeywords(
+        tenantId,
+        chatId,
+        current.filter((item) => item !== parsed.data),
+      );
+      return true;
+    },
+    async clearKeywords(tenantId, chatId) {
+      const current = await loadKeywords(tenantId, chatId);
+      if (current.length === 0) {
+        return;
+      }
+      await saveKeywords(tenantId, chatId, null);
+    },
   };
 }
 
@@ -393,6 +471,22 @@ function runtimeReportKey(tenantId: string, chatId: string): string {
 
 function runtimeFloodKey(tenantId: string, chatId: string): string {
   return `runtime-flood\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeKeywordKey(tenantId: string, chatId: string): string {
+  return `runtime-keyword\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseKeywords(raw: string | null): readonly string[] {
+  if (raw === null) {
+    return [];
+  }
+  try {
+    const parsed = chatKeywordDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.keywords : [];
+  } catch {
+    return [];
+  }
 }
 
 function isDefaultFlood(policy: FloodPolicy): boolean {

@@ -16,6 +16,7 @@ import {
   type CommandMenuQuery,
   type CommandMenuTarget,
   captchaChallengeSchema,
+  chatKeywordSchema,
   type DefaultRightsTarget,
   type DeleteMessagesTarget,
   type DeleteTarget,
@@ -27,6 +28,7 @@ import {
   type GeneralNameTarget,
   isExpired,
   type JoinTarget,
+  MAX_CHAT_KEYWORDS,
   MAX_RULE_SWITCHES,
   type MemberTagTarget,
   type MenuButtonTarget,
@@ -828,6 +830,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const actions = new Map<string, Map<string, RuleActionOverride["action"]>>();
   const reports = new Map<string, string>();
   const floods = new Map<string, FloodPolicy>();
+  const keywords = new Map<string, string[]>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -955,6 +958,49 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearFloodPolicy(tenantId, chatId) {
       floods.delete(key(tenantId, chatId));
+    },
+    async listKeywords(tenantId, chatId) {
+      return keywords.get(key(tenantId, chatId)) ?? [];
+    },
+    async addKeyword(tenantId, chatId, keyword) {
+      const parsed = chatKeywordSchema.safeParse(keyword);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      const current = keywords.get(id) ?? [];
+      if (current.includes(parsed.data)) {
+        return true;
+      }
+      if (current.length >= MAX_CHAT_KEYWORDS) {
+        return false;
+      }
+      if (current.length === 0 && keywords.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      keywords.set(id, [...current, parsed.data]);
+      return true;
+    },
+    async removeKeyword(tenantId, chatId, keyword) {
+      const parsed = chatKeywordSchema.safeParse(keyword);
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      const current = keywords.get(id);
+      if (!current?.includes(parsed.data)) {
+        return false;
+      }
+      const next = current.filter((item) => item !== parsed.data);
+      if (next.length === 0) {
+        keywords.delete(id);
+        return true;
+      }
+      keywords.set(id, next);
+      return true;
+    },
+    async clearKeywords(tenantId, chatId) {
+      keywords.delete(key(tenantId, chatId));
     },
   };
 }
