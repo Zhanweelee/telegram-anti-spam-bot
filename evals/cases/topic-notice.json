@@ -1,0 +1,24 @@
+[
+  {
+    "id": "topic_notice_created",
+    "kind": "message",
+    "label": "spam",
+    "topicNotice": "created"
+  },
+  {
+    "id": "topic_notice_edited",
+    "kind": "message",
+    "label": "spam",
+    "topicNotice": "edited"
+  },
+  {
+    "id": "topic_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "topic_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

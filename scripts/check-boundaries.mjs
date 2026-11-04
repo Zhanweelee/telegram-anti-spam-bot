@@ -150,6 +150,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-topic/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -212,6 +216,7 @@ const rules = [
       /^@tasb\/detector-proximity$/,
       /^@tasb\/detector-poll$/,
       /^@tasb\/detector-task$/,
+      /^@tasb\/detector-topic$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
@@ -275,6 +280,7 @@ const rules = [
       /^@tasb\/detector-proximity$/,
       /^@tasb\/detector-poll$/,
       /^@tasb\/detector-task$/,
+      /^@tasb\/detector-topic$/,
       /^node:/,
       /^vitest$/,
     ],

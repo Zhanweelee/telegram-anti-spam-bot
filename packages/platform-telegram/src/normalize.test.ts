@@ -20614,6 +20614,163 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a topic rename and keeps the topic name", async () => {
+    const created = "新建话题广告名";
+    const edited = "改名后的广告名";
+    const actor = "建话题的人";
+    const emoji = "表情编号90206专属";
+    const color = 90207;
+    const made = await normalize({
+      update_id: 4680,
+      message: {
+        message_id: 730,
+        date: 1761955200,
+        chat: { id: -100499680, type: "supergroup" },
+        from: { id: 104, first_name: actor },
+        forum_topic_created: {
+          name: created,
+          icon_color: color,
+          icon_custom_emoji_id: emoji,
+          is_name_implicit: true,
+        },
+      },
+    });
+    expect(made.status).toBe("event");
+    if (made.status !== "event") {
+      return;
+    }
+    expect(made.event.message?.topicNotice).toBe("created");
+    expect(made.event.message?.text).toBe(created);
+    const dumped = JSON.stringify(made.event);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(emoji);
+    expect(dumped).not.toContain(String(color));
+
+    const renamed = await normalize({
+      update_id: 4681,
+      message: {
+        message_id: 731,
+        date: 1761955200,
+        chat: { id: -100499681, type: "supergroup" },
+        from: { id: 104, first_name: actor },
+        forum_topic_edited: { name: edited, icon_custom_emoji_id: emoji },
+      },
+    });
+    expect(renamed.status).toBe("event");
+    if (renamed.status !== "event") {
+      return;
+    }
+    expect(renamed.event.message?.topicNotice).toBe("edited");
+    expect(renamed.event.message?.text).toBe(edited);
+    expect(JSON.stringify(renamed.event)).not.toContain(emoji);
+
+    const kept = await normalize({
+      update_id: 4682,
+      message: {
+        message_id: 732,
+        date: 1761955200,
+        chat: { id: -100499682, type: "supergroup" },
+        from: { id: 104, first_name: actor },
+        text: "今天站会",
+        forum_topic_created: { name: created, icon_color: color },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.topicNotice).toBe("created");
+    expect(JSON.stringify(kept.event)).not.toContain(created);
+
+    const both = await normalize({
+      update_id: 4683,
+      message: {
+        message_id: 733,
+        date: 1761955200,
+        chat: { id: -100499683, type: "supergroup" },
+        from: { id: 104 },
+        forum_topic_created: { name: created, icon_color: color },
+        forum_topic_edited: { name: edited },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.topicNotice).toBe("created");
+    expect(both.event.message?.text).toBe(created);
+
+    const blankCreated = await normalize({
+      update_id: 4684,
+      message: {
+        message_id: 734,
+        date: 1761955200,
+        chat: { id: -100499684, type: "supergroup" },
+        from: { id: 104 },
+        forum_topic_created: { name: "", icon_color: color },
+        forum_topic_edited: { name: edited },
+      },
+    });
+    expect(blankCreated.status).toBe("event");
+    if (blankCreated.status !== "event") {
+      return;
+    }
+    expect(blankCreated.event.message?.topicNotice).toBe("edited");
+    expect(blankCreated.event.message?.text).toBe(edited);
+
+    const iconOnly = await normalize({
+      update_id: 4685,
+      message: {
+        message_id: 735,
+        date: 1761955200,
+        chat: { id: -100499685, type: "supergroup" },
+        from: { id: 104 },
+        forum_topic_edited: { icon_custom_emoji_id: emoji },
+      },
+    });
+    expect(iconOnly.status).toBe("event");
+    if (iconOnly.status !== "event") {
+      return;
+    }
+    expect(iconOnly.event.message?.topicNotice).toBe("edited");
+    expect(iconOnly.event.message?.text).toBe("");
+    expect(JSON.stringify(iconOnly.event)).not.toContain(emoji);
+
+    const empty = await normalize({
+      update_id: 4686,
+      message: {
+        message_id: 736,
+        date: 1761955200,
+        chat: { id: -100499686, type: "supergroup" },
+        from: { id: 104 },
+        forum_topic_edited: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.topicNotice).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4687,
+      message: {
+        message_id: 737,
+        date: 1761955200,
+        chat: { id: -100499687, type: "supergroup" },
+        from: { id: 104 },
+        forum_topic_created: true,
+        forum_topic_edited: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.topicNotice).toBeUndefined();
+  });
+
   it("marks added checklist tasks and keeps the task text", async () => {
     const first = "新加的广告事项";
     const second = "另一条广告事项";
