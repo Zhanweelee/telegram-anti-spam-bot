@@ -200,6 +200,7 @@ export {
   fitAuditExportDocument,
   type GeneralNameTarget,
   type InviteLinkTarget,
+  type JoinBot,
   type JoinTarget,
   type MemberStanding,
   type MemberTagTarget,

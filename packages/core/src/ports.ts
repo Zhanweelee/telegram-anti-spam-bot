@@ -110,6 +110,11 @@ export interface ChatGuard {
   readonly linkedChatId: string | null;
 }
 
+export interface JoinBot {
+  readonly id: string | null;
+  readonly username: string | null;
+}
+
 export interface ChatStickerSetTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -421,6 +426,7 @@ export interface ModerationPort {
   readMember(target: BanTarget): Promise<MemberStanding>;
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
   readChatGuard(target: ChatTarget): Promise<ChatGuard>;
+  readJoinBot(target: ChatTarget): Promise<JoinBot>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   declinePost(target: SuggestedPostTarget): Promise<void>;

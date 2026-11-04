@@ -30,6 +30,7 @@ import {
   type DefaultChatPermissions,
   type DefaultRightsSnapshot,
   fitAuditExportDocument,
+  type JoinBot,
   type MemberStanding,
   type MenuButtonState,
   type MenuCommand,
@@ -140,6 +141,7 @@ const COMMAND_NAMES = [
   "who",
   "hook",
   "guard",
+  "joinbot",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -287,6 +289,7 @@ export interface OperatorCommandInput {
       | "readChatGuard"
       | "readCommandMenu"
       | "readDefaultRights"
+      | "readJoinBot"
       | "readMember"
       | "readMemberCount"
       | "readMenuButton"
@@ -537,6 +540,8 @@ async function dispatch(
       return showWebhook(input, args);
     case "guard":
       return showChatGuard(input, args);
+    case "joinbot":
+      return showJoinBot(input, args);
   }
 }
 
@@ -3805,6 +3810,79 @@ function rejectChatGuard(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "guard",
+  });
+}
+
+async function showJoinBot(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.joinbot.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readJoinBot;
+  if (!read) {
+    rejectJoinBot(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const bot = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isJoinBot(bot)) {
+      rejectJoinBot(input);
+      return say(input, "command.invalid");
+    }
+    return describeJoinBot(input, chatId, bot);
+  } catch {
+    rejectJoinBot(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isJoinBot(bot: JoinBot): boolean {
+  if (bot.id === null && bot.username === null) {
+    return true;
+  }
+  return (
+    bot.id !== null &&
+    bot.username !== null &&
+    isBotUserId(bot.id) &&
+    isBotUsername(bot.username)
+  );
+}
+
+function describeJoinBot(
+  input: OperatorCommandInput,
+  chatId: string,
+  bot: JoinBot,
+): string {
+  const id =
+    bot.id === null
+      ? say(input, "command.joinbot.id_unknown")
+      : say(input, "command.joinbot.id", { id: bot.id });
+  const username =
+    bot.username === null
+      ? say(input, "command.joinbot.username_unknown")
+      : bot.username.length === 0
+        ? say(input, "command.joinbot.username_empty")
+        : say(input, "command.joinbot.username", { username: bot.username });
+  return [say(input, "command.joinbot.header", { chatId }), id, username].join(
+    "\n",
+  );
+}
+
+function rejectJoinBot(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "joinbot",
   });
 }
 
