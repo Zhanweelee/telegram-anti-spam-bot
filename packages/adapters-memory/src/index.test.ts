@@ -241,6 +241,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("personal_unavailable");
   });
 
+  it("does not invent private-chat privacy", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readPrivatePrivacy({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("privacy_unavailable");
+  });
+
   it("does not invent a bot short description", async () => {
     const moderator = createMemoryModerator();
     await expect(

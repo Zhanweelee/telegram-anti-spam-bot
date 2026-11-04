@@ -17,6 +17,7 @@ import type {
   ParentChat,
   PermissionState,
   PersonalChat,
+  PrivatePrivacy,
   ReactionAllowlist,
   StickerSetRight,
   UnmuteResult,
@@ -447,6 +448,19 @@ export function createTelegramModerator(input: {
         },
       });
       return readPersonalChatValue(chat, target.chatId);
+    },
+    async readPrivatePrivacy(target) {
+      const chat = await postTelegram({
+        token: input.token,
+        method: "getChat",
+        fetchImpl: input.fetchImpl,
+        missing: "privacy_unavailable",
+        failed: "privacy_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+      return readPrivatePrivacyValue(chat, target.chatId);
     },
     async readAdministrators(target) {
       const chat = await postTelegram({
@@ -1346,6 +1360,47 @@ function readParentChatId(value: unknown): string | null {
     throw new Error("parent_failed");
   }
   return text;
+}
+
+function readPrivatePrivacyValue(
+  body: unknown,
+  chatId: string,
+): PrivatePrivacy {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("privacy_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("privacy_failed");
+  }
+  const record = result as Record<string, unknown>;
+  const id = record.id;
+  if (
+    typeof id !== "number" ||
+    !Number.isSafeInteger(id) ||
+    String(id) !== chatId
+  ) {
+    throw new Error("privacy_failed");
+  }
+  return {
+    privateForwards: readPrivacyFlag(record.has_private_forwards),
+    restrictedVoice: readPrivacyFlag(
+      record.has_restricted_voice_and_video_messages,
+    ),
+  };
+}
+
+function readPrivacyFlag(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "unknown";
+  }
+  if (value === true) {
+    return "on";
+  }
+  if (value === false) {
+    return "off";
+  }
+  throw new Error("privacy_failed");
 }
 
 function readStickerSetRightValue(

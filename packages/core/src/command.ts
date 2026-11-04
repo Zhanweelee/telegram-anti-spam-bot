@@ -41,6 +41,7 @@ import {
   type ParentChat,
   type PermissionState,
   type PersonalChat,
+  type PrivatePrivacy,
   type ReactionAllowlist,
   type StickerSetRight,
   type Storage,
@@ -152,6 +153,7 @@ const COMMAND_NAMES = [
   "canstickers",
   "parent",
   "personal",
+  "privacy",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -307,6 +309,7 @@ export interface OperatorCommandInput {
       | "readParentChat"
       | "readPermissions"
       | "readPersonalChat"
+      | "readPrivatePrivacy"
       | "readReactions"
       | "readStickerSetRight"
       | "readWebhook"
@@ -567,6 +570,8 @@ async function dispatch(
       return showParentChat(input, args);
     case "personal":
       return showPersonalChat(input, args);
+    case "privacy":
+      return showPrivatePrivacy(input, args);
   }
 }
 
@@ -4199,6 +4204,66 @@ function rejectPersonalChat(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "personal",
+  });
+}
+
+async function showPrivatePrivacy(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.privacy.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readPrivatePrivacy;
+  if (!read) {
+    rejectPrivatePrivacy(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const privacy = await read({ tenantId: input.event.tenantId, chatId });
+    if (!isPrivatePrivacy(privacy)) {
+      rejectPrivatePrivacy(input);
+      return say(input, "command.invalid");
+    }
+    return describePrivatePrivacy(input, chatId, privacy);
+  } catch {
+    rejectPrivatePrivacy(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isPrivatePrivacy(privacy: PrivatePrivacy): boolean {
+  return (
+    isPermissionState(privacy.privateForwards) &&
+    isPermissionState(privacy.restrictedVoice)
+  );
+}
+
+function describePrivatePrivacy(
+  input: OperatorCommandInput,
+  chatId: string,
+  privacy: PrivatePrivacy,
+): string {
+  return [
+    say(input, "command.privacy.header", { chatId }),
+    `${say(input, "command.privacy.forwards")} ${say(input, permissionStateKey(privacy.privateForwards))}`,
+    `${say(input, "command.privacy.voice")} ${say(input, permissionStateKey(privacy.restrictedVoice))}`,
+  ].join("\n");
+}
+
+function rejectPrivatePrivacy(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "privacy",
   });
 }
 

@@ -127,6 +127,11 @@ export interface PersonalChat {
   readonly id: string | null;
 }
 
+export interface PrivatePrivacy {
+  readonly privateForwards: PermissionState;
+  readonly restrictedVoice: PermissionState;
+}
+
 export interface StickerSetRight {
   readonly canSet: PermissionState;
 }
@@ -454,6 +459,7 @@ export interface ModerationPort {
   readStickerSetRight(target: ChatTarget): Promise<StickerSetRight>;
   readParentChat(target: ChatTarget): Promise<ParentChat>;
   readPersonalChat(target: ChatTarget): Promise<PersonalChat>;
+  readPrivatePrivacy(target: ChatTarget): Promise<PrivatePrivacy>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
   declinePost(target: SuggestedPostTarget): Promise<void>;

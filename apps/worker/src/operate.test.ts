@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(79);
+    expect(body.commands).toHaveLength(80);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2878,9 +2878,13 @@ describe("handleIncomingEvent", () => {
       command: "parent",
       description: "/parent <chatId>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "personal")).toEqual({
       command: "personal",
       description: "/personal <chatId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "privacy",
+      description: "/privacy <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -5761,6 +5765,163 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/personal -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads private-chat privacy and drops the name", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const invite = `https://t.me/+${phrase}`;
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "private",
+                first_name: phrase,
+                bio: phrase,
+                username: phrase,
+                invite_link: invite,
+                has_private_forwards: true,
+                has_restricted_voice_and_video_messages: false,
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "私密转发 on", "语音视频 off"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatPermissions");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
+    const unknown = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      {
+        ...unknown,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "private", first_name: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(unknown.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "私密转发 未知", "语音视频 未知"].join("\n"),
+    ]);
+    expect(JSON.stringify(unknown.reply.sent)).not.toContain(phrase);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                bio: phrase,
+                has_restricted_voice_and_video_messages: "yes",
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const wide = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      {
+        ...wide,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                first_name: phrase,
+                invite_link: invite,
+                has_private_forwards: true,
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(invite);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/privacy -100", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

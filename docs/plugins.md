@@ -185,6 +185,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/personal <chatId>` 调用 `readPersonalChat`。配了 token 时使用 `getChat`，只带 `chat_id`。回复写个人频道的编号。没有 `personal_chat` 写无。标题、用户名和姓名不进回复，也不进日志。类型不是四种群、编号不是安全整数或返回的群号和请求不一致时整份回复是「参数无效」。配置里的管理员可以看任意群。接入目录里的人只能看自己的群。没有 token 时不编一个编号。不调用 `setChatTitle`。见 ADR 0427。
 
+`/privacy <chatId>` 调用 `readPrivatePrivacy`。配了 token 时使用 `getChat`，只带 `chat_id`。回复写私密转发和语音视频限制。缺字段写未知。名字、简介和邀请链接不进回复，也不进日志。不是布尔值或返回的群号和请求不一致时整份回复是「参数无效」。配置里的管理员可以看任意群。接入目录里的人只能看自己的群。没有 token 时不编一份开关。不调用 `setChatPermissions`。见 ADR 0428。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

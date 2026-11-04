@@ -220,6 +220,7 @@ export {
   type PermissionState,
   type PersonalChat,
   type PinnedMessageTarget,
+  type PrivatePrivacy,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
