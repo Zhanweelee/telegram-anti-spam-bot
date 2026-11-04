@@ -157,6 +157,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> bare_location on` 删这个群里只有坐标的位置消息。默认关闭。带标题的场馆消息仍留下。见 ADR 0473。
 
+`/rule <chatId> giveaway_card on` 删这个群里的抽奖卡片和结束公告。默认关闭。投票仍留下。见 ADR 0474。
+
 ## 确认
 
 ```sh

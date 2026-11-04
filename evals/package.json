@@ -20,6 +20,7 @@
     "@tasb/detector-sender": "workspace:*",
     "@tasb/detector-story": "workspace:*",
     "@tasb/detector-location": "workspace:*",
+    "@tasb/detector-giveaway": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/detector-bot": "workspace:*",
     "@tasb/detector-contact": "workspace:*",

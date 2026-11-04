@@ -4353,6 +4353,192 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("南京东路");
   });
 
+  it("keeps a giveaway card until that chat asks", async () => {
+    const title = "抽奖频道";
+    const username = "giveawayposter441";
+    const channelId = -100777441;
+    const winnerCount = 90177;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      giveaway?: boolean;
+      winners?: boolean;
+      poll?: boolean;
+      paid?: boolean;
+      text?: string;
+    }) {
+      const channel = {
+        id: channelId,
+        type: "channel",
+        title,
+        username,
+      };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 90 },
+            ...(input.text ? { text: input.text } : {}),
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.giveaway
+              ? {
+                  giveaway: {
+                    chats: [channel],
+                    winners_selection_date: 1700000001,
+                    winner_count: winnerCount,
+                  },
+                }
+              : {}),
+            ...(input.winners
+              ? {
+                  giveaway_winners: {
+                    chat: { ...channel, title: "结束频道" },
+                    winners_selection_date: 1700000001,
+                    winner_count: winnerCount,
+                    winners: [{ id: 991441, first_name: "中奖的人" }],
+                  },
+                }
+              : {}),
+            ...(input.poll
+              ? {
+                  poll: {
+                    id: "poll441",
+                    question: "今天站会",
+                    options: [{ text: title }],
+                    total_voter_count: 1,
+                    is_closed: false,
+                    is_anonymous: true,
+                    type: "regular",
+                    allows_multiple_answers: false,
+                  },
+                }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7200,
+      chatId: -100740,
+      giveaway: true,
+    });
+    expect(idle.message?.asGiveaway).toBe(true);
+    expect(idle.message?.text).toBe("");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(title);
+    expect(idleDump).not.toContain(username);
+    expect(idleDump).not.toContain(String(channelId));
+    expect(idleDump).not.toContain(String(winnerCount));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "giveaway_card",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["giveaway_card"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7201, chatId: -100741, giveaway: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("giveaway_card");
+    expect(removed.decision.ruleIds).toContain("giveaway_card");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "giveaway:card" },
+    ]);
+    const finished = await screenTelegramEvent(
+      await posted({ updateId: 7202, chatId: -100742, winners: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(finished.decision.action).toBe("delete");
+    expect(finished.decision.evidence).toEqual([
+      { kind: "feature", summary: "giveaway:card" },
+    ]);
+    const poll = await screenTelegramEvent(
+      await posted({ updateId: 7203, chatId: -100743, poll: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(poll.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7204,
+        chatId: -100744,
+        giveaway: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      finished: finished.decision,
+      poll: poll.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain(String(channelId));
+    expect(dumped).not.toContain(String(winnerCount));
+    expect(dumped).not.toContain("结束频道");
+    expect(dumped).not.toContain("中奖的人");
+    expect(dumped).not.toContain("991441");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

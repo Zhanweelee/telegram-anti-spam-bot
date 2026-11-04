@@ -16487,6 +16487,157 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(invite.event)).not.toContain(code);
   });
 
+  it("marks a giveaway card and leaves the channel out", async () => {
+    const title = "抽奖频道";
+    const username = "giveawayposter441";
+    const channelId = -100777441;
+    const winnerCount = 90177;
+    const selectionDate = 1700000001;
+    const posted = await normalize({
+      update_id: 4970,
+      message: {
+        message_id: 50,
+        date: 1761955200,
+        chat: { id: -100730, type: "supergroup" },
+        from: { id: 90 },
+        giveaway: {
+          chats: [{ id: channelId, type: "channel", title, username }],
+          winners_selection_date: selectionDate,
+          winner_count: winnerCount,
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.asGiveaway).toBe(true);
+    expect(posted.event.message?.text).toBe("");
+    expect(posted.event.message?.hosts).toBeUndefined();
+    expect(posted.event.actor).toEqual({ id: "90", isAdmin: false });
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain(String(channelId));
+    expect(dumped).not.toContain(String(winnerCount));
+    expect(dumped).not.toContain(String(selectionDate));
+
+    const prize = await normalize({
+      update_id: 4971,
+      message: {
+        message_id: 51,
+        date: 1761955200,
+        chat: { id: -100731, type: "supergroup" },
+        from: { id: 91 },
+        text: "今天站会",
+        giveaway: {
+          chats: [{ id: channelId, type: "channel", title }],
+          winners_selection_date: selectionDate,
+          winner_count: winnerCount,
+          prize_description: "请免费领取礼品",
+        },
+      },
+    });
+    expect(prize.status).toBe("event");
+    if (prize.status !== "event") {
+      return;
+    }
+    expect(prize.event.message?.asGiveaway).toBe(true);
+    expect(prize.event.message?.text).toBe("今天站会");
+    const prizeDump = JSON.stringify(prize.event);
+    expect(prizeDump).not.toContain(title);
+    expect(prizeDump).not.toContain("请免费领取礼品");
+
+    const finished = await normalize({
+      update_id: 4972,
+      message: {
+        message_id: 52,
+        date: 1761955200,
+        chat: { id: -100732, type: "supergroup" },
+        from: { id: 92 },
+        giveaway_winners: {
+          chat: { id: channelId, type: "channel", title: "结束频道" },
+          winners_selection_date: selectionDate,
+          winner_count: 90178,
+          winners: [{ id: 991441, first_name: "中奖的人" }],
+        },
+      },
+    });
+    expect(finished.status).toBe("event");
+    if (finished.status !== "event") {
+      return;
+    }
+    expect(finished.event.message?.asGiveaway).toBe(true);
+    expect(finished.event.message?.text).toBe("");
+    const finishedDump = JSON.stringify(finished.event);
+    expect(finishedDump).not.toContain("结束频道");
+    expect(finishedDump).not.toContain("中奖的人");
+    expect(finishedDump).not.toContain("991441");
+    expect(finishedDump).not.toContain("90178");
+
+    const empty = await normalize({
+      update_id: 4973,
+      message: {
+        message_id: 53,
+        date: 1761955200,
+        chat: { id: -100733, type: "supergroup" },
+        from: { id: 93 },
+        text: "今天站会",
+        giveaway: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asGiveaway).toBeUndefined();
+
+    const blankChats = await normalize({
+      update_id: 4974,
+      message: {
+        message_id: 54,
+        date: 1761955200,
+        chat: { id: -100734, type: "supergroup" },
+        from: { id: 94 },
+        text: "今天站会",
+        giveaway: { chats: [], winner_count: winnerCount },
+      },
+    });
+    expect(blankChats.status).toBe("event");
+    if (blankChats.status !== "event") {
+      return;
+    }
+    expect(blankChats.event.message?.asGiveaway).toBeUndefined();
+    expect(JSON.stringify(blankChats.event)).not.toContain(String(winnerCount));
+
+    const poll = await normalize({
+      update_id: 4975,
+      message: {
+        message_id: 55,
+        date: 1761955200,
+        chat: { id: -100735, type: "supergroup" },
+        from: { id: 95 },
+        poll: {
+          id: "poll441",
+          question: "今天站会",
+          options: [{ text: title }],
+          total_voter_count: winnerCount,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(poll.status).toBe("event");
+    if (poll.status !== "event") {
+      return;
+    }
+    expect(poll.event.message?.asGiveaway).toBeUndefined();
+    expect(poll.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(poll.event)).not.toContain(title);
+  });
+
   it("hashes a caption-less rich photo and leaves the file id out", async () => {
     const fileId = "SECRETFILE92";
     const uniqueId = "RICHPHOTO92";

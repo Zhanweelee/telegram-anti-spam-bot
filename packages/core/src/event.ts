@@ -89,6 +89,8 @@ export const messageSchema = z
     asStory: z.literal(true).optional(),
     /** Bare location pin. Coordinates stay out. */
     asLocation: z.literal(true).optional(),
+    /** Giveaway card. Channel names, ids, and winner names stay out. */
+    asGiveaway: z.literal(true).optional(),
   })
   .refine(
     (message) =>
