@@ -146,7 +146,7 @@ function decoyHint(update: unknown): string | undefined {
   }
   const data = update.callback_query.data;
   if (typeof data === "string" && /^n:[a-f0-9]{16}$/.test(data)) {
-    return captchaDecoyHint;
+    return captchaDecoyHint(data.slice(2));
   }
   return undefined;
 }

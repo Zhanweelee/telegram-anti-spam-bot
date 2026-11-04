@@ -213,7 +213,7 @@ describe("handleTelegramWebhook", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true, ignored: true });
     expect(calls).toBe(0);
-    expect(payload).toContain("请点「我不是机器人」。");
+    expect(payload).toContain("请点「1」。");
     expect(payload).not.toContain(nonce);
     expect(payload).not.toContain(leaked);
     expect(payload).not.toContain("show_alert");
@@ -225,7 +225,7 @@ describe("handleTelegramWebhook", () => {
   it("keeps other captcha callbacks free of the decoy hint", async () => {
     const token = "bot-token";
     const nonce = "0123456789abcdef";
-    const hint = "请点「我不是机器人」。";
+    const hint = "请点「1」。";
     const payloads: string[] = [];
     const fetchImpl: typeof fetch = async (_input, init) => {
       payloads.push(String(init?.body ?? ""));

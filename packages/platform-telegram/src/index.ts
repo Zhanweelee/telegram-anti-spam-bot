@@ -7,7 +7,9 @@
 export { sha256Hex } from "./hash.js";
 export {
   answerCallbackQuery,
+  captchaDecoyHint,
   captchaPrompt,
+  captchaQuiz,
   createTelegramModerator,
   sendCaptchaButton,
 } from "./moderate.js";

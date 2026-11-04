@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  captchaPrompt,
+  captchaQuiz,
   createTelegramModerator,
   sendCaptchaButton,
 } from "./moderate.js";
@@ -4817,14 +4817,22 @@ describe("telegram captcha transport", () => {
       }),
     ).toBeNull();
     const sent = bodies[0] ?? "";
-    expect(sent).toContain(captchaPrompt);
-    expect(sent).toContain("请点「我不是机器人」。点「我是机器人」不会通过。");
+    const quiz = captchaQuiz("0123456789abcdef");
+    expect(quiz).toEqual({
+      prompt: "请点「1」。点「4」不会通过。",
+      hint: "请点「1」。",
+      passLabel: "1",
+      decoyLabel: "4",
+    });
+    expect(sent).toContain(quiz.prompt);
     const decoyAt = sent.indexOf("n:0123456789abcdef");
     const passAt = sent.indexOf("c:0123456789abcdef");
     expect(decoyAt).toBeGreaterThanOrEqual(0);
     expect(passAt).toBeGreaterThan(decoyAt);
-    expect(sent).toContain("我是机器人");
-    expect(sent).toContain("我不是机器人");
+    expect(sent).toContain(`"text":"${quiz.decoyLabel}"`);
+    expect(sent).toContain(`"text":"${quiz.passLabel}"`);
+    expect(sent).not.toContain("我不是机器人");
+    expect(sent).not.toContain("0123456789abcdef0123456789abcdef");
     expect(sent).toContain('"disable_notification":true');
     const moderator = createTelegramModerator({ token, fetchImpl });
     await moderator.releaseActor({
@@ -4839,6 +4847,22 @@ describe("telegram captcha transport", () => {
     expect(bodies[1]).toContain('"can_react_to_messages":true');
     expect(bodies[1]).toContain('"can_edit_tag":true');
     expect(bodies[1]).not.toContain("until_date");
+  });
+
+  it("keeps the decoy different for every nonce prefix", () => {
+    const digits = "0123456789abcdef";
+    for (const left of digits) {
+      for (const right of digits) {
+        for (const third of digits) {
+          const prefix = `${left}${right}${third}`;
+          const sample = captchaQuiz(`${prefix}${"0".repeat(13)}`);
+          expect(sample.decoyLabel).not.toBe(sample.passLabel);
+          expect(sample.hint).toBe(`请点「${sample.passLabel}」。`);
+          expect(sample.hint).not.toContain(prefix);
+          expect(sample.prompt).not.toContain(prefix);
+        }
+      }
+    }
   });
 
   it("reads the captcha button id from the send response", async () => {
