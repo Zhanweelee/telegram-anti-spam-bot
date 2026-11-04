@@ -7,6 +7,7 @@ import type { Cache } from "./cache.js";
 import { beginChallenge, type CaptchaStore } from "./captcha.js";
 import type { ChatDirectory } from "./chats.js";
 import type { Clock } from "./clock.js";
+import { punitiveActions } from "./decision.js";
 import type { Event } from "./event.js";
 import { fitFeedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
@@ -76,7 +77,11 @@ import {
   type RuleSource,
   resolveRuleSet,
 } from "./rules-load.js";
-import type { RuleSwitch, RuntimeStore } from "./runtime.js";
+import type {
+  RuleActionOverride,
+  RuleSwitch,
+  RuntimeStore,
+} from "./runtime.js";
 import {
   normalizeWarnLimit,
   WARN_LIMIT,
@@ -739,6 +744,10 @@ async function showRules(
   if (!switches) {
     return say(input, "command.invalid");
   }
+  const actions = await readRuleActions(input, chatId);
+  if (!actions) {
+    return say(input, "command.invalid");
+  }
   const pack = await commandPack(input, chatId);
   if (pack === "failed") {
     return say(input, "command.invalid");
@@ -750,6 +759,7 @@ async function showRules(
     source: input.source,
     logger: input.logger,
     switches,
+    actions,
     ...(pack ? { pack } : {}),
   });
   const mark = await quotaRuleMark(input, chatId, rules);
@@ -5724,17 +5734,16 @@ async function editRule(
     return say(input, "command.invalid");
   }
   const mode = parsed.mode;
-  if (
-    mode !== undefined &&
-    mode !== "on" &&
-    mode !== "off" &&
-    mode !== "reset"
-  ) {
+  if (mode !== undefined && !isRuleMode(mode)) {
     return say(input, "command.rule.usage");
   }
   const tenantId = input.event.tenantId;
   const switches = await readRuleSwitches(input, parsed.chatId);
   if (!switches) {
+    return say(input, "command.invalid");
+  }
+  const actions = await readRuleActions(input, parsed.chatId);
+  if (!actions) {
     return say(input, "command.invalid");
   }
   const rules = await loadRuleSet({
@@ -5744,6 +5753,7 @@ async function editRule(
     source: input.source,
     logger: input.logger,
     switches,
+    actions,
   });
   if (!rules.rules.some((rule) => rule.id === parsed.ruleId)) {
     return say(input, "command.rule.missing", { id: parsed.ruleId });
@@ -5771,8 +5781,47 @@ async function editRule(
     if (!cleared) {
       return say(input, "command.invalid");
     }
+  } else if (mode === "file") {
+    const cleared = await removeRuleAction(input, parsed.chatId, parsed.ruleId);
+    if (!cleared) {
+      return say(input, "command.invalid");
+    }
+  } else if (mode !== undefined && isPunitiveRuleAction(mode)) {
+    const saved = await writeRuleAction(
+      input,
+      parsed.chatId,
+      parsed.ruleId,
+      mode,
+    );
+    if (saved === "invalid") {
+      return say(input, "command.invalid");
+    }
+    if (saved === "full") {
+      input.logger.warn("rule_action_full", {
+        eventId: input.event.id,
+        chatId: parsed.chatId,
+        command: "rule",
+      });
+      return say(input, "command.invalid");
+    }
   }
   return formatRule(input, parsed.chatId, parsed.ruleId);
+}
+
+function isRuleMode(mode: string): boolean {
+  return (
+    mode === "on" ||
+    mode === "off" ||
+    mode === "reset" ||
+    mode === "file" ||
+    isPunitiveRuleAction(mode)
+  );
+}
+
+function isPunitiveRuleAction(
+  mode: string,
+): mode is RuleActionOverride["action"] {
+  return (punitiveActions as readonly string[]).includes(mode);
 }
 
 function parseRuleArgs(
@@ -5856,6 +5905,52 @@ async function removeRuleSwitch(
   }
 }
 
+async function readRuleActions(
+  input: OperatorCommandInput,
+  chatId: string,
+): Promise<readonly RuleActionOverride[] | null> {
+  try {
+    return await input.runtime.listRuleActions(input.event.tenantId, chatId);
+  } catch {
+    rejectRule(input);
+    return null;
+  }
+}
+
+async function writeRuleAction(
+  input: OperatorCommandInput,
+  chatId: string,
+  ruleId: string,
+  action: RuleActionOverride["action"],
+): Promise<"ok" | "full" | "invalid"> {
+  try {
+    const saved = await input.runtime.setRuleAction(
+      input.event.tenantId,
+      chatId,
+      ruleId,
+      action,
+    );
+    return saved ? "ok" : "full";
+  } catch {
+    rejectRule(input);
+    return "invalid";
+  }
+}
+
+async function removeRuleAction(
+  input: OperatorCommandInput,
+  chatId: string,
+  ruleId: string,
+): Promise<boolean> {
+  try {
+    await input.runtime.clearRuleAction(input.event.tenantId, chatId, ruleId);
+    return true;
+  } catch {
+    rejectRule(input);
+    return false;
+  }
+}
+
 async function formatRule(
   input: OperatorCommandInput,
   chatId: string,
@@ -5865,6 +5960,10 @@ async function formatRule(
   if (!switches) {
     return say(input, "command.invalid");
   }
+  const actions = await readRuleActions(input, chatId);
+  if (!actions) {
+    return say(input, "command.invalid");
+  }
   const rules = await loadRuleSet({
     tenantId: input.event.tenantId,
     chatId,
@@ -5872,6 +5971,7 @@ async function formatRule(
     source: input.source,
     logger: input.logger,
     switches,
+    actions,
   });
   const rule = rules.rules.find((item) => item.id === ruleId);
   if (!rule) {
@@ -5886,6 +5986,7 @@ async function formatRule(
       rule.enabled ? "command.rules.enabled" : "command.rules.disabled",
     ),
     source: say(input, override ? "command.rule.switch" : "command.rule.file"),
+    actions: rule.actions.join(","),
   });
 }
 

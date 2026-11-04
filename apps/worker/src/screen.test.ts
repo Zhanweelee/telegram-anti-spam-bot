@@ -538,6 +538,59 @@ describe("screenTelegramEvent", () => {
     expect(logged).not.toContain('"text"');
   });
 
+  it("uses one private rule action and keeps the file action for other chats", async () => {
+    const text = "请免费领取礼品";
+    const runtime = createMemoryRuntimeStore();
+    let overridden = true;
+    const screened = {
+      ...runtime,
+      async listRuleActions(_tenantId: string, chatId: string) {
+        if (!overridden || chatId !== "-100") {
+          return [];
+        }
+        return [{ ruleId: "spam_keywords", action: "warn" as const }];
+      },
+    };
+    const warnedLog = createMemoryLogger();
+    const warned = await screenTelegramEvent(await event(text), {
+      logger: warnedLog,
+      runtime: screened,
+      storage: createMemoryStorage(),
+      warnStore: createMemoryWarnStore(),
+    });
+    expect(warned.decision.action).toBe("warn");
+    expect(JSON.stringify(warnedLog.entries)).not.toContain(text);
+    overridden = false;
+    const restored = await screenTelegramEvent(
+      await event(text, false, "-100"),
+      {
+        runtime: screened,
+        storage: createMemoryStorage(),
+        cache: createMemoryCache(),
+      },
+    );
+    expect(restored.decision.action).toBe("delete");
+    const other = await screenTelegramEvent(await event(text, false, "-200"), {
+      runtime: screened,
+      storage: createMemoryStorage(),
+    });
+    expect(other.decision.action).toBe("delete");
+    const brokenLog = createMemoryLogger();
+    const broken = await screenTelegramEvent(await event(text, false, "-300"), {
+      logger: brokenLog,
+      storage: createMemoryStorage(),
+      runtime: {
+        ...runtime,
+        async listRuleActions() {
+          throw new Error(text);
+        },
+      },
+    });
+    expect(broken.decision.action).toBe("delete");
+    expect(JSON.stringify(brokenLog.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(brokenLog.entries)).not.toContain(text);
+  });
+
   it("runs mute and ban from chat rules without deleting", async () => {
     const text = "请免费领取礼品";
     const cache = createMemoryCache();

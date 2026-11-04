@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { punitiveActions } from "./decision.js";
 
 /** One chat can override at most this many rule ids. */
 export const MAX_RULE_SWITCHES = 32;
@@ -38,6 +39,35 @@ export const runtimeDocumentSchema = z
 
 export type RuntimeDocument = z.output<typeof runtimeDocumentSchema>;
 
+/** One rule's single punitive action for a single chat. Unknown ids are ignored later. */
+export const ruleActionSchema = z.strictObject({
+  ruleId: ruleIdSchema,
+  action: z.enum(punitiveActions),
+});
+
+export type RuleActionOverride = z.output<typeof ruleActionSchema>;
+
+/** Separate from the runtime document so an old worker can still read switches. */
+export const ruleActionDocumentSchema = z
+  .strictObject({
+    actions: z.array(ruleActionSchema).max(MAX_RULE_SWITCHES),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+    for (const item of value.actions) {
+      if (seen.has(item.ruleId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "duplicate_rule_id",
+          path: ["actions"],
+        });
+      }
+      seen.add(item.ruleId);
+    }
+  });
+
+export type RuleActionDocument = z.output<typeof ruleActionDocumentSchema>;
+
 /** Per-chat switches that are not prefilter policy and not rules. */
 export interface RuntimeStore {
   getDryRun(tenantId: string, chatId: string): Promise<boolean>;
@@ -57,6 +87,25 @@ export interface RuntimeStore {
     enabled: boolean,
   ): Promise<boolean>;
   clearRuleSwitch(
+    tenantId: string,
+    chatId: string,
+    ruleId: string,
+  ): Promise<void>;
+  listRuleActions(
+    tenantId: string,
+    chatId: string,
+  ): Promise<readonly RuleActionOverride[]>;
+  /**
+   * Returns false when a new chat or a new rule id would exceed the cap.
+   * Updating an id that is already stored still succeeds.
+   */
+  setRuleAction(
+    tenantId: string,
+    chatId: string,
+    ruleId: string,
+    action: RuleActionOverride["action"],
+  ): Promise<boolean>;
+  clearRuleAction(
     tenantId: string,
     chatId: string,
     ruleId: string,

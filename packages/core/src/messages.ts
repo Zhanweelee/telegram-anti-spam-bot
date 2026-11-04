@@ -363,7 +363,7 @@ export type MessageKey = (typeof messageKeys)[number];
 const syntax = [
   "/help",
   "/rules [chatId]",
-  "/rule [chatId] <ruleId> [on|off|reset]",
+  "/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
   "/whitelist <chatId>",
   "/whitelist <chatId> add <actorId>",
   "/whitelist <chatId> remove <actorId>",
@@ -489,8 +489,10 @@ const zh = {
   "command.rules.until": "{status} until {resetsAt}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
-  "command.rule.usage": "用法：/rule [chatId] <ruleId> [on|off|reset]",
-  "command.rule.status": "rule {chatId} {ruleId} {state} {source}",
+  "command.rule.usage":
+    "用法：/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
+  "command.rule.status":
+    "rule {chatId} {ruleId} {state} {source} actions {actions}",
   "command.rule.missing": "rule {id} missing",
   "command.rule.file": "file",
   "command.rule.switch": "switch",
@@ -894,8 +896,10 @@ const en = {
   "command.rules.until": "{status} until {resetsAt}",
   "command.rules.enabled": "enabled",
   "command.rules.disabled": "disabled",
-  "command.rule.usage": "Usage: /rule [chatId] <ruleId> [on|off|reset]",
-  "command.rule.status": "rule {chatId} {ruleId} {state} {source}",
+  "command.rule.usage":
+    "Usage: /rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
+  "command.rule.status":
+    "rule {chatId} {ruleId} {state} {source} actions {actions}",
   "command.rule.missing": "rule {id} missing",
   "command.rule.file": "file",
   "command.rule.switch": "switch",

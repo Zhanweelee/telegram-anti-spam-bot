@@ -309,6 +309,7 @@ export {
   ruleSubscriptionDocumentSchema,
 } from "./rule-pack.js";
 export {
+  applyRuleActions,
   applyRuleSwitches,
   DEFAULT_RULE_CACHE_TTL_SECONDS,
   type LoadRuleSetInput,
@@ -320,9 +321,13 @@ export {
 } from "./rules-load.js";
 export {
   MAX_RULE_SWITCHES,
+  type RuleActionDocument,
+  type RuleActionOverride,
   type RuleSwitch,
   type RuntimeDocument,
   type RuntimeStore,
+  ruleActionDocumentSchema,
+  ruleActionSchema,
   ruleSwitchSchema,
   runtimeDocumentSchema,
 } from "./runtime.js";

@@ -44,6 +44,7 @@ import {
   type RenamedTopicTarget,
   type ReplyMessage,
   type ReplyPort,
+  type RuleActionOverride,
   type RuleSet,
   type RuntimeStore,
   type SenderChatTarget,
@@ -820,6 +821,7 @@ const MAX_SWITCH_CHATS = 256;
 export function createMemoryRuntimeStore(): RuntimeStore {
   const dryRun = new Set<string>();
   const switches = new Map<string, Map<string, boolean>>();
+  const actions = new Map<string, Map<string, RuleActionOverride["action"]>>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -867,6 +869,43 @@ export function createMemoryRuntimeStore(): RuntimeStore {
       saved.delete(ruleId);
       if (saved.size === 0) {
         switches.delete(id);
+      }
+    },
+    async listRuleActions(tenantId, chatId) {
+      const saved = actions.get(key(tenantId, chatId));
+      if (!saved) {
+        return [];
+      }
+      return [...saved.entries()].map(([ruleId, action]) => ({
+        ruleId,
+        action,
+      }));
+    },
+    async setRuleAction(tenantId, chatId, ruleId, action) {
+      const id = key(tenantId, chatId);
+      let saved = actions.get(id);
+      if (!saved) {
+        if (actions.size >= MAX_SWITCH_CHATS) {
+          return false;
+        }
+        saved = new Map();
+        actions.set(id, saved);
+      }
+      if (!saved.has(ruleId) && saved.size >= MAX_RULE_SWITCHES) {
+        return false;
+      }
+      saved.set(ruleId, action);
+      return true;
+    },
+    async clearRuleAction(tenantId, chatId, ruleId) {
+      const id = key(tenantId, chatId);
+      const saved = actions.get(id);
+      if (!saved) {
+        return;
+      }
+      saved.delete(ruleId);
+      if (saved.size === 0) {
+        actions.delete(id);
       }
     },
   };

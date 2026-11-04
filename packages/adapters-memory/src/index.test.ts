@@ -162,6 +162,76 @@ describe("memory adapter", () => {
     ).toBe(true);
   });
 
+  it("keeps rule actions apart from switches", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.listRuleActions("tenant_a", "chat_1")).toEqual([]);
+    expect(
+      await runtime.setRuleAction(
+        "tenant_a",
+        "chat_1",
+        "spam_keywords",
+        "warn",
+      ),
+    ).toBe(true);
+    expect(await runtime.listRuleActions("tenant_a", "chat_1")).toEqual([
+      { ruleId: "spam_keywords", action: "warn" },
+    ]);
+    expect(await runtime.listRuleSwitches("tenant_a", "chat_1")).toEqual([]);
+    expect(await runtime.listRuleActions("tenant_a", "chat_2")).toEqual([]);
+    expect(
+      await runtime.setRuleAction(
+        "tenant_a",
+        "chat_1",
+        "spam_keywords",
+        "mute",
+      ),
+    ).toBe(true);
+    await runtime.clearRuleAction("tenant_a", "chat_1", "spam_keywords");
+    expect(await runtime.listRuleActions("tenant_a", "chat_1")).toEqual([]);
+    for (let index = 0; index < 32; index += 1) {
+      expect(
+        await runtime.setRuleSwitch("tenant_a", "full", `rule_${index}`, true),
+      ).toBe(true);
+      expect(
+        await runtime.setRuleAction(
+          "tenant_a",
+          "actions",
+          `rule_${index}`,
+          "log",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setRuleAction("tenant_a", "actions", "rule_extra", "ban"),
+    ).toBe(false);
+    expect(
+      await runtime.setRuleAction("tenant_a", "actions", "rule_0", "report"),
+    ).toBe(true);
+    expect(await runtime.listRuleActions("tenant_a", "actions")).toHaveLength(
+      32,
+    );
+    expect(await runtime.listRuleSwitches("tenant_a", "full")).toHaveLength(32);
+    for (let index = 0; index < 255; index += 1) {
+      expect(
+        await runtime.setRuleAction(
+          "tenant_a",
+          `act_${index}`,
+          "links",
+          "delete",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      await runtime.setRuleAction("tenant_a", "overflow", "links", "delete"),
+    ).toBe(false);
+    for (let index = 0; index < 32; index += 1) {
+      await runtime.clearRuleAction("tenant_a", "actions", `rule_${index}`);
+    }
+    expect(
+      await runtime.setRuleAction("tenant_a", "overflow", "links", "captcha"),
+    ).toBe(true);
+  });
+
   it("drops the oldest audits past the cap", async () => {
     const storage = createMemoryStorage({ maxAudits: 2 });
     for (const eventId of ["evt_1", "evt_2", "evt_3"]) {

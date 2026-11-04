@@ -7,6 +7,7 @@ import {
   type RulePackSource,
 } from "./rule-pack.js";
 import {
+  applyRuleActions,
   applyRuleSwitches,
   type LoadRuleSetInput,
   loadRuleSet,
@@ -448,6 +449,58 @@ describe("applyRuleSwitches", () => {
       },
     });
     expect(opened.rules[0]?.enabled).toBe(true);
+  });
+
+  it("replaces a rule action after the cached ruleset", async () => {
+    const cached = memoryCache();
+    const rules = source();
+    const first = await loadRuleSet(input(cached, rules));
+    expect(first.rules[0]?.actions).toEqual(["delete"]);
+    const reads = rules.calls;
+    const replaced = await loadRuleSet({
+      ...input(cached, rules),
+      switches: [{ ruleId: "spam_keywords", enabled: false }],
+      actions: [{ ruleId: "spam_keywords", action: "warn" }],
+    });
+    expect(rules.calls).toBe(reads);
+    expect(replaced.rules[0]?.enabled).toBe(false);
+    expect(replaced.rules[0]?.actions).toEqual(["warn"]);
+    expect(cached.values.get("rules:local:chat_1")).toContain(
+      '"actions":["delete"]',
+    );
+    expect(first.rules[0]?.actions).toEqual(["delete"]);
+    const packed = await resolveRuleSet({
+      ...input(cached, rules),
+      actions: [{ ruleId: "via_inline", action: "mute" }],
+      pack: {
+        id: "community",
+        source: countingPacks({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "via_inline",
+              enabled: true,
+              detectorIds: ["via"],
+              threshold: 1,
+              actions: ["delete", "report"],
+            },
+          ],
+        }),
+        archive: createMemoryRulePackArchive(),
+      },
+    });
+    expect(packed.rules[0]?.actions).toEqual(["mute"]);
+    const kept = await loadRuleSet({
+      ...input(memoryCache(), rules),
+      actions: [{ ruleId: "missing", action: "ban" }],
+    });
+    expect(kept.rules[0]?.actions).toEqual(["delete"]);
+    expect(kept).toEqual(first);
+    const same = applyRuleActions(first, [
+      { ruleId: "spam_keywords", action: "delete" },
+    ]);
+    expect(same).toBe(first);
   });
 });
 
