@@ -518,6 +518,18 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async leaveChat(target) {
+      await postTelegram({
+        token: input.token,
+        method: "leaveChat",
+        fetchImpl: input.fetchImpl,
+        missing: "leave_unavailable",
+        failed: "leave_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+        },
+      });
+    },
   };
 }
 

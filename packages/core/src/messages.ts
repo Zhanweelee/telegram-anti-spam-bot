@@ -173,6 +173,8 @@ export const messageKeys = [
   "command.unreact.done",
   "command.delphoto.usage",
   "command.delphoto.done",
+  "command.leave.usage",
+  "command.leave.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -234,6 +236,7 @@ const syntax = [
   "/unpinmsg <chatId> <messageId>",
   "/unreact <chatId> <messageId> <actorId>",
   "/delphoto <chatId>",
+  "/leave <chatId>",
 ].join("\n");
 
 const zh = {
@@ -431,6 +434,9 @@ const zh = {
     "已请求撤下 {actorId} 在 {chatId} 消息 {messageId} 上的反应。别人的反应还在。其它消息上的反应还在。",
   "command.delphoto.usage": "用法：/delphoto <chatId>",
   "command.delphoto.done": "已请求删除 {chatId} 的头像。标题和简介还在。",
+  "command.leave.usage": "用法：/leave <chatId>",
+  "command.leave.done":
+    "已请求退出 {chatId}。之后这个 bot 不再处理它。消息还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -641,6 +647,9 @@ const en = {
   "command.delphoto.usage": "Usage: /delphoto <chatId>",
   "command.delphoto.done":
     "Asked to delete the photo of {chatId}. The title and description stay.",
+  "command.leave.usage": "Usage: /leave <chatId>",
+  "command.leave.done":
+    "Asked to leave {chatId}. This bot stops handling it. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

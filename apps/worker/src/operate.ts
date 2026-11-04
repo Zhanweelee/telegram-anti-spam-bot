@@ -100,6 +100,9 @@ function commandModerator(
     async deletePhoto() {
       throw new Error("delphoto_unavailable");
     },
+    async leaveChat() {
+      throw new Error("leave_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },
