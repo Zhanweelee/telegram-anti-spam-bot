@@ -5008,6 +5008,161 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(String(communityId));
   });
 
+  it("keeps a shared chat until that chat asks", async () => {
+    const title = "分享广告标题";
+    const requestId = 446446001;
+    const sharedId = -100777446;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      shared?: boolean;
+      users?: boolean;
+      empty?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.shared
+              ? {
+                  chat_shared: {
+                    request_id: requestId,
+                    chat_id: sharedId,
+                    title,
+                    username: "shareposter446",
+                  },
+                }
+              : {}),
+            ...(input.users
+              ? {
+                  users_shared: {
+                    request_id: requestId,
+                    users: [{ user_id: 991446, first_name: "干净名字" }],
+                  },
+                }
+              : {}),
+            ...(input.empty ? { chat_shared: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7600,
+      chatId: -100790,
+      shared: true,
+    });
+    expect(idle.message?.asSharedChat).toBe(true);
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain("100777446");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "shared_chat",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["shared_chat"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7601, chatId: -100791, shared: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("shared_chat");
+    expect(removed.decision.ruleIds).toContain("shared_chat");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "chat:shared" },
+    ]);
+    const users = await screenTelegramEvent(
+      await posted({ updateId: 7602, chatId: -100792, users: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(users.decision.action).toBe("allow");
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 7603, chatId: -100793, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7604,
+        chatId: -100794,
+        shared: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      users: users.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain("shareposter446");
+    expect(dumped).not.toContain(String(requestId));
+    expect(dumped).not.toContain("100777446");
+    expect(dumped).not.toContain("991446");
+    expect(dumped).not.toContain("干净名字");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

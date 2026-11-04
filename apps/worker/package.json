@@ -32,6 +32,7 @@
     "@tasb/detector-regex": "workspace:*",
     "@tasb/detector-script": "workspace:*",
     "@tasb/detector-sender": "workspace:*",
+    "@tasb/detector-shared-chat": "workspace:*",
     "@tasb/detector-story": "workspace:*",
     "@tasb/detector-title": "workspace:*",
     "@tasb/detector-location": "workspace:*",

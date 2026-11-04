@@ -1,0 +1,18 @@
+[
+  {
+    "id": "shared_chat",
+    "kind": "message",
+    "label": "spam",
+    "asSharedChat": true
+  },
+  {
+    "id": "shared_chat_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "shared_chat_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

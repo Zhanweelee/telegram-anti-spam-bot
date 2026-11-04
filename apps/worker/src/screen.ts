@@ -81,6 +81,7 @@ import {
 } from "@tasb/detector-regex";
 import { createScriptDetector } from "@tasb/detector-script";
 import { createSenderDetector } from "@tasb/detector-sender";
+import { createSharedChatDetector } from "@tasb/detector-shared-chat";
 import { createStoryDetector } from "@tasb/detector-story";
 import { createTitleDetector } from "@tasb/detector-title";
 import { createViaDetector } from "@tasb/detector-via";
@@ -534,6 +535,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.communityNotice,
         value: createCommunityDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.sharedChat,
+        value: createSharedChatDetector(),
       },
       {
         source: "builtin",

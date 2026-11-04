@@ -193,6 +193,12 @@ export const builtinManifests = {
     integrity:
       "083f31c3c82a22cf5929dae8ae0ecbee867de73a54e7b636f45195d382710a72",
   }),
+  sharedChat: manifest({
+    id: "shared_chat",
+    kind: "detector",
+    integrity:
+      "13d9077476ae09154e74f0bd23c5a0ca327919e2259c35626f715e91018d3ef5",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

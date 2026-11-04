@@ -97,6 +97,8 @@ export const messageSchema = z
     asTitle: z.literal(true).optional(),
     /** Community service line. Names and ids stay out. */
     community: z.enum(["added", "joined", "removed"]).optional(),
+    /** Shared chat card. Titles, usernames, and ids stay out. */
+    asSharedChat: z.literal(true).optional(),
   })
   .refine(
     (message) =>
