@@ -5911,6 +5911,257 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("sets a group sticker set and keeps the name out of the reply", async () => {
+    const deps = kit();
+    const seen: { chatId: string; name: string }[] = [];
+    const remember = {
+      async setStickerSet(target: { chatId: string; name: string }) {
+        seen.push({ chatId: target.chatId, name: target.name });
+      },
+    };
+    const name = "Animals_by_SomeBot";
+    const done = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求设置 -100 的群贴纸包。消息还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain(name);
+    expect(seen).toEqual([{ chatId: "-100", name }]);
+    const lower = "animals_by_somebot";
+    const folded = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${lower}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(folded).toMatchObject({
+      text: "已请求设置 -100 的群贴纸包。消息还在。",
+    });
+    expect(JSON.stringify(folded)).not.toContain(lower);
+    expect(seen[1]).toEqual({ chatId: "-100", name: lower });
+    const positive = await runOperatorCommand({
+      event: event({ text: `/stickers 42 ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求设置 42 的群贴纸包。消息还在。",
+    });
+    expect(seen[2]).toEqual({ chatId: "42", name });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/stickers <chatId> <name>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setStickerSet() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set the group sticker set of -100. The messages stay.",
+    });
+    expect(JSON.stringify(english)).not.toContain(name);
+    const skipped = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name}`, chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/stickers", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/stickers <chatId> <name>",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/stickers -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/stickers <chatId> <name>",
+    });
+    const extra = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name} extra`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/stickers <chatId> <name>",
+    });
+    const username = `C${"d".repeat(28)}bot`;
+    const exact = `A${"b".repeat(27)}_by_${username}`;
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求设置 -100 的群贴纸包。消息还在。",
+    });
+    expect(JSON.stringify(fitted)).not.toContain(exact);
+    expect(seen[3]?.name).toBe(exact);
+    const tooLong = `A${"b".repeat(28)}_by_${username}`;
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(4);
+    const doubled = "Animals__by_SomeBot";
+    const gap = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${doubled}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(gap).toMatchObject({ text: "参数无效" });
+    const digit = "A_by_1bot";
+    const numbered = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${digit}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(numbered).toMatchObject({ text: "参数无效" });
+    const plain = "Animals_by_Some";
+    const unfinished = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${plain}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(unfinished).toMatchObject({ text: "参数无效" });
+    const longUser = `A_by_C${"d".repeat(29)}bot`;
+    const longOwner = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${longUser}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(longOwner).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(4);
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(seen).toHaveLength(4);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/stickers ${phrase} ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/stickers -100 ${name}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setStickerSet() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(name);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"stickers"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: `/stickers -200 ${name}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setStickerSet() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

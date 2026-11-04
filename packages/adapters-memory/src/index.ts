@@ -6,6 +6,7 @@ import {
   type CaptchaChallenge,
   type CaptchaStore,
   type ChatDescriptionTarget,
+  type ChatStickerSetTarget,
   type ChatTarget,
   type ChatTitleTarget,
   captchaChallengeSchema,
@@ -154,6 +155,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly chatsLeft: readonly ChatTarget[];
   readonly memberTagsSet: readonly MemberTagTarget[];
   readonly stickerSetsDeleted: readonly ChatTarget[];
+  readonly stickerSetsSet: readonly ChatStickerSetTarget[];
   readonly reactionsSet: readonly ReactionChoice[];
   readonly titlesSet: readonly ChatTitleTarget[];
   readonly descriptionsSet: readonly ChatDescriptionTarget[];
@@ -191,6 +193,7 @@ export function createMemoryModerator(): ModerationPort & {
   const chatsLeft: ChatTarget[] = [];
   const memberTagsSet: MemberTagTarget[] = [];
   const stickerSetsDeleted: ChatTarget[] = [];
+  const stickerSetsSet: ChatStickerSetTarget[] = [];
   const reactionsSet: ReactionChoice[] = [];
   const titlesSet: ChatTitleTarget[] = [];
   const descriptionsSet: ChatDescriptionTarget[] = [];
@@ -228,6 +231,7 @@ export function createMemoryModerator(): ModerationPort & {
     chatsLeft,
     memberTagsSet,
     stickerSetsDeleted,
+    stickerSetsSet,
     reactionsSet,
     titlesSet,
     descriptionsSet,
@@ -412,6 +416,13 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         messageId: target.messageId,
         emoji: target.emoji,
+      });
+    },
+    async setStickerSet(target) {
+      stickerSetsSet.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        name: target.name,
       });
     },
     async setTitle(target) {

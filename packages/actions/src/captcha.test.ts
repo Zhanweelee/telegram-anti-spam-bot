@@ -123,6 +123,7 @@ function moderator(
     async setMemberTag() {},
     async deleteStickerSet() {},
     async setReaction() {},
+    async setStickerSet() {},
     async setTitle() {},
     async setDescription() {},
     async renameTopic() {},

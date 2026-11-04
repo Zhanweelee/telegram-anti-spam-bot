@@ -173,6 +173,7 @@ export {
   type BanTarget,
   type ChatAdministrator,
   type ChatDescriptionTarget,
+  type ChatStickerSetTarget,
   type ChatTarget,
   type ChatTitleTarget,
   type DefaultChatPermissions,

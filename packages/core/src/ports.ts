@@ -91,6 +91,12 @@ export interface ChatTarget {
   readonly chatId: string;
 }
 
+export interface ChatStickerSetTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly name: string;
+}
+
 export interface ChatTitleTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -287,6 +293,7 @@ export interface ModerationPort {
   setMemberTag(target: MemberTagTarget): Promise<void>;
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
+  setStickerSet(target: ChatStickerSetTarget): Promise<void>;
   setTitle(target: ChatTitleTarget): Promise<void>;
   setDescription(target: ChatDescriptionTarget): Promise<void>;
   createTopic(target: NewTopicTarget): Promise<string>;

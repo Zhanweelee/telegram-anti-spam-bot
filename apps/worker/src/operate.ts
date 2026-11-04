@@ -115,6 +115,9 @@ function commandModerator(
     async deleteStickerSet() {
       throw new Error("delstickers_unavailable");
     },
+    async setStickerSet() {
+      throw new Error("stickers_unavailable");
+    },
     async setReaction() {
       throw new Error("react_unavailable");
     },

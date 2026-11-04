@@ -1407,6 +1407,51 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets a group sticker set and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const name = "Animals_by_SomeBot";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setStickerSet({
+      tenantId: "local",
+      chatId: "-100",
+      name,
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatStickerSet`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      sticker_set_name: name,
+    });
+    expect(calls[0]?.method).not.toContain("deleteChatStickerSet");
+    expect(calls[0]?.method).not.toContain("getStickerSet");
+    expect(calls[0]?.method).not.toContain("getChat");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setStickerSet({
+        tenantId: "local",
+        chatId: "-100",
+        name,
+      }),
+    ).rejects.toThrow("stickers_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("sets one emoji reaction and keeps the other reactions", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

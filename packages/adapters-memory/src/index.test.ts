@@ -331,6 +331,19 @@ describe("memory adapter", () => {
     expect(JSON.stringify(moderator.stickerSetsDeleted)).not.toContain("name");
   });
 
+  it("records one set group sticker set", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setStickerSet({
+      tenantId: "t",
+      chatId: "c",
+      name: "Animals_by_SomeBot",
+    });
+    expect(moderator.stickerSetsSet).toEqual([
+      { tenantId: "t", chatId: "c", name: "Animals_by_SomeBot" },
+    ]);
+    expect(JSON.stringify(moderator.stickerSetsSet)).not.toContain("file_id");
+  });
+
   it("records a member tag including an empty one", async () => {
     const moderator = createMemoryModerator();
     await moderator.setMemberTag({

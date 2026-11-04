@@ -187,6 +187,7 @@ function harness(options?: { failStorage?: boolean }) {
     async setMemberTag() {},
     async deleteStickerSet() {},
     async setReaction() {},
+    async setStickerSet() {},
     async setTitle() {},
     async setDescription() {},
     async renameTopic() {},
