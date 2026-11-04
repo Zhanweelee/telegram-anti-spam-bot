@@ -112,6 +112,7 @@ const COMMAND_NAMES = [
   "rentopic",
   "rengeneral",
   "stickers",
+  "admintitle",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -127,6 +128,7 @@ const TITLE_LIMIT = 128;
 const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
 const STICKER_SET_NAME_LIMIT = 64;
+const ADMIN_TITLE_LIMIT = 16;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -252,6 +254,7 @@ export interface OperatorCommandInput {
       | "renameGeneral"
       | "renameTopic"
       | "revokeInvite"
+      | "setAdminTitle"
       | "setDescription"
       | "setMemberTag"
       | "setReaction"
@@ -448,6 +451,8 @@ async function dispatch(
       return renameGeneralTopic(input, args);
     case "stickers":
       return setGroupStickerSet(input, args);
+    case "admintitle":
+      return setOneAdminTitle(input, args);
   }
 }
 
@@ -2537,6 +2542,62 @@ function rejectStickerSet(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "stickers",
+  });
+}
+
+async function setOneAdminTitle(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.admintitle.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  const title = args.slice(2).join(" ");
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId) ||
+    title.length > ADMIN_TITLE_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setAdminTitle;
+  if (!set) {
+    rejectAdminTitle(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+      title,
+    });
+  } catch {
+    rejectAdminTitle(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    title.length === 0
+      ? "command.admintitle.cleared"
+      : "command.admintitle.done",
+    { chatId, actorId },
+  );
+}
+
+function rejectAdminTitle(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "admintitle",
   });
 }
 

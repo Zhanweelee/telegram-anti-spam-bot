@@ -1452,6 +1452,64 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets an admin title and drops the title", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setAdminTitle({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      title: phrase,
+    });
+    await moderator.setAdminTitle({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+      title: "",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatAdministratorCustomTitle`,
+      `https://api.telegram.org/bot${token}/setChatAdministratorCustomTitle`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      user_id: 77,
+      custom_title: phrase,
+    });
+    expect(JSON.parse(calls[1]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      user_id: 77,
+      custom_title: "",
+    });
+    expect(calls[0]?.method).not.toContain("promoteChatMember");
+    expect(calls[0]?.method).not.toContain("setChatMemberTag");
+    expect(calls[0]?.method).not.toContain("getChat");
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setAdminTitle({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        title: phrase,
+      }),
+    ).rejects.toThrow("admintitle_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("sets one emoji reaction and keeps the other reactions", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

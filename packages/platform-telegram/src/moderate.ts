@@ -544,6 +544,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setAdminTitle(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatAdministratorCustomTitle",
+        fetchImpl: input.fetchImpl,
+        missing: "admintitle_unavailable",
+        failed: "admintitle_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+          custom_title: target.title,
+        },
+      });
+    },
     async setMemberTag(target) {
       await postTelegram({
         token: input.token,

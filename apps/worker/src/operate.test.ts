@@ -2271,6 +2271,103 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("sets an admin title and drops the title", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/admintitle -100 77 hello", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: true,
+              custom_title: phrase,
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求设置 -100 里 77 的管理员头衔。权限还在。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "setChatAdministratorCustomTitle",
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      user_id: 77,
+      custom_title: "hello",
+    });
+    expect(calls[0]?.method).not.toContain("promoteChatMember");
+    expect(calls[0]?.method).not.toContain("setChatMemberTag");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("hello");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("hello");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const cleared = deps();
+    const clearCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/admintitle -100 77", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          clearCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      "已请求清掉 -100 里 77 的管理员头衔。权限还在。",
+    ]);
+    expect(JSON.parse(clearCalls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      user_id: 77,
+      custom_title: "",
+    });
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/admintitle -100 77 hello", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/admintitle -100 77 ${phrase}`, direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];
