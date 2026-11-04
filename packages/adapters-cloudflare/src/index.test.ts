@@ -463,6 +463,64 @@ describe("kv runtime store", () => {
     expect(await second.getRepeatPolicy("local", "-100")).toBeNull();
     expect(backing.values.get(repeatKey ?? "")).toBe("{}");
   });
+
+  it("keeps a rule mute duration in a separate key", async () => {
+    const backing = createMapStore();
+    const secret = "请免费领取礼品";
+    let puts = 0;
+    const counting = {
+      async get(key: string) {
+        return backing.store.get(key);
+      },
+      async put(key: string, value: string) {
+        puts += 1;
+        await backing.store.put(key, value);
+      },
+    };
+    const first = createKvRuntimeStore(counting);
+    expect(await first.getMuteDuration("local", "-100")).toBeNull();
+    expect(await first.setMuteDuration("local", "-100", 120)).toBe(true);
+    const written = puts;
+    expect(await first.setMuteDuration("local", "-100", 120)).toBe(true);
+    expect(puts).toBe(written);
+    expect(
+      await first.setRepeatPolicy("local", "-100", {
+        threshold: 4,
+        windowSeconds: 30,
+      }),
+    ).toBe(true);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.getMuteDuration("local", "-100")).toBe(120);
+    expect(await second.getRepeatPolicy("local", "-100")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+    const keys = [...backing.values.keys()];
+    const muteKey = keys.find((key) => key.startsWith("runtime-mute"));
+    const repeatKey = keys.find((key) => key.startsWith("runtime-repeat"));
+    expect(muteKey).toBeDefined();
+    expect(muteKey).not.toBe(repeatKey);
+    expect(backing.values.get(repeatKey ?? "")).not.toContain("120");
+    if (muteKey !== undefined) {
+      backing.values.set(muteKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.getMuteDuration("local", "-100")).toBeNull();
+    expect(await fresh.getRepeatPolicy("local", "-100")).toEqual({
+      threshold: 4,
+      windowSeconds: 30,
+    });
+    expect(String(await fresh.getMuteDuration("local", "-100"))).not.toContain(
+      secret,
+    );
+    expect(await fresh.setMuteDuration("local", "-100", 29)).toBe(false);
+    expect(await fresh.getMuteDuration("local", "-100")).toBeNull();
+    expect(await fresh.setMuteDuration("local", "-100", 3600)).toBe(true);
+    expect(await fresh.getMuteDuration("local", "-100")).toBeNull();
+    await second.clearMuteDuration("local", "-100");
+    expect(await second.getMuteDuration("local", "-100")).toBeNull();
+    expect(backing.values.get(muteKey ?? "")).toBe("{}");
+  });
 });
 
 describe("kv chat directory", () => {

@@ -171,11 +171,15 @@ describe("resolveStores", () => {
       threshold: 4,
       windowSeconds: 30,
     });
+    expect(await first.runtime.setMuteDuration("local", "-100", 120)).toBe(
+      true,
+    );
+    expect(await restarted.runtime.getMuteDuration("local", "-100")).toBe(120);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(7);
+    expect(values.size).toBe(8);
     expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
       true,
     );
@@ -196,6 +200,9 @@ describe("resolveStores", () => {
     ).toBe(true);
     expect(
       [...values.keys()].some((key) => key.startsWith("runtime-repeat")),
+    ).toBe(true);
+    expect(
+      [...values.keys()].some((key) => key.startsWith("runtime-mute")),
     ).toBe(true);
     expect(
       await first.chats.noteBot({

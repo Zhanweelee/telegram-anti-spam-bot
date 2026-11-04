@@ -34,7 +34,9 @@ import {
   type MenuButtonTarget,
   type MessageReactionTarget,
   type ModerationPort,
+  MUTE_DURATION_SECONDS,
   type MuteTarget,
+  muteDurationDocumentSchema,
   type NamedForumTopicTarget,
   type NewTopicTarget,
   type PinnedMessageTarget,
@@ -836,6 +838,7 @@ export function createMemoryRuntimeStore(): RuntimeStore {
   const floods = new Map<string, FloodPolicy>();
   const keywords = new Map<string, string[]>();
   const repeats = new Map<string, RepeatPolicy>();
+  const mutes = new Map<string, number>();
   return {
     async getDryRun(tenantId, chatId) {
       return dryRun.has(key(tenantId, chatId));
@@ -1031,6 +1034,28 @@ export function createMemoryRuntimeStore(): RuntimeStore {
     },
     async clearRepeatPolicy(tenantId, chatId) {
       repeats.delete(key(tenantId, chatId));
+    },
+    async getMuteDuration(tenantId, chatId) {
+      return mutes.get(key(tenantId, chatId)) ?? null;
+    },
+    async setMuteDuration(tenantId, chatId, seconds) {
+      const parsed = muteDurationDocumentSchema.safeParse({ seconds });
+      if (!parsed.success) {
+        return false;
+      }
+      const id = key(tenantId, chatId);
+      if (parsed.data.seconds === MUTE_DURATION_SECONDS) {
+        mutes.delete(id);
+        return true;
+      }
+      if (!mutes.has(id) && mutes.size >= MAX_SWITCH_CHATS) {
+        return false;
+      }
+      mutes.set(id, parsed.data.seconds);
+      return true;
+    },
+    async clearMuteDuration(tenantId, chatId) {
+      mutes.delete(key(tenantId, chatId));
     },
   };
 }

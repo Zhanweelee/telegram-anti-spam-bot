@@ -19,6 +19,8 @@ import {
   MAX_DIRECTORY_ACTORS,
   MAX_DIRECTORY_CHATS,
   MAX_RULE_SWITCHES,
+  MUTE_DURATION_SECONDS,
+  muteDurationDocumentSchema,
   type PolicyStore,
   prefilterPolicySchema,
   REPEAT_THRESHOLD,
@@ -140,6 +142,10 @@ export function createKvRuntimeStore(
   const repeatCache = new Map<
     string,
     { readonly policy: RepeatPolicy | null; readonly expiresAt: number }
+  >();
+  const muteCache = new Map<
+    string,
+    { readonly seconds: number | null; readonly expiresAt: number }
   >();
 
   async function load(
@@ -309,6 +315,35 @@ export function createKvRuntimeStore(
         : JSON.stringify(repeatPolicyDocumentSchema.parse(policy));
     await kv.put(id, body);
     repeatCache.set(id, { policy, expiresAt: now() + ttlMs });
+  }
+
+  async function loadMute(
+    tenantId: string,
+    chatId: string,
+  ): Promise<number | null> {
+    const id = runtimeMuteKey(tenantId, chatId);
+    const at = now();
+    const hit = muteCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.seconds;
+    }
+    const seconds = parseMute(await kv.get(id));
+    muteCache.set(id, { seconds, expiresAt: at + ttlMs });
+    return seconds;
+  }
+
+  async function saveMute(
+    tenantId: string,
+    chatId: string,
+    seconds: number | null,
+  ): Promise<void> {
+    const id = runtimeMuteKey(tenantId, chatId);
+    const body =
+      seconds === null
+        ? "{}"
+        : JSON.stringify(muteDurationDocumentSchema.parse({ seconds }));
+    await kv.put(id, body);
+    muteCache.set(id, { seconds, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -498,6 +533,32 @@ export function createKvRuntimeStore(
       }
       await saveRepeat(tenantId, chatId, null);
     },
+    async getMuteDuration(tenantId, chatId) {
+      return loadMute(tenantId, chatId);
+    },
+    async setMuteDuration(tenantId, chatId, seconds) {
+      const parsed = muteDurationDocumentSchema.safeParse({ seconds });
+      if (!parsed.success) {
+        return false;
+      }
+      const current = await loadMute(tenantId, chatId);
+      const next =
+        parsed.data.seconds === MUTE_DURATION_SECONDS
+          ? null
+          : parsed.data.seconds;
+      if (current === next) {
+        return true;
+      }
+      await saveMute(tenantId, chatId, next);
+      return true;
+    },
+    async clearMuteDuration(tenantId, chatId) {
+      const current = await loadMute(tenantId, chatId);
+      if (current === null) {
+        return;
+      }
+      await saveMute(tenantId, chatId, null);
+    },
   };
 }
 
@@ -539,6 +600,22 @@ function runtimeKeywordKey(tenantId: string, chatId: string): string {
 
 function runtimeRepeatKey(tenantId: string, chatId: string): string {
   return `runtime-repeat\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeMuteKey(tenantId: string, chatId: string): string {
+  return `runtime-mute\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseMute(raw: string | null): number | null {
+  if (raw === null) {
+    return null;
+  }
+  try {
+    const parsed = muteDurationDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data.seconds : null;
+  } catch {
+    return null;
+  }
 }
 
 function parseKeywords(raw: string | null): readonly string[] {

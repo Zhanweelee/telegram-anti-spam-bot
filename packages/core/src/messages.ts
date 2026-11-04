@@ -121,6 +121,9 @@ export const messageKeys = [
   "command.repeat.usage",
   "command.repeat.show",
   "command.repeat.done",
+  "command.rulemute.usage",
+  "command.rulemute.show",
+  "command.rulemute.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -479,6 +482,7 @@ const syntax = [
   "/flood <chatId> [count [seconds]|reset]",
   "/keyword <chatId> [add|remove <token>|reset]",
   "/repeat <chatId> [count [seconds]|reset]",
+  "/rulemute <chatId> [seconds|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -621,6 +625,9 @@ const zh = {
   "command.repeat.show": "{chatId} 重复 {threshold} 条 / {windowSeconds} 秒",
   "command.repeat.done":
     "已设置 {chatId} 重复 {threshold} 条 / {windowSeconds} 秒",
+  "command.rulemute.usage": "用法：/rulemute <chatId> [seconds|reset]",
+  "command.rulemute.show": "{chatId} 规则禁言 {seconds} 秒",
+  "command.rulemute.done": "已设置 {chatId} 规则禁言 {seconds} 秒",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1048,6 +1055,9 @@ const en = {
     "Repeat for {chatId} is {threshold} in {windowSeconds}s",
   "command.repeat.done":
     "Set repeat for {chatId} to {threshold} in {windowSeconds}s",
+  "command.rulemute.usage": "Usage: /rulemute <chatId> [seconds|reset]",
+  "command.rulemute.show": "Rule mute for {chatId} is {seconds}s",
+  "command.rulemute.done": "Set rule mute for {chatId} to {seconds}s",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

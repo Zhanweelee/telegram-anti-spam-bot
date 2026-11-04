@@ -2151,6 +2151,92 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(logger.entries)).not.toContain("quiet-line");
   });
 
+  it("mutes for one chat's rule duration and leaves the other chat at one hour", async () => {
+    const runtime = createMemoryRuntimeStore();
+    expect(await runtime.setMuteDuration("local", "-100mute", 120)).toBe(true);
+    const text = "请免费领取礼品";
+    const source = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return {
+          version: 1,
+          aggregate: "max" as const,
+          rules: [
+            {
+              id: "quiet",
+              enabled: true,
+              detectorIds: ["keyword"],
+              threshold: 1,
+              actions: ["mute"],
+            },
+          ],
+        };
+      },
+    };
+    const moderator = createMemoryModerator();
+    const hit = await screenTelegramEvent(
+      await event(text, false, "-100mute"),
+      {
+        runtime,
+        source,
+        moderator,
+        storage: createMemoryStorage(),
+        cache: createMemoryCache(),
+      },
+    );
+    expect(hit.decision.action).toBe("mute");
+    expect(moderator.muted).toEqual([
+      expect.objectContaining({
+        chatId: "-100mute",
+        actorId: "5",
+        durationSeconds: 120,
+      }),
+    ]);
+    expect(JSON.stringify(hit)).not.toContain(text);
+    const otherMod = createMemoryModerator();
+    const other = await screenTelegramEvent(
+      await event(text, false, "-200mute"),
+      {
+        runtime,
+        source,
+        moderator: otherMod,
+        storage: createMemoryStorage(),
+        cache: createMemoryCache(),
+      },
+    );
+    expect(other.decision.action).toBe("mute");
+    expect(otherMod.muted).toEqual([
+      expect.objectContaining({ durationSeconds: 3600 }),
+    ]);
+    const logger = createMemoryLogger();
+    const broken = createMemoryRuntimeStore();
+    const failedMod = createMemoryModerator();
+    const failed = await screenTelegramEvent(
+      await event(text, false, "-300mute"),
+      {
+        logger,
+        source,
+        moderator: failedMod,
+        storage: createMemoryStorage(),
+        cache: createMemoryCache(),
+        runtime: {
+          ...broken,
+          async getMuteDuration() {
+            throw new Error(text);
+          },
+        },
+      },
+    );
+    expect(failed.decision.action).toBe("mute");
+    expect(failedMod.muted).toEqual([
+      expect.objectContaining({ durationSeconds: 3600 }),
+    ]);
+    expect(JSON.stringify(logger.entries)).toContain("runtime_failed");
+    expect(JSON.stringify(logger.entries)).not.toContain(text);
+  });
+
   it("deletes a contact card URL and keeps the vCard out of logs", async () => {
     const phone = "13800138118";
     const path = "card118";
