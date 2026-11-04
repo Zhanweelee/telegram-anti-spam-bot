@@ -403,6 +403,40 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a rich reference and rejects other marks", () => {
+    const reference = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        asRichReference: true,
+      },
+    });
+    expect(reference.message?.asRichReference).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          asRichReference: false,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts a rich anchor link and rejects other marks", () => {
     const link = parseEvent({
       id: "evt_1",
