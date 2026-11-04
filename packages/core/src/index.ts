@@ -174,6 +174,8 @@ export {
   type BanTarget,
   type BotDescriptionQuery,
   type BotDescriptionTarget,
+  type BotIdentity,
+  type BotIdentityQuery,
   type BotNameQuery,
   type BotNameTarget,
   type BotShortDescriptionQuery,

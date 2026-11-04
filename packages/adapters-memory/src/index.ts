@@ -449,6 +449,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readBotShortDescription() {
       throw new Error("myshort_unavailable");
     },
+    async readBotIdentity() {
+      throw new Error("who_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

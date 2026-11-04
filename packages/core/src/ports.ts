@@ -359,6 +359,17 @@ export interface BotShortDescriptionQuery {
   readonly tenantId: string;
 }
 
+export interface BotIdentityQuery {
+  readonly tenantId: string;
+}
+
+export interface BotIdentity {
+  readonly id: string;
+  readonly username: string;
+  readonly joinGroups: PermissionState;
+  readonly readAllGroupMessages: PermissionState;
+}
+
 export interface MenuCommandSnapshot {
   readonly command: string;
   readonly description: string;
@@ -403,6 +414,7 @@ export interface ModerationPort {
   ): Promise<readonly MenuCommandSnapshot[]>;
   readMenuButton(query: MenuButtonQuery): Promise<MenuButtonState>;
   readBotDescription(query: BotDescriptionQuery): Promise<string>;
+  readBotIdentity(query: BotIdentityQuery): Promise<BotIdentity>;
   readBotName(query: BotNameQuery): Promise<string>;
   readBotShortDescription(query: BotShortDescriptionQuery): Promise<string>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;

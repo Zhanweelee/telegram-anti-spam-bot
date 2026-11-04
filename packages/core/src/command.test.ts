@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(70);
+    expect(menu).toHaveLength(71);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7346,9 +7346,13 @@ describe("runOperatorCommand", () => {
       command: "botshort",
       description: "/botshort [short]",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "myshort")).toEqual({
       command: "myshort",
       description: "/myshort",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "who",
+      description: "/who",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -9184,6 +9188,220 @@ describe("runOperatorCommand", () => {
     });
     expect(foreignPhrase).toMatchObject({ text: "参数无效" });
     expect(seen).toHaveLength(3);
+  });
+
+  it("reads the bot identity and drops the display name", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const identities = [
+      {
+        id: "42",
+        username: "giftbot",
+        joinGroups: "on" as const,
+        readAllGroupMessages: "off" as const,
+      },
+      {
+        id: "7",
+        username: "",
+        joinGroups: "unknown" as const,
+        readAllGroupMessages: "unknown" as const,
+      },
+    ];
+    const remember = {
+      async readBotIdentity(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+        const identity = identities[seen.length - 1];
+        if (identity === undefined) {
+          throw new Error("called");
+        }
+        return identity;
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({
+      text: ["机器人 42", "用户名 giftbot", "入群 on", "群消息 off"].join("\n"),
+    });
+    expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain("giftbot");
+    expect(JSON.stringify(described)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: ["机器人 7", "用户名 空", "入群 未知", "群消息 未知"].join("\n"),
+    });
+    expect(seen).toHaveLength(2);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/who");
+      expect(help.text).not.toContain("/who ");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotIdentity() {
+          return {
+            id: "42",
+            username: "giftbot",
+            joinGroups: "on" as const,
+            readAllGroupMessages: "off" as const,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: [
+        "bot 42",
+        "username giftbot",
+        "groups on",
+        "group messages off",
+      ].join("\n"),
+    });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotIdentity() {
+          return {
+            id: "7",
+            username: "",
+            joinGroups: "unknown" as const,
+            readAllGroupMessages: "unknown" as const,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({
+      text: [
+        "bot 7",
+        "username empty",
+        "groups unknown",
+        "group messages unknown",
+      ].join("\n"),
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/who", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/who extra more", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/who" });
+    expect(seen).toHaveLength(2);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/who ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const leaked = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          return {
+            id: "42",
+            username: phrase,
+            joinGroups: "on" as const,
+            readAllGroupMessages: "off" as const,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(leaked).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(leaked)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/who", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotIdentity() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain('"command":"who"');
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/who",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotIdentity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/who ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotIdentity() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(2);
   });
 
   it("reports default speaking permissions without the chat title", async () => {

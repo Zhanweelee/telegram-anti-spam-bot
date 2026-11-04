@@ -1,6 +1,7 @@
 import type {
   AdministratorRight,
   BanTarget,
+  BotIdentity,
   ChatAdministrator,
   DefaultAdministratorRights,
   DefaultChatPermissions,
@@ -629,6 +630,17 @@ export function createTelegramModerator(input: {
       });
       return readBotShortDescriptionValue(described);
     },
+    async readBotIdentity() {
+      const identity = await postTelegram({
+        token: input.token,
+        method: "getMe",
+        fetchImpl: input.fetchImpl,
+        missing: "who_unavailable",
+        failed: "who_failed",
+        body: {},
+      });
+      return readBotIdentityValue(identity);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -1086,6 +1098,54 @@ function telegramDefaultRights(
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
   };
+}
+
+function readBotIdentityValue(body: unknown): BotIdentity {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("who_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("who_failed");
+  }
+  const record = result as Record<string, unknown>;
+  if (record.is_bot !== true) {
+    throw new Error("who_failed");
+  }
+  const id = record.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) {
+    throw new Error("who_failed");
+  }
+  const username = readBotUsername(record.username);
+  return {
+    id: String(id),
+    username,
+    joinGroups: readBotFlag(record.can_join_groups),
+    readAllGroupMessages: readBotFlag(record.can_read_all_group_messages),
+  };
+}
+
+function readBotUsername(value: unknown): string {
+  if (value === undefined) {
+    return "";
+  }
+  if (typeof value !== "string" || !/^[A-Za-z0-9_]{1,32}$/.test(value)) {
+    throw new Error("who_failed");
+  }
+  return value;
+}
+
+function readBotFlag(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "unknown";
+  }
+  if (value === true) {
+    return "on";
+  }
+  if (value === false) {
+    return "off";
+  }
+  throw new Error("who_failed");
 }
 
 function readBotShortDescriptionValue(body: unknown): string {
