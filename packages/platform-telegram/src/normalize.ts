@@ -235,6 +235,7 @@ async function messageEvent(
       ...(richContact.card ? { asRichCard: true as const } : {}),
       ...(richContact.email ? { asRichEmail: true as const } : {}),
       ...(asRichMap ? { asRichMap: true as const } : {}),
+      ...(richContact.mention ? { asRichMention: true as const } : {}),
     },
   });
 }
@@ -301,8 +302,9 @@ function richContactMark(message: Record<string, unknown>): {
   phone: boolean;
   card: boolean;
   email: boolean;
+  mention: boolean;
 } {
-  const found = { phone: false, card: false, email: false };
+  const found = { phone: false, card: false, email: false, mention: false };
   const rich = message.rich_message;
   if (isRecord(rich)) {
     walkRichContact(rich.blocks, found);
@@ -312,9 +314,9 @@ function richContactMark(message: Record<string, unknown>): {
 
 function walkRichContact(
   value: unknown,
-  found: { phone: boolean; card: boolean; email: boolean },
+  found: { phone: boolean; card: boolean; email: boolean; mention: boolean },
 ): void {
-  if (found.phone && found.card && found.email) {
+  if (found.phone && found.card && found.email && found.mention) {
     return;
   }
   if (Array.isArray(value)) {
@@ -337,6 +339,9 @@ function walkRichContact(
   }
   if (value.type === "email_address" && hiddenSecret(value.email_address)) {
     found.email = true;
+  }
+  if (value.type === "mention" && hiddenSecret(value.username)) {
+    found.mention = true;
   }
   for (const nested of Object.values(value)) {
     walkRichContact(nested, found);

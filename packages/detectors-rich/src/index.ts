@@ -1,13 +1,14 @@
 import { type Detector, defineDetector } from "@tasb/core";
 import { z } from "zod";
 
-export const richContacts = ["phone", "card", "email"] as const;
+export const richContacts = ["phone", "card", "email", "mention"] as const;
 export type RichContact = (typeof richContacts)[number];
 
 const richSpecs = {
   phone: { id: "rich_phone", summary: "rich:phone" },
   card: { id: "rich_card", summary: "rich:card" },
   email: { id: "rich_email", summary: "rich:email" },
+  mention: { id: "rich_mention", summary: "rich:mention" },
 } as const;
 
 export function createRichDetector(kind: RichContact): Detector {
@@ -25,7 +26,9 @@ export function createRichDetector(kind: RichContact): Detector {
           ? message?.asRichPhone === true
           : kind === "card"
             ? message?.asRichCard === true
-            : message?.asRichEmail === true;
+            : kind === "email"
+              ? message?.asRichEmail === true
+              : message?.asRichMention === true;
       if (ctx.event.kind !== "message" || !marked) {
         return null;
       }

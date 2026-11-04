@@ -99,3 +99,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 富文本块 `photo`、`video` 或 `animation` 上 `has_spoiler` 正好是 `true` 时，消息带 `asSpoiler`。`false` 不带这个标记。嵌套在幻灯片里也同样。文件和音频块不带。文件号不进事件。说明仍是正文。已有正文时正文不变。规则仍是 `media_spoiler`。见 ADR 0503。
 
 富文本块 `map` 的 `location` 同时有有限纬度和经度时，消息带 `asRichMap`。只有一个坐标、字符串坐标和缺位置不带这个标记。嵌套在拼贴里也同样。坐标不进事件。说明仍是正文。已有正文时正文不变。普通图钉仍只带 `asLocation`。规则 `rich_map` 默认关闭。见 ADR 0504。
+
+`rich_message` 里 `type` 为 `mention` 且用户名去掉空白后非空时，消息带 `asRichMention`。空白、布尔值和缺用户名不带这个标记。按标识提及的用户不带。用户名不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_mention` 默认关闭。见 ADR 0505。
