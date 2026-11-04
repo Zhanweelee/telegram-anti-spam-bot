@@ -7297,7 +7297,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(86);
+    expect(menu).toHaveLength(87);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7409,8 +7409,8 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
-      command: "captcha",
-      description: "/captcha <chatId> <actorId>",
+      command: "uncaptcha",
+      description: "/uncaptcha <chatId> <actorId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -16053,6 +16053,170 @@ describe("runOperatorCommand", () => {
     expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(failed.logger.entries)).not.toContain(nonce);
   });
+
+  it("cancels a pending captcha and opens the chat again", async () => {
+    const deps = kit();
+    const store = memoryCaptcha();
+    const nonce = "0123456789abcdef";
+    await store.put(
+      parseCaptchaChallenge({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        nonce,
+        expiresAt: "2026-11-01T00:05:00.000Z",
+        messageId: "55",
+      }),
+    );
+    const released: { chatId: string; actorId: string }[] = [];
+    const deleted: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      moderator: {
+        async releaseActor(target) {
+          released.push({ chatId: target.chatId, actorId: target.actorId });
+        },
+        async deleteMessage(target) {
+          deleted.push(target.messageId);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "已取消验证 -100 77" });
+    expect(released).toEqual([{ chatId: "-100", actorId: "77" }]);
+    expect(deleted).toEqual(["55"]);
+    expect(await store.get("local", "-100", "77")).toBeNull();
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(nonce);
+
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/uncaptcha <chatId> <actorId>");
+    }
+
+    const englishStore = memoryCaptcha();
+    await englishStore.put(
+      parseCaptchaChallenge({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        nonce,
+        expiresAt: "2026-11-01T00:05:00.000Z",
+      }),
+    );
+    const english = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      captcha: englishStore,
+      moderator: {
+        async releaseActor() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Cancelled the check for 77 in -100",
+    });
+    expect(await englishStore.get("local", "-100", "77")).toBeNull();
+
+    const absent = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: memoryCaptcha(),
+      moderator: {
+        async releaseActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(absent).toMatchObject({ text: "-100 77 没有待验证" });
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100", direct: true }),
+      adminActorIds: ["42"],
+      captcha: store,
+      moderator: {
+        async releaseActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/uncaptcha <chatId> <actorId>",
+    });
+
+    const grouped = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100 77" }),
+      adminActorIds: ["42"],
+      captcha: store,
+      moderator: {
+        async releaseActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(grouped).toEqual({ status: "skip" });
+
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/uncaptcha -200 77",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      captcha: store,
+      moderator: {
+        async releaseActor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+
+    const failed = kit();
+    const failedStore = memoryCaptcha();
+    await failedStore.put(
+      parseCaptchaChallenge({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+        nonce,
+        expiresAt: "2026-11-01T00:05:00.000Z",
+        messageId: "55",
+      }),
+    );
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/uncaptcha -100 77", direct: true }),
+      adminActorIds: ["42"],
+      captcha: failedStore,
+      moderator: {
+        async releaseActor() {
+          throw new Error(phrase);
+        },
+        async deleteMessage() {
+          throw new Error("deleted");
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(await failedStore.get("local", "-100", "77")).toMatchObject({
+      nonce,
+      messageId: "55",
+    });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(nonce);
+  });
 });
 
 function memoryCaptcha(): CaptchaStore {
@@ -16078,8 +16242,13 @@ function memoryCaptcha(): CaptchaStore {
         );
       }
     },
-    async take() {
-      return null;
+    async take(tenantId, chatId, actorId, nonce) {
+      const current = values.get(`${tenantId}:${chatId}:${actorId}`);
+      if (current === undefined || current.nonce !== nonce) {
+        return null;
+      }
+      values.delete(`${tenantId}:${chatId}:${actorId}`);
+      return current;
     },
     async takeMany() {
       return [];

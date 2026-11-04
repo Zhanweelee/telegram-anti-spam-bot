@@ -75,6 +75,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/captcha <chatId> <actorId>` 对已经在群里的人再发一次入群验证。先 `restrictChatMember` 300 秒，再静音发出同一对按钮。验证消息发到目标群，回复发到私聊。按钮发不出去时解除限制并删除挑战，回复「参数无效」。nonce 不进回复，也不进日志。群聊里的同样文本不执行。没有 token 或调用失败时不把内存记录当成已经限制。不改入群时的 `new_member`。见 ADR 0450。
 
+`/uncaptcha <chatId> <actorId>` 取消尚未完成的验证。先取走挑战，再 `restrictChatMember` 把每一项权限打开，不带 `until_date`，然后 `deleteMessage` 删掉按钮。没有待验证时不调用。放行失败时把挑战放回去，不删按钮。nonce 不进回复，也不进日志。不改 `/unmute`。见 ADR 0451。
+
 机器人还在群里但不是管理员，或管理员缺删除、缺限制时，给改了它的那个人发一条私聊。已经离开或被移出时不发。两条权限都在时不发。不发到群里。见 ADR 0436。
 
 `/mute <chatId> <actorId> [seconds]` 调用 `muteActor`。不写秒数时用 3600。写出的秒数要是 30 到 366 天里的整数。配了 token 时仍把每一项权限关掉，并带上 `until_date`。没有 token 或调用失败时回复「参数无效」，不把内存记录当成已经禁言。见 ADR 0365。

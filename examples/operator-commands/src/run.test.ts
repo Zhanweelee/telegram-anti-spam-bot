@@ -88,6 +88,7 @@ describe("operator command example", () => {
     expect(help).toContain("\n/kick <chatId> <actorId>");
     expect(help).toContain("\n/cani <chatId>");
     expect(help).toContain("\n/captcha <chatId> <actorId>");
+    expect(help).toContain("\n/uncaptcha <chatId> <actorId>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",

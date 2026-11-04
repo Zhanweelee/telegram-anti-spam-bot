@@ -165,6 +165,7 @@ const COMMAND_NAMES = [
   "kick",
   "cani",
   "captcha",
+  "uncaptcha",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -307,6 +308,7 @@ export interface OperatorCommandInput {
       | "leaveChat"
       | "lockChat"
       | "muteActor"
+      | "releaseActor"
       | "restrictActor"
       | "openTopic"
       | "pinMessage"
@@ -504,6 +506,8 @@ async function dispatch(
       return showOwnAdmin(input, args);
     case "captcha":
       return challengeMember(input, args);
+    case "uncaptcha":
+      return releaseCaptcha(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5122,6 +5126,100 @@ async function challengeMember(
     failureText: say(input, "command.invalid"),
     issuedChallenge: { chatId, actorId },
   };
+}
+
+async function releaseCaptcha(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.uncaptcha.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const store = input.captcha;
+  const release = input.moderator?.releaseActor;
+  if (!store || !release) {
+    rejectUncaptcha(input);
+    return say(input, "command.invalid");
+  }
+  let current: Awaited<ReturnType<CaptchaStore["get"]>>;
+  try {
+    current = await store.get(input.event.tenantId, chatId, actorId);
+  } catch {
+    rejectUncaptcha(input);
+    return say(input, "command.invalid");
+  }
+  if (!current) {
+    return say(input, "command.uncaptcha.absent", { chatId, actorId });
+  }
+  let taken: Awaited<ReturnType<CaptchaStore["take"]>>;
+  try {
+    taken = await store.take(
+      current.tenantId,
+      current.chatId,
+      current.actorId,
+      current.nonce,
+    );
+  } catch {
+    rejectUncaptcha(input);
+    return say(input, "command.invalid");
+  }
+  if (!taken) {
+    return say(input, "command.uncaptcha.absent", { chatId, actorId });
+  }
+  try {
+    await release({
+      tenantId: taken.tenantId,
+      chatId: taken.chatId,
+      actorId: taken.actorId,
+    });
+  } catch {
+    try {
+      await store.put(taken);
+    } catch {
+      rejectUncaptcha(input);
+    }
+    rejectUncaptcha(input);
+    return say(input, "command.invalid");
+  }
+  const messageId = taken.messageId;
+  const remove = input.moderator?.deleteMessage;
+  if (messageId !== undefined && remove) {
+    try {
+      await remove({
+        tenantId: taken.tenantId,
+        chatId: taken.chatId,
+        messageId,
+      });
+    } catch {
+      input.logger.warn("captcha_prompt_delete_failed", {
+        eventId: input.event.id,
+        chatId: taken.chatId,
+      });
+    }
+  }
+  return say(input, "command.uncaptcha.done", { chatId, actorId });
+}
+
+function rejectUncaptcha(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "uncaptcha",
+  });
 }
 
 function rejectCaptcha(input: OperatorCommandInput): void {
