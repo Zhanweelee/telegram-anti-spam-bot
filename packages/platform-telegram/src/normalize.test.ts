@@ -11666,6 +11666,104 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("121.4737");
   });
 
+  it("marks a bare location and leaves the coordinates out", async () => {
+    const latitude = 23.1291;
+    const longitude = 113.2644;
+    const livePeriod = 90177;
+    const posted = await normalize({
+      update_id: 4960,
+      message: {
+        message_id: 40,
+        date: 1761955200,
+        chat: { id: -100710, type: "supergroup" },
+        from: { id: 85 },
+        location: {
+          latitude,
+          longitude,
+          horizontal_accuracy: 44.4,
+          live_period: livePeriod,
+          heading: 173,
+          proximity_alert_radius: 88,
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.asLocation).toBe(true);
+    expect(posted.event.message?.text).toBe("");
+    expect(posted.event.actor).toEqual({ id: "85", isAdmin: false });
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(String(latitude));
+    expect(dumped).not.toContain(String(longitude));
+    expect(dumped).not.toContain(String(livePeriod));
+    expect(dumped).not.toContain("44.4");
+    expect(dumped).not.toContain("173");
+    expect(dumped).not.toContain("88");
+
+    const named = await normalize({
+      update_id: 4961,
+      message: {
+        message_id: 41,
+        date: 1761955200,
+        chat: { id: -100711, type: "supergroup" },
+        from: { id: 86 },
+        location: { latitude, longitude },
+        venue: {
+          location: { latitude, longitude },
+          title: "场馆名字",
+          address: "南京东路",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.asLocation).toBeUndefined();
+    expect(named.event.message?.text).toBe("场馆名字");
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(String(latitude));
+    expect(namedDump).not.toContain("南京东路");
+
+    const empty = await normalize({
+      update_id: 4962,
+      message: {
+        message_id: 42,
+        date: 1761955200,
+        chat: { id: -100712, type: "supergroup" },
+        from: { id: 87 },
+        text: "今天站会",
+        location: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asLocation).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+
+    const half = await normalize({
+      update_id: 4963,
+      message: {
+        message_id: 43,
+        date: 1761955200,
+        chat: { id: -100713, type: "supergroup" },
+        from: { id: 88 },
+        text: "今天站会",
+        location: { latitude },
+      },
+    });
+    expect(half.status).toBe("event");
+    if (half.status !== "event") {
+      return;
+    }
+    expect(half.event.message?.asLocation).toBeUndefined();
+    expect(JSON.stringify(half.event)).not.toContain(String(latitude));
+  });
+
   it("keeps only the hostname from a venue address", async () => {
     const phrase = "请免费领取礼品";
     const code = "VENUE48";

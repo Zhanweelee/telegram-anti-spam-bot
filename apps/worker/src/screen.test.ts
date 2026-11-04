@@ -4200,6 +4200,159 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(String(posterId));
   });
 
+  it("keeps a bare location until that chat asks", async () => {
+    const latitude = 23.1291;
+    const longitude = 113.2644;
+    const livePeriod = 90177;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      location?: boolean;
+      venue?: boolean;
+      paid?: boolean;
+      text?: string;
+    }) {
+      const pin = { latitude, longitude, live_period: livePeriod };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 85 },
+            ...(input.text ? { text: input.text } : {}),
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.location ? { location: pin } : {}),
+            ...(input.venue
+              ? {
+                  location: pin,
+                  venue: {
+                    location: pin,
+                    title: "场馆名字",
+                    address: "南京东路",
+                  },
+                }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7100,
+      chatId: -100720,
+      location: true,
+    });
+    expect(idle.message?.asLocation).toBe(true);
+    expect(idle.message?.text).toBe("");
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(String(latitude));
+    expect(idleDump).not.toContain(String(longitude));
+    expect(idleDump).not.toContain(String(livePeriod));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "bare_location",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["bare_location"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7101, chatId: -100721, location: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("bare_location");
+    expect(removed.decision.ruleIds).toContain("bare_location");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "location:pin" },
+    ]);
+    const venue = await screenTelegramEvent(
+      await posted({ updateId: 7102, chatId: -100722, venue: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(venue.decision.action).toBe("allow");
+    const member = await screenTelegramEvent(
+      await posted({
+        updateId: 7103,
+        chatId: -100723,
+        text: "今天站会",
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(member.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7104,
+        chatId: -100724,
+        location: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      venue: venue.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(latitude));
+    expect(dumped).not.toContain(String(longitude));
+    expect(dumped).not.toContain(String(livePeriod));
+    expect(dumped).not.toContain("场馆名字");
+    expect(dumped).not.toContain("南京东路");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

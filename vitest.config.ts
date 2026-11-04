@@ -20,6 +20,7 @@ export default defineConfig({
       "packages/detectors-script",
       "packages/detectors-sender",
       "packages/detectors-story",
+      "packages/detectors-location",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

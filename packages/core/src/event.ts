@@ -87,6 +87,8 @@ export const messageSchema = z
     asChannel: z.literal(true).optional(),
     /** Shared story card. Poster names, ids, and usernames stay out. */
     asStory: z.literal(true).optional(),
+    /** Bare location pin. Coordinates stay out. */
+    asLocation: z.literal(true).optional(),
   })
   .refine(
     (message) =>

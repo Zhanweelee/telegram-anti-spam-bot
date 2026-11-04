@@ -142,6 +142,7 @@ async function messageEvent(
   const notice = serviceNotice(message);
   const asChannel = sentAsForeignChannel(message);
   const asStory = sharedStory(message);
+  const asLocation = bareLocation(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -173,8 +174,25 @@ async function messageEvent(
       ...(notice === undefined ? {} : { notice }),
       ...(asChannel ? { asChannel: true as const } : {}),
       ...(asStory ? { asStory: true as const } : {}),
+      ...(asLocation ? { asLocation: true as const } : {}),
     },
   });
+}
+
+function bareLocation(message: Record<string, unknown>): boolean {
+  if (isRecord(message.venue)) {
+    return false;
+  }
+  const location = message.location;
+  return (
+    isRecord(location) &&
+    finiteCoordinate(location.latitude) &&
+    finiteCoordinate(location.longitude)
+  );
+}
+
+function finiteCoordinate(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function sharedStory(message: Record<string, unknown>): boolean {

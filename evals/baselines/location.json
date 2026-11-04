@@ -1,0 +1,5 @@
+{
+  "detector": "bare_location",
+  "precision": 1,
+  "recall": 1
+}

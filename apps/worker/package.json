@@ -31,6 +31,7 @@
     "@tasb/detector-script": "workspace:*",
     "@tasb/detector-sender": "workspace:*",
     "@tasb/detector-story": "workspace:*",
+    "@tasb/detector-location": "workspace:*",
     "@tasb/detector-forward": "workspace:*",
     "@tasb/platform-telegram": "workspace:*",
     "hono": "4.13.16"
