@@ -433,6 +433,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readBotName() {
       throw new Error("myname_unavailable");
     },
+    async readBotDescription() {
+      throw new Error("mydesc_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

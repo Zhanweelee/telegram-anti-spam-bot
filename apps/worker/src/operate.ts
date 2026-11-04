@@ -94,6 +94,9 @@ function commandModerator(
     async readBotName() {
       throw new Error("myname_unavailable");
     },
+    async readBotDescription() {
+      throw new Error("mydesc_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

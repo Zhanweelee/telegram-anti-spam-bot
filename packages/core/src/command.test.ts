@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(67);
+    expect(menu).toHaveLength(68);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7334,9 +7334,13 @@ describe("runOperatorCommand", () => {
       command: "myname",
       description: "/myname",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
       description: "/botdesc [description]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "mydesc",
+      description: "/mydesc",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -8661,6 +8665,165 @@ describe("runOperatorCommand", () => {
     });
     expect(called).toBe(false);
     expect(foreignLong).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(3);
+  });
+
+  it("reads the default bot description", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const descriptions = [phrase, "", "Ada"] as const;
+    const remember = {
+      async readBotDescription(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+        return descriptions[seen.length - 1] ?? "";
+      },
+    };
+    const described = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(described).toMatchObject({ text: `简介 ${phrase}` });
+    expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({ text: "简介 空" });
+    const short = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "简介 Ada" });
+    expect(seen).toHaveLength(3);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/mydesc");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotDescription() {
+          return phrase;
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: `description ${phrase}` });
+    const englishEmpty = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBotDescription() {
+          return "";
+        },
+      },
+      ...kit(),
+    });
+    expect(englishEmpty).toMatchObject({ text: "description empty" });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/mydesc", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotDescription() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/mydesc extra more", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/mydesc" });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/mydesc ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/mydesc", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBotDescription() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"mydesc"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/mydesc",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/mydesc ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBotDescription() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
     expect(seen).toHaveLength(3);
   });
 

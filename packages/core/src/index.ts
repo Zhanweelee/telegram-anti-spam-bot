@@ -172,6 +172,7 @@ export {
   auditRecordSchema,
   auditScopeSchema,
   type BanTarget,
+  type BotDescriptionQuery,
   type BotDescriptionTarget,
   type BotNameQuery,
   type BotNameTarget,

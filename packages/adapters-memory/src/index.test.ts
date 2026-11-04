@@ -178,6 +178,13 @@ describe("memory adapter", () => {
     );
   });
 
+  it("does not invent a bot description", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readBotDescription({ tenantId: "t" }),
+    ).rejects.toThrow("mydesc_unavailable");
+  });
+
   it("records a bot description without a language", async () => {
     const moderator = createMemoryModerator();
     await moderator.setBotDescription({ tenantId: "t", description: "ops" });
