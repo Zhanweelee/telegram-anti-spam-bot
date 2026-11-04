@@ -159,6 +159,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> giveaway_card on` 删这个群里的抽奖卡片和结束公告。默认关闭。投票仍留下。见 ADR 0474。
 
+`/rule <chatId> call_notice on` 删这个群里视频聊天的开始、结束和预约。默认关闭。邀请名单仍留下。见 ADR 0475。
+
 ## 确认
 
 ```sh

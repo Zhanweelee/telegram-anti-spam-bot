@@ -70,6 +70,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-call/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -112,6 +116,7 @@ const rules = [
       /^@tasb\/detector-story$/,
       /^@tasb\/detector-location$/,
       /^@tasb\/detector-giveaway$/,
+      /^@tasb\/detector-call$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
@@ -155,6 +160,7 @@ const rules = [
       /^@tasb\/detector-story$/,
       /^@tasb\/detector-location$/,
       /^@tasb\/detector-giveaway$/,
+      /^@tasb\/detector-call$/,
       /^node:/,
       /^vitest$/,
     ],

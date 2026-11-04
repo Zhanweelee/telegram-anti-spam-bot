@@ -91,6 +91,8 @@ export const messageSchema = z
     asLocation: z.literal(true).optional(),
     /** Giveaway card. Channel names, ids, and winner names stay out. */
     asGiveaway: z.literal(true).optional(),
+    /** Video-chat service line. Durations and start times stay out. */
+    call: z.enum(["started", "ended", "scheduled"]).optional(),
   })
   .refine(
     (message) =>

@@ -21703,6 +21703,102 @@ describe("normalizeUpdate", () => {
     expect(aloneDump).not.toContain("tinyurl.com");
   });
 
+  it("marks a video-chat notice and leaves the time out", async () => {
+    const duration = 90177;
+    const startDate = 1700000002;
+    const started = await normalize({
+      update_id: 4980,
+      message: {
+        message_id: 60,
+        date: 1761955200,
+        chat: { id: -100750, type: "supergroup" },
+        from: { id: 96 },
+        video_chat_started: {},
+      },
+    });
+    expect(started.status).toBe("event");
+    if (started.status !== "event") {
+      return;
+    }
+    expect(started.event.message?.call).toBe("started");
+    expect(started.event.message?.text).toBe("");
+    expect(started.event.actor).toEqual({ id: "96", isAdmin: false });
+
+    const ended = await normalize({
+      update_id: 4981,
+      message: {
+        message_id: 61,
+        date: 1761955200,
+        chat: { id: -100751, type: "supergroup" },
+        from: { id: 97 },
+        video_chat_ended: { duration },
+      },
+    });
+    expect(ended.status).toBe("event");
+    if (ended.status !== "event") {
+      return;
+    }
+    expect(ended.event.message?.call).toBe("ended");
+    expect(ended.event.message?.text).toBe("");
+    expect(JSON.stringify(ended.event)).not.toContain(String(duration));
+
+    const scheduled = await normalize({
+      update_id: 4982,
+      message: {
+        message_id: 62,
+        date: 1761955200,
+        chat: { id: -100752, type: "supergroup" },
+        from: { id: 98 },
+        video_chat_scheduled: { start_date: startDate },
+      },
+    });
+    expect(scheduled.status).toBe("event");
+    if (scheduled.status !== "event") {
+      return;
+    }
+    expect(scheduled.event.message?.call).toBe("scheduled");
+    expect(scheduled.event.message?.text).toBe("");
+    expect(JSON.stringify(scheduled.event)).not.toContain(String(startDate));
+
+    const invited = await normalize({
+      update_id: 4983,
+      message: {
+        message_id: 63,
+        date: 1761955200,
+        chat: { id: -100753, type: "supergroup" },
+        from: { id: 99 },
+        video_chat_participants_invited: {
+          users: [{ id: 991442, first_name: "干净名字" }],
+        },
+      },
+    });
+    expect(invited.status).toBe("event");
+    if (invited.status !== "event") {
+      return;
+    }
+    expect(invited.event.message?.call).toBeUndefined();
+    expect(invited.event.message?.text).toBe("干净名字");
+    expect(JSON.stringify(invited.event)).not.toContain("991442");
+
+    const blankEnded = await normalize({
+      update_id: 4984,
+      message: {
+        message_id: 64,
+        date: 1761955200,
+        chat: { id: -100754, type: "supergroup" },
+        from: { id: 100 },
+        text: "今天站会",
+        video_chat_ended: {},
+      },
+    });
+    expect(blankEnded.status).toBe("event");
+    if (blankEnded.status !== "event") {
+      return;
+    }
+    expect(blankEnded.event.message?.call).toBeUndefined();
+    expect(blankEnded.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps an owner change name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "OWN87";
