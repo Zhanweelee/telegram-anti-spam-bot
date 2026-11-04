@@ -176,6 +176,7 @@ async function messageEvent(
   const asSwitchQuery = switchQueryMark(message);
   const asLoginForward = loginForwardMark(message);
   const asButtonEmoji = buttonEmojiMark(message);
+  const asStickerEmoji = stickerEmojiMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -258,6 +259,7 @@ async function messageEvent(
       ...(asSwitchQuery ? { asSwitchQuery: true as const } : {}),
       ...(asLoginForward ? { asLoginForward: true as const } : {}),
       ...(asButtonEmoji ? { asButtonEmoji: true as const } : {}),
+      ...(asStickerEmoji ? { asStickerEmoji: true as const } : {}),
     },
   });
 }
@@ -745,6 +747,12 @@ function inlineButtonEmoji(markup: unknown): boolean {
 
 function buttonShowsEmoji(button: unknown): boolean {
   return isRecord(button) && hiddenSecret(button.icon_custom_emoji_id);
+}
+
+function stickerEmojiMark(message: Record<string, unknown>): boolean {
+  return (
+    isRecord(message.sticker) && hiddenSecret(message.sticker.custom_emoji_id)
+  );
 }
 
 function mentionedUser(value: unknown): boolean {

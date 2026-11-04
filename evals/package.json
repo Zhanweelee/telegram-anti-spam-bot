@@ -32,6 +32,7 @@
     "@tasb/detector-query": "workspace:*",
     "@tasb/detector-login": "workspace:*",
     "@tasb/detector-icon": "workspace:*",
+    "@tasb/detector-emoji-sticker": "workspace:*",
     "@tasb/detector-folder": "workspace:*",
     "@tasb/detector-media": "workspace:*",
     "@tasb/detector-mention": "workspace:*",

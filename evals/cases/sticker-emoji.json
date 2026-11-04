@@ -1,0 +1,18 @@
+[
+  {
+    "id": "sticker_emoji_spam",
+    "kind": "message",
+    "label": "spam",
+    "asStickerEmoji": true
+  },
+  {
+    "id": "sticker_emoji_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "sticker_emoji_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

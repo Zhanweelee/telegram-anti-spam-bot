@@ -95,6 +95,9 @@ importers:
       '@tasb/detector-emoji':
         specifier: workspace:*
         version: link:../../packages/detectors-emoji
+      '@tasb/detector-emoji-sticker':
+        specifier: workspace:*
+        version: link:../../packages/detectors-emoji-sticker
       '@tasb/detector-folder':
         specifier: workspace:*
         version: link:../../packages/detectors-folder
@@ -267,6 +270,9 @@ importers:
       '@tasb/detector-emoji':
         specifier: workspace:*
         version: link:../packages/detectors-emoji
+      '@tasb/detector-emoji-sticker':
+        specifier: workspace:*
+        version: link:../packages/detectors-emoji-sticker
       '@tasb/detector-folder':
         specifier: workspace:*
         version: link:../packages/detectors-folder
@@ -566,6 +572,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-emoji:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-emoji-sticker:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

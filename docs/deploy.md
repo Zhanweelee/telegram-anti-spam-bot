@@ -249,6 +249,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> button_emoji on` 删这个群里带有自定义表情图标的内联按钮。默认关闭。编号不进证据。看得见的按钮文字仍参与关键词。正文里的自定义表情仍看 `custom_emoji`。见 ADR 0519。
 
+`/rule <chatId> sticker_emoji on` 删这个群里的自定义表情贴纸。默认关闭。编号不进证据。普通贴纸仍看 `media_sticker`。正文里的自定义表情仍看 `custom_emoji`。见 ADR 0520。
+
 ## 确认
 
 ```sh

@@ -179,6 +179,8 @@ export const messageSchema = z
     asLoginForward: z.literal(true).optional(),
     /** Custom emoji shown on an inline button. The emoji id stays out. The visible label stays in the message. */
     asButtonEmoji: z.literal(true).optional(),
+    /** Custom emoji sticker. The emoji id stays out. A regular sticker stays unmarked. */
+    asStickerEmoji: z.literal(true).optional(),
   })
   .refine(
     (message) =>
