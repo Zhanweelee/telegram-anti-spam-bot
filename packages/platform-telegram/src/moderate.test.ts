@@ -1567,6 +1567,83 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the default bot description and drops extra fields", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: { description: phrase, note: phrase },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.readBotDescription({ tenantId: "local" }),
+    ).resolves.toBe(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getMyDescription`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setMyDescription");
+    expect("getMyDescription").not.toContain("setMyDescription");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { description: "" } }),
+            { status: 200 },
+          ),
+      }).readBotDescription({ tenantId: "local" }),
+    ).resolves.toBe("");
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readBotDescription({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("mydesc_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { description: `${phrase}\n` },
+            }),
+            { status: 200 },
+          ),
+      }).readBotDescription({ tenantId: "local" }),
+    ).rejects.toThrow("mydesc_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { description: "x".repeat(513) },
+            }),
+            { status: 200 },
+          ),
+      }).readBotDescription({ tenantId: "local" }),
+    ).rejects.toThrow("mydesc_failed");
+  });
+
   it("sets the bot description without a language", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

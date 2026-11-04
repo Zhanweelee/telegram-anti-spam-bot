@@ -130,6 +130,7 @@ const COMMAND_NAMES = [
   "botname",
   "myname",
   "botdesc",
+  "mydesc",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -268,6 +269,7 @@ export interface OperatorCommandInput {
       | "openTopic"
       | "pinMessage"
       | "readAdministrators"
+      | "readBotDescription"
       | "readBotName"
       | "readBoostCount"
       | "readCommandMenu"
@@ -508,6 +510,8 @@ async function dispatch(
       return showBotName(input, args);
     case "botdesc":
       return setBotDescription(input, args);
+    case "mydesc":
+      return showBotDescription(input, args);
   }
 }
 
@@ -3320,6 +3324,53 @@ function rejectBotDescription(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "botdesc",
+  });
+}
+
+async function showBotDescription(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.mydesc.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readBotDescription;
+  if (!read) {
+    rejectReadBotDescription(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const description = await read({ tenantId: input.event.tenantId });
+    if (!isBotDescription(description)) {
+      rejectReadBotDescription(input);
+      return say(input, "command.invalid");
+    }
+    return description.length === 0
+      ? say(input, "command.mydesc.empty")
+      : say(input, "command.mydesc.body", { description });
+  } catch {
+    rejectReadBotDescription(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isBotDescription(description: string): boolean {
+  return (
+    description.length <= BOT_DESCRIPTION_LIMIT && !/[\r\n]/.test(description)
+  );
+}
+
+function rejectReadBotDescription(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "mydesc",
   });
 }
 

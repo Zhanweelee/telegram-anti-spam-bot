@@ -597,6 +597,17 @@ export function createTelegramModerator(input: {
       });
       return readBotNameValue(named);
     },
+    async readBotDescription() {
+      const described = await postTelegram({
+        token: input.token,
+        method: "getMyDescription",
+        fetchImpl: input.fetchImpl,
+        missing: "mydesc_unavailable",
+        failed: "mydesc_failed",
+        body: {},
+      });
+      return readBotDescriptionValue(described);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -1054,6 +1065,25 @@ function telegramDefaultRights(
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
   };
+}
+
+function readBotDescriptionValue(body: unknown): string {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("mydesc_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("mydesc_failed");
+  }
+  const description = (result as Record<string, unknown>).description;
+  if (
+    typeof description !== "string" ||
+    description.length > 512 ||
+    /[\r\n]/.test(description)
+  ) {
+    throw new Error("mydesc_failed");
+  }
+  return description;
 }
 
 function readBotNameValue(body: unknown): string {

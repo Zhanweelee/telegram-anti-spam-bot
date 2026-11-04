@@ -2826,11 +2826,15 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(67);
+    expect(body.commands).toHaveLength(68);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
       description: "/botdesc [description]",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "mydesc",
+      description: "/mydesc",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -3748,6 +3752,117 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: `/botdesc ${phrase}`, direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the default bot description and keeps it out of the logs", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { description: phrase, note: "kept" },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      `简介 ${phrase}`,
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getMyDescription"]);
+    expect(calls[0]?.method).not.toContain("setMyDescription");
+    expect("getMyDescription").not.toContain("setMyDescription");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const cleared = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { description: "" } }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      "简介 空",
+    ]);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { description: `${phrase}\nsecret` },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/mydesc", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",
