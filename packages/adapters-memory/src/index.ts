@@ -140,6 +140,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly generalsShown: readonly ChatTarget[];
   readonly topicsDeleted: readonly NamedForumTopicTarget[];
   readonly messagesPinned: readonly PinnedMessageTarget[];
+  readonly messagesUnpinned: readonly PinnedMessageTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -166,6 +167,7 @@ export function createMemoryModerator(): ModerationPort & {
   const generalsShown: ChatTarget[] = [];
   const topicsDeleted: NamedForumTopicTarget[] = [];
   const messagesPinned: PinnedMessageTarget[] = [];
+  const messagesUnpinned: PinnedMessageTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -192,6 +194,7 @@ export function createMemoryModerator(): ModerationPort & {
     generalsShown,
     topicsDeleted,
     messagesPinned,
+    messagesUnpinned,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -312,6 +315,13 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async pinMessage(target) {
       messagesPinned.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        messageId: target.messageId,
+      });
+    },
+    async unpinMessage(target) {
+      messagesUnpinned.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
         messageId: target.messageId,

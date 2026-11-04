@@ -167,6 +167,8 @@ export const messageKeys = [
   "command.count.done",
   "command.pin.usage",
   "command.pin.done",
+  "command.unpinmsg.usage",
+  "command.unpinmsg.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -225,6 +227,7 @@ const syntax = [
   "/deltopic <chatId> <threadId>",
   "/count <chatId>",
   "/pin <chatId> <messageId>",
+  "/unpinmsg <chatId> <messageId>",
 ].join("\n");
 
 const zh = {
@@ -414,6 +417,9 @@ const zh = {
   "command.pin.usage": "用法：/pin <chatId> <messageId>",
   "command.pin.done":
     "已请求置顶 {chatId} 的消息 {messageId}。群里可能收到通知。频道和私聊不会。消息还在。其它置顶还在。",
+  "command.unpinmsg.usage": "用法：/unpinmsg <chatId> <messageId>",
+  "command.unpinmsg.done":
+    "已请求撤下 {chatId} 的消息 {messageId} 的置顶。消息还在。其它置顶还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -615,6 +621,9 @@ const en = {
   "command.pin.usage": "Usage: /pin <chatId> <messageId>",
   "command.pin.done":
     "Asked to pin message {messageId} of {chatId}. A group may be notified. Channels and private chats stay quiet. The message stays. The other pins stay.",
+  "command.unpinmsg.usage": "Usage: /unpinmsg <chatId> <messageId>",
+  "command.unpinmsg.done":
+    "Asked to unpin message {messageId} of {chatId}. The message stays. The other pins stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

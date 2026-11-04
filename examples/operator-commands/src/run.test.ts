@@ -42,6 +42,15 @@ describe("operator command example", () => {
     expect(help).toContain("/deltopic");
     expect(help).toContain("/count");
     expect(help).toContain("/pin");
+    expect(help).toContain("/unpinmsg");
+    const unpinnedMessage = await runPrivateCommand({
+      text: "/unpinmsg -100 55",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(unpinnedMessage).toBe(
+      "已请求撤下 -100 的消息 55 的置顶。消息还在。其它置顶还在。",
+    );
     const pinned = await runPrivateCommand({
       text: "/pin -100 55",
       actorId: "42",

@@ -3780,6 +3780,160 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("unpins one message and leaves the other pins", async () => {
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinChat() {
+          throw new Error("called");
+        },
+        async pinMessage() {
+          throw new Error("called");
+        },
+        async unpinMessage(target) {
+          seen.push(`${target.chatId}:${target.messageId}`);
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求撤下 -100 的消息 55 的置顶。消息还在。其它置顶还在。",
+    });
+    const one = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage(target) {
+          seen.push(`${target.chatId}:${target.messageId}`);
+        },
+      },
+      ...kit(),
+    });
+    expect(one).toMatchObject({
+      text: "已请求撤下 -100 的消息 1 的置顶。消息还在。其它置顶还在。",
+    });
+    expect(seen).toEqual(["-100:55", "-100:1"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/unpinmsg <chatId> <messageId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async unpinMessage() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to unpin message 55 of -100. The message stays. The other pins stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/unpinmsg <chatId> <messageId>",
+    });
+    expect(seen).toEqual(["-100:55", "-100:1"]);
+    const extra = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/unpinmsg <chatId> <messageId>",
+    });
+    const invalid = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    const hiddenText = await runOperatorCommand({
+      event: event({ text: `/unpinmsg ${phrase} 55`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(hiddenText).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(hiddenText)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async unpinMessage() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"unpinmsg"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/unpinmsg -200 55", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async unpinMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];
