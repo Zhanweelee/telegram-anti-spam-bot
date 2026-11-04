@@ -20614,6 +20614,106 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a giveaway notice and leaves the prize message out", async () => {
+    const prize = "抽奖广告正文";
+    const prizeId = 90184;
+    const stars = 90183;
+    const created = await normalize({
+      update_id: 4510,
+      message: {
+        message_id: 560,
+        date: 1761955200,
+        chat: { id: -100499490, type: "supergroup" },
+        from: { id: 96 },
+        giveaway_created: { prize_star_count: stars },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.giveawayNotice).toBe("created");
+    expect(created.event.message?.text).toBe("");
+    expect(created.event.message?.asGiveaway).toBeUndefined();
+    expect(JSON.stringify(created.event)).not.toContain(String(stars));
+
+    const completed = await normalize({
+      update_id: 4511,
+      message: {
+        message_id: 561,
+        date: 1761955200,
+        chat: { id: -100499491, type: "supergroup" },
+        from: { id: 96 },
+        giveaway_completed: {
+          winner_count: 3,
+          unclaimed_prize_count: stars,
+          is_star_giveaway: true,
+          giveaway_message: {
+            message_id: prizeId,
+            text: `${prize} https://bit.ly/gw451`,
+            from: { id: 97, first_name: "开奖的人" },
+          },
+        },
+      },
+    });
+    expect(completed.status).toBe("event");
+    if (completed.status !== "event") {
+      return;
+    }
+    expect(completed.event.message?.giveawayNotice).toBe("completed");
+    expect(completed.event.message?.text).toBe("");
+    expect(completed.event.message?.hosts).toBeUndefined();
+    expect(completed.event.actor).toEqual({ id: "96", isAdmin: false });
+    const completedDump = JSON.stringify(completed.event);
+    expect(completedDump).not.toContain(prize);
+    expect(completedDump).not.toContain("gw451");
+    expect(completedDump).not.toContain("bit.ly");
+    expect(completedDump).not.toContain("开奖的人");
+    expect(completedDump).not.toContain(String(prizeId));
+    expect(completedDump).not.toContain(String(stars));
+
+    const alongside = await normalize({
+      update_id: 4512,
+      message: {
+        message_id: 562,
+        date: 1761955200,
+        chat: { id: -100499492, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        giveaway_created: {},
+        giveaway_completed: {
+          winner_count: 1,
+          giveaway_message: { message_id: prizeId, text: prize },
+        },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.giveawayNotice).toBe("created");
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(prize);
+
+    const empty = await normalize({
+      update_id: 4513,
+      message: {
+        message_id: 563,
+        date: 1761955200,
+        chat: { id: -100499493, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        giveaway_completed: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.giveawayNotice).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("marks a pin and leaves the pinned text out", async () => {
     const pinnedText = "置顶广告正文";
     const pinnedId = 90182;

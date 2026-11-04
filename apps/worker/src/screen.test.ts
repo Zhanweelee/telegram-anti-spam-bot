@@ -5675,6 +5675,142 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a giveaway notice until that chat asks", async () => {
+    const prize = "抽奖广告正文";
+    const prizeId = 90184;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      created?: boolean;
+      completed?: boolean;
+      empty?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.created ? { giveaway_created: {} } : {}),
+            ...(input.completed
+              ? {
+                  giveaway_completed: {
+                    winner_count: 3,
+                    giveaway_message: {
+                      message_id: prizeId,
+                      text: `${prize} https://bit.ly/gw451`,
+                      from: { id: 97, first_name: "开奖的人" },
+                    },
+                  },
+                }
+              : {}),
+            ...(input.empty ? { giveaway_completed: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8400,
+      chatId: -100840,
+      created: true,
+    });
+    expect(idle.message?.giveawayNotice).toBe("created");
+    expect(idle.message?.text).toBe("");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "giveaway_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["giveaway_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8401, chatId: -100841, completed: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("giveaway_notice");
+    expect(removed.decision.ruleIds).toContain("giveaway_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "giveaway:completed" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 8402, chatId: -100842, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8403,
+        chatId: -100843,
+        created: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(prize);
+    expect(dumped).not.toContain("gw451");
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("开奖的人");
+    expect(dumped).not.toContain("90184");
+  });
+
   it("keeps a pin until that chat asks", async () => {
     const pinnedText = "置顶广告正文";
     const pinnedId = 90182;

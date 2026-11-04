@@ -30,6 +30,7 @@ export default defineConfig({
       "packages/detectors-background",
       "packages/detectors-gift",
       "packages/detectors-pin",
+      "packages/detectors-giveaway-notice",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

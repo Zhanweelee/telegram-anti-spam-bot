@@ -55,3 +55,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `gift.gift`、`unique_gift.gift` 或 `gift_upgrade_sent.gift` 是对象时，消息带 `gift`，取值是 `card`、`unique` 或 `upgrade`。同时出现时先认普通礼物。星星数量、编号、文件号和发布者名字不因这个标记进事件。空对象不带这个标记。附言和收藏名仍按 ADR 0087 和 ADR 0324 成为正文。规则 `gift_card` 默认关闭。见 ADR 0481。
 
 `pinned_message.message_id` 是大于 0 的安全整数时，消息带 `asPin`。被置顶的原文、名字和消息号不进事件。空的 `pinned_message` 不带这个标记。不从这条嵌套消息里抽主机名。规则 `pin_notice` 默认关闭。见 ADR 0482。
+
+`giveaway_created` 是对象时，消息带 `giveawayNotice: "created"`。`giveaway_completed.winner_count` 是大于等于 0 的安全整数时带 `completed`。同时出现时先认创建。星星数量、中奖人数和嵌套抽奖消息不进事件。空的结束对象不带这个标记。规则 `giveaway_notice` 默认关闭。见 ADR 0483。
