@@ -61,6 +61,7 @@ describe("operator command example", () => {
     expect(help).toContain("/delephemeral <chatId> <userId> <messageId>");
     expect(help).toContain("/myrights [channels] <clear|right...>");
     expect(help).toContain("/botrights [channels]");
+    expect(help).toContain("/setcommands [private]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -273,6 +274,15 @@ describe("operator command example", () => {
       "已请求设置这个 bot 在群和超级群里的默认管理员权限。加入时仍可修改。已有群不受影响。",
     );
     expect(rights).not.toContain("manage_chat");
+    const menu = await runPrivateCommand({
+      text: "/setcommands",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(menu).toBe(
+      "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
+    );
+    expect(menu).not.toContain("/help");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

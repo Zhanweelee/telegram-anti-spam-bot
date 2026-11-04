@@ -212,6 +212,8 @@ export const messageKeys = [
   "command.botrights.usage",
   "command.botrights.groups",
   "command.botrights.channels",
+  "command.setcommands.usage",
+  "command.setcommands.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -289,7 +291,20 @@ const syntax = [
   "/delephemeral <chatId> <userId> <messageId>",
   "/myrights [channels] <clear|right...>",
   "/botrights [channels]",
+  "/setcommands [private]",
 ].join("\n");
+
+export function commandDescriptions(): ReadonlyMap<string, string> {
+  const descriptions = new Map<string, string>();
+  for (const line of syntax.split("\n")) {
+    const name = /^\/([a-z0-9_]{1,32})(?:\s|$)/.exec(line)?.[1];
+    if (name === undefined || descriptions.has(name)) {
+      continue;
+    }
+    descriptions.set(name, line);
+  }
+  return descriptions;
+}
 
 const zh = {
   "command.denied": "没有权限",
@@ -539,6 +554,9 @@ const zh = {
   "command.botrights.usage": "用法：/botrights [channels]",
   "command.botrights.groups": "botrights 群",
   "command.botrights.channels": "botrights 频道",
+  "command.setcommands.usage": "用法：/setcommands [private]",
+  "command.setcommands.done":
+    "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -810,6 +828,9 @@ const en = {
   "command.botrights.usage": "Usage: /botrights [channels]",
   "command.botrights.groups": "botrights groups",
   "command.botrights.channels": "botrights channels",
+  "command.setcommands.usage": "Usage: /setcommands [private]",
+  "command.setcommands.done":
+    "Asked to set the command menu in private chats. Group menus stay. People who already have a language-specific list are unchanged.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

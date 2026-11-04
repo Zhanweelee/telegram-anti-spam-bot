@@ -2793,6 +2793,136 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("sets the private command menu and leaves group menus alone", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/setcommands", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求设置私聊里的命令菜单。群菜单不变。已有单独语言列表的人不受影响。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["setMyCommands"]);
+    expect(calls[0]?.method).not.toContain("deleteMyCommands");
+    expect(calls[0]?.method).not.toContain("getMyCommands");
+    const body = JSON.parse(calls[0]?.body ?? "null") as {
+      commands: { command: string; description: string }[];
+      scope: { type: string };
+    };
+    expect(body.scope).toEqual({ type: "all_private_chats" });
+    expect(body).not.toHaveProperty("language_code");
+    expect(body).not.toHaveProperty("chat_id");
+    expect(body.commands).toHaveLength(60);
+    expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
+    expect(body.commands.at(-1)).toEqual({
+      command: "setcommands",
+      description: "/setcommands [private]",
+    });
+    expect(calls[0]?.body).not.toContain("is_ephemeral");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain("bot-token");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("/help");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const named = deps();
+    const namedCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/setcommands private", direct: true }),
+      {
+        ...named,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          namedCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(JSON.parse(namedCalls[0]?.body ?? "null")).toEqual(body);
+    const usage = deps();
+    let used = false;
+    await handleIncomingEvent(
+      await incoming({ text: "/setcommands private extra", direct: true }),
+      {
+        ...usage,
+        botToken: "bot-token",
+        fetchImpl: async () => {
+          used = true;
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(used).toBe(false);
+    expect(usage.reply.sent.map((message) => message.text)).toEqual([
+      "用法：/setcommands [private]",
+    ]);
+    const invalid = deps();
+    let called = false;
+    await handleIncomingEvent(
+      await incoming({ text: `/setcommands ${phrase}`, direct: true }),
+      {
+        ...invalid,
+        botToken: "bot-token",
+        fetchImpl: async () => {
+          called = true;
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(called).toBe(false);
+    expect(invalid.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(invalid.reply.sent)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/setcommands", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/setcommands", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-375 私聊设置命令菜单 — done
+
+验收：私聊 `/setcommands [private]` 调用 `setMyCommands`。范围是 `all_private_chats`。不送 `language_code`、`chat_id` 或 `is_ephemeral`。命令和说明来自固定目录，一条命令一行，最多 100 条。`private` 和没有参数是同一次设置。其它参数不发出请求。回复不重复目录，并写明群菜单不变、已有单独语言列表的人不受影响。只有配置里的管理员可以改。接入目录里的人即使管着自己的群也不能改。群聊里的同样文本不执行。没有 token 或调用失败时回复「参数无效」，日志不含异常文本、token 和原文，也不把内存记录当成已经设置。不调用 `deleteMyCommands` 或 `getMyCommands`。不改黑名单、封禁或禁言。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-374 私聊查看这个 bot 的默认管理员权限 — done
 
 验收：私聊 `/botrights [channels]` 调用 `getMyDefaultAdministratorRights`。不写 `channels` 时不送 `for_channels`。写了 `channels` 才送 `for_channels: true`。回复列出十八项权限。缺字段写未知。非布尔值回复「参数无效」，并且不发出第二轮请求。多余参数不发出请求。只有配置里的管理员可以看。接入目录里的人即使管着自己的群也不能看。群聊里的同样文本不执行。没有 token 或调用失败时回复「参数无效」，日志不含异常文本、token 和原文，也不编一份权限。不调用 `setMyDefaultAdministratorRights` 或 `promoteChatMember`。不改黑名单、封禁或禁言。规则、白名单、额度和 30 天保留期不动。
@@ -1732,6 +1736,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-04 P3-375
+
+- 做了什么：配置里的管理员可以在私聊设置私聊命令菜单。一次请求。群菜单不变。已有单独语言列表的人不受影响。
+- 学到什么：`all_private_chats` 只出现在私聊菜单的查找顺序里。不送 `language_code` 时，已经有单独语言列表的人继续用原来的列表。说明来自固定目录，粘贴的原文不离开 Worker。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-04 P3-374
 

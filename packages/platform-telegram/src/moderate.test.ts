@@ -1567,6 +1567,56 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets the private command menu without a language or a group scope", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setCommandMenu({
+      tenantId: "local",
+      commands: [
+        { command: "help", description: "/help" },
+        { command: "setcommands", description: "/setcommands [private]" },
+      ],
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setMyCommands`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      commands: [
+        { command: "help", description: "/help" },
+        { command: "setcommands", description: "/setcommands [private]" },
+      ],
+      scope: { type: "all_private_chats" },
+    });
+    expect(calls[0]?.body).not.toContain("language_code");
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(calls[0]?.body).not.toContain("is_ephemeral");
+    expect(calls[0]?.method).not.toContain("deleteMyCommands");
+    expect(calls[0]?.method).not.toContain("getMyCommands");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setCommandMenu({
+        tenantId: "local",
+        commands: [{ command: "help", description: "/help" }],
+      }),
+    ).rejects.toThrow("setcommands_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("sets one emoji reaction and keeps the other reactions", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

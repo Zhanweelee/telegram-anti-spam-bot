@@ -120,6 +120,22 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setCommandMenu(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setMyCommands",
+        fetchImpl: input.fetchImpl,
+        missing: "setcommands_unavailable",
+        failed: "setcommands_failed",
+        body: {
+          commands: target.commands.map((item) => ({
+            command: item.command,
+            description: item.description,
+          })),
+          scope: { type: "all_private_chats" },
+        },
+      });
+    },
     async setDefaultRights(target) {
       await postTelegram({
         token: input.token,

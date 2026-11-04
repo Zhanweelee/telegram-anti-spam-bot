@@ -305,6 +305,16 @@ export interface JoinTarget extends BanTarget {
   readonly queryId?: string;
 }
 
+export interface MenuCommand {
+  readonly command: string;
+  readonly description: string;
+}
+
+export interface CommandMenuTarget {
+  readonly tenantId: string;
+  readonly commands: readonly MenuCommand[];
+}
+
 export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
   deleteMessages(target: DeleteMessagesTarget): Promise<void>;
@@ -344,6 +354,7 @@ export interface ModerationPort {
   leaveChat(target: ChatTarget): Promise<void>;
   setMemberTag(target: MemberTagTarget): Promise<void>;
   setAdminTitle(target: AdminTitleTarget): Promise<void>;
+  setCommandMenu(target: CommandMenuTarget): Promise<void>;
   deleteStickerSet(target: ChatTarget): Promise<void>;
   setReaction(target: ReactionChoice): Promise<void>;
   setStickerSet(target: ChatStickerSetTarget): Promise<void>;

@@ -9,7 +9,7 @@ import type { Event } from "./event.js";
 import { fitFeedbackEvalDocument } from "./feedback-eval.js";
 import type { Logger } from "./logger.js";
 import type { Locale, MessageKey } from "./messages.js";
-import { translate } from "./messages.js";
+import { commandDescriptions, translate } from "./messages.js";
 import {
   defaultPrefilterPolicy,
   loadPolicy,
@@ -28,6 +28,7 @@ import {
   type DefaultRightsSnapshot,
   fitAuditExportDocument,
   type MemberStanding,
+  type MenuCommand,
   type ModerationPort,
   minimumAuditExportLength,
   type PermissionState,
@@ -119,6 +120,7 @@ const COMMAND_NAMES = [
   "delephemeral",
   "myrights",
   "botrights",
+  "setcommands",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -264,6 +266,7 @@ export interface OperatorCommandInput {
       | "renameTopic"
       | "revokeInvite"
       | "setAdminTitle"
+      | "setCommandMenu"
       | "setDefaultRights"
       | "setDescription"
       | "setMemberTag"
@@ -471,6 +474,8 @@ async function dispatch(
       return setMyRights(input, args);
     case "botrights":
       return showBotRights(input, args);
+    case "setcommands":
+      return publishCommandMenu(input, args);
   }
 }
 
@@ -2916,6 +2921,71 @@ function rejectBotRights(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "botrights",
+  });
+}
+
+const MENU_LIMIT = 100;
+
+function privateMenu(): readonly MenuCommand[] | undefined {
+  const descriptions = commandDescriptions();
+  if (descriptions.size !== COMMAND_NAMES.length) {
+    return undefined;
+  }
+  const commands: MenuCommand[] = [];
+  for (const name of COMMAND_NAMES) {
+    const description = descriptions.get(name);
+    if (
+      description === undefined ||
+      description.length < 1 ||
+      description.length > 256 ||
+      !/^[a-z0-9_]{1,32}$/.test(name)
+    ) {
+      return undefined;
+    }
+    commands.push({ command: name, description });
+  }
+  if (commands.length === 0 || commands.length > MENU_LIMIT) {
+    return undefined;
+  }
+  return commands;
+}
+
+async function publishCommandMenu(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.setcommands.usage");
+  }
+  if (args.length === 1 && args[0] !== "private") {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const commands = privateMenu();
+  const set = input.moderator?.setCommandMenu;
+  if (!commands || !set) {
+    rejectCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      commands,
+    });
+  } catch {
+    rejectCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.setcommands.done");
+}
+
+function rejectCommandMenu(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "setcommands",
   });
 }
 
