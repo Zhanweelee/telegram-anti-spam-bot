@@ -21178,6 +21178,245 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a rich anchor link and leaves the name out", async () => {
+    const anchorName = "link90229";
+    const actor = "发锚点链接的人";
+    const marked = await normalize({
+      update_id: 4840,
+      message: {
+        message_id: 880,
+        date: 1761955200,
+        chat: { id: -100499840, type: "supergroup" },
+        from: { id: 120, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "anchor_link",
+                  text: "链接广告",
+                  anchor_name: anchorName,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichAnchorLink).toBe(true);
+    expect(marked.event.message?.asRichAnchor).toBeUndefined();
+    expect(marked.event.message?.text).toBe("链接广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(anchorName);
+    expect(markedDump).not.toContain("90229");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4841,
+      message: {
+        message_id: 881,
+        date: 1761955200,
+        chat: { id: -100499841, type: "supergroup" },
+        from: { id: 120 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "anchor_link",
+                text: "链接广告",
+                anchor_name: anchorName,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichAnchorLink).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(anchorName);
+
+    const nested = await normalize({
+      update_id: 4842,
+      message: {
+        message_id: 882,
+        date: 1761955200,
+        chat: { id: -100499842, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "anchor_link",
+                    text: "嵌套链接",
+                    anchor_name: anchorName,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichAnchorLink).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套链接");
+    expect(JSON.stringify(nested.event)).not.toContain("90229");
+
+    const blank = await normalize({
+      update_id: 4843,
+      message: {
+        message_id: 883,
+        date: 1761955200,
+        chat: { id: -100499843, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "anchor_link",
+                text: "空链接",
+                anchor_name: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空链接");
+    expect(blank.event.message?.asRichAnchorLink).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4844,
+      message: {
+        message_id: 884,
+        date: 1761955200,
+        chat: { id: -100499844, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "anchor_link",
+                text: "布尔链接",
+                anchor_name: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔链接");
+    expect(flag.event.message?.asRichAnchorLink).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4845,
+      message: {
+        message_id: 885,
+        date: 1761955200,
+        chat: { id: -100499845, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: { type: "anchor_link", text: "缺链接" },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺链接");
+    expect(missing.event.message?.asRichAnchorLink).toBeUndefined();
+
+    const anchor = await normalize({
+      update_id: 4846,
+      message: {
+        message_id: 886,
+        date: 1761955200,
+        chat: { id: -100499846, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: ["锚点留下", { type: "anchor", name: "keep90231" }],
+            },
+          ],
+        },
+      },
+    });
+    expect(anchor.status).toBe("event");
+    if (anchor.status !== "event") {
+      return;
+    }
+    expect(anchor.event.message?.text).toBe("锚点留下");
+    expect(anchor.event.message?.asRichAnchor).toBe(true);
+    expect(anchor.event.message?.asRichAnchorLink).toBeUndefined();
+    expect(JSON.stringify(anchor.event)).not.toContain("90231");
+
+    const reference = await normalize({
+      update_id: 4847,
+      message: {
+        message_id: 887,
+        date: 1761955200,
+        chat: { id: -100499847, type: "supergroup" },
+        from: { id: 120 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "reference",
+                text: "引用留下",
+                name: "ref90230",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(reference.status).toBe("event");
+    if (reference.status !== "event") {
+      return;
+    }
+    expect(reference.event.message?.text).toBe("引用留下");
+    expect(reference.event.message?.asRichAnchorLink).toBeUndefined();
+    expect(JSON.stringify(reference.event)).not.toContain("90230");
+  });
+
   it("marks a rich anchor and leaves the name out", async () => {
     const name = "anchor90227";
     const actor = "发锚点的人";
@@ -21397,6 +21636,7 @@ describe("normalizeUpdate", () => {
     }
     expect(link.event.message?.text).toBe("链接留下");
     expect(link.event.message?.asRichAnchor).toBeUndefined();
+    expect(link.event.message?.asRichAnchorLink).toBe(true);
     expect(JSON.stringify(link.event)).not.toContain("90228");
   });
 

@@ -1,0 +1,5 @@
+{
+  "detector": "rich_anchor_link",
+  "precision": 1,
+  "recall": 1
+}

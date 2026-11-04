@@ -747,6 +747,11 @@ export async function screenTelegramEvent(
       },
       {
         source: "builtin",
+        manifest: builtinManifests.richAnchorLink,
+        value: createRichDetector("anchor_link"),
+      },
+      {
+        source: "builtin",
         manifest: builtinManifests.flood,
         value: createFloodDetector({
           window: deps.rateWindow ?? workerRateWindow,
