@@ -219,6 +219,7 @@ export {
   type MuteTarget,
   type NamedForumTopicTarget,
   type NewTopicTarget,
+  type OwnAdmin,
   type ParentChat,
   type PermissionState,
   type PersonalChat,

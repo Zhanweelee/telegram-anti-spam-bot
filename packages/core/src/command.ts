@@ -40,6 +40,7 @@ import {
   type MenuCommandSnapshot,
   type ModerationPort,
   minimumAuditExportLength,
+  type OwnAdmin,
   type ParentChat,
   type PermissionState,
   type PersonalChat,
@@ -160,6 +161,7 @@ const COMMAND_NAMES = [
   "allows",
   "canadmin",
   "kick",
+  "cani",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -314,6 +316,7 @@ export interface OperatorCommandInput {
       | "readMember"
       | "readMemberAdmin"
       | "readMemberAllows"
+      | "readOwnAdmin"
       | "readMemberCount"
       | "readMenuButton"
       | "readParentChat"
@@ -464,6 +467,8 @@ async function dispatch(
       return showMemberAdmin(input, args);
     case "kick":
       return kickMember(input, args);
+    case "cani":
+      return showOwnAdmin(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -1419,8 +1424,11 @@ function describeMemberAdmin(
   chatId: string,
   actorId: string,
   value: MemberAdmin,
+  header:
+    | "command.canadmin.header"
+    | "command.cani.header" = "command.canadmin.header",
 ): string {
-  const lines = [say(input, "command.canadmin.header", { chatId, actorId })];
+  const lines = [say(input, header, { chatId, actorId })];
   if (value.kind === "none") {
     lines.push(say(input, "command.canadmin.none"));
     return lines.join("\n");
@@ -1441,6 +1449,87 @@ function rejectMemberAdmin(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "canadmin",
+  });
+}
+
+async function showOwnAdmin(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.cani.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readOwnAdmin;
+  if (!read) {
+    rejectOwnAdmin(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const admin = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+    if (!isOwnAdmin(admin)) {
+      rejectOwnAdmin(input);
+      return say(input, "command.invalid");
+    }
+    const standing: MemberAdmin =
+      admin.kind === "none"
+        ? { kind: "none" }
+        : {
+            kind: "admin",
+            editable: admin.editable,
+            admin: admin.admin,
+          };
+    return describeMemberAdmin(
+      input,
+      chatId,
+      admin.botId,
+      standing,
+      "command.cani.header",
+    );
+  } catch {
+    rejectOwnAdmin(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isOwnAdmin(value: OwnAdmin): boolean {
+  if (!isTargetId(value.botId)) {
+    return false;
+  }
+  if (value.kind === "none") {
+    return true;
+  }
+  if (value.kind !== "admin") {
+    return false;
+  }
+  return (
+    value.admin.actorId === value.botId &&
+    isMemberAdmin(
+      {
+        kind: "admin",
+        editable: value.editable,
+        admin: value.admin,
+      },
+      value.botId,
+    )
+  );
+}
+
+function rejectOwnAdmin(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "cani",
   });
 }
 

@@ -262,6 +262,13 @@ describe("memory adapter", () => {
     ).rejects.toThrow("personal_unavailable");
   });
 
+  it("does not invent this bot's admin rights", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readOwnAdmin({ tenantId: "t", chatId: "-100" }),
+    ).rejects.toThrow("cani_unavailable");
+  });
+
   it("does not invent one member's admin rights", async () => {
     const moderator = createMemoryModerator();
     await expect(

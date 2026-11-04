@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(84);
+    expect(body.commands).toHaveLength(85);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2898,9 +2898,13 @@ describe("handleIncomingEvent", () => {
       command: "canadmin",
       description: "/canadmin <chatId> <actorId>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "kick")).toEqual({
       command: "kick",
       description: "/kick <chatId> <actorId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "cani",
+      description: "/cani <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -6503,6 +6507,132 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/allows -100 77", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads this bot's admin rights in one chat", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const flags = {
+      can_be_edited: false,
+      is_anonymous: false,
+      can_manage_chat: false,
+      can_delete_messages: true,
+      can_manage_video_chats: false,
+      can_restrict_members: true,
+      can_promote_members: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_post_stories: false,
+      can_edit_stories: false,
+      can_delete_stories: false,
+      can_send_welcome_messages: false,
+    };
+    await handleIncomingEvent(
+      await incoming({ text: "/cani -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          const method = url.slice(url.lastIndexOf("/") + 1);
+          calls.push({ method, body: String(init?.body ?? "") });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result:
+                method === "getMe"
+                  ? {
+                      id: 9,
+                      is_bot: true,
+                      first_name: phrase,
+                      username: "giftbot",
+                    }
+                  : {
+                      status: "administrator",
+                      user: { id: 9, is_bot: true, first_name: phrase },
+                      custom_title: phrase,
+                      ...flags,
+                    },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100 机器人 9", "9 机器人 管理员 删除 限制 可改 off"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "getMe",
+      "getChatMember",
+    ]);
+    expect(calls[0]?.body).toBe("{}");
+    expect(calls[1]?.body).toBe('{"chat_id":-100,"user_id":9}');
+    expect(calls.map((call) => call.method)).not.toContain("promoteChatMember");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("giftbot");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+
+    const absent = deps();
+    const absentCalls: string[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/cani -100", direct: true }),
+      {
+        ...absent,
+        botToken: "bot-token",
+        fetchImpl: async (input) => {
+          const method = String(input).slice(
+            String(input).lastIndexOf("/") + 1,
+          );
+          absentCalls.push(method);
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result:
+                method === "getMe"
+                  ? { id: 9, is_bot: true, first_name: phrase }
+                  : {
+                      status: "member",
+                      user: { id: 9, is_bot: true, first_name: phrase },
+                    },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(absent.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100 机器人 9", "管理员 无"].join("\n"),
+    ]);
+    expect(absentCalls).toEqual(["getMe", "getChatMember"]);
+
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/cani -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/cani -100", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

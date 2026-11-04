@@ -373,6 +373,15 @@ export type MemberAdmin =
       readonly editable: PermissionState | null;
     };
 
+export type OwnAdmin =
+  | { readonly kind: "none"; readonly botId: string }
+  | {
+      readonly kind: "admin";
+      readonly botId: string;
+      readonly admin: ChatAdministrator;
+      readonly editable: PermissionState | null;
+    };
+
 export interface JoinTarget extends BanTarget {
   readonly queryId?: string;
 }
@@ -477,6 +486,7 @@ export interface ModerationPort {
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
   readMemberAdmin(target: BanTarget): Promise<MemberAdmin>;
+  readOwnAdmin(target: ChatTarget): Promise<OwnAdmin>;
   readMemberAllows(target: BanTarget): Promise<MemberAllows>;
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
   readChatGuard(target: ChatTarget): Promise<ChatGuard>;

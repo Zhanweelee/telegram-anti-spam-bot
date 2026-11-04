@@ -386,6 +386,172 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads this bot's admin rights without copying a name", async () => {
+    const phrase = "请免费领取礼品";
+    const flags = {
+      can_be_edited: true,
+      is_anonymous: false,
+      can_manage_chat: false,
+      can_delete_messages: true,
+      can_manage_video_chats: false,
+      can_restrict_members: true,
+      can_promote_members: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_post_stories: false,
+      can_edit_stories: false,
+      can_delete_stories: false,
+      can_send_welcome_messages: false,
+    };
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        const method = url.slice(url.lastIndexOf("/") + 1);
+        calls.push({ method, body: String(init?.body ?? "") });
+        const result =
+          method === "getMe"
+            ? {
+                id: 9,
+                is_bot: true,
+                first_name: phrase,
+                username: "giftbot",
+              }
+            : {
+                status: "administrator",
+                user: { id: 9, is_bot: true, first_name: phrase },
+                custom_title: phrase,
+                ...flags,
+              };
+        return new Response(JSON.stringify({ ok: true, result }), {
+          status: 200,
+        });
+      },
+    });
+    const admin = await moderator.readOwnAdmin({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(admin).toEqual({
+      kind: "admin",
+      botId: "9",
+      editable: "on",
+      admin: {
+        actorId: "9",
+        bot: true,
+        role: "administrator",
+        anonymous: false,
+        rights: ["deleteMessages", "restrictMembers"],
+      },
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      "getMe",
+      "getChatMember",
+    ]);
+    expect(calls[0]?.body).toBe("{}");
+    expect(calls[1]?.body).toBe('{"chat_id":-100,"user_id":9}');
+    expect(calls.map((call) => call.method)).not.toContain("promoteChatMember");
+    expect(JSON.stringify(admin)).not.toContain(phrase);
+    expect(JSON.stringify(admin)).not.toContain("giftbot");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+
+    const plainCalls: string[] = [];
+    const plain = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async (input) => {
+        const method = String(input).slice(String(input).lastIndexOf("/") + 1);
+        plainCalls.push(method);
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result:
+              method === "getMe"
+                ? { id: 9, is_bot: true, first_name: phrase }
+                : {
+                    status: "member",
+                    user: { id: 9, is_bot: true, first_name: phrase },
+                  },
+          }),
+          { status: 200 },
+        );
+      },
+    });
+    expect(
+      await plain.readOwnAdmin({ tenantId: "local", chatId: "-100" }),
+    ).toEqual({ kind: "none", botId: "9" });
+    expect(plainCalls).toEqual(["getMe", "getChatMember"]);
+
+    const stopped: string[] = [];
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async (input) => {
+          stopped.push(String(input).slice(String(input).lastIndexOf("/") + 1));
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: "9", is_bot: true, first_name: phrase },
+            }),
+            { status: 200 },
+          );
+        },
+      }).readOwnAdmin({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("cani_failed");
+    expect(stopped).toEqual(["getMe"]);
+
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: 9, is_bot: false, first_name: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readOwnAdmin({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("cani_failed");
+
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async (input) => {
+          const method = String(input).slice(
+            String(input).lastIndexOf("/") + 1,
+          );
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result:
+                method === "getMe"
+                  ? { id: 9, is_bot: true }
+                  : {
+                      status: "administrator",
+                      user: { id: 8, is_bot: true },
+                      ...flags,
+                    },
+            }),
+            { status: 200 },
+          );
+        },
+      }).readOwnAdmin({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("cani_failed");
+
+    let called = false;
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl: async () => {
+          called = true;
+          return new Response("ok", { status: 200 });
+        },
+      }).readOwnAdmin({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("cani_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads one administrator without copying a name or a title", async () => {
     const phrase = "请免费领取礼品";
     const flags = {
