@@ -106,6 +106,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-boost/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/actions/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -157,6 +161,7 @@ const rules = [
       /^@tasb\/detector-gift$/,
       /^@tasb\/detector-pin$/,
       /^@tasb\/detector-giveaway-notice$/,
+      /^@tasb\/detector-boost$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
       /^@tasb\/detector-blocklist$/,
@@ -209,6 +214,7 @@ const rules = [
       /^@tasb\/detector-gift$/,
       /^@tasb\/detector-pin$/,
       /^@tasb\/detector-giveaway-notice$/,
+      /^@tasb\/detector-boost$/,
       /^node:/,
       /^vitest$/,
     ],

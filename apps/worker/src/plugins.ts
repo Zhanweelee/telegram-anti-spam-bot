@@ -229,6 +229,12 @@ export const builtinManifests = {
     integrity:
       "1af610c1f245f260530adf57469ddace0031c68424294b214ce5423dacded8ae",
   }),
+  chatBoost: manifest({
+    id: "chat_boost",
+    kind: "detector",
+    integrity:
+      "2ffbd3164b9d89243f2f73a7067ca4ff0b0c114de1ed3c414e6793dc3f2aa0fa",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

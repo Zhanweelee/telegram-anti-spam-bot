@@ -57,3 +57,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `pinned_message.message_id` 是大于 0 的安全整数时，消息带 `asPin`。被置顶的原文、名字和消息号不进事件。空的 `pinned_message` 不带这个标记。不从这条嵌套消息里抽主机名。规则 `pin_notice` 默认关闭。见 ADR 0482。
 
 `giveaway_created` 是对象时，消息带 `giveawayNotice: "created"`。`giveaway_completed.winner_count` 是大于等于 0 的安全整数时带 `completed`。同时出现时先认创建。星星数量、中奖人数和嵌套抽奖消息不进事件。空的结束对象不带这个标记。规则 `giveaway_notice` 默认关闭。见 ADR 0483。
+
+`boost_added.boost_count` 是大于 0 的安全整数时，消息带 `asBoost`。次数和发送者名字不进事件。空对象、0 和小数不带这个标记。规则 `chat_boost` 默认关闭。见 ADR 0484。

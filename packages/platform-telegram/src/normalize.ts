@@ -153,6 +153,7 @@ async function messageEvent(
   const gift = giftNotice(message);
   const asPin = pinnedNotice(message);
   const giveawayNotice = scheduledGiveaway(message);
+  const asBoost = addedBoost(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -195,8 +196,18 @@ async function messageEvent(
       ...(gift === undefined ? {} : { gift }),
       ...(asPin ? { asPin: true as const } : {}),
       ...(giveawayNotice === undefined ? {} : { giveawayNotice }),
+      ...(asBoost ? { asBoost: true as const } : {}),
     },
   });
+}
+
+function addedBoost(message: Record<string, unknown>): boolean {
+  const added = message.boost_added;
+  if (!isRecord(added)) {
+    return false;
+  }
+  const count = added.boost_count;
+  return typeof count === "number" && Number.isSafeInteger(count) && count > 0;
 }
 
 function scheduledGiveaway(
