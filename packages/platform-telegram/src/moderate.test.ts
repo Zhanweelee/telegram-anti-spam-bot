@@ -225,6 +225,167 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads individual allows without copying a name or a tag", async () => {
+    const phrase = "请免费领取礼品";
+    const flags = {
+      can_send_messages: true,
+      can_send_audios: false,
+      can_send_documents: false,
+      can_send_photos: false,
+      can_send_videos: false,
+      can_send_video_notes: false,
+      can_send_voice_notes: false,
+      can_send_polls: false,
+      can_send_other_messages: false,
+      can_add_web_page_previews: false,
+      can_react_to_messages: false,
+      can_edit_tag: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_pin_messages: false,
+      can_manage_topics: false,
+    };
+    const calls: { method: string; body: string }[] = [];
+    const moderator = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async (input, init) => {
+        const url = String(input);
+        calls.push({
+          method: url.slice(url.lastIndexOf("/") + 1),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              status: "restricted",
+              user: { id: 77, first_name: phrase },
+              is_member: true,
+              until_date: 1_700_003_600,
+              tag: phrase,
+              ...flags,
+            },
+          }),
+          { status: 200 },
+        );
+      },
+    });
+    const allows = await moderator.readMemberAllows({
+      tenantId: "local",
+      chatId: "-100",
+      actorId: "77",
+    });
+    expect(allows).toEqual({
+      kind: "restricted",
+      inChat: true,
+      untilDate: 1_700_003_600,
+      permissions: {
+        sendMessages: "on",
+        sendAudios: "off",
+        sendDocuments: "off",
+        sendPhotos: "off",
+        sendVideos: "off",
+        sendVideoNotes: "off",
+        sendVoiceNotes: "off",
+        sendPolls: "off",
+        sendOtherMessages: "off",
+        addWebPagePreviews: "off",
+        reactToMessages: "off",
+        editTag: "off",
+        changeInfo: "off",
+        inviteUsers: "off",
+        pinMessages: "off",
+        manageTopics: "off",
+      },
+    });
+    expect(calls.map((call) => call.method)).toEqual(["getChatMember"]);
+    expect(calls[0]?.body).toBe('{"chat_id":-100,"user_id":77}');
+    expect(JSON.stringify(allows)).not.toContain(phrase);
+    const open = createTelegramModerator({
+      token: "bot-token",
+      fetchImpl: async () =>
+        new Response(
+          JSON.stringify({
+            ok: true,
+            result: {
+              status: "member",
+              user: { id: 77, first_name: phrase },
+              can_send_messages: false,
+              tag: phrase,
+            },
+          }),
+          { status: 200 },
+        ),
+    });
+    expect(
+      await open.readMemberAllows({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).toEqual({ kind: "none" });
+    const { can_send_messages, ...missingFlag } = flags;
+    expect(can_send_messages).toBe(true);
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "restricted",
+                user: { id: 77 },
+                is_member: true,
+                ...missingFlag,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readMemberAllows({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("allows_failed");
+    await expect(
+      createTelegramModerator({
+        token: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "restricted",
+                user: { id: 78 },
+                ...flags,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readMemberAllows({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("allows_failed");
+    let called = false;
+    await expect(
+      createTelegramModerator({
+        token: " ",
+        fetchImpl: async () => {
+          called = true;
+          return new Response("ok", { status: 200 });
+        },
+      }).readMemberAllows({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("allows_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("lifts restrictions only when the member is restricted", async () => {
     const phrase = "请免费领取礼品";
     const calls: { method: string; body: string }[] = [];

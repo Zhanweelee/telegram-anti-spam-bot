@@ -203,6 +203,7 @@ export {
   type InviteLinkTarget,
   type JoinBot,
   type JoinTarget,
+  type MemberAllows,
   type MemberStanding,
   type MemberTagTarget,
   type MenuButtonKind,

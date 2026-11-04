@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(81);
+    expect(menu).toHaveLength(82);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7390,9 +7390,13 @@ describe("runOperatorCommand", () => {
       command: "privacy",
       description: "/privacy <chatId>",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "banfor")).toEqual({
       command: "banfor",
       description: "/banfor <chatId> <actorId> <seconds>",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "allows",
+      description: "/allows <chatId> <actorId>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -12674,6 +12678,214 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async banActorFor() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("reads one member's individual allows", async () => {
+    const off = {
+      sendMessages: "off",
+      sendAudios: "off",
+      sendDocuments: "off",
+      sendPhotos: "off",
+      sendVideos: "off",
+      sendVideoNotes: "off",
+      sendVoiceNotes: "off",
+      sendPolls: "off",
+      sendOtherMessages: "off",
+      addWebPagePreviews: "off",
+      reactToMessages: "off",
+      editTag: "off",
+      changeInfo: "off",
+      inviteUsers: "off",
+      pinMessages: "off",
+      manageTopics: "off",
+    } as const;
+    const deps = kit();
+    const seen: string[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows(target) {
+          seen.push(target.actorId);
+          return {
+            kind: "restricted",
+            inChat: true,
+            untilDate: 1_700_003_600,
+            permissions: { ...off, sendMessages: "on" },
+          };
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: [
+        "群 -100 77",
+        "人 在",
+        "直到 1700003600",
+        "发言 on",
+        "音频 off",
+        "文件 off",
+        "图片 off",
+        "视频 off",
+        "视频留言 off",
+        "语音 off",
+        "投票 off",
+        "其他 off",
+        "预览 off",
+        "反应 off",
+        "标签 off",
+        "资料 off",
+        "邀请 off",
+        "置顶 off",
+        "话题 off",
+      ].join("\n"),
+    });
+    expect(seen).toEqual(["77"]);
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("\n/allows <chatId> <actorId>");
+    }
+
+    const open = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          return { kind: "none" };
+        },
+      },
+      ...kit(),
+    });
+    expect(open).toMatchObject({
+      text: ["群 -100 77", "单独限制 无"].join("\n"),
+    });
+    expect(JSON.stringify(open)).not.toContain("发言");
+
+    const away = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          return {
+            kind: "restricted",
+            inChat: false,
+            untilDate: null,
+            permissions: off,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(away.status).toBe("reply");
+    if (away.status === "reply") {
+      expect(away.text.startsWith("群 -100 77\n人 不在\n发言 off")).toBe(true);
+      expect(away.text).not.toContain("直到");
+    }
+
+    const english = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readMemberAllows() {
+          return { kind: "none" };
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: ["chat -100 77", "individual none"].join("\n"),
+    });
+
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+
+    const usage = await runOperatorCommand({
+      event: event({ text: "/allows -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/allows <chatId> <actorId>",
+    });
+
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/allows -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+
+    const unknown = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          return {
+            kind: "restricted",
+            inChat: true,
+            untilDate: null,
+            permissions: { ...off, sendMessages: "unknown" },
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(unknown).toMatchObject({ text: "参数无效" });
+
+    const missing = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/allows -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readMemberAllows() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/allows -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readMemberAllows() {
           throw new Error("called");
         },
       },

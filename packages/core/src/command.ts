@@ -32,6 +32,7 @@ import {
   type DefaultRightsSnapshot,
   fitAuditExportDocument,
   type JoinBot,
+  type MemberAllows,
   type MemberStanding,
   type MenuButtonState,
   type MenuCommand,
@@ -155,6 +156,7 @@ const COMMAND_NAMES = [
   "personal",
   "privacy",
   "banfor",
+  "allows",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -306,6 +308,7 @@ export interface OperatorCommandInput {
       | "readDefaultRights"
       | "readJoinBot"
       | "readMember"
+      | "readMemberAllows"
       | "readMemberCount"
       | "readMenuButton"
       | "readParentChat"
@@ -450,6 +453,8 @@ async function dispatch(
       return banMember(input, args);
     case "banfor":
       return banMemberFor(input, args);
+    case "allows":
+      return showMemberAllows(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -1225,6 +1230,108 @@ function rejectMember(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "member",
+  });
+}
+
+async function showMemberAllows(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.allows.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readMemberAllows;
+  if (!read) {
+    rejectMemberAllows(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const allows = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    if (!isMemberAllows(allows)) {
+      rejectMemberAllows(input);
+      return say(input, "command.invalid");
+    }
+    return describeMemberAllows(input, chatId, actorId, allows);
+  } catch {
+    rejectMemberAllows(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isMemberAllows(allows: MemberAllows): boolean {
+  if (allows.kind === "none") {
+    return true;
+  }
+  if (allows.kind !== "restricted" || typeof allows.inChat !== "boolean") {
+    return false;
+  }
+  if (allows.untilDate !== null && !isUntil(allows.untilDate)) {
+    return false;
+  }
+  return permissionLines.every(([, field]) =>
+    isOnOff(allows.permissions[field]),
+  );
+}
+
+function isUntil(value: number): boolean {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function isOnOff(state: PermissionState): boolean {
+  return state === "on" || state === "off";
+}
+
+function describeMemberAllows(
+  input: OperatorCommandInput,
+  chatId: string,
+  actorId: string,
+  allows: MemberAllows,
+): string {
+  const lines = [say(input, "command.allows.header", { chatId, actorId })];
+  if (allows.kind === "none") {
+    lines.push(say(input, "command.allows.none"));
+    return lines.join("\n");
+  }
+  lines.push(
+    say(
+      input,
+      allows.inChat ? "command.allows.present" : "command.allows.away",
+    ),
+  );
+  if (allows.untilDate !== null) {
+    lines.push(say(input, "command.allows.until", { until: allows.untilDate }));
+  }
+  for (const [label, field] of permissionLines) {
+    lines.push(
+      `${say(input, label)} ${say(input, permissionStateKey(allows.permissions[field]))}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function rejectMemberAllows(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "allows",
   });
 }
 

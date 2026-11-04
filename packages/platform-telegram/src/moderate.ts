@@ -9,6 +9,7 @@ import type {
   DefaultChatPermissions,
   DefaultRightsSnapshot,
   JoinBot,
+  MemberAllows,
   MemberStanding,
   MenuButtonState,
   MenuCommandSnapshot,
@@ -361,6 +362,20 @@ export function createTelegramModerator(input: {
         },
       });
       return readStanding(member);
+    },
+    async readMemberAllows(target): Promise<MemberAllows> {
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "allows_unavailable",
+        failed: "allows_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      return readMemberAllowsValue(member, target.actorId);
     },
     async readPermissions(target) {
       const chat = await postTelegram({
@@ -2059,6 +2074,111 @@ function chatResult(body: unknown): Record<string, unknown> {
     throw new Error("perms_failed");
   }
   return result as Record<string, unknown>;
+}
+
+const allowsFlagKeys = [
+  ["can_send_messages", "sendMessages"],
+  ["can_send_audios", "sendAudios"],
+  ["can_send_documents", "sendDocuments"],
+  ["can_send_photos", "sendPhotos"],
+  ["can_send_videos", "sendVideos"],
+  ["can_send_video_notes", "sendVideoNotes"],
+  ["can_send_voice_notes", "sendVoiceNotes"],
+  ["can_send_polls", "sendPolls"],
+  ["can_send_other_messages", "sendOtherMessages"],
+  ["can_add_web_page_previews", "addWebPagePreviews"],
+  ["can_react_to_messages", "reactToMessages"],
+  ["can_edit_tag", "editTag"],
+  ["can_change_info", "changeInfo"],
+  ["can_invite_users", "inviteUsers"],
+  ["can_pin_messages", "pinMessages"],
+  ["can_manage_topics", "manageTopics"],
+] as const satisfies ReadonlyArray<
+  readonly [string, keyof DefaultChatPermissions]
+>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readMemberAllowsValue(body: unknown, actorId: string): MemberAllows {
+  const result = allowsResult(body);
+  const user = result.user;
+  if (
+    !isRecord(user) ||
+    typeof user.id !== "number" ||
+    !Number.isSafeInteger(user.id) ||
+    String(user.id) !== actorId
+  ) {
+    throw new Error("allows_failed");
+  }
+  if (result.status === "restricted") {
+    return {
+      kind: "restricted",
+      inChat: allowsInChat(result),
+      untilDate: allowsExpiry(result),
+      permissions: allowsPermissions(result),
+    };
+  }
+  if (
+    result.status === "creator" ||
+    result.status === "administrator" ||
+    result.status === "member" ||
+    result.status === "left" ||
+    result.status === "kicked"
+  ) {
+    return { kind: "none" };
+  }
+  throw new Error("allows_failed");
+}
+
+function allowsResult(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("allows_failed");
+  }
+  const result = body.result;
+  if (!isRecord(result) || typeof result.status !== "string") {
+    throw new Error("allows_failed");
+  }
+  return result;
+}
+
+function allowsInChat(result: Record<string, unknown>): boolean {
+  if (!("is_member" in result) || result.is_member === undefined) {
+    return true;
+  }
+  if (typeof result.is_member !== "boolean") {
+    throw new Error("allows_failed");
+  }
+  return result.is_member;
+}
+
+function allowsExpiry(result: Record<string, unknown>): number | null {
+  if (!("until_date" in result) || result.until_date === undefined) {
+    return null;
+  }
+  const value = result.until_date;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error("allows_failed");
+  }
+  return value === 0 ? null : value;
+}
+
+function allowsPermissions(
+  result: Record<string, unknown>,
+): DefaultChatPermissions {
+  const permissions = {} as Record<
+    keyof DefaultChatPermissions,
+    PermissionState
+  >;
+  for (const [key, field] of allowsFlagKeys) {
+    const value = result[key];
+    if (typeof value !== "boolean") {
+      throw new Error("allows_failed");
+    }
+    permissions[field] = value ? "on" : "off";
+  }
+  return permissions;
 }
 
 function readStanding(body: unknown): MemberStanding {
