@@ -6,6 +6,8 @@
 
 `/rules -100 skip 64` 跳过前面的 64 条再往下列。不写 `skip` 时仍从第一条开始。
 
+`/rules -100 on` 只列打开的规则。`off` 只列关闭的规则。不写时仍列出全部。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
