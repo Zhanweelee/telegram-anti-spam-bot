@@ -727,6 +727,11 @@ export async function screenTelegramEvent(
       },
       {
         source: "builtin",
+        manifest: builtinManifests.richCommand,
+        value: createRichDetector("command"),
+      },
+      {
+        source: "builtin",
         manifest: builtinManifests.flood,
         value: createFloodDetector({
           window: deps.rateWindow ?? workerRateWindow,

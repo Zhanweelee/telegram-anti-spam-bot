@@ -36,4 +36,5 @@ ADR 0505 只认 `username`。打开 `rich_mention` 不会删除这种按标识�
 - 打开 `rich_text_mention` 后，这个群里的这种提及会删除。打开 `rich_mention` 仍不删除它。付费帖仍留下。
 - 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `rich_text_mention` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上 `rich_text_mention`，否则 `/rule` 会拒绝。
+- 富文本机器人命令后来由 ADR 0507 另开 `rich_command`。打开按标识提及仍不删除这种命令。命令仍不进事件。
 - 30 天保留期没有改。

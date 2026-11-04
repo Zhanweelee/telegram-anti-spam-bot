@@ -153,6 +153,8 @@ export const messageSchema = z
     asRichMention: z.literal(true).optional(),
     /** Rich text user mention. The user id stays out. The visible text stays in the message. */
     asRichTextMention: z.literal(true).optional(),
+    /** Rich text bot command. The command stays out. The visible text stays in the message. */
+    asRichCommand: z.literal(true).optional(),
   })
   .refine(
     (message) =>

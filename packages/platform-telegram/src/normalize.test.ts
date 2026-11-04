@@ -20939,6 +20939,218 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich command and leaves the command out", async () => {
+    const command = "/go90223";
+    const actor = "发命令的人";
+    const marked = await normalize({
+      update_id: 4800,
+      message: {
+        message_id: 840,
+        date: 1761955200,
+        chat: { id: -100499800, type: "supergroup" },
+        from: { id: 116, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "bot_command",
+                  text: "点命令广告",
+                  bot_command: command,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asRichCommand).toBe(true);
+    expect(marked.event.message?.asRichTextMention).toBeUndefined();
+    expect(marked.event.message?.text).toBe("点命令广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(command);
+    expect(markedDump).not.toContain("90223");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4801,
+      message: {
+        message_id: 841,
+        date: 1761955200,
+        chat: { id: -100499801, type: "supergroup" },
+        from: { id: 116 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bot_command",
+                text: "点命令广告",
+                bot_command: command,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichCommand).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(command);
+
+    const nested = await normalize({
+      update_id: 4802,
+      message: {
+        message_id: 842,
+        date: 1761955200,
+        chat: { id: -100499802, type: "supergroup" },
+        from: { id: 116 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "paragraph",
+                  text: {
+                    type: "bot_command",
+                    text: "嵌套命令",
+                    bot_command: command,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asRichCommand).toBe(true);
+    expect(nested.event.message?.text).toBe("嵌套命令");
+    expect(JSON.stringify(nested.event)).not.toContain("90223");
+
+    const blank = await normalize({
+      update_id: 4803,
+      message: {
+        message_id: 843,
+        date: 1761955200,
+        chat: { id: -100499803, type: "supergroup" },
+        from: { id: 116 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bot_command",
+                text: "空命令",
+                bot_command: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空命令");
+    expect(blank.event.message?.asRichCommand).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4804,
+      message: {
+        message_id: 844,
+        date: 1761955200,
+        chat: { id: -100499804, type: "supergroup" },
+        from: { id: 116 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bot_command",
+                text: "布尔命令",
+                bot_command: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔命令");
+    expect(flag.event.message?.asRichCommand).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4805,
+      message: {
+        message_id: 845,
+        date: 1761955200,
+        chat: { id: -100499805, type: "supergroup" },
+        from: { id: 116 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: { type: "bot_command", text: "缺命令" },
+            },
+          ],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺命令");
+    expect(missing.event.message?.asRichCommand).toBeUndefined();
+
+    const named = await normalize({
+      update_id: 4806,
+      message: {
+        message_id: 846,
+        date: 1761955200,
+        chat: { id: -100499806, type: "supergroup" },
+        from: { id: 116 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "text_mention",
+                text: "文字提及",
+                user: { id: 88022, is_bot: false, first_name: "某人" },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.asRichTextMention).toBe(true);
+    expect(named.event.message?.asRichCommand).toBeUndefined();
+  });
+
   it("marks a rich text mention and leaves the user id out", async () => {
     const userId = 902220011;
     const hiddenName = "隐藏名90222";

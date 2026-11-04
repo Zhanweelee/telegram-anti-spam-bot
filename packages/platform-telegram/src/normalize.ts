@@ -237,6 +237,7 @@ async function messageEvent(
       ...(asRichMap ? { asRichMap: true as const } : {}),
       ...(richContact.mention ? { asRichMention: true as const } : {}),
       ...(richContact.textMention ? { asRichTextMention: true as const } : {}),
+      ...(richContact.command ? { asRichCommand: true as const } : {}),
     },
   });
 }
@@ -305,6 +306,7 @@ function richContactMark(message: Record<string, unknown>): {
   email: boolean;
   mention: boolean;
   textMention: boolean;
+  command: boolean;
 } {
   const found = {
     phone: false,
@@ -312,6 +314,7 @@ function richContactMark(message: Record<string, unknown>): {
     email: false,
     mention: false,
     textMention: false,
+    command: false,
   };
   const rich = message.rich_message;
   if (isRecord(rich)) {
@@ -328,6 +331,7 @@ function walkRichContact(
     email: boolean;
     mention: boolean;
     textMention: boolean;
+    command: boolean;
   },
 ): void {
   if (
@@ -335,7 +339,8 @@ function walkRichContact(
     found.card &&
     found.email &&
     found.mention &&
-    found.textMention
+    found.textMention &&
+    found.command
   ) {
     return;
   }
@@ -365,6 +370,9 @@ function walkRichContact(
   }
   if (value.type === "text_mention" && mentionedUser(value.user)) {
     found.textMention = true;
+  }
+  if (value.type === "bot_command" && hiddenSecret(value.bot_command)) {
+    found.command = true;
   }
   for (const nested of Object.values(value)) {
     walkRichContact(nested, found);

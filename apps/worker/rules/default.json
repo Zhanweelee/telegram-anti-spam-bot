@@ -411,6 +411,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "rich_command",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["rich_command"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },
