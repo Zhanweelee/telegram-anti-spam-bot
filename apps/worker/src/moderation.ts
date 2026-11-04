@@ -26,6 +26,7 @@ function createOpenModerator(): ModerationPort {
     banSenderChat: (target) => memory.banSenderChat(target),
     unbanSenderChat: (target) => memory.unbanSenderChat(target),
     declineJoin: (target) => memory.declineJoin(target),
+    declinePost: (target) => memory.declinePost(target),
     approveJoin: (target) => memory.approveJoin(target),
     deferJoin: (target) => memory.deferJoin(target),
     async restrictActor() {

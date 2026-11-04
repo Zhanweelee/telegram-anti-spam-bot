@@ -57,6 +57,7 @@ describe("operator command example", () => {
     expect(help).toContain("/rengeneral <chatId> <name>");
     expect(help).toContain("/stickers <chatId> <name>");
     expect(help).toContain("/admintitle <chatId> <userId> [title]");
+    expect(help).toContain("/declinepost <chatId> <messageId> [comment]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -237,6 +238,15 @@ describe("operator command example", () => {
     });
     expect(adminTitle).toBe("已请求设置 -100 里 77 的管理员头衔。权限还在。");
     expect(adminTitle).not.toContain("ops");
+    const declinedPost = await runPrivateCommand({
+      text: "/declinepost -100 55 ops",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(declinedPost).toBe(
+      "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
+    );
+    expect(declinedPost).not.toContain("ops");
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

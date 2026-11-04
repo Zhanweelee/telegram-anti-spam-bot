@@ -41,6 +41,7 @@ import {
   type RuntimeStore,
   type SenderChatTarget,
   type Storage,
+  type SuggestedPostTarget,
   type TopicPinTarget,
 } from "@tasb/core";
 
@@ -132,6 +133,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly senderBanned: readonly SenderChatTarget[];
   readonly senderUnbanned: readonly SenderChatTarget[];
   readonly declined: readonly JoinTarget[];
+  readonly suggestedPostsDeclined: readonly SuggestedPostTarget[];
   readonly approved: readonly JoinTarget[];
   readonly deferred: readonly (JoinTarget & { readonly queryId: string })[];
   readonly restricted: readonly MuteTarget[];
@@ -171,6 +173,7 @@ export function createMemoryModerator(): ModerationPort & {
   const senderBanned: SenderChatTarget[] = [];
   const senderUnbanned: SenderChatTarget[] = [];
   const declined: JoinTarget[] = [];
+  const suggestedPostsDeclined: SuggestedPostTarget[] = [];
   const approved: JoinTarget[] = [];
   const deferred: (JoinTarget & { readonly queryId: string })[] = [];
   const restricted: MuteTarget[] = [];
@@ -210,6 +213,7 @@ export function createMemoryModerator(): ModerationPort & {
     senderBanned,
     senderUnbanned,
     declined,
+    suggestedPostsDeclined,
     approved,
     deferred,
     restricted,
@@ -277,6 +281,22 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         actorId: target.actorId,
       });
+    },
+    async declinePost(target) {
+      suggestedPostsDeclined.push(
+        target.comment === undefined
+          ? {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+            }
+          : {
+              tenantId: target.tenantId,
+              chatId: target.chatId,
+              messageId: target.messageId,
+              comment: target.comment,
+            },
+      );
     },
     async declineJoin(target) {
       declined.push(

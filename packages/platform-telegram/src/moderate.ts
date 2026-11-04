@@ -118,6 +118,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async declinePost(target) {
+      await postTelegram({
+        token: input.token,
+        method: "declineSuggestedPost",
+        fetchImpl: input.fetchImpl,
+        missing: "declinepost_unavailable",
+        failed: "declinepost_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+          ...(target.comment === undefined ? {} : { comment: target.comment }),
+        },
+      });
+    },
     async declineJoin(target) {
       if (target.queryId) {
         await answerJoinQuery(input, target.queryId, "decline");

@@ -2368,6 +2368,99 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("declines one suggested post and drops the comment", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: `/declinepost -100 55 ${phrase}`, direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: true,
+              comment: phrase,
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["declineSuggestedPost"]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      message_id: 55,
+      comment: phrase,
+    });
+    expect(calls[0]?.method).not.toContain("approveSuggestedPost");
+    expect(calls[0]?.body).not.toContain("send_date");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const quiet = deps();
+    const quietCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/declinepost -100 1", direct: true }),
+      {
+        ...quiet,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          quietCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(quiet.reply.sent.map((message) => message.text)).toEqual([
+      "已请求拒绝 -100 的建议帖 1。这条不会发出。其它建议帖还在。",
+    ]);
+    expect(JSON.parse(quietCalls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      message_id: 1,
+    });
+    expect(quietCalls[0]?.body).not.toContain("comment");
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/declinepost -100 55", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: `/declinepost -100 55 ${phrase}`, direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

@@ -365,6 +365,31 @@ describe("memory adapter", () => {
     expect(JSON.stringify(moderator.adminTitlesSet)).not.toContain("promote");
   });
 
+  it("records one declined suggested post with and without a comment", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.declinePost({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "55",
+    });
+    await moderator.declinePost({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "1",
+      comment: "hello",
+    });
+    expect(moderator.suggestedPostsDeclined).toEqual([
+      { tenantId: "t", chatId: "c", messageId: "55" },
+      { tenantId: "t", chatId: "c", messageId: "1", comment: "hello" },
+    ]);
+    expect(JSON.stringify(moderator.suggestedPostsDeclined[0])).not.toContain(
+      "comment",
+    );
+    expect(JSON.stringify(moderator.suggestedPostsDeclined)).not.toContain(
+      "approve",
+    );
+  });
+
   it("records a member tag including an empty one", async () => {
     const moderator = createMemoryModerator();
     await moderator.setMemberTag({

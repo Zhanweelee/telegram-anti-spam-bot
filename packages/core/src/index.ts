@@ -202,6 +202,7 @@ export {
   type RenamedTopicTarget,
   type SenderChatTarget,
   type Storage,
+  type SuggestedPostTarget,
   type TopicPinTarget,
   type UnmuteResult,
 } from "./ports.js";

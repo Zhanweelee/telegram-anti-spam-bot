@@ -200,6 +200,8 @@ export const messageKeys = [
   "command.admintitle.usage",
   "command.admintitle.done",
   "command.admintitle.cleared",
+  "command.declinepost.usage",
+  "command.declinepost.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -273,6 +275,7 @@ const syntax = [
   "/rengeneral <chatId> <name>",
   "/stickers <chatId> <name>",
   "/admintitle <chatId> <userId> [title]",
+  "/declinepost <chatId> <messageId> [comment]",
 ].join("\n");
 
 const zh = {
@@ -503,6 +506,10 @@ const zh = {
     "已请求设置 {chatId} 里 {actorId} 的管理员头衔。权限还在。",
   "command.admintitle.cleared":
     "已请求清掉 {chatId} 里 {actorId} 的管理员头衔。权限还在。",
+  "command.declinepost.usage":
+    "用法：/declinepost <chatId> <messageId> [comment]",
+  "command.declinepost.done":
+    "已请求拒绝 {chatId} 的建议帖 {messageId}。这条不会发出。其它建议帖还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -754,6 +761,10 @@ const en = {
     "Asked to set the admin title of {actorId} in {chatId}. The privileges stay.",
   "command.admintitle.cleared":
     "Asked to clear the admin title of {actorId} in {chatId}. The privileges stay.",
+  "command.declinepost.usage":
+    "Usage: /declinepost <chatId> <messageId> [comment]",
+  "command.declinepost.done":
+    "Asked to decline suggested post {messageId} in {chatId}. This post stays unpublished. The other suggested posts stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

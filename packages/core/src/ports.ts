@@ -180,6 +180,13 @@ export interface AdminTitleTarget {
   readonly title: string;
 }
 
+export interface SuggestedPostTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly messageId: string;
+  readonly comment?: string;
+}
+
 export interface MemberTagTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -277,6 +284,7 @@ export interface ModerationPort {
   readPermissions(target: ChatTarget): Promise<DefaultChatPermissions>;
   readAdministrators(target: ChatTarget): Promise<readonly ChatAdministrator[]>;
   declineJoin(target: JoinTarget): Promise<void>;
+  declinePost(target: SuggestedPostTarget): Promise<void>;
   approveJoin(target: JoinTarget): Promise<void>;
   deferJoin(target: JoinTarget & { readonly queryId: string }): Promise<void>;
   restrictActor(target: MuteTarget): Promise<void>;
