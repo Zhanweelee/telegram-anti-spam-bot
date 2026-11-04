@@ -1,0 +1,5 @@
+{
+  "detector": "chat_background",
+  "precision": 1,
+  "recall": 1
+}

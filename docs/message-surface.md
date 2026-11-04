@@ -49,3 +49,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `chat_shared.chat_id` 是有限安全整数时，消息带 `asSharedChat`。标题、用户名、请求编号、聊天编号和头像不进事件。空的 `chat_shared` 和 `users_shared` 不带这个标记。规则 `shared_chat` 默认关闭。见 ADR 0478。
 
 `new_chat_photo` 里至少有一个对象时，消息带 `photo: "set"`。`delete_chat_photo` 正好是 true 时带 `cleared`。同时出现时先认换头像。文件号和尺寸不进事件。空数组和 false 不带这个标记。规则 `chat_photo` 默认关闭。见 ADR 0479。
+
+`chat_background_set.type.type` 是壁纸、图案、纯色或 `chat_theme` 时，消息带 `background`。主题记成 `theme`。文件名、文件号、颜色和主题名不进事件。空对象和其它类型不带这个标记。壁纸和图案的文件名仍按 ADR 0430 只留主机名。规则 `chat_background` 默认关闭。见 ADR 0480。

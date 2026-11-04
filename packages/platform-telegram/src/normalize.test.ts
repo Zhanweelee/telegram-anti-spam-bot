@@ -20332,6 +20332,134 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a chat background and leaves the filename out", async () => {
+    const filename = "壁纸广告文件名";
+    const fileId = "AgADwall448";
+    const uniqueId = "uniqwall448";
+    const themeName = "主题广告448";
+    const wallpaper = await normalize({
+      update_id: 4480,
+      message: {
+        message_id: 530,
+        date: 1761955200,
+        chat: { id: -100499460, type: "supergroup" },
+        from: { id: 96 },
+        chat_background_set: {
+          type: {
+            type: "wallpaper",
+            document: {
+              file_id: fileId,
+              file_unique_id: uniqueId,
+              file_name: filename,
+            },
+            theme_name: themeName,
+          },
+        },
+      },
+    });
+    expect(wallpaper.status).toBe("event");
+    if (wallpaper.status !== "event") {
+      return;
+    }
+    expect(wallpaper.event.message?.background).toBe("wallpaper");
+    expect(wallpaper.event.message?.text).toBe("");
+    expect(wallpaper.event.actor).toEqual({ id: "96", isAdmin: false });
+    const wallpaperDump = JSON.stringify(wallpaper.event);
+    expect(wallpaperDump).not.toContain(filename);
+    expect(wallpaperDump).not.toContain(fileId);
+    expect(wallpaperDump).not.toContain(uniqueId);
+    expect(wallpaperDump).not.toContain(themeName);
+
+    const alongside = await normalize({
+      update_id: 4481,
+      message: {
+        message_id: 531,
+        date: 1761955200,
+        chat: { id: -100499461, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        chat_background_set: {
+          type: {
+            type: "pattern",
+            document: {
+              file_id: fileId,
+              file_unique_id: uniqueId,
+              file_name: filename,
+            },
+          },
+        },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.background).toBe("pattern");
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(filename);
+
+    const fill = await normalize({
+      update_id: 4482,
+      message: {
+        message_id: 532,
+        date: 1761955200,
+        chat: { id: -100499462, type: "supergroup" },
+        from: { id: 96 },
+        chat_background_set: {
+          type: {
+            type: "fill",
+            fill: { type: "solid", color: 90179 },
+            dark_theme_dimming: 50,
+          },
+        },
+      },
+    });
+    expect(fill.status).toBe("event");
+    if (fill.status !== "event") {
+      return;
+    }
+    expect(fill.event.message?.background).toBe("fill");
+    expect(fill.event.message?.text).toBe("");
+    expect(JSON.stringify(fill.event)).not.toContain("90179");
+
+    const theme = await normalize({
+      update_id: 4483,
+      message: {
+        message_id: 533,
+        date: 1761955200,
+        chat: { id: -100499463, type: "supergroup" },
+        from: { id: 96 },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: themeName },
+        },
+      },
+    });
+    expect(theme.status).toBe("event");
+    if (theme.status !== "event") {
+      return;
+    }
+    expect(theme.event.message?.background).toBe("theme");
+    expect(JSON.stringify(theme.event)).not.toContain(themeName);
+
+    const empty = await normalize({
+      update_id: 4484,
+      message: {
+        message_id: 534,
+        date: 1761955200,
+        chat: { id: -100499464, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        chat_background_set: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.background).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+  });
+
   it("keeps a shared user name and drops the sender name", async () => {
     const phrase = "请免费领取礼品";
     const code = "INV288";

@@ -52,6 +52,7 @@ import {
   type WarnStore,
   wrapLogger,
 } from "@tasb/core";
+import { createBackgroundDetector } from "@tasb/detector-background";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
 import { createBotDetector } from "@tasb/detector-bot";
 import { createCallDetector } from "@tasb/detector-call";
@@ -546,6 +547,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.chatPhoto,
         value: createPhotoDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.chatBackground,
+        value: createBackgroundDetector(),
       },
       {
         source: "builtin",

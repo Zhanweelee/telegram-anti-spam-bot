@@ -5313,6 +5313,186 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("90178");
   });
 
+  it("keeps a chat background until that chat asks", async () => {
+    const filename = "壁纸广告文件名";
+    const fileId = "AgADwall448";
+    const themeName = "主题广告448";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "wallpaper" | "pattern" | "fill" | "theme";
+      empty?: boolean;
+      paid?: boolean;
+    }) {
+      const type =
+        input.kind === "wallpaper" || input.kind === "pattern"
+          ? {
+              type: input.kind,
+              document: {
+                file_id: fileId,
+                file_unique_id: "uniqwall448",
+                file_name: filename,
+              },
+              theme_name: themeName,
+            }
+          : input.kind === "fill"
+            ? { type: "fill", fill: { type: "solid", color: 90179 } }
+            : input.kind === "theme"
+              ? { type: "chat_theme", theme_name: themeName }
+              : undefined;
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(type ? { chat_background_set: { type } } : {}),
+            ...(input.empty ? { chat_background_set: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 7800,
+      chatId: -100800,
+      kind: "wallpaper",
+    });
+    expect(idle.message?.background).toBe("wallpaper");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(filename);
+    expect(JSON.stringify(idle)).not.toContain(fileId);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "chat_background",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["chat_background"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 7801, chatId: -100801, kind: "wallpaper" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("chat_background");
+    expect(removed.decision.ruleIds).toContain("chat_background");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "background:wallpaper" },
+    ]);
+    const pattern = await screenTelegramEvent(
+      await posted({ updateId: 7802, chatId: -100802, kind: "pattern" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(pattern.decision.action).toBe("delete");
+    expect(pattern.decision.evidence).toEqual([
+      { kind: "feature", summary: "background:pattern" },
+    ]);
+    const fill = await screenTelegramEvent(
+      await posted({ updateId: 7803, chatId: -100803, kind: "fill" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(fill.decision.action).toBe("delete");
+    expect(fill.decision.evidence).toEqual([
+      { kind: "feature", summary: "background:fill" },
+    ]);
+    const theme = await screenTelegramEvent(
+      await posted({ updateId: 7804, chatId: -100804, kind: "theme" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(theme.decision.action).toBe("delete");
+    expect(theme.decision.evidence).toEqual([
+      { kind: "feature", summary: "background:theme" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 7805, chatId: -100805, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 7806,
+        chatId: -100806,
+        kind: "wallpaper",
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      pattern: pattern.decision,
+      fill: fill.decision,
+      theme: theme.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(filename);
+    expect(dumped).not.toContain(fileId);
+    expect(dumped).not.toContain(themeName);
+    expect(dumped).not.toContain("90179");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

@@ -149,6 +149,7 @@ async function messageEvent(
   const community = communityNotice(message);
   const asSharedChat = sharedChatCard(message);
   const photo = photoNotice(message);
+  const background = backgroundNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -187,8 +188,30 @@ async function messageEvent(
       ...(community === undefined ? {} : { community }),
       ...(asSharedChat ? { asSharedChat: true as const } : {}),
       ...(photo === undefined ? {} : { photo }),
+      ...(background === undefined ? {} : { background }),
     },
   });
+}
+
+function backgroundNotice(
+  message: Record<string, unknown>,
+): "wallpaper" | "pattern" | "fill" | "theme" | undefined {
+  const background = message.chat_background_set;
+  if (!isRecord(background) || !isRecord(background.type)) {
+    return undefined;
+  }
+  switch (background.type.type) {
+    case "wallpaper":
+      return "wallpaper";
+    case "pattern":
+      return "pattern";
+    case "fill":
+      return "fill";
+    case "chat_theme":
+      return "theme";
+    default:
+      return undefined;
+  }
 }
 
 function photoNotice(
