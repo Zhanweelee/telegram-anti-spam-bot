@@ -67,7 +67,7 @@ const speaking = {
   can_manage_topics: true,
 };
 
-export const captchaPrompt = "请点击按钮，确认你不是机器人。";
+export const captchaPrompt = "请点「我不是机器人」。点「我是机器人」不会通过。";
 
 export function createTelegramModerator(input: {
   readonly token: string | undefined;
@@ -1117,6 +1117,7 @@ export async function sendCaptchaButton(input: {
       link_preview_options: { is_disabled: true },
       reply_markup: {
         inline_keyboard: [
+          [{ text: "我是机器人", callback_data: `n:${input.nonce}` }],
           [{ text: "我不是机器人", callback_data: `c:${input.nonce}` }],
         ],
       },

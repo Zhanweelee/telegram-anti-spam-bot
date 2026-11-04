@@ -4816,9 +4816,15 @@ describe("telegram captcha transport", () => {
         fetchImpl,
       }),
     ).toBeNull();
-    expect(bodies[0]).toContain(captchaPrompt);
-    expect(bodies[0]).toContain("c:0123456789abcdef");
-    expect(bodies[0]).toContain("我不是机器人");
+    const sent = bodies[0] ?? "";
+    expect(sent).toContain(captchaPrompt);
+    expect(sent).toContain("请点「我不是机器人」。点「我是机器人」不会通过。");
+    const decoyAt = sent.indexOf("n:0123456789abcdef");
+    const passAt = sent.indexOf("c:0123456789abcdef");
+    expect(decoyAt).toBeGreaterThanOrEqual(0);
+    expect(passAt).toBeGreaterThan(decoyAt);
+    expect(sent).toContain("我是机器人");
+    expect(sent).toContain("我不是机器人");
     const moderator = createTelegramModerator({ token, fetchImpl });
     await moderator.releaseActor({
       tenantId: "local",
