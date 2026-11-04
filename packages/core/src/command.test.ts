@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(60);
+    expect(menu).toHaveLength(61);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7306,9 +7306,13 @@ describe("runOperatorCommand", () => {
       command: "botrights",
       description: "/botrights [channels]",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "setcommands")).toEqual({
       command: "setcommands",
       description: "/setcommands [private]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "commands",
+      description: "/commands [private]",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -7439,6 +7443,218 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async setCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
+  it("reads the private command menu", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; keys: readonly string[] }[] = [];
+    const remember = {
+      async readCommandMenu(target: { tenantId: string }) {
+        seen.push({ tenantId: target.tenantId, keys: Object.keys(target) });
+        if (seen.length === 1) {
+          return [
+            {
+              command: "help",
+              description: "/help",
+              ephemeral: "unknown" as const,
+            },
+            {
+              command: "stickers",
+              description: "/stickers <chatId> <name>",
+              ephemeral: "off" as const,
+            },
+          ];
+        }
+        if (seen.length === 2) {
+          return [
+            {
+              command: "help",
+              description: "/help",
+              ephemeral: "on" as const,
+            },
+          ];
+        }
+        return [];
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: [
+        "命令 2",
+        "help /help 未知",
+        "stickers /stickers <chatId> <name> off",
+      ].join("\n"),
+    });
+    expect(seen[0]).toEqual({ tenantId: "local", keys: ["tenantId"] });
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const named = await runOperatorCommand({
+      event: event({ text: "/commands private", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(named).toMatchObject({
+      text: "命令 1\nhelp /help on",
+    });
+    expect(seen[1]?.keys).toEqual(["tenantId"]);
+    const empty = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "命令 0" });
+    expect(empty.status).toBe("reply");
+    if (empty.status === "reply") {
+      expect(empty.text.split("\n")).toHaveLength(1);
+    }
+    const wide = Array.from({ length: 20 }, (_, index) => ({
+      command: `cmd${index}`,
+      description: "x".repeat(200),
+      ephemeral: "unknown" as const,
+    }));
+    const fitted = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          return wide;
+        },
+      },
+      ...kit(),
+    });
+    expect(fitted.status).toBe("reply");
+    if (fitted.status === "reply") {
+      expect(fitted.text.length).toBeLessThanOrEqual(3500);
+      expect(fitted.text.startsWith("命令 20\n")).toBe(true);
+      const lines = fitted.text.split("\n");
+      const omitted = Number(/^\+(\d+)$/.exec(lines.at(-1) ?? "")?.[1]);
+      expect(omitted).toBeGreaterThan(0);
+      expect(lines.length - 2 + omitted).toBe(20);
+    }
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/commands [private]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readCommandMenu() {
+          return [
+            {
+              command: "help",
+              description: "/help",
+              ephemeral: "unknown" as const,
+            },
+          ];
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "commands 1\nhelp /help unknown",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/commands", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/commands private extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/commands [private]" });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/commands ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readCommandMenu() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"commands"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/commands",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/commands ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readCommandMenu() {
           throw new Error("called");
         },
       },

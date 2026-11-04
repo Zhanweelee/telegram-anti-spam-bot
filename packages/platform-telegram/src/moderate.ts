@@ -6,6 +6,7 @@ import type {
   DefaultChatPermissions,
   DefaultRightsSnapshot,
   MemberStanding,
+  MenuCommandSnapshot,
   ModerationPort,
   MuteTarget,
   PermissionState,
@@ -522,6 +523,17 @@ export function createTelegramModerator(input: {
       });
       return readDefaultRightsSnapshot(rights);
     },
+    async readCommandMenu() {
+      const menu = await postTelegram({
+        token: input.token,
+        method: "getMyCommands",
+        fetchImpl: input.fetchImpl,
+        missing: "commands_unavailable",
+        failed: "commands_failed",
+        body: { scope: { type: "all_private_chats" } },
+      });
+      return readCommandMenuSnapshot(menu);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -979,6 +991,54 @@ function telegramDefaultRights(
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
   };
+}
+
+function readCommandMenuSnapshot(
+  body: unknown,
+): readonly MenuCommandSnapshot[] {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("commands_failed");
+  }
+  const result = body.result;
+  if (!Array.isArray(result) || result.length > 100) {
+    throw new Error("commands_failed");
+  }
+  const seen = new Set<string>();
+  const commands: MenuCommandSnapshot[] = [];
+  for (const item of result) {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error("commands_failed");
+    }
+    const raw = item as Record<string, unknown>;
+    const command = raw.command;
+    const description = raw.description;
+    if (
+      typeof command !== "string" ||
+      !/^[a-z0-9_]{1,32}$/.test(command) ||
+      seen.has(command)
+    ) {
+      throw new Error("commands_failed");
+    }
+    if (
+      typeof description !== "string" ||
+      description.length < 1 ||
+      description.length > 256 ||
+      /[\n\r]/.test(description)
+    ) {
+      throw new Error("commands_failed");
+    }
+    let ephemeral: MenuCommandSnapshot["ephemeral"];
+    if (!Object.hasOwn(raw, "is_ephemeral") || raw.is_ephemeral === undefined) {
+      ephemeral = "unknown";
+    } else if (typeof raw.is_ephemeral !== "boolean") {
+      throw new Error("commands_failed");
+    } else {
+      ephemeral = raw.is_ephemeral ? "on" : "off";
+    }
+    seen.add(command);
+    commands.push({ command, description, ephemeral });
+  }
+  return commands;
 }
 
 function readDefaultRightsSnapshot(body: unknown): DefaultRightsSnapshot {

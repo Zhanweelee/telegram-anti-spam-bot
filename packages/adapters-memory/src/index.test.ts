@@ -543,6 +543,13 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent a command menu", async () => {
+    const moderator = createMemoryModerator();
+    await expect(moderator.readCommandMenu({ tenantId: "t" })).rejects.toThrow(
+      "commands_unavailable",
+    );
+  });
+
   it("does not invent default administrator rights", async () => {
     const moderator = createMemoryModerator();
     await expect(

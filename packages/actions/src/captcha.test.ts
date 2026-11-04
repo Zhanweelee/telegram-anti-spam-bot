@@ -115,6 +115,9 @@ function moderator(
     async readDefaultRights() {
       throw new Error("botrights_unavailable");
     },
+    async readCommandMenu() {
+      throw new Error("commands_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

@@ -315,6 +315,16 @@ export interface CommandMenuTarget {
   readonly commands: readonly MenuCommand[];
 }
 
+export interface CommandMenuQuery {
+  readonly tenantId: string;
+}
+
+export interface MenuCommandSnapshot {
+  readonly command: string;
+  readonly description: string;
+  readonly ephemeral: PermissionState;
+}
+
 export interface ModerationPort {
   deleteMessage(target: DeleteTarget): Promise<void>;
   deleteMessages(target: DeleteMessagesTarget): Promise<void>;
@@ -347,6 +357,9 @@ export interface ModerationPort {
   readMemberCount(target: ChatTarget): Promise<number>;
   readBoostCount(target: BanTarget): Promise<number>;
   readDefaultRights(query: DefaultRightsQuery): Promise<DefaultRightsSnapshot>;
+  readCommandMenu(
+    query: CommandMenuQuery,
+  ): Promise<readonly MenuCommandSnapshot[]>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;

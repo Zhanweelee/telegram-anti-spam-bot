@@ -29,6 +29,7 @@ import {
   fitAuditExportDocument,
   type MemberStanding,
   type MenuCommand,
+  type MenuCommandSnapshot,
   type ModerationPort,
   minimumAuditExportLength,
   type PermissionState,
@@ -121,6 +122,7 @@ const COMMAND_NAMES = [
   "myrights",
   "botrights",
   "setcommands",
+  "commands",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -257,6 +259,7 @@ export interface OperatorCommandInput {
       | "pinMessage"
       | "readAdministrators"
       | "readBoostCount"
+      | "readCommandMenu"
       | "readDefaultRights"
       | "readMember"
       | "readMemberCount"
@@ -476,6 +479,8 @@ async function dispatch(
       return showBotRights(input, args);
     case "setcommands":
       return publishCommandMenu(input, args);
+    case "commands":
+      return showCommandMenu(input, args);
   }
 }
 
@@ -2986,6 +2991,55 @@ function rejectCommandMenu(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "setcommands",
+  });
+}
+
+async function showCommandMenu(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.commands.usage");
+  }
+  if (args.length === 1 && args[0] !== "private") {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readCommandMenu;
+  if (!read) {
+    rejectReadCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const commands = await read({ tenantId: input.event.tenantId });
+    return describeCommandMenu(input, commands);
+  } catch {
+    rejectReadCommandMenu(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function describeCommandMenu(
+  input: OperatorCommandInput,
+  commands: readonly MenuCommandSnapshot[],
+): string {
+  return fitAdministratorLines(
+    say(input, "command.commands.header", { count: commands.length }),
+    commands.map(
+      (item) =>
+        `${item.command} ${item.description} ${say(input, permissionStateKey(item.ephemeral))}`,
+    ),
+    (count) => say(input, "command.commands.more", { count }),
+  );
+}
+
+function rejectReadCommandMenu(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "commands",
   });
 }
 
