@@ -241,6 +241,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> custom_emoji on` 删这个群里的自定义表情。默认关闭。编号不进证据。看得见的字仍参与关键词。按标识提及仍看 `text_mention`。见 ADR 0515。
 
+`/rule <chatId> copy_text on` 删这个群里复制到剪贴板的按钮。默认关闭。复制句子不进证据。看得见的按钮文字仍参与关键词。自定义表情仍看 `custom_emoji`。见 ADR 0516。
+
 ## 确认
 
 ```sh

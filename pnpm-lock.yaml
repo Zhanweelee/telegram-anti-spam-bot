@@ -83,6 +83,9 @@ importers:
       '@tasb/detector-contact':
         specifier: workspace:*
         version: link:../../packages/detectors-contact
+      '@tasb/detector-copy':
+        specifier: workspace:*
+        version: link:../../packages/detectors-copy
       '@tasb/detector-created':
         specifier: workspace:*
         version: link:../../packages/detectors-created
@@ -243,6 +246,9 @@ importers:
       '@tasb/detector-contact':
         specifier: workspace:*
         version: link:../packages/detectors-contact
+      '@tasb/detector-copy':
+        specifier: workspace:*
+        version: link:../packages/detectors-copy
       '@tasb/detector-created':
         specifier: workspace:*
         version: link:../packages/detectors-created
@@ -506,6 +512,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-contact:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-copy:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

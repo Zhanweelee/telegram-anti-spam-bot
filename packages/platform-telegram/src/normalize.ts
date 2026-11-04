@@ -172,6 +172,7 @@ async function messageEvent(
   const richContact = richContactMark(message);
   const asTextMention = textMentionMark(message);
   const asCustomEmoji = customEmojiMark(message);
+  const asCopyText = copyTextMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -250,6 +251,7 @@ async function messageEvent(
         : {}),
       ...(asTextMention ? { asTextMention: true as const } : {}),
       ...(asCustomEmoji ? { asCustomEmoji: true as const } : {}),
+      ...(asCopyText ? { asCopyText: true as const } : {}),
     },
   });
 }
@@ -528,6 +530,64 @@ function richCustomEmoji(value: unknown): boolean {
   }
   for (const nested of Object.values(value)) {
     if (richCustomEmoji(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function copyTextMark(message: Record<string, unknown>): boolean {
+  if (inlineCopyText(message.reply_markup)) {
+    return true;
+  }
+  const rich = message.rich_message;
+  return isRecord(rich) && richCopyText(rich);
+}
+
+function inlineCopyText(markup: unknown): boolean {
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return false;
+  }
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (buttonCopiesText(button)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function buttonCopiesText(button: unknown): boolean {
+  if (!isRecord(button)) {
+    return false;
+  }
+  const copied = button.copy_text;
+  return isRecord(copied) && hiddenSecret(copied.text);
+}
+
+function richCopyText(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richCopyText(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "button" && buttonCopiesText(value.button)) {
+    return true;
+  }
+  if (value.type === "buttons" && Array.isArray(value.buttons)) {
+    for (const button of value.buttons) {
+      if (buttonCopiesText(button)) {
+        return true;
+      }
+    }
+  }
+  for (const nested of Object.values(value)) {
+    if (richCopyText(nested)) {
       return true;
     }
   }

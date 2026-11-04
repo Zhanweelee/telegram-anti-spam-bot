@@ -21178,6 +21178,298 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a copy button and leaves the sentence out", async () => {
+    const sentence = "口令90251";
+    const actor = "发复制的人";
+    const marked = await normalize({
+      update_id: 4920,
+      message: {
+        message_id: 960,
+        date: 1761955200,
+        chat: { id: -100499920, type: "supergroup" },
+        from: { id: 125, first_name: actor },
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "复制广告", copy_text: { text: sentence } }],
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asCopyText).toBe(true);
+    expect(marked.event.message?.asCustomEmoji).toBeUndefined();
+    expect(marked.event.message?.text).toBe("复制广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(sentence);
+    expect(markedDump).not.toContain("90251");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4921,
+      message: {
+        message_id: 961,
+        date: 1761955200,
+        chat: { id: -100499921, type: "supergroup" },
+        from: { id: 125 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "复制广告", copy_text: { text: sentence } }],
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asCopyText).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90251");
+
+    const blank = await normalize({
+      update_id: 4922,
+      message: {
+        message_id: 962,
+        date: 1761955200,
+        chat: { id: -100499922, type: "supergroup" },
+        from: { id: 125 },
+        text: "空复制",
+        reply_markup: {
+          inline_keyboard: [[{ text: "空按钮", copy_text: { text: "   " } }]],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空复制");
+    expect(blank.event.message?.asCopyText).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4923,
+      message: {
+        message_id: 963,
+        date: 1761955200,
+        chat: { id: -100499923, type: "supergroup" },
+        from: { id: 125 },
+        text: "布尔复制",
+        reply_markup: {
+          inline_keyboard: [[{ text: "布尔按钮", copy_text: true }]],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔复制");
+    expect(flag.event.message?.asCopyText).toBeUndefined();
+
+    const missing = await normalize({
+      update_id: 4924,
+      message: {
+        message_id: 964,
+        date: 1761955200,
+        chat: { id: -100499924, type: "supergroup" },
+        from: { id: 125 },
+        text: "缺复制",
+        reply_markup: {
+          inline_keyboard: [[{ text: "缺按钮", copy_text: {} }]],
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.text).toBe("缺复制");
+    expect(missing.event.message?.asCopyText).toBeUndefined();
+
+    const link = await normalize({
+      update_id: 4925,
+      message: {
+        message_id: 965,
+        date: 1761955200,
+        chat: { id: -100499925, type: "supergroup" },
+        from: { id: 125 },
+        text: "链接留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: "https://example.com/keep" }],
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asCopyText).toBeUndefined();
+
+    const callback = await normalize({
+      update_id: 4926,
+      message: {
+        message_id: 966,
+        date: 1761955200,
+        chat: { id: -100499926, type: "supergroup" },
+        from: { id: 125 },
+        text: "回调留下",
+        reply_markup: {
+          inline_keyboard: [[{ text: "点我", callback_data: "cb90252" }]],
+        },
+      },
+    });
+    expect(callback.status).toBe("event");
+    if (callback.status !== "event") {
+      return;
+    }
+    expect(callback.event.message?.text).toBe("回调留下");
+    expect(callback.event.message?.asCopyText).toBeUndefined();
+    expect(JSON.stringify(callback.event)).not.toContain("90252");
+
+    const keyboard = await normalize({
+      update_id: 4927,
+      message: {
+        message_id: 967,
+        date: 1761955200,
+        chat: { id: -100499927, type: "supergroup" },
+        from: { id: 125 },
+        text: "键盘留下",
+        reply_markup: {
+          keyboard: [[{ text: "键盘按钮", copy_text: { text: "口令90253" } }]],
+        },
+      },
+    });
+    expect(keyboard.status).toBe("event");
+    if (keyboard.status !== "event") {
+      return;
+    }
+    expect(keyboard.event.message?.text).toBe("键盘留下");
+    expect(keyboard.event.message?.asCopyText).toBeUndefined();
+    expect(JSON.stringify(keyboard.event)).not.toContain("90253");
+
+    const rich = await normalize({
+      update_id: 4928,
+      message: {
+        message_id: 968,
+        date: 1761955200,
+        chat: { id: -100499928, type: "supergroup" },
+        from: { id: 125 },
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "buttons",
+                  buttons: [
+                    { text: "嵌套复制", copy_text: { text: sentence } },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("嵌套复制");
+    expect(rich.event.message?.asCopyText).toBe(true);
+    expect(rich.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90251");
+
+    const paragraph = await normalize({
+      update_id: 4929,
+      message: {
+        message_id: 969,
+        date: 1761955200,
+        chat: { id: -100499929, type: "supergroup" },
+        from: { id: 125 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "button",
+                button: { text: "段内复制", copy_text: { text: sentence } },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(paragraph.status).toBe("event");
+    if (paragraph.status !== "event") {
+      return;
+    }
+    expect(paragraph.event.message?.text).toBe("段内复制");
+    expect(paragraph.event.message?.asCopyText).toBe(true);
+    expect(JSON.stringify(paragraph.event)).not.toContain("90251");
+
+    const emoji = await normalize({
+      update_id: 4930,
+      message: {
+        message_id: 970,
+        date: 1761955200,
+        chat: { id: -100499930, type: "supergroup" },
+        from: { id: 125 },
+        text: "表情留下",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji90246",
+          },
+        ],
+      },
+    });
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.text).toBe("表情留下");
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asCopyText).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("90246");
+
+    const dated = await normalize({
+      update_id: 4931,
+      message: {
+        message_id: 971,
+        date: 1761955200,
+        chat: { id: -100499931, type: "supergroup" },
+        from: { id: 125 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90254,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asCopyText).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90254");
+  });
+
   it("marks a custom emoji and leaves the id out", async () => {
     const emojiId = "emoji90246";
     const actor = "发表情的人";

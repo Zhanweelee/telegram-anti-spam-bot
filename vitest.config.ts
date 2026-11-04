@@ -49,6 +49,7 @@ export default defineConfig({
       "packages/detectors-spoiler",
       "packages/detectors-mention",
       "packages/detectors-emoji",
+      "packages/detectors-copy",
       "packages/detectors-rich",
       "packages/detectors-forward",
       "packages/actions",

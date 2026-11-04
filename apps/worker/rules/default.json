@@ -483,6 +483,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "copy_text",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["copy_text"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

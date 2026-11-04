@@ -1,0 +1,18 @@
+[
+  {
+    "id": "copy_text_spam",
+    "kind": "message",
+    "label": "spam",
+    "asCopyText": true
+  },
+  {
+    "id": "copy_text_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "copy_text_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
