@@ -12,6 +12,7 @@ export {
   MAX_BLOCKLIST_ENTRIES,
   parseBlocklistEntry,
 } from "./blocklist.js";
+export { botSetupNotice } from "./bot-setup.js";
 export type { Cache } from "./cache.js";
 export {
   addSeconds,

@@ -91,42 +91,53 @@ export const actorSchema = z.strictObject({
   bot: z.literal(true).optional(),
 });
 
-export const eventSchema = z.strictObject({
-  id: idSchema,
-  tenantId: idSchema,
-  chatId: idSchema,
-  kind: eventKindSchema,
-  occurredAt: isoSchema,
-  actor: actorSchema,
-  /** True when the event is a private conversation with the bot. */
-  direct: z.boolean().optional(),
-  /** True when this message replaces an earlier one. */
-  edited: z.literal(true).optional(),
-  /** Present when a member joined from outside the chat, left it, was promoted, or was unrestricted. */
-  membership: z.enum(["join", "leave", "promote", "unrestrict"]).optional(),
-  /** Bot admin state. Chat titles stay out of the event. */
-  bot: botStateSchema.optional(),
-  /** Button answer. The nonce is not message text. */
-  challenge: z
-    .strictObject({
-      nonce: z.string().regex(/^[a-f0-9]{16}$/),
-      messageId: z
-        .string()
-        .regex(/^[1-9][0-9]{0,15}$/)
-        .optional(),
-    })
-    .optional(),
-  message: messageSchema.optional(),
-  /** Visible join name. Request memory only; audits keep the hash. */
-  profile: profileSchema.optional(),
-  /** Guard-bot join query. Phrases and blank ids stay out. */
-  joinQueryId: z
-    .string()
-    .regex(/^[A-Za-z0-9_-]{1,128}$/)
-    .optional(),
-  /** Joined through a chat-folder invite. The invite link stays out. */
-  folderInvite: z.literal(true).optional(),
-});
+export const eventSchema = z
+  .strictObject({
+    id: idSchema,
+    tenantId: idSchema,
+    chatId: idSchema,
+    kind: eventKindSchema,
+    occurredAt: isoSchema,
+    actor: actorSchema,
+    /** True when the event is a private conversation with the bot. */
+    direct: z.boolean().optional(),
+    /** True when this message replaces an earlier one. */
+    edited: z.literal(true).optional(),
+    /** Present when a member joined from outside the chat, left it, was promoted, or was unrestricted. */
+    membership: z.enum(["join", "leave", "promote", "unrestrict"]).optional(),
+    /** Bot admin state. Chat titles stay out of the event. */
+    bot: botStateSchema.optional(),
+    /** Still in the chat. Directory state stays gone. */
+    botSeat: z.literal("in").optional(),
+    /** Delete right. Present only together with botRestrict. */
+    botDelete: z.enum(["on", "off"]).optional(),
+    /** Restrict right. Present only together with botDelete. */
+    botRestrict: z.enum(["on", "off"]).optional(),
+    /** Button answer. The nonce is not message text. */
+    challenge: z
+      .strictObject({
+        nonce: z.string().regex(/^[a-f0-9]{16}$/),
+        messageId: z
+          .string()
+          .regex(/^[1-9][0-9]{0,15}$/)
+          .optional(),
+      })
+      .optional(),
+    message: messageSchema.optional(),
+    /** Visible join name. Request memory only; audits keep the hash. */
+    profile: profileSchema.optional(),
+    /** Guard-bot join query. Phrases and blank ids stay out. */
+    joinQueryId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional(),
+    /** Joined through a chat-folder invite. The invite link stays out. */
+    folderInvite: z.literal(true).optional(),
+  })
+  .refine(
+    (event) =>
+      (event.botDelete === undefined) === (event.botRestrict === undefined),
+  );
 
 export type EventKind = z.output<typeof eventKindSchema>;
 export type ForwardKind = z.output<typeof forwardKindSchema>;

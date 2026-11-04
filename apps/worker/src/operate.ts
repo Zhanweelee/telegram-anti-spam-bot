@@ -1,4 +1,5 @@
 import {
+  botSetupNotice,
   type ChatDirectory,
   cancelChallenge,
   createSystemClock,
@@ -285,6 +286,7 @@ export async function handleIncomingEvent(
     await syncChatDirectory(event, chats, logger);
   }
   if (event.kind === "bot_membership") {
+    await sendBotSetupNotice(event, deps.reply, deps.locale, logger);
     return;
   }
   if (event.kind === "chat_member" && event.membership === "leave") {
@@ -551,6 +553,26 @@ export async function handleIncomingEvent(
         chatId: event.chatId,
       });
     }
+  }
+}
+
+async function sendBotSetupNotice(
+  event: Event,
+  reply: ReplyPort | undefined,
+  locale: Locale | undefined,
+  logger: Logger,
+): Promise<void> {
+  const notice = botSetupNotice(event, locale);
+  if (!notice || !reply) {
+    return;
+  }
+  try {
+    await reply.send(notice);
+  } catch {
+    logger.warn("bot_setup_notice_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
   }
 }
 
