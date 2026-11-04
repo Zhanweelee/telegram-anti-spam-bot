@@ -18859,6 +18859,7 @@ describe("normalizeUpdate", () => {
       "bit.ly",
       "t.me",
       "example.com",
+      "cutt.ly",
       "tinyurl.com",
     ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
@@ -18871,7 +18872,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("fwd78");
     expect(labeledDump).not.toContain("kb78");
     expect(labeledDump).not.toContain("ow.ly");
-    expect(labeledDump).not.toContain("cutt.ly");
     expect(labeledDump).not.toContain("is.gd");
     expect(labeledDump).not.toContain("login78");
 
@@ -18979,6 +18979,124 @@ describe("normalizeUpdate", () => {
     expect(richDump).not.toContain(richCode);
     expect(richDump).not.toContain("richcb78");
     expect(richDump).not.toContain("bit.ly");
+  });
+
+  it("keeps hostnames from a login button's forwarded label", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "FWD79";
+    const labeled = await normalize({
+      update_id: 4920,
+      message: {
+        message_id: 4920,
+        date: 1761955200,
+        chat: { id: -1004920, type: "supergroup" },
+        from: { id: 4920 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "登录",
+                login_url: {
+                  url: "https://example.com/login79",
+                  forward_text: `${phrase} https://bit.ly/fwd79 https://t.me/+${code}.`,
+                  bot_username: "https://tinyurl.com/bot79",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hosts).toEqual([
+      "example.com",
+      "bit.ly",
+      "t.me",
+    ]);
+    expect(labeled.event.message?.invites).toEqual(["t.me"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(phrase);
+    expect(labeledDump).not.toContain(code);
+    expect(labeledDump).not.toContain("fwd79");
+    expect(labeledDump).not.toContain("login79");
+    expect(labeledDump).not.toContain("bot79");
+    expect(labeledDump).not.toContain("tinyurl.com");
+
+    const rich = await normalize({
+      update_id: 4921,
+      message: {
+        message_id: 4921,
+        date: 1761955200,
+        chat: { id: -1004921, type: "supergroup" },
+        from: { id: 4921 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [
+                {
+                  text: "登录",
+                  login_url: {
+                    url: "https://example.com/rich79",
+                    forward_text: "https://cutt.ly/rich79",
+                    bot_username: phrase,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("今天站会");
+    expect(rich.event.message?.hosts).toEqual(["example.com", "cutt.ly"]);
+    const richDump = JSON.stringify(rich.event);
+    expect(richDump).not.toContain(phrase);
+    expect(richDump).not.toContain("rich79");
+
+    for (const mark of [false, 1, phrase]) {
+      const outcome = await normalize({
+        update_id: 4922,
+        message: {
+          message_id: 4922,
+          date: 1761955200,
+          chat: { id: -1004922, type: "supergroup" },
+          from: { id: 4922 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "登录",
+                  login_url: {
+                    url: "https://example.com/other79",
+                    forward_text: mark,
+                  },
+                },
+              ],
+            ],
+          },
+        },
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        return;
+      }
+      expect(outcome.event.message?.hosts).toEqual(["example.com"]);
+      expect(JSON.stringify(outcome.event)).not.toContain(phrase);
+      expect(JSON.stringify(outcome.event)).not.toContain("other79");
+    }
   });
 
   it("keeps the host Android opens in an inline query", async () => {
