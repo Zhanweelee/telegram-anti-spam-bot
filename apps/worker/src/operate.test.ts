@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(77);
+    expect(body.commands).toHaveLength(78);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2868,9 +2868,15 @@ describe("handleIncomingEvent", () => {
       command: "community",
       description: "/community <chatId>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(
+      body.commands.find((item) => item.command === "canstickers"),
+    ).toEqual({
       command: "canstickers",
       description: "/canstickers <chatId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "parent",
+      description: "/parent <chatId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -5417,6 +5423,170 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/canstickers -100", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads the parent channel and drops the title", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const invite = `https://t.me/+${phrase}`;
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                username: phrase,
+                invite_link: invite,
+                parent_chat: {
+                  id: -100777,
+                  type: "channel",
+                  title: phrase,
+                  username: phrase,
+                },
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "上级 -100777"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChat"]);
+    expect(calls[0]?.method).not.toContain("setChatTitle");
+    expect("getChat").not.toContain("setChatTitle");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
+    const none = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      {
+        ...none,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "group", title: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(none.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100", "上级 无"].join("\n"),
+    ]);
+    expect(JSON.stringify(none.reply.sent)).not.toContain(phrase);
+    const broken = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      {
+        ...broken,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                title: phrase,
+                parent_chat: { id: -100777, title: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(broken.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(broken.reply.sent)).not.toContain(phrase);
+    const wide = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      {
+        ...wide,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                title: phrase,
+                invite_link: invite,
+                parent_chat: {
+                  id: -100777,
+                  type: "channel",
+                  title: phrase,
+                },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(wide.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(wide.reply.sent)).not.toContain(invite);
+    const empty = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      {
+        ...empty,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      },
+    );
+    expect(empty.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/parent -100", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",
