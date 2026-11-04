@@ -56,6 +56,32 @@ export function bindWarnStoreContract(create: () => WarnStore): void {
       expect(await crowded.increment({ ...target, actorId: "0" })).toBe(2);
     });
 
+    it("lists one chat with the highest count first", async () => {
+      const store = create();
+      await store.increment({ ...target, actorId: "10" });
+      await store.increment({ ...target, actorId: "9" });
+      await store.increment({ ...target, actorId: "9" });
+      await store.increment({ ...target, actorId: "9" });
+      await store.increment({ ...target, actorId: "8" });
+      await store.increment({ ...target, actorId: "8" });
+      await store.increment({ ...target, actorId: "8" });
+      await store.increment({ ...target, chatId: "-200", actorId: "9" });
+      expect(await store.list(target.tenantId, target.chatId)).toEqual([
+        { actorId: "8", count: 3 },
+        { actorId: "9", count: 3 },
+        { actorId: "10", count: 1 },
+      ]);
+      expect(await store.list(target.tenantId, "-200")).toEqual([
+        { actorId: "9", count: 1 },
+      ]);
+      expect(await store.list(target.tenantId, "-300")).toEqual([]);
+      await store.clear({ ...target, actorId: "9" });
+      expect(await store.list(target.tenantId, target.chatId)).toEqual([
+        { actorId: "8", count: 3 },
+        { actorId: "10", count: 1 },
+      ]);
+    });
+
     it("writes a lower count without keeping a zero", async () => {
       const store = create();
       await store.increment(target);

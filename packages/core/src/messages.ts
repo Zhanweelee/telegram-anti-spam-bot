@@ -102,6 +102,7 @@ export const messageKeys = [
   "command.warns.usage",
   "command.warns.count",
   "command.warns.absent",
+  "command.warns.empty",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -454,7 +455,7 @@ const syntax = [
   "/uncaptcha <chatId> <actorId>",
   "/warn <chatId> <actorId>",
   "/unwarn <chatId> <actorId>",
-  "/warns <chatId> <actorId>",
+  "/warns <chatId> [actorId]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -571,9 +572,10 @@ const zh = {
   "command.unwarn.usage": "用法：/unwarn <chatId> <actorId>",
   "command.unwarn.done": "已清除警告 {chatId} {actorId}",
   "command.unwarn.absent": "{chatId} {actorId} 没有警告",
-  "command.warns.usage": "用法：/warns <chatId> <actorId>",
+  "command.warns.usage": "用法：/warns <chatId> [actorId]",
   "command.warns.count": "{chatId} {actorId} 警告 {count}/{limit}",
   "command.warns.absent": "{chatId} {actorId} 没有警告",
+  "command.warns.empty": "{chatId} 没有警告",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -973,9 +975,10 @@ const en = {
   "command.unwarn.usage": "Usage: /unwarn <chatId> <actorId>",
   "command.unwarn.done": "Cleared warnings for {actorId} in {chatId}",
   "command.unwarn.absent": "{actorId} has no warnings in {chatId}",
-  "command.warns.usage": "Usage: /warns <chatId> <actorId>",
+  "command.warns.usage": "Usage: /warns <chatId> [actorId]",
   "command.warns.count": "{actorId} in {chatId} has {count}/{limit} warnings",
   "command.warns.absent": "{actorId} has no warnings in {chatId}",
+  "command.warns.empty": "No warnings in {chatId}",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

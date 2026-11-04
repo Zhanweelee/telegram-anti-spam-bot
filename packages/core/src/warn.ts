@@ -15,11 +15,28 @@ export interface WarnTarget {
   readonly actorId: string;
 }
 
+export interface WarnCount {
+  readonly actorId: string;
+  readonly count: number;
+}
+
 export interface WarnStore {
   read(target: WarnTarget): Promise<number>;
   increment(target: WarnTarget): Promise<number>;
   write(target: WarnTarget, count: number): Promise<void>;
   clear(target: WarnTarget): Promise<boolean>;
+  list(tenantId: string, chatId: string): Promise<readonly WarnCount[]>;
+}
+
+export function sortWarnCounts(
+  rows: readonly WarnCount[],
+): readonly WarnCount[] {
+  return [...rows].sort((left, right) => {
+    if (left.count !== right.count) {
+      return right.count - left.count;
+    }
+    return compareActorId(left.actorId, right.actorId);
+  });
 }
 
 export function createMemoryWarnStore(): WarnStore {
@@ -49,7 +66,40 @@ export function createMemoryWarnStore(): WarnStore {
     async clear(target) {
       return drop(chats, target);
     },
+    async list(tenantId, chatId) {
+      const actors = chats.get(`${tenantId}\n${chatId}`);
+      if (actors === undefined) {
+        return [];
+      }
+      const rows: WarnCount[] = [];
+      for (const [actorId, count] of actors) {
+        rows.push({ actorId, count });
+      }
+      return sortWarnCounts(rows);
+    },
   };
+}
+
+function compareActorId(left: string, right: string): number {
+  const leftDigits = /^-?\d+$/.test(left);
+  const rightDigits = /^-?\d+$/.test(right);
+  if (leftDigits && rightDigits) {
+    const delta = BigInt(left) - BigInt(right);
+    if (delta < 0n) {
+      return -1;
+    }
+    if (delta > 0n) {
+      return 1;
+    }
+    return 0;
+  }
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
 }
 
 function chatKey(target: WarnTarget): string {

@@ -22,7 +22,9 @@ import {
   reviewSampleSchema,
   ruleSetSchema,
   type Storage,
+  sortWarnCounts,
   WarnCapacityError,
+  type WarnCount,
   type WarnStore,
   type WarnTarget,
 } from "@tasb/core";
@@ -296,6 +298,9 @@ AND (
 const deleteWarnSql = `DELETE FROM warn_counts
 WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
 
+const listWarnSql = `SELECT actor_id, count FROM warn_counts
+WHERE tenant_id = ? AND chat_id = ? AND count > 0`;
+
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
 
 export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
@@ -503,6 +508,18 @@ export function createD1WarnStore(db: SqlDatabase): WarnStore {
         .run();
       return readChanges(result) >= 1;
     },
+    async list(tenantId, chatId) {
+      await migrationsFor(db);
+      const rows = await db.prepare(listWarnSql).bind(tenantId, chatId).all();
+      const counts: WarnCount[] = [];
+      for (const row of rows.results ?? []) {
+        const parsed = readWarnRow(row);
+        if (parsed) {
+          counts.push(parsed);
+        }
+      }
+      return sortWarnCounts(counts).slice(0, MAX_WARN_ACTORS);
+    },
   };
 }
 
@@ -517,26 +534,48 @@ async function readWarnCount(
   return readWarnTotal(rows.results?.[0]) ?? 0;
 }
 
-function readWarnTotal(row: unknown): number | undefined {
+function readWarnRow(row: unknown): WarnCount | undefined {
   if (typeof row !== "object" || row === null) {
     return undefined;
   }
-  const value = (row as Record<string, unknown>).total;
+  const record = row as Record<string, unknown>;
+  const actorId = record.actor_id;
+  if (typeof actorId !== "string" || !/^-?\d{1,20}$/.test(actorId)) {
+    return undefined;
+  }
+  const count = readStoredCount(record.count);
+  if (count === undefined || count <= 0) {
+    return undefined;
+  }
+  return { actorId, count };
+}
+
+function readStoredCount(value: unknown): number | undefined {
   if (
     typeof value === "number" &&
     Number.isInteger(value) &&
-    value >= 0 &&
     Number.isSafeInteger(value)
   ) {
     return value;
   }
-  if (typeof value === "bigint" && value >= 0n) {
+  if (typeof value === "bigint") {
     const asNumber = Number(value);
     if (Number.isSafeInteger(asNumber)) {
       return asNumber;
     }
   }
   return undefined;
+}
+
+function readWarnTotal(row: unknown): number | undefined {
+  if (typeof row !== "object" || row === null) {
+    return undefined;
+  }
+  const count = readStoredCount((row as Record<string, unknown>).total);
+  if (count === undefined || count < 0) {
+    return undefined;
+  }
+  return count;
 }
 
 function readCaptcha(row: unknown): CaptchaChallenge | null {

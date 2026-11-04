@@ -7411,7 +7411,7 @@ describe("runOperatorCommand", () => {
     });
     expect(menu.at(-1)).toEqual({
       command: "warns",
-      description: "/warns <chatId> <actorId>",
+      description: "/warns <chatId> [actorId]",
     });
     expect(menu.find((item) => item.command === "warn")).toEqual({
       command: "warn",
@@ -16288,6 +16288,116 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(shown).toMatchObject({ text: "-100 77 警告 3/3" });
+    const listed = await runOperatorCommand({
+      event: event({ text: "/warns -100", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(listed).toMatchObject({ text: "-100\n77 3/3" });
+    expect(JSON.stringify(listed)).not.toContain(phrase);
+  });
+
+  it("lists warnings for one chat and skips the others", async () => {
+    const deps = kit();
+    const warns = createMemoryWarnStore();
+    await warns.write({ tenantId: "local", chatId: "-100", actorId: "10" }, 1);
+    await warns.write({ tenantId: "local", chatId: "-100", actorId: "9" }, 3);
+    await warns.write({ tenantId: "local", chatId: "-100", actorId: "8" }, 3);
+    await warns.write({ tenantId: "local", chatId: "-200", actorId: "9" }, 2);
+    const listed = await runOperatorCommand({
+      event: event({ text: "/warns -100", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(listed).toMatchObject({ text: "-100\n8 3/3\n9 3/3\n10 1/3" });
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const empty = await runOperatorCommand({
+      event: event({ text: "/warns -300", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(empty).toMatchObject({ text: "-300 没有警告" });
+    const english = await runOperatorCommand({
+      event: event({ text: "/warns -300", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      warns,
+      ...deps,
+    });
+    expect(english).toMatchObject({ text: "No warnings in -300" });
+    const usage = await runOperatorCommand({
+      event: event({ text: "/warns -100 77 extra", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/warns <chatId> [actorId]",
+    });
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/warns -200",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      warns,
+      ...deps,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const grouped = await runOperatorCommand({
+      event: event({ text: "/warns -100" }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(grouped.status).not.toBe("reply");
+    const bad = await runOperatorCommand({
+      event: event({ text: "/warns chat", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const missing = await runOperatorCommand({
+      event: event({ text: "/warns -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const logged = kit();
+    const broken = {
+      async read(): Promise<number> {
+        return 0;
+      },
+      async increment(): Promise<number> {
+        return 1;
+      },
+      async write(): Promise<void> {
+        return;
+      },
+      async clear(): Promise<boolean> {
+        return false;
+      },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        throw new Error(phrase);
+      },
+    };
+    const failed = await runOperatorCommand({
+      event: event({ text: "/warns -100", direct: true }),
+      adminActorIds: ["42"],
+      warns: broken,
+      ...logged,
+    });
+    expect(failed).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(logged.logger.entries)).toContain(
+      "operator_rejected",
+    );
+    expect(JSON.stringify(logged.logger.entries)).not.toContain(phrase);
   });
 
   it("rolls the third warning back when the ban fails", async () => {
@@ -16422,6 +16532,9 @@ describe("runOperatorCommand", () => {
       async clear(): Promise<boolean> {
         return false;
       },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        return [];
+      },
     };
     const unread = await runOperatorCommand({
       event: event({ text: "/warn -100 77", direct: true }),
@@ -16444,6 +16557,9 @@ describe("runOperatorCommand", () => {
       async clear(): Promise<boolean> {
         throw new Error(phrase);
       },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        return [];
+      },
     };
     const full = await runOperatorCommand({
       event: event({ text: "/warn -100 77", direct: true }),
@@ -16465,6 +16581,9 @@ describe("runOperatorCommand", () => {
       },
       async clear(): Promise<boolean> {
         throw new Error(phrase);
+      },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        return [];
       },
     };
     const failedClear = await runOperatorCommand({

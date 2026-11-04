@@ -1065,6 +1065,7 @@ describe("warn action", () => {
       increment: (target) => store.increment(target),
       write: (target, count) => store.write(target, count),
       clear: (target) => store.clear(target),
+      list: (tenantId, chatId) => store.list(tenantId, chatId),
     };
   }
 
@@ -1180,6 +1181,7 @@ describe("warn action", () => {
           throw new Error("write_failed");
         },
         clear: (target) => store.clear(target),
+        list: (tenantId, chatId) => store.list(tenantId, chatId),
       },
     });
     const target = {
