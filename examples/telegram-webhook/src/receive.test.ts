@@ -1444,4 +1444,28 @@ describe("receiveUpdate", () => {
     expect(dumped).not.toContain(connection);
     expect(dumped).not.toContain("bit.ly");
   });
+
+  it("ignores a scheduled message whose id is still zero", async () => {
+    const phrase = "请免费领取礼品";
+    const result = await receiveUpdate({
+      secret: "dev-secret",
+      header: "dev-secret",
+      body: JSON.stringify({
+        update_id: 4604,
+        message: {
+          message_id: 0,
+          date: 1761955200,
+          chat: { id: -100 },
+          from: { id: 3 },
+          text: `${phrase} https://bit.ly/gift4604`,
+        },
+      }),
+    });
+    expect(result.status).toBe(200);
+    expect(result.events).toEqual([]);
+    expect(result.body).toEqual({ ok: true, ignored: true });
+    const dumped = JSON.stringify(result);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("bit.ly");
+  });
 });

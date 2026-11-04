@@ -131,6 +131,9 @@ async function messageEvent(
   if (!chatId || !messageId || !actor) {
     return { status: "ignored" };
   }
+  if (messageId === "0" && ephemeralId === null) {
+    return { status: "ignored" };
+  }
   const text = messageText(message);
   const forward = forwardKind(message);
   const links = linkHosts(message);
