@@ -107,6 +107,8 @@ export const messageSchema = z
     gift: z.enum(["card", "unique", "upgrade"]).optional(),
     /** Pin service line. The pinned message stays out. */
     asPin: z.literal(true).optional(),
+    /** Giveaway creation or private completion. Counts and the prize message stay out. */
+    giveawayNotice: z.enum(["created", "completed"]).optional(),
   })
   .refine(
     (message) =>

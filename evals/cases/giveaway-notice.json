@@ -1,0 +1,24 @@
+[
+  {
+    "id": "giveaway_notice_created",
+    "kind": "message",
+    "label": "spam",
+    "giveawayNotice": "created"
+  },
+  {
+    "id": "giveaway_notice_completed",
+    "kind": "message",
+    "label": "spam",
+    "giveawayNotice": "completed"
+  },
+  {
+    "id": "giveaway_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "giveaway_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

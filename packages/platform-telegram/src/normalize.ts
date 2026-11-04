@@ -152,6 +152,7 @@ async function messageEvent(
   const background = backgroundNotice(message);
   const gift = giftNotice(message);
   const asPin = pinnedNotice(message);
+  const giveawayNotice = scheduledGiveaway(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -193,8 +194,30 @@ async function messageEvent(
       ...(background === undefined ? {} : { background }),
       ...(gift === undefined ? {} : { gift }),
       ...(asPin ? { asPin: true as const } : {}),
+      ...(giveawayNotice === undefined ? {} : { giveawayNotice }),
     },
   });
+}
+
+function scheduledGiveaway(
+  message: Record<string, unknown>,
+): "created" | "completed" | undefined {
+  if (isRecord(message.giveaway_created)) {
+    return "created";
+  }
+  const completed = message.giveaway_completed;
+  if (!isRecord(completed)) {
+    return undefined;
+  }
+  const winners = completed.winner_count;
+  if (
+    typeof winners === "number" &&
+    Number.isSafeInteger(winners) &&
+    winners >= 0
+  ) {
+    return "completed";
+  }
+  return undefined;
 }
 
 function pinnedNotice(message: Record<string, unknown>): boolean {

@@ -227,6 +227,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "giveaway_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["giveaway_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

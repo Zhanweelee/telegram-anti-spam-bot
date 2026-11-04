@@ -65,6 +65,7 @@ import {
 } from "@tasb/detector-forward";
 import { createGiftDetector } from "@tasb/detector-gift";
 import { createGiveawayDetector } from "@tasb/detector-giveaway";
+import { createGiveawayNoticeDetector } from "@tasb/detector-giveaway-notice";
 import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
@@ -564,6 +565,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.pinNotice,
         value: createPinDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.giveawayNotice,
+        value: createGiveawayNoticeDetector(),
       },
       {
         source: "builtin",

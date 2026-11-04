@@ -175,6 +175,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> pin_notice on` 删这个群里的置顶提示。默认关闭。被置顶的原文不进证据。置顶本身还在。见 ADR 0482。
 
+`/rule <chatId> giveaway_notice on` 删这个群里的抽奖创建公告和没有公开中奖者的结束公告。默认关闭。奖品原文不进证据。抽奖本身不取消。见 ADR 0483。
+
 ## 确认
 
 ```sh

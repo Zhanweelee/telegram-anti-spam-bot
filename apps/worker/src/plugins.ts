@@ -223,6 +223,12 @@ export const builtinManifests = {
     integrity:
       "a91576cecd406d51d3eb6f2a9899723fc9cf21a3fcb88491695c4bb8f4a5de47",
   }),
+  giveawayNotice: manifest({
+    id: "giveaway_notice",
+    kind: "detector",
+    integrity:
+      "1af610c1f245f260530adf57469ddace0031c68424294b214ce5423dacded8ae",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
