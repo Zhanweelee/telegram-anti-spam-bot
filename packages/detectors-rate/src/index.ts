@@ -94,11 +94,17 @@ function floodKey(event: Event): string {
 }
 
 function floodSampleId(event: Event): string {
-  const album = event.message?.albumId;
-  if (event.edited === true || album === undefined) {
+  if (event.edited === true) {
     return event.id;
   }
-  return `a.${album}`;
+  const album = event.message?.albumId;
+  if (album !== undefined) {
+    return `a.${album}`;
+  }
+  if (event.message?.offline === true) {
+    return "offline";
+  }
+  return event.id;
 }
 
 function repeatDigest(message: NonNullable<Event["message"]>): string | null {

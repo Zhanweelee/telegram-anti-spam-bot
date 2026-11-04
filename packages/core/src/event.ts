@@ -67,6 +67,8 @@ export const messageSchema = z
     via: z.literal(true).optional(),
     /** Paid post that must stay. Star counts stay out. */
     paid: z.literal(true).optional(),
+    /** Sent by a schedule or another implicit action. The reason stays out. */
+    offline: z.literal(true).optional(),
     /** File class. File ids, names, and set titles stay out. */
     media: mediaKindSchema.optional(),
     /** Digest of the file class and file_unique_id. The id stays out. */

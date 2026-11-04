@@ -54,6 +54,7 @@ function messageEvent(input: {
   readonly mediaSha256?: string;
   readonly albumId?: string;
   readonly edited?: true;
+  readonly offline?: true;
 }): Event {
   return parseEvent({
     id: input.id,
@@ -70,6 +71,7 @@ function messageEvent(input: {
       ...(input.media ? { media: input.media } : {}),
       ...(input.mediaSha256 ? { mediaSha256: input.mediaSha256 } : {}),
       ...(input.albumId ? { albumId: input.albumId } : {}),
+      ...(input.offline ? { offline: true as const } : {}),
     },
   });
 }
@@ -93,6 +95,93 @@ async function lastHit(
 }
 
 describe("flood and repeat fixtures", () => {
+  it("counts scheduled messages as a single flood sample", async () => {
+    const phrase = "请免费领取礼品";
+    const logger = createMemoryLogger();
+    const detector = createFloodDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 10,
+      threshold: 5,
+    });
+    const scheduled = Array.from({ length: 8 }, (_, index) =>
+      messageEvent({
+        id: `offline_${index}`,
+        actorId: "user_1",
+        text: phrase,
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        offline: true,
+      }),
+    );
+    expect(await lastHit(detector, scheduled, logger)).toBeNull();
+    const under = Array.from({ length: 3 }, (_, index) =>
+      messageEvent({
+        id: `plain_${index}`,
+        actorId: "user_1",
+        text: "今天站会",
+        textSha256: HASH,
+        occurredAt: isoAt(1000 + index * 10),
+      }),
+    );
+    expect(await lastHit(detector, under, logger)).toBeNull();
+    const hit = await lastHit(
+      detector,
+      [
+        messageEvent({
+          id: "plain_3",
+          actorId: "user_1",
+          text: "今天站会",
+          textSha256: HASH,
+          occurredAt: isoAt(1500),
+        }),
+      ],
+      logger,
+    );
+    expect(hit?.evidence[0]?.summary).toBe("flood:5");
+    expect(JSON.stringify(hit)).not.toContain(phrase);
+    expect(JSON.stringify(logger.entries)).not.toContain(phrase);
+
+    const edited = createFloodDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 10,
+      threshold: 5,
+    });
+    const edits = Array.from({ length: 5 }, (_, index) =>
+      messageEvent({
+        id: `offline_edit_${index}`,
+        actorId: "user_1",
+        text: "今天站会",
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        offline: true,
+        edited: true,
+      }),
+    );
+    expect(
+      (await lastHit(edited, edits, createMemoryLogger()))?.evidence[0]
+        ?.summary,
+    ).toBe("flood:5");
+
+    const repeat = createRepeatDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 60,
+      threshold: 3,
+    });
+    const copies = Array.from({ length: 3 }, (_, index) =>
+      messageEvent({
+        id: `offline_copy_${index}`,
+        actorId: "user_1",
+        text: phrase,
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        offline: true,
+      }),
+    );
+    const repeated = await lastHit(repeat, copies, createMemoryLogger());
+    expect(repeated?.evidence[0]?.summary).toBe("repeat:3");
+    expect(JSON.stringify(repeated)).not.toContain(phrase);
+  });
+
   it("counts one album as a single flood sample", async () => {
     const albumId = "12532140322504850";
     const logger = createMemoryLogger();

@@ -22108,6 +22108,66 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps a scheduled message and leaves other offline values out", async () => {
+    const phrase = "请免费领取礼品";
+    const scheduled = await normalize({
+      update_id: 4701,
+      message: {
+        message_id: 4701,
+        date: 1761955200,
+        chat: { id: -1004701, type: "supergroup" },
+        from: { id: 4701 },
+        text: "今天站会",
+        is_from_offline: true,
+      },
+    });
+    expect(scheduled.status).toBe("event");
+    if (scheduled.status !== "event") {
+      return;
+    }
+    expect(scheduled.event.message?.offline).toBe(true);
+    expect(scheduled.event.message?.text).toBe("今天站会");
+    expect(scheduled.event.edited).toBeUndefined();
+
+    const edited = await normalize({
+      update_id: 4702,
+      edited_message: {
+        message_id: 4702,
+        date: 1761955200,
+        chat: { id: -1004702, type: "supergroup" },
+        from: { id: 4702 },
+        text: "今天站会",
+        is_from_offline: true,
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.offline).toBe(true);
+
+    for (const mark of [false, 1, phrase]) {
+      const outcome = await normalize({
+        update_id: 4703,
+        message: {
+          message_id: 4703,
+          date: 1761955200,
+          chat: { id: -1004703, type: "supergroup" },
+          from: { id: 4703 },
+          text: "今天站会",
+          is_from_offline: mark,
+        },
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        return;
+      }
+      expect(outcome.event.message?.offline).toBeUndefined();
+      expect(JSON.stringify(outcome.event)).not.toContain(phrase);
+    }
+  });
+
   it("keeps a numeric album id and leaves other group ids out", async () => {
     const albumId = "12532140322504850";
     const phrase = "请免费领取礼品";
