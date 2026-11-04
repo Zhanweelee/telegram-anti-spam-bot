@@ -243,6 +243,9 @@ async function messageEvent(
       ...(richContact.anchor ? { asRichAnchor: true as const } : {}),
       ...(richContact.anchorLink ? { asRichAnchorLink: true as const } : {}),
       ...(richContact.reference ? { asRichReference: true as const } : {}),
+      ...(richContact.referenceLink
+        ? { asRichReferenceLink: true as const }
+        : {}),
     },
   });
 }
@@ -317,6 +320,7 @@ function richContactMark(message: Record<string, unknown>): {
   anchor: boolean;
   anchorLink: boolean;
   reference: boolean;
+  referenceLink: boolean;
 } {
   const found = {
     phone: false,
@@ -330,6 +334,7 @@ function richContactMark(message: Record<string, unknown>): {
     anchor: false,
     anchorLink: false,
     reference: false,
+    referenceLink: false,
   };
   const rich = message.rich_message;
   if (isRecord(rich)) {
@@ -352,6 +357,7 @@ function walkRichContact(
     anchor: boolean;
     anchorLink: boolean;
     reference: boolean;
+    referenceLink: boolean;
   },
 ): void {
   if (
@@ -365,7 +371,8 @@ function walkRichContact(
     found.cashtag &&
     found.anchor &&
     found.anchorLink &&
-    found.reference
+    found.reference &&
+    found.referenceLink
   ) {
     return;
   }
@@ -413,6 +420,9 @@ function walkRichContact(
   }
   if (value.type === "reference" && hiddenSecret(value.name)) {
     found.reference = true;
+  }
+  if (value.type === "reference_link" && hiddenSecret(value.reference_name)) {
+    found.referenceLink = true;
   }
   for (const nested of Object.values(value)) {
     walkRichContact(nested, found);

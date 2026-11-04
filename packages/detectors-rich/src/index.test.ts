@@ -15,6 +15,7 @@ function eventFor(input: {
   asRichAnchor?: true;
   asRichAnchorLink?: true;
   asRichReference?: true;
+  asRichReferenceLink?: true;
 }): Event {
   const kind = input.kind ?? "message";
   return parseEvent({
@@ -46,6 +47,9 @@ function eventFor(input: {
               : {}),
             ...(input.asRichReference
               ? { asRichReference: true as const }
+              : {}),
+            ...(input.asRichReferenceLink
+              ? { asRichReferenceLink: true as const }
               : {}),
           },
         }
@@ -467,6 +471,46 @@ describe("rich contact detector", () => {
     expect(
       await phone.detect({
         event: eventFor({ asRichReference: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
+
+  it("scores a rich reference link and leaves the name out of the hit", async () => {
+    const cited = createRichDetector("reference_link");
+    const hit = await cited.detect({
+      event: eventFor({ asRichReferenceLink: true }),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "rich_reference_link",
+      score: 1,
+      reasons: ["rich_reference_link"],
+      evidence: [{ kind: "feature", summary: "rich:reference_link" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain("90235");
+    expect(
+      await cited.detect({ event: eventFor({}), logger, signal }),
+    ).toBeNull();
+    expect(
+      await cited.detect({
+        event: eventFor({ kind: "chat_member", asRichReferenceLink: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await cited.detect({
+        event: eventFor({ asRichReference: true }),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await phone.detect({
+        event: eventFor({ asRichReferenceLink: true }),
         logger,
         signal,
       }),
