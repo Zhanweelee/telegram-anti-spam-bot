@@ -60,6 +60,7 @@ import { createCallDetector } from "@tasb/detector-call";
 import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
 import { createFolderDetector } from "@tasb/detector-folder";
+import { createForumDetector } from "@tasb/detector-forum";
 import {
   createForwardDetector,
   defaultForwardKinds,
@@ -576,6 +577,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.chatBoost,
         value: createBoostDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.forumNotice,
+        value: createForumDetector(),
       },
       {
         source: "builtin",

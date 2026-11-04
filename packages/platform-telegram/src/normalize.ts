@@ -154,6 +154,7 @@ async function messageEvent(
   const asPin = pinnedNotice(message);
   const giveawayNotice = scheduledGiveaway(message);
   const asBoost = addedBoost(message);
+  const forumNotice = forumService(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -197,8 +198,27 @@ async function messageEvent(
       ...(asPin ? { asPin: true as const } : {}),
       ...(giveawayNotice === undefined ? {} : { giveawayNotice }),
       ...(asBoost ? { asBoost: true as const } : {}),
+      ...(forumNotice === undefined ? {} : { forumNotice }),
     },
   });
+}
+
+function forumService(
+  message: Record<string, unknown>,
+): "closed" | "reopened" | "hidden" | "shown" | undefined {
+  if (isRecord(message.forum_topic_closed)) {
+    return "closed";
+  }
+  if (isRecord(message.forum_topic_reopened)) {
+    return "reopened";
+  }
+  if (isRecord(message.general_forum_topic_hidden)) {
+    return "hidden";
+  }
+  if (isRecord(message.general_forum_topic_unhidden)) {
+    return "shown";
+  }
+  return undefined;
 }
 
 function addedBoost(message: Record<string, unknown>): boolean {

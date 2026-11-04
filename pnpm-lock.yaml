@@ -77,6 +77,9 @@ importers:
       '@tasb/detector-folder':
         specifier: workspace:*
         version: link:../../packages/detectors-folder
+      '@tasb/detector-forum':
+        specifier: workspace:*
+        version: link:../../packages/detectors-forum
       '@tasb/detector-forward':
         specifier: workspace:*
         version: link:../../packages/detectors-forward
@@ -183,6 +186,9 @@ importers:
       '@tasb/detector-folder':
         specifier: workspace:*
         version: link:../packages/detectors-folder
+      '@tasb/detector-forum':
+        specifier: workspace:*
+        version: link:../packages/detectors-forum
       '@tasb/detector-forward':
         specifier: workspace:*
         version: link:../packages/detectors-forward
@@ -380,6 +386,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-folder:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-forum:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

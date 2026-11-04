@@ -111,6 +111,8 @@ export const messageSchema = z
     giveawayNotice: z.enum(["created", "completed"]).optional(),
     /** Boost service line. The boost count stays out. */
     asBoost: z.literal(true).optional(),
+    /** Forum service line. Topic names stay out. */
+    forumNotice: z.enum(["closed", "reopened", "hidden", "shown"]).optional(),
   })
   .refine(
     (message) =>

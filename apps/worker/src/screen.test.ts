@@ -5675,6 +5675,129 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a forum notice until that chat asks", async () => {
+    const title = "关掉广告名";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      closed?: boolean;
+      reopened?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96, first_name: "关话题的人" },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.closed ? { forum_topic_closed: { name: title } } : {}),
+            ...(input.reopened ? { forum_topic_reopened: {} } : {}),
+            ...(input.flag ? { forum_topic_closed: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8600,
+      chatId: -100860,
+      closed: true,
+    });
+    expect(idle.message?.forumNotice).toBe("closed");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain("关话题的人");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "forum_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["forum_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8601, chatId: -100861, reopened: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("forum_notice");
+    expect(removed.decision.ruleIds).toContain("forum_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "forum:reopened" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 8602, chatId: -100862, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8603,
+        chatId: -100863,
+        closed: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain("关话题的人");
+  });
+
   it("keeps a boost until that chat asks", async () => {
     const booster = "助推的人";
     const count = 90185;

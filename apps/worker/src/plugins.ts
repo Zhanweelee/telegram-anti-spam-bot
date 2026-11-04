@@ -235,6 +235,12 @@ export const builtinManifests = {
     integrity:
       "2ffbd3164b9d89243f2f73a7067ca4ff0b0c114de1ed3c414e6793dc3f2aa0fa",
   }),
+  forumNotice: manifest({
+    id: "forum_notice",
+    kind: "detector",
+    integrity:
+      "798de1b35085277d740014a5c1d33668ebbaaa64faae7b8800f3640199d92b22",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

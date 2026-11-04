@@ -59,3 +59,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `giveaway_created` 是对象时，消息带 `giveawayNotice: "created"`。`giveaway_completed.winner_count` 是大于等于 0 的安全整数时带 `completed`。同时出现时先认创建。星星数量、中奖人数和嵌套抽奖消息不进事件。空的结束对象不带这个标记。规则 `giveaway_notice` 默认关闭。见 ADR 0483。
 
 `boost_added.boost_count` 是大于 0 的安全整数时，消息带 `asBoost`。次数和发送者名字不进事件。空对象、0 和小数不带这个标记。规则 `chat_boost` 默认关闭。见 ADR 0484。
+
+`forum_topic_closed`、`forum_topic_reopened`、`general_forum_topic_hidden` 或 `general_forum_topic_unhidden` 是对象时，消息带 `forumNotice`，取值是 `closed`、`reopened`、`hidden` 或 `shown`。同时出现时先认关掉，再认重开，再认隐藏，再认重新显示。名字、图标和话题号不进事件。布尔值不带这个标记。空对象带这个标记。新建和改名不带这个标记，话题名仍按 ADR 0088 成为正文。规则 `forum_notice` 默认关闭。见 ADR 0485。
