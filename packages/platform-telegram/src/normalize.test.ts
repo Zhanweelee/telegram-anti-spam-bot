@@ -20614,6 +20614,158 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks an owner change and keeps the new name", async () => {
+    const name = "新群主广告名";
+    const actor = "交群的人";
+    const userId = 90199;
+    const changed = await normalize({
+      update_id: 4640,
+      message: {
+        message_id: 690,
+        date: 1761955200,
+        chat: { id: -100499630, type: "supergroup" },
+        from: { id: 100, first_name: actor },
+        chat_owner_changed: {
+          new_owner: { id: userId, is_bot: false, first_name: name },
+        },
+      },
+    });
+    expect(changed.status).toBe("event");
+    if (changed.status !== "event") {
+      return;
+    }
+    expect(changed.event.message?.ownerNotice).toBe("changed");
+    expect(changed.event.message?.text).toBe(name);
+    expect(JSON.stringify(changed.event)).not.toContain(actor);
+    expect(JSON.stringify(changed.event)).not.toContain(String(userId));
+
+    const namedLeft = await normalize({
+      update_id: 4641,
+      message: {
+        message_id: 691,
+        date: 1761955200,
+        chat: { id: -100499631, type: "supergroup" },
+        from: { id: 100, first_name: actor },
+        chat_owner_left: {
+          new_owner: { id: userId, is_bot: false, first_name: name },
+        },
+      },
+    });
+    expect(namedLeft.status).toBe("event");
+    if (namedLeft.status !== "event") {
+      return;
+    }
+    expect(namedLeft.event.message?.ownerNotice).toBe("left");
+    expect(namedLeft.event.message?.text).toBe(name);
+    expect(JSON.stringify(namedLeft.event)).not.toContain(String(userId));
+
+    const emptyLeft = await normalize({
+      update_id: 4642,
+      message: {
+        message_id: 692,
+        date: 1761955200,
+        chat: { id: -100499632, type: "supergroup" },
+        from: { id: 100, first_name: actor },
+        chat_owner_left: {},
+      },
+    });
+    expect(emptyLeft.status).toBe("event");
+    if (emptyLeft.status !== "event") {
+      return;
+    }
+    expect(emptyLeft.event.message?.ownerNotice).toBe("left");
+    expect(emptyLeft.event.message?.text).toBe("");
+    expect(JSON.stringify(emptyLeft.event)).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4643,
+      message: {
+        message_id: 693,
+        date: 1761955200,
+        chat: { id: -100499633, type: "supergroup" },
+        from: { id: 100, first_name: actor },
+        text: "今天站会",
+        chat_owner_changed: {
+          new_owner: { id: userId, is_bot: false, first_name: name },
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.ownerNotice).toBe("changed");
+
+    const both = await normalize({
+      update_id: 4644,
+      message: {
+        message_id: 694,
+        date: 1761955200,
+        chat: { id: -100499634, type: "supergroup" },
+        from: { id: 100 },
+        chat_owner_changed: {
+          new_owner: { id: userId, is_bot: false, first_name: name },
+        },
+        chat_owner_left: {},
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.ownerNotice).toBe("changed");
+
+    const blankChanged = await normalize({
+      update_id: 4645,
+      message: {
+        message_id: 695,
+        date: 1761955200,
+        chat: { id: -100499635, type: "supergroup" },
+        from: { id: 100 },
+        chat_owner_changed: {},
+      },
+    });
+    expect(blankChanged.status).toBe("event");
+    if (blankChanged.status !== "event") {
+      return;
+    }
+    expect(blankChanged.event.message?.ownerNotice).toBeUndefined();
+
+    const badOwner = await normalize({
+      update_id: 4646,
+      message: {
+        message_id: 696,
+        date: 1761955200,
+        chat: { id: -100499636, type: "supergroup" },
+        from: { id: 100 },
+        chat_owner_changed: { new_owner: true },
+      },
+    });
+    expect(badOwner.status).toBe("event");
+    if (badOwner.status !== "event") {
+      return;
+    }
+    expect(badOwner.event.message?.ownerNotice).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4647,
+      message: {
+        message_id: 697,
+        date: 1761955200,
+        chat: { id: -100499637, type: "supergroup" },
+        from: { id: 100 },
+        chat_owner_changed: true,
+        chat_owner_left: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.ownerNotice).toBeUndefined();
+  });
+
   it("marks a video-chat invite and keeps the invited name", async () => {
     const name = "视频邀请广告名";
     const actor = "拉人的人";

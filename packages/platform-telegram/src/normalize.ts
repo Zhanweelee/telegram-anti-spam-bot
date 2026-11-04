@@ -160,6 +160,7 @@ async function messageEvent(
   const postNotice = suggestedPost(message);
   const checklistNotice = taskNotice(message);
   const asCallInvite = videoInvite(message);
+  const ownerNotice = changedOwner(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -211,8 +212,22 @@ async function messageEvent(
       ...(postNotice === undefined ? {} : { postNotice }),
       ...(checklistNotice === undefined ? {} : { checklistNotice }),
       ...(asCallInvite ? { asCallInvite: true as const } : {}),
+      ...(ownerNotice === undefined ? {} : { ownerNotice }),
     },
   });
+}
+
+function changedOwner(
+  message: Record<string, unknown>,
+): "changed" | "left" | undefined {
+  const changed = message.chat_owner_changed;
+  if (isRecord(changed) && isRecord(changed.new_owner)) {
+    return "changed";
+  }
+  if (isRecord(message.chat_owner_left)) {
+    return "left";
+  }
+  return undefined;
 }
 
 function videoInvite(message: Record<string, unknown>): boolean {
