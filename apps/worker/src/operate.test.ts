@@ -2558,6 +2558,120 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("sets this bot's default administrator rights", async () => {
+    const kit = deps();
+    const calls: { method: string; url: string; body: string }[] = [];
+    const rights = {
+      is_anonymous: false,
+      can_manage_chat: true,
+      can_delete_messages: true,
+      can_manage_video_chats: false,
+      can_restrict_members: false,
+      can_promote_members: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_post_stories: false,
+      can_edit_stories: false,
+      can_delete_stories: false,
+      can_post_messages: false,
+      can_edit_messages: false,
+      can_pin_messages: false,
+      can_manage_topics: false,
+      can_manage_direct_messages: false,
+      can_manage_tags: false,
+      can_send_welcome_messages: false,
+    };
+    await handleIncomingEvent(
+      await incoming({
+        text: "/myrights manage_chat delete_messages",
+        direct: true,
+      }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            url,
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({ ok: true, result: true, description: phrase }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求设置这个 bot 在群和超级群里的默认管理员权限。加入时仍可修改。已有群不受影响。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "setMyDefaultAdministratorRights",
+    ]);
+    expect(calls[0]?.method).not.toContain("promoteChatMember");
+    expect(calls[0]?.method).not.toContain("getMyDefaultAdministratorRights");
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({ rights });
+    expect(calls[0]?.body).not.toContain("for_channels");
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("manage_chat");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const cleared = deps();
+    const clearCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/myrights channels clear", direct: true }),
+      {
+        ...cleared,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          clearCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(cleared.reply.sent.map((message) => message.text)).toEqual([
+      "已请求清掉这个 bot 在频道里的默认管理员权限。已有频道不受影响。",
+    ]);
+    expect(JSON.parse(clearCalls[0]?.body ?? "{}")).toEqual({
+      for_channels: true,
+    });
+    expect(clearCalls[0]?.body).not.toContain("rights");
+    expect(clearCalls[0]?.method).not.toContain("promoteChatMember");
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/myrights clear", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/myrights clear", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

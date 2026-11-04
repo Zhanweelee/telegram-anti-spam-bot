@@ -2,6 +2,7 @@ import type {
   AdministratorRight,
   BanTarget,
   ChatAdministrator,
+  DefaultAdministratorRights,
   DefaultChatPermissions,
   MemberStanding,
   ModerationPort,
@@ -115,6 +116,21 @@ export function createTelegramModerator(input: {
         body: {
           chat_id: telegramId(target.chatId),
           user_id: telegramId(target.actorId),
+        },
+      });
+    },
+    async setDefaultRights(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setMyDefaultAdministratorRights",
+        fetchImpl: input.fetchImpl,
+        missing: "myrights_unavailable",
+        failed: "myrights_failed",
+        body: {
+          ...(target.forChannels ? { for_channels: true } : {}),
+          ...(target.rights === undefined
+            ? {}
+            : { rights: telegramDefaultRights(target.rights) }),
         },
       });
     },
@@ -909,6 +925,31 @@ function readDefaultPermissions(body: unknown): DefaultChatPermissions {
     inviteUsers: state(flag("can_invite_users")),
     pinMessages: state(pin),
     manageTopics: state(flag("can_manage_topics"), pin),
+  };
+}
+
+function telegramDefaultRights(
+  rights: DefaultAdministratorRights,
+): Record<string, boolean> {
+  return {
+    is_anonymous: rights.anonymous,
+    can_manage_chat: rights.manageChat,
+    can_delete_messages: rights.deleteMessages,
+    can_manage_video_chats: rights.manageVideoChats,
+    can_restrict_members: rights.restrictMembers,
+    can_promote_members: rights.promoteMembers,
+    can_change_info: rights.changeInfo,
+    can_invite_users: rights.inviteUsers,
+    can_post_stories: rights.postStories,
+    can_edit_stories: rights.editStories,
+    can_delete_stories: rights.deleteStories,
+    can_post_messages: rights.postMessages,
+    can_edit_messages: rights.editMessages,
+    can_pin_messages: rights.pinMessages,
+    can_manage_topics: rights.manageTopics,
+    can_manage_direct_messages: rights.manageDirectMessages,
+    can_manage_tags: rights.manageTags,
+    can_send_welcome_messages: rights.sendWelcomeMessages,
   };
 }
 

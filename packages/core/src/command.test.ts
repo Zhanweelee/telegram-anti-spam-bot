@@ -9,7 +9,12 @@ import { parseEvent } from "./event.js";
 import { createMemoryLogger } from "./logger.js";
 import { loadPolicy } from "./policy-load.js";
 import type { PolicyStore } from "./policy-store.js";
-import type { AuditRecord, Storage } from "./ports.js";
+import type {
+  AuditRecord,
+  DefaultAdministratorRights,
+  DefaultRightsTarget,
+  Storage,
+} from "./ports.js";
 import { parseAuditRecord } from "./ports.js";
 import { prefilterPolicySchema } from "./prefilter.js";
 import { createMemoryReviewQueue, type ReviewQueue } from "./review.js";
@@ -6809,6 +6814,242 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async deleteMessage() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("sets this bot's default administrator rights", async () => {
+    const deps = kit();
+    const seen: {
+      forChannels: boolean;
+      rights?: DefaultAdministratorRights;
+    }[] = [];
+    const remember = {
+      async setDefaultRights(target: DefaultRightsTarget) {
+        seen.push(
+          target.rights === undefined
+            ? { forChannels: target.forChannels }
+            : { forChannels: target.forChannels, rights: { ...target.rights } },
+        );
+      },
+    };
+    const off = {
+      anonymous: false,
+      manageChat: false,
+      deleteMessages: false,
+      manageVideoChats: false,
+      restrictMembers: false,
+      promoteMembers: false,
+      changeInfo: false,
+      inviteUsers: false,
+      postStories: false,
+      editStories: false,
+      deleteStories: false,
+      postMessages: false,
+      editMessages: false,
+      pinMessages: false,
+      manageTopics: false,
+      manageDirectMessages: false,
+      manageTags: false,
+      sendWelcomeMessages: false,
+    };
+    const done = await runOperatorCommand({
+      event: event({
+        text: "/myrights manage_chat delete_messages",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求设置这个 bot 在群和超级群里的默认管理员权限。加入时仍可修改。已有群不受影响。",
+    });
+    expect(JSON.stringify(done)).not.toContain("manage_chat");
+    expect(seen).toEqual([
+      {
+        forChannels: false,
+        rights: { ...off, manageChat: true, deleteMessages: true },
+      },
+    ]);
+    expect(seen[0]).not.toHaveProperty("chatId");
+    const channels = await runOperatorCommand({
+      event: event({
+        text: "/myrights channels post_messages anonymous",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(channels).toMatchObject({
+      text: "已请求设置这个 bot 在频道里的默认管理员权限。加入时仍可修改。已有频道不受影响。",
+    });
+    expect(seen[1]).toEqual({
+      forChannels: true,
+      rights: { ...off, anonymous: true, postMessages: true },
+    });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/myrights clear", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: "已请求清掉这个 bot 在群和超级群里的默认管理员权限。已有群不受影响。",
+    });
+    expect(seen[2]).toEqual({ forChannels: false });
+    expect(JSON.stringify(seen[2])).not.toContain("rights");
+    const clearedChannels = await runOperatorCommand({
+      event: event({ text: "/myrights channels clear", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(clearedChannels).toMatchObject({
+      text: "已请求清掉这个 bot 在频道里的默认管理员权限。已有频道不受影响。",
+    });
+    expect(seen[3]).toEqual({ forChannels: true });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/myrights [channels] <clear|right...>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/myrights manage_chat", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setDefaultRights() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set this bot's default admin rights for groups and supergroups. People can still change the list before adding the bot. Existing groups stay.",
+    });
+    const englishClear = await runOperatorCommand({
+      event: event({ text: "/myrights channels clear", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setDefaultRights() {},
+      },
+      ...kit(),
+    });
+    expect(englishClear).toMatchObject({
+      text: "Asked to clear this bot's default admin rights for channels. Existing channels stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/myrights clear", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/myrights", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/myrights [channels] <clear|right...>",
+    });
+    const bareChannels = await runOperatorCommand({
+      event: event({ text: "/myrights channels", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(bareChannels).toMatchObject({
+      text: "用法：/myrights [channels] <clear|right...>",
+    });
+    expect(seen).toHaveLength(4);
+    const mixed = await runOperatorCommand({
+      event: event({ text: "/myrights clear manage_chat", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(mixed).toMatchObject({ text: "参数无效" });
+    const duplicate = await runOperatorCommand({
+      event: event({
+        text: "/myrights manage_chat manage_chat",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(duplicate).toMatchObject({ text: "参数无效" });
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/myrights ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    expect(seen).toHaveLength(4);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/myrights clear", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/myrights clear", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setDefaultRights() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"myrights"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/myrights clear",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setDefaultRights() {
           throw new Error("called");
         },
       },

@@ -141,6 +141,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/delephemeral <chatId> <userId> <messageId>` 调用 `deleteMessage`，并带上 `audienceId`。配了 token 时适配器使用 `deleteEphemeralMessage`，带群号、接收者号和临时消息号。`/delete` 仍然不带 `audienceId`，也不调用 `deleteEphemeralMessage`。回复写明对方离线时可能收不到这次删除，其它消息还在。三个编号都要写全。前导零的消息号不发出请求。没有 token、编号不合法或调用失败时回复「参数无效」，不把内存记录当成已经删除。不改黑名单、封禁或禁言。见 ADR 0404。
 
+`/myrights [channels] <clear|right...>` 调用 `setDefaultRights`。配了 token 时使用 `setMyDefaultAdministratorRights`。`channels` 才送 `for_channels`。`clear` 不送 `rights`，用来清掉默认值。写出的权限会把十八项全部送出，点名的是 true，其余是 false。回复不重复权限名。加入时仍可修改，已有群不受影响。只有配置里的管理员可以改。接入目录里的人即使管着群也不能改。没有 token、权限名不认识或调用失败时回复「参数无效」，不把内存记录当成已经设置。不调用 `promoteChatMember` 或 `getMyDefaultAdministratorRights`，也不改黑名单、封禁或禁言。见 ADR 0405。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

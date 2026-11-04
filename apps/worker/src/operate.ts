@@ -166,6 +166,9 @@ function commandModerator(
     async declinePost() {
       throw new Error("declinepost_unavailable");
     },
+    async setDefaultRights() {
+      throw new Error("myrights_unavailable");
+    },
     async approveJoin() {
       throw new Error("approve_unavailable");
     },
