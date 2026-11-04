@@ -259,6 +259,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "price_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["price_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

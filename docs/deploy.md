@@ -183,6 +183,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> autodelete_notice on` 删这个群里改自动删除计时的提示。默认关闭。秒数不进证据。计时本身还在。见 ADR 0486。
 
+`/rule <chatId> price_notice on` 删这个群里付费发言改价和私信改价的提示。默认关闭。星星数量不进证据。价格和私信开关不变。见 ADR 0487。
+
 ## 确认
 
 ```sh

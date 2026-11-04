@@ -1,0 +1,24 @@
+[
+  {
+    "id": "price_notice_paid",
+    "kind": "message",
+    "label": "spam",
+    "priceNotice": "paid"
+  },
+  {
+    "id": "price_notice_direct",
+    "kind": "message",
+    "label": "spam",
+    "priceNotice": "direct"
+  },
+  {
+    "id": "price_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "price_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

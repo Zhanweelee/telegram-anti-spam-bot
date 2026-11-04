@@ -20614,6 +20614,232 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a price notice and leaves the star count out", async () => {
+    const stars = 90188;
+    const actor = "改价的人";
+    const paid = await normalize({
+      update_id: 4550,
+      message: {
+        message_id: 610,
+        date: 1761955200,
+        chat: { id: -100499530, type: "supergroup" },
+        from: { id: 96, first_name: actor },
+        paid_message_price_changed: { paid_message_star_count: stars },
+      },
+    });
+    expect(paid.status).toBe("event");
+    if (paid.status !== "event") {
+      return;
+    }
+    expect(paid.event.message?.priceNotice).toBe("paid");
+    expect(paid.event.message?.text).toBe("");
+    const paidDump = JSON.stringify(paid.event);
+    expect(paidDump).not.toContain(String(stars));
+    expect(paidDump).not.toContain(actor);
+
+    const free = await normalize({
+      update_id: 4551,
+      message: {
+        message_id: 611,
+        date: 1761955200,
+        chat: { id: -100499531, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: { paid_message_star_count: 0 },
+      },
+    });
+    expect(free.status).toBe("event");
+    if (free.status !== "event") {
+      return;
+    }
+    expect(free.event.message?.priceNotice).toBe("paid");
+
+    const kept = await normalize({
+      update_id: 4552,
+      message: {
+        message_id: 612,
+        date: 1761955200,
+        chat: { id: -100499532, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        paid_message_price_changed: { paid_message_star_count: 90190 },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.priceNotice).toBe("paid");
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(kept.event)).not.toContain("90190");
+
+    const directStars = 90189;
+    const direct = await normalize({
+      update_id: 4553,
+      message: {
+        message_id: 613,
+        date: 1761955200,
+        chat: { id: -100499533, type: "channel" },
+        from: { id: 96 },
+        direct_message_price_changed: {
+          are_direct_messages_enabled: false,
+          direct_message_star_count: directStars,
+        },
+      },
+    });
+    expect(direct.status).toBe("event");
+    if (direct.status !== "event") {
+      return;
+    }
+    expect(direct.event.message?.priceNotice).toBe("direct");
+    expect(direct.event.message?.text).toBe("");
+    expect(JSON.stringify(direct.event)).not.toContain(String(directStars));
+
+    const enabled = await normalize({
+      update_id: 4554,
+      message: {
+        message_id: 614,
+        date: 1761955200,
+        chat: { id: -100499534, type: "channel" },
+        from: { id: 96 },
+        direct_message_price_changed: { are_direct_messages_enabled: true },
+      },
+    });
+    expect(enabled.status).toBe("event");
+    if (enabled.status !== "event") {
+      return;
+    }
+    expect(enabled.event.message?.priceNotice).toBe("direct");
+
+    const both = await normalize({
+      update_id: 4555,
+      message: {
+        message_id: 615,
+        date: 1761955200,
+        chat: { id: -100499535, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: { paid_message_star_count: 1 },
+        direct_message_price_changed: { are_direct_messages_enabled: true },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.priceNotice).toBe("paid");
+
+    const empty = await normalize({
+      update_id: 4556,
+      message: {
+        message_id: 616,
+        date: 1761955200,
+        chat: { id: -100499536, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.priceNotice).toBeUndefined();
+
+    const negative = await normalize({
+      update_id: 4557,
+      message: {
+        message_id: 617,
+        date: 1761955200,
+        chat: { id: -100499537, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: { paid_message_star_count: -1 },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.priceNotice).toBeUndefined();
+
+    const fraction = await normalize({
+      update_id: 4558,
+      message: {
+        message_id: 618,
+        date: 1761955200,
+        chat: { id: -100499538, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: { paid_message_star_count: 1.5 },
+      },
+    });
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.priceNotice).toBeUndefined();
+
+    const textStars = await normalize({
+      update_id: 4559,
+      message: {
+        message_id: 619,
+        date: 1761955200,
+        chat: { id: -100499539, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: { paid_message_star_count: "5" },
+      },
+    });
+    expect(textStars.status).toBe("event");
+    if (textStars.status !== "event") {
+      return;
+    }
+    expect(textStars.event.message?.priceNotice).toBeUndefined();
+
+    const paidFlag = await normalize({
+      update_id: 4560,
+      message: {
+        message_id: 620,
+        date: 1761955200,
+        chat: { id: -100499540, type: "supergroup" },
+        from: { id: 96 },
+        paid_message_price_changed: true,
+      },
+    });
+    expect(paidFlag.status).toBe("event");
+    if (paidFlag.status !== "event") {
+      return;
+    }
+    expect(paidFlag.event.message?.priceNotice).toBeUndefined();
+
+    const directEmpty = await normalize({
+      update_id: 4561,
+      message: {
+        message_id: 621,
+        date: 1761955200,
+        chat: { id: -100499541, type: "channel" },
+        from: { id: 96 },
+        direct_message_price_changed: {},
+      },
+    });
+    expect(directEmpty.status).toBe("event");
+    if (directEmpty.status !== "event") {
+      return;
+    }
+    expect(directEmpty.event.message?.priceNotice).toBeUndefined();
+
+    const directFlag = await normalize({
+      update_id: 4562,
+      message: {
+        message_id: 622,
+        date: 1761955200,
+        chat: { id: -100499542, type: "channel" },
+        from: { id: 96 },
+        direct_message_price_changed: true,
+      },
+    });
+    expect(directFlag.status).toBe("event");
+    if (directFlag.status !== "event") {
+      return;
+    }
+    expect(directFlag.event.message?.priceNotice).toBeUndefined();
+  });
+
   it("marks an auto-delete notice and leaves the seconds out", async () => {
     const seconds = 90186;
     const actor = "改计时的人";

@@ -247,6 +247,12 @@ export const builtinManifests = {
     integrity:
       "f99bc4982c88c9bc70009e3323a3f340f74229275208e35959980cca072c7d43",
   }),
+  priceNotice: manifest({
+    id: "price_notice",
+    kind: "detector",
+    integrity:
+      "1668d2175b31bc3d3f7ca060086d04fd99cef438a4f378ee783623e30606ad36",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
