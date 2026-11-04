@@ -6391,6 +6391,236 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("declines one suggested post and keeps the comment out of the reply", async () => {
+    const deps = kit();
+    const seen: {
+      chatId: string;
+      messageId: string;
+      comment?: string;
+    }[] = [];
+    const remember = {
+      async declinePost(target: {
+        chatId: string;
+        messageId: string;
+        comment?: string;
+      }) {
+        seen.push(
+          target.comment === undefined
+            ? { chatId: target.chatId, messageId: target.messageId }
+            : {
+                chatId: target.chatId,
+                messageId: target.messageId,
+                comment: target.comment,
+              },
+        );
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
+    });
+    expect(seen).toEqual([{ chatId: "-100", messageId: "55" }]);
+    expect(JSON.stringify(seen[0])).not.toContain("comment");
+    const noted = await runOperatorCommand({
+      event: event({ text: `/declinepost -100 55 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(noted).toMatchObject({
+      text: "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
+    });
+    expect(JSON.stringify(noted)).not.toContain(phrase);
+    expect(seen[1]).toEqual({
+      chatId: "-100",
+      messageId: "55",
+      comment: phrase,
+    });
+    const spaced = await runOperatorCommand({
+      event: event({
+        text: "/declinepost -100 55 hello world",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+    expect(seen[2]).toEqual({
+      chatId: "-100",
+      messageId: "55",
+      comment: "hello world",
+    });
+    const first = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(first).toMatchObject({
+      text: "已请求拒绝 -100 的建议帖 1。这条不会发出。其它建议帖还在。",
+    });
+    expect(seen[3]).toEqual({ chatId: "-100", messageId: "1" });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/declinepost 42 55", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求拒绝 42 的建议帖 55。这条不会发出。其它建议帖还在。",
+    });
+    expect(seen[4]).toEqual({ chatId: "42", messageId: "55" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain(
+        "/declinepost <chatId> <messageId> [comment]",
+      );
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 55", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async declinePost() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to decline suggested post 55 in -100. This post stays unpublished. The other suggested posts stay.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 55", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/declinepost", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/declinepost <chatId> <messageId> [comment]",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/declinepost -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/declinepost <chatId> <messageId> [comment]",
+    });
+    const leading = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(leading).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(5);
+    const exact = "a".repeat(128);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/declinepost -100 55 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求拒绝 -100 的建议帖 55。这条不会发出。其它建议帖还在。",
+    });
+    expect(JSON.stringify(fitted)).not.toContain(exact);
+    expect(seen[5]?.comment).toBe(exact);
+    const tooLong = "a".repeat(129);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/declinepost -100 55 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(6);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/declinepost ${phrase} 55`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/declinepost -100 55", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/declinepost -100 55 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async declinePost() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"declinepost"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/declinepost -200 55",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async declinePost() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

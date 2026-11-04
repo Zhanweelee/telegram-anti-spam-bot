@@ -1510,6 +1510,63 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("declines one suggested post and drops the comment", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.declinePost({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "55",
+    });
+    await moderator.declinePost({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "1",
+      comment: phrase,
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/declineSuggestedPost`,
+      `https://api.telegram.org/bot${token}/declineSuggestedPost`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      message_id: 55,
+    });
+    expect(calls[0]?.body).not.toContain("comment");
+    expect(JSON.parse(calls[1]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      message_id: 1,
+      comment: phrase,
+    });
+    expect(calls[0]?.method).not.toContain("approveSuggestedPost");
+    expect(calls[0]?.method).not.toContain("declineChatJoinRequest");
+    expect(calls[1]?.body).not.toContain("send_date");
+    expect(calls[1]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).declinePost({
+        tenantId: "local",
+        chatId: "-100",
+        messageId: "55",
+        comment: phrase,
+      }),
+    ).rejects.toThrow("declinepost_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("sets one emoji reaction and keeps the other reactions", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

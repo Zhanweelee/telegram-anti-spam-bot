@@ -79,6 +79,7 @@ function moderator(
     async unbanSenderChat() {},
     async approveJoin() {},
     async declineJoin() {},
+    async declinePost() {},
     async deferJoin() {},
     async restrictActor(target) {
       if (restrict) {

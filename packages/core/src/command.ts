@@ -113,6 +113,7 @@ const COMMAND_NAMES = [
   "rengeneral",
   "stickers",
   "admintitle",
+  "declinepost",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -129,6 +130,7 @@ const DESCRIPTION_LIMIT = 255;
 const TOPIC_NAME_LIMIT = 128;
 const STICKER_SET_NAME_LIMIT = 64;
 const ADMIN_TITLE_LIMIT = 16;
+const SUGGESTED_POST_COMMENT_LIMIT = 128;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -234,6 +236,7 @@ export interface OperatorCommandInput {
       | "createTopic"
       | "closeTopic"
       | "declineJoin"
+      | "declinePost"
       | "deleteMessage"
       | "deleteMessages"
       | "deletePhoto"
@@ -453,6 +456,8 @@ async function dispatch(
       return setGroupStickerSet(input, args);
     case "admintitle":
       return setOneAdminTitle(input, args);
+    case "declinepost":
+      return declineOnePost(input, args);
   }
 }
 
@@ -2598,6 +2603,56 @@ function rejectAdminTitle(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "admintitle",
+  });
+}
+
+async function declineOnePost(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.declinepost.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  const comment = args.slice(2).join(" ");
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId) ||
+    comment.length > SUGGESTED_POST_COMMENT_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const decline = input.moderator?.declinePost;
+  if (!decline) {
+    rejectDeclinePost(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await decline({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+      ...(comment.length > 0 ? { comment } : {}),
+    });
+  } catch {
+    rejectDeclinePost(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.declinepost.done", { chatId, messageId });
+}
+
+function rejectDeclinePost(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "declinepost",
   });
 }
 
