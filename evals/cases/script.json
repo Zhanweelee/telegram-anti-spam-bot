@@ -1,0 +1,61 @@
+[
+  {
+    "id": "script_arabic_ad",
+    "kind": "message",
+    "label": "spam",
+    "text": "اشتر الآن مجانا اليوم"
+  },
+  {
+    "id": "script_arabic_forms",
+    "kind": "message",
+    "label": "spam",
+    "text": "ﺍﺍﺍﺍ"
+  },
+  {
+    "id": "script_cyrillic_sentence",
+    "kind": "message",
+    "label": "ham",
+    "text": "Бесплатно получите подарок"
+  },
+  {
+    "id": "script_chinese",
+    "kind": "message",
+    "label": "ham",
+    "text": "今天站会没有广告"
+  },
+  {
+    "id": "script_english",
+    "kind": "message",
+    "label": "ham",
+    "text": "hello everyone"
+  },
+  {
+    "id": "script_tie",
+    "kind": "message",
+    "label": "ham",
+    "text": "hello مرحبا"
+  },
+  {
+    "id": "script_short",
+    "kind": "message",
+    "label": "ham",
+    "text": "نعم"
+  },
+  {
+    "id": "script_digits",
+    "kind": "message",
+    "label": "ham",
+    "text": "١٢٣٤٥٦٧٨"
+  },
+  {
+    "id": "script_empty",
+    "kind": "message",
+    "label": "ham",
+    "text": ""
+  },
+  {
+    "id": "script_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

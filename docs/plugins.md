@@ -49,6 +49,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `media_sticker`、`media_animation`、`media_voice`、`media_video_note` 和 `media_dice` 在 `packages/detectors-media`。只在 `message.media` 正好是这一种时返回 score 1。证据是 `media:` 加类别。贴纸包名、文件名、点数和表情不进证据。五条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0469。
 
+`script_arabic` 和 `script_cyrillic` 在 `packages/detectors-script`。这种字母至少 4 个，并且多于其它字母时返回 score 1。证据是 `script:` 加文字。正文不进证据。两条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0470。
+
 洪泛和重复在 `packages/detectors-rate`。两者共用一个 `RateWindow`。默认实现是内存，最多 256 个 key。放不下时 `observe` 返回 `null`，检测器返回未命中并记 `rate_window_skipped`。不要把原文或文件 id 放进 key。有正文时重复检测用 `textSha256`。没有正文但有 `mediaSha256` 时用这份摘要。两者都没有则跳过。配了 `RATE_WINDOW` 之后按群放进 Durable Object，调用失败记 `rate_window_failed` 并放过。提交的配置不绑定它。同一条事件 id 在这个 key 最近 32 次计数里只计一次。见 ADR 0010、ADR 0050、ADR 0052、ADR 0338 和 `docs/limits.md` 的 KV、Durable Objects 两节。
 
 链接检测在 `packages/detectors-link`。默认只认短链域名、denylist 和 IPv4 主机。`ReputationSource` 不传就不会发请求。本地已命中时也不调用它。超时或抛错记 `reputation_failed`，返回 null。证据里只留主机名。抽主机名之前的折叠，以及每种字段怎么留下主机名，见 [message-surface.md](message-surface.md)。`tg://join?invite=` 和 `tg://addlist?slug=` 记成 `t.me` 邀请。`tg://resolve` 仍当公开用户名。邀请码不进证据。见 ADR 0102。

@@ -3765,6 +3765,144 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(events[4])).not.toContain(emoji);
   });
 
+  it("keeps other scripts until a chat locks that one", async () => {
+    const arabic = "اشتر الآن مجانا اليوم";
+    const cyrillic = "Бесплатно получите подарок";
+    const chinese = "今天站会没有广告";
+    async function posted(
+      updateId: number,
+      chatId: number,
+      text: string,
+      paid = false,
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup" },
+            from: { id: 77 },
+            text,
+            ...(paid ? { is_paid_post: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    for (const [text, chatId] of [
+      [arabic, -100680],
+      [cyrillic, -100681],
+      [chinese, -100682],
+    ] as const) {
+      const idle = await screenTelegramEvent(
+        await posted(6800 + Math.abs(chatId), chatId, text),
+        { rateWindow: createMemoryRateWindow() },
+      );
+      expect(idle.decision.action).toBe("allow");
+    }
+    function source(id: "script_arabic" | "script_cyrillic"): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const arabicSource = source("script_arabic");
+    const removed = await screenTelegramEvent(
+      await posted(6810, -100683, arabic),
+      {
+        source: arabicSource,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("script_arabic");
+    expect(removed.decision.ruleIds).toContain("script_arabic");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "script:arabic" },
+    ]);
+    const keptRussian = await screenTelegramEvent(
+      await posted(6811, -100684, cyrillic),
+      {
+        source: arabicSource,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptRussian.decision.action).toBe("allow");
+    const keptTie = await screenTelegramEvent(
+      await posted(6812, -100685, "hello مرحبا"),
+      {
+        source: arabicSource,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptTie.decision.action).toBe("allow");
+    const russian = await screenTelegramEvent(
+      await posted(6813, -100686, cyrillic),
+      {
+        source: source("script_cyrillic"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(russian.decision.evidence).toEqual([
+      { kind: "feature", summary: "script:cyrillic" },
+    ]);
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted(6814, -100687, arabic, true),
+      {
+        source: arabicSource,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      russian: russian.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(arabic);
+    expect(dumped).not.toContain(cyrillic);
+    expect(dumped).not.toContain(chinese);
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";
