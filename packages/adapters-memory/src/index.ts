@@ -12,6 +12,7 @@ import {
   type DeleteMessagesTarget,
   type DeleteTarget,
   type ForumTopicTarget,
+  type GeneralNameTarget,
   isExpired,
   type JoinTarget,
   MAX_RULE_SWITCHES,
@@ -157,6 +158,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly titlesSet: readonly ChatTitleTarget[];
   readonly descriptionsSet: readonly ChatDescriptionTarget[];
   readonly topicsRenamed: readonly RenamedTopicTarget[];
+  readonly generalsRenamed: readonly GeneralNameTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -193,6 +195,7 @@ export function createMemoryModerator(): ModerationPort & {
   const titlesSet: ChatTitleTarget[] = [];
   const descriptionsSet: ChatDescriptionTarget[] = [];
   const topicsRenamed: RenamedTopicTarget[] = [];
+  const generalsRenamed: GeneralNameTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -229,6 +232,7 @@ export function createMemoryModerator(): ModerationPort & {
     titlesSet,
     descriptionsSet,
     topicsRenamed,
+    generalsRenamed,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -429,6 +433,13 @@ export function createMemoryModerator(): ModerationPort & {
         tenantId: target.tenantId,
         chatId: target.chatId,
         threadId: target.threadId,
+        name: target.name,
+      });
+    },
+    async renameGeneral(target) {
+      generalsRenamed.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
         name: target.name,
       });
     },

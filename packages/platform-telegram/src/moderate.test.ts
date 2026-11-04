@@ -1670,6 +1670,49 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("renames the General topic and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.renameGeneral({
+      tenantId: "local",
+      chatId: "-100",
+      name: phrase,
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/editGeneralForumTopic`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      name: phrase,
+    });
+    expect(calls[0]?.method).not.toContain("editForumTopic");
+    expect(calls[0]?.method).not.toContain("createForumTopic");
+    expect(calls[0]?.body).not.toContain("message_thread_id");
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).renameGeneral({
+        tenantId: "local",
+        chatId: "-100",
+        name: phrase,
+      }),
+    ).rejects.toThrow("rengeneral_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

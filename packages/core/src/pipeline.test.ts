@@ -190,6 +190,7 @@ function harness(options?: { failStorage?: boolean }) {
     async setTitle() {},
     async setDescription() {},
     async renameTopic() {},
+    async renameGeneral() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

@@ -193,6 +193,8 @@ export const messageKeys = [
   "command.newtopic.done",
   "command.rentopic.usage",
   "command.rentopic.done",
+  "command.rengeneral.usage",
+  "command.rengeneral.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -263,6 +265,7 @@ const syntax = [
   "/desc <chatId> [description]",
   "/newtopic <chatId> <name>",
   "/rentopic <chatId> <threadId> <name>",
+  "/rengeneral <chatId> <name>",
 ].join("\n");
 
 const zh = {
@@ -483,6 +486,9 @@ const zh = {
   "command.rentopic.usage": "用法：/rentopic <chatId> <threadId> <name>",
   "command.rentopic.done":
     "已请求修改 {chatId} 里话题 {threadId} 的名字。消息还在。其它话题还在。",
+  "command.rengeneral.usage": "用法：/rengeneral <chatId> <name>",
+  "command.rengeneral.done":
+    "已请求修改 {chatId} 的通用话题名字。其它话题还在。消息还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -723,6 +729,9 @@ const en = {
   "command.rentopic.usage": "Usage: /rentopic <chatId> <threadId> <name>",
   "command.rentopic.done":
     "Asked to change the name of topic {threadId} in {chatId}. The messages stay. The other topics stay.",
+  "command.rengeneral.usage": "Usage: /rengeneral <chatId> <name>",
+  "command.rengeneral.done":
+    "Asked to change the General topic name of {chatId}. The other topics stay. The messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

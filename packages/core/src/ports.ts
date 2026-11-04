@@ -201,6 +201,12 @@ export interface ForumTopicTarget {
   readonly threadId?: string;
 }
 
+export interface GeneralNameTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly name: string;
+}
+
 export interface NamedForumTopicTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -285,6 +291,7 @@ export interface ModerationPort {
   setDescription(target: ChatDescriptionTarget): Promise<void>;
   createTopic(target: NewTopicTarget): Promise<string>;
   renameTopic(target: RenamedTopicTarget): Promise<void>;
+  renameGeneral(target: GeneralNameTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {
