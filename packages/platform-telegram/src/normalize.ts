@@ -167,6 +167,7 @@ async function messageEvent(
   const topicNotice = changedTopic(message);
   const asPostDeclined = declinedPost(message);
   const asGroupCreated = createdGroup(message);
+  const asPostPending = pendingPost(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -225,6 +226,7 @@ async function messageEvent(
       ...(topicNotice === undefined ? {} : { topicNotice }),
       ...(asPostDeclined ? { asPostDeclined: true as const } : {}),
       ...(asGroupCreated ? { asGroupCreated: true as const } : {}),
+      ...(asPostPending ? { asPostPending: true as const } : {}),
     },
   });
 }
@@ -251,6 +253,11 @@ function hasPollOptionText(value: unknown): boolean {
 
 function createdGroup(message: Record<string, unknown>): boolean {
   return message.group_chat_created === true;
+}
+
+function pendingPost(message: Record<string, unknown>): boolean {
+  const info = message.suggested_post_info;
+  return isRecord(info) && info.state === "pending";
 }
 
 function declinedPost(message: Record<string, unknown>): boolean {

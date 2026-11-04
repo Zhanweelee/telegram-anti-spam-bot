@@ -207,6 +207,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> group_created on` 删这个群里普通群刚建好的提示。默认关闭。发送者名字不进证据。超级群和频道的创建字段不带这个标记。入群和退群仍看 `service_notice`。见 ADR 0498。
 
+`/rule <chatId> post_pending on` 删这个群里待审建议帖正文。默认关闭。价格和发表时间不进证据。通过、失败、付款和退款仍看 `post_notice`。拒绝仍看 `post_declined`。见 ADR 0499。
+
 ## 确认
 
 ```sh

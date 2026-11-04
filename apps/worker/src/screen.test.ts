@@ -5675,6 +5675,211 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a pending suggested post until that chat asks", async () => {
+    const text = "待审建议帖广告";
+    const actor = "投稿的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      state?: "pending" | "approved";
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "channel" },
+            from: { id: 107, first_name: actor },
+            text,
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.state
+              ? {
+                  suggested_post_info: {
+                    state: input.state,
+                    price: { currency: "XTR", amount: 90208 },
+                    send_date: 1761959028,
+                  },
+                }
+              : {}),
+            ...(input.flag ? { suggested_post_info: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10500,
+      chatId: -1001100,
+      state: "pending",
+    });
+    expect(idle.message?.asPostPending).toBe(true);
+    expect(idle.message?.text).toBe(text);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(actor);
+    expect(idleDump).not.toContain("90208");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "post_pending",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["post_pending"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10501, chatId: -1001101, state: "pending" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("post_pending");
+    expect(removed.decision.ruleIds).toContain("post_pending");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "post:pending" },
+    ]);
+    const postOnly: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "post_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["post_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const keptByPost = await screenTelegramEvent(
+      await posted({ updateId: 10502, chatId: -1001102, state: "pending" }),
+      {
+        source: postOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByPost.decision.action).toBe("allow");
+    const declinedOnly: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "post_declined",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["post_declined"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const keptByDecline = await screenTelegramEvent(
+      await posted({ updateId: 10503, chatId: -1001103, state: "pending" }),
+      {
+        source: declinedOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByDecline.decision.action).toBe("allow");
+    const approved = await screenTelegramEvent(
+      await posted({ updateId: 10504, chatId: -1001104, state: "approved" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(approved.decision.action).toBe("allow");
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10505, chatId: -1001105, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10506,
+        chatId: -1001106,
+        state: "pending",
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByPost: keptByPost.decision,
+      keptByDecline: keptByDecline.decision,
+      approved: approved.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(text);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain("90208");
+  });
+
   it("keeps a created group until that chat asks", async () => {
     const actor = "建群的人";
     async function posted(input: {

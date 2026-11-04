@@ -131,6 +131,9 @@ importers:
       '@tasb/detector-owner':
         specifier: workspace:*
         version: link:../../packages/detectors-owner
+      '@tasb/detector-pending':
+        specifier: workspace:*
+        version: link:../../packages/detectors-pending
       '@tasb/detector-photo':
         specifier: workspace:*
         version: link:../../packages/detectors-photo
@@ -273,6 +276,9 @@ importers:
       '@tasb/detector-owner':
         specifier: workspace:*
         version: link:../packages/detectors-owner
+      '@tasb/detector-pending':
+        specifier: workspace:*
+        version: link:../packages/detectors-pending
       '@tasb/detector-photo':
         specifier: workspace:*
         version: link:../packages/detectors-photo
@@ -620,6 +626,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-owner:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-pending:
     dependencies:
       '@tasb/core':
         specifier: workspace:*
