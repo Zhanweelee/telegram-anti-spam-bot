@@ -107,26 +107,44 @@ describe("screenTelegramEvent", () => {
     );
     expect(clean.decision.action).toBe("allow");
     expect(moderator.deleted).toEqual([]);
+    await screenTelegramEvent(await photo("tg_album_880_15", "15", "明早见"), {
+      logger,
+      moderator,
+      storage,
+      albumWatch: watch,
+    });
 
     const spam = await screenTelegramEvent(
       await photo("tg_album_880_12", "12", phrase),
       { logger, moderator, storage, albumWatch: watch },
     );
     expect(spam.decision.action).toBe("delete");
-    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
-      "12",
-      "11",
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
+    expect(moderator.deletedMessages).toEqual([
+      {
+        tenantId: "local",
+        chatId,
+        messageIds: ["11", "15"],
+      },
     ]);
 
     const later = await screenTelegramEvent(
-      await photo("tg_album_880_13", "13", "今天站会"),
+      await photo("tg_album_880_13", "13", "下周见"),
       { logger, moderator, storage, albumWatch: watch },
     );
     expect(later.decision.action).toBe("allow");
-    expect(moderator.deleted.map((item) => item.messageId)).toEqual([
-      "12",
-      "11",
-      "13",
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
+    expect(moderator.deletedMessages).toEqual([
+      {
+        tenantId: "local",
+        chatId,
+        messageIds: ["11", "15"],
+      },
+      {
+        tenantId: "local",
+        chatId,
+        messageIds: ["13"],
+      },
     ]);
 
     const paid = await screenTelegramEvent(
@@ -219,9 +237,13 @@ describe("screenTelegramEvent", () => {
       storage,
       albumWatch: watch,
     });
-    expect(moderator.deleted.map((item) => item.messageId).sort()).toEqual([
-      "11",
-      "12",
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
+    expect(moderator.deletedMessages).toEqual([
+      {
+        tenantId: "local",
+        chatId,
+        messageIds: ["11"],
+      },
     ]);
   });
 
@@ -258,6 +280,7 @@ describe("screenTelegramEvent", () => {
     expect(spam.dryRun).toBe(true);
     expect(spam.decision.action).toBe("delete");
     expect(moderator.deleted).toEqual([]);
+    expect(moderator.deletedMessages).toEqual([]);
 
     const runtimeOff = createMemoryRuntimeStore();
     const clean = await screenTelegramEvent(
@@ -272,6 +295,7 @@ describe("screenTelegramEvent", () => {
     expect(clean.dryRun).toBe(false);
     expect(clean.decision.action).toBe("allow");
     expect(moderator.deleted).toEqual([]);
+    expect(moderator.deletedMessages).toEqual([]);
   });
 
   it("keeps album deletes inside one chat and retries a sibling after a failure", async () => {
@@ -359,6 +383,7 @@ describe("screenTelegramEvent", () => {
       "13",
       "11",
     ]);
+    expect(moderator.deletedMessages).toEqual([]);
     expect(moderator.deleted.map((item) => item.messageId)).not.toContain("31");
 
     const again = await screenTelegramEvent(
@@ -375,6 +400,83 @@ describe("screenTelegramEvent", () => {
       "13",
       "11",
     ]);
+    expect(moderator.deletedMessages).toEqual([]);
+  });
+
+  it("retries a public album in one deleteMessages call", async () => {
+    const phrase = "请免费领取礼品";
+    const albumId = "12532140322504856";
+    const watch = createAlbumWatch();
+    const moderator = createMemoryModerator();
+    const logger = createMemoryLogger();
+    const storage = createMemoryStorage();
+    const chatId = "-100887";
+
+    async function photo(id: string, messageId: string, text: string) {
+      return parseEvent({
+        id,
+        tenantId: "local",
+        chatId,
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "8810", isAdmin: false },
+        message: {
+          id: messageId,
+          text,
+          textSha256: await sha256Hex(text),
+          albumId,
+        },
+      });
+    }
+
+    await screenTelegramEvent(
+      await photo("tg_album_887_11", "11", "今天站会"),
+      {
+        logger,
+        moderator,
+        storage,
+        albumWatch: watch,
+      },
+    );
+    await screenTelegramEvent(await photo("tg_album_887_15", "15", "明早见"), {
+      logger,
+      moderator,
+      storage,
+      albumWatch: watch,
+    });
+    const throwing = {
+      ...moderator,
+      async deleteMessages() {
+        throw new Error(phrase);
+      },
+    };
+    const spam = await screenTelegramEvent(
+      await photo("tg_album_887_12", "12", phrase),
+      { logger, moderator: throwing, storage, albumWatch: watch },
+    );
+    expect(spam.decision.action).toBe("delete");
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
+    expect(moderator.deletedMessages).toEqual([]);
+    const failed = JSON.stringify(logger.entries);
+    expect(failed).toContain("album_delete_failed");
+    expect(failed.split("album_delete_failed")).toHaveLength(2);
+    expect(failed).not.toContain(phrase);
+    expect(failed).not.toContain(albumId);
+
+    await screenTelegramEvent(await photo("tg_album_887_13", "13", "下周见"), {
+      logger,
+      moderator,
+      storage,
+      albumWatch: watch,
+    });
+    expect(moderator.deletedMessages).toEqual([
+      {
+        tenantId: "local",
+        chatId,
+        messageIds: ["13", "11", "15"],
+      },
+    ]);
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["12"]);
   });
 
   it("leaves a phrase-shaped message id out of the album list", async () => {
