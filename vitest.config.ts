@@ -52,6 +52,7 @@ export default defineConfig({
       "packages/detectors-copy",
       "packages/detectors-query",
       "packages/detectors-login",
+      "packages/detectors-icon",
       "packages/detectors-rich",
       "packages/detectors-forward",
       "packages/actions",
