@@ -87,6 +87,10 @@ export const messageKeys = [
   "command.kick.admin",
   "command.cani.usage",
   "command.cani.header",
+  "bot.setup.present",
+  "bot.setup.delete",
+  "bot.setup.restrict",
+  "bot.setup.both",
   "command.mute.usage",
   "command.mute.done",
   "command.member.usage",
@@ -535,6 +539,11 @@ const zh = {
   "command.kick.admin": "{chatId} {actorId} 是管理员",
   "command.cani.usage": "用法：/cani <chatId>",
   "command.cani.header": "群 {chatId} 机器人 {actorId}",
+  "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
+  "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
+  "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
+  "bot.setup.both":
+    "机器人在 {chatId} 还不能删除，还不能限制。私聊 /cani {chatId}。",
   "command.mute.usage": "用法：/mute <chatId> <actorId> [seconds]",
   "command.mute.done": "已禁言 {chatId} {actorId} {seconds} 秒",
   "command.member.usage": "用法：/member <chatId> <actorId>",
@@ -917,6 +926,14 @@ const en = {
   "command.kick.admin": "{actorId} is an admin in {chatId}",
   "command.cani.usage": "Usage: /cani <chatId>",
   "command.cani.header": "chat {chatId} bot {actorId}",
+  "bot.setup.present":
+    "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
+  "bot.setup.delete":
+    "The bot in {chatId} cannot delete messages. Private /cani {chatId}.",
+  "bot.setup.restrict":
+    "The bot in {chatId} cannot restrict members. Private /cani {chatId}.",
+  "bot.setup.both":
+    "The bot in {chatId} cannot delete messages or restrict members. Private /cani {chatId}.",
   "command.mute.usage": "Usage: /mute <chatId> <actorId> [seconds]",
   "command.mute.done": "Muted {actorId} in {chatId} for {seconds} seconds",
   "command.member.usage": "Usage: /member <chatId> <actorId>",

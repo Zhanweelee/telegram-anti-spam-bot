@@ -17915,6 +17915,164 @@ describe("normalizeUpdate", () => {
     ).toBe("ignored");
   });
 
+  it("marks an in-chat bot that cannot moderate", async () => {
+    const title = "机密群名";
+    const name = "操作者昵称";
+    const member = await normalize({
+      update_id: 4041,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup", title },
+        from: { id: 7, first_name: name },
+        new_chat_member: {
+          user: { id: 99, is_bot: true, username: "tasb" },
+          status: "member",
+        },
+      },
+    });
+    expect(member.status).toBe("event");
+    if (member.status === "event") {
+      expect(member.event.bot).toBe("gone");
+      expect(member.event.botSeat).toBe("in");
+      expect(member.event.botDelete).toBeUndefined();
+      expect(JSON.stringify(member.event)).not.toContain(title);
+      expect(JSON.stringify(member.event)).not.toContain(name);
+      expect(JSON.stringify(member.event)).not.toContain("tasb");
+    }
+    const away = await normalize({
+      update_id: 4042,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup", title },
+        from: { id: 7, first_name: name },
+        new_chat_member: {
+          user: { id: 99, is_bot: true, username: "tasb" },
+          status: "restricted",
+          is_member: false,
+        },
+      },
+    });
+    expect(away.status).toBe("event");
+    if (away.status === "event") {
+      expect(away.event.bot).toBe("gone");
+      expect(away.event.botSeat).toBeUndefined();
+    }
+    const missing = await normalize({
+      update_id: 4043,
+      my_chat_member: {
+        chat: { id: -100586, type: "group" },
+        from: { id: 7 },
+        new_chat_member: { user: { id: 99 }, status: "restricted" },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status === "event") {
+      expect(missing.event.bot).toBe("gone");
+      expect(missing.event.botSeat).toBe("in");
+    }
+    const odd = await normalize({
+      update_id: 4044,
+      my_chat_member: {
+        chat: { id: -100586, type: "group" },
+        from: { id: 7 },
+        new_chat_member: {
+          user: { id: 99 },
+          status: "restricted",
+          is_member: "yes",
+        },
+      },
+    });
+    expect(odd.status).toBe("event");
+    if (odd.status === "event") {
+      expect(odd.event.botSeat).toBeUndefined();
+    }
+    const partial = await normalize({
+      update_id: 4045,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup", title },
+        from: { id: 7, first_name: name },
+        new_chat_member: {
+          user: { id: 99, is_bot: true, username: "tasb" },
+          status: "administrator",
+          can_delete_messages: false,
+          can_restrict_members: true,
+        },
+      },
+    });
+    expect(partial.status).toBe("event");
+    if (partial.status === "event") {
+      expect(partial.event.bot).toBe("admin");
+      expect(partial.event.botDelete).toBe("off");
+      expect(partial.event.botRestrict).toBe("on");
+      expect(JSON.stringify(partial.event)).not.toContain(title);
+      expect(JSON.stringify(partial.event)).not.toContain(name);
+    }
+    const broken = await normalize({
+      update_id: 4046,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup" },
+        from: { id: 7 },
+        new_chat_member: {
+          user: { id: 99 },
+          status: "administrator",
+          can_delete_messages: "yes",
+          can_restrict_members: true,
+        },
+      },
+    });
+    expect(broken.status).toBe("event");
+    if (broken.status === "event") {
+      expect(broken.event.bot).toBe("admin");
+      expect(broken.event.botDelete).toBeUndefined();
+      expect(broken.event.botRestrict).toBeUndefined();
+    }
+    const owner = await normalize({
+      update_id: 4047,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup" },
+        from: { id: 7 },
+        new_chat_member: {
+          user: { id: 99 },
+          status: "creator",
+          can_delete_messages: false,
+        },
+      },
+    });
+    expect(owner.status).toBe("event");
+    if (owner.status === "event") {
+      expect(owner.event.bot).toBe("admin");
+      expect(owner.event.botDelete).toBe("on");
+      expect(owner.event.botRestrict).toBe("on");
+    }
+    const left = await normalize({
+      update_id: 4048,
+      my_chat_member: {
+        chat: { id: -100586, type: "group", title },
+        from: { id: 7, first_name: name },
+        new_chat_member: { user: { id: 99, username: "tasb" }, status: "left" },
+      },
+    });
+    expect(left.status).toBe("event");
+    if (left.status === "event") {
+      expect(left.event.bot).toBe("gone");
+      expect(left.event.botSeat).toBeUndefined();
+      expect(JSON.stringify(left.event)).not.toContain(title);
+      expect(JSON.stringify(left.event)).not.toContain(name);
+      expect(JSON.stringify(left.event)).not.toContain("tasb");
+    }
+    const kicked = await normalize({
+      update_id: 4049,
+      my_chat_member: {
+        chat: { id: -100586, type: "supergroup" },
+        from: { id: 7 },
+        new_chat_member: { user: { id: 99 }, status: "kicked" },
+      },
+    });
+    expect(kicked.status).toBe("event");
+    if (kicked.status === "event") {
+      expect(kicked.event.bot).toBe("gone");
+      expect(kicked.event.botSeat).toBeUndefined();
+    }
+  });
+
   it("keeps hostnames from the author signature", async () => {
     const phrase = "请免费领取礼品";
     const code = "SIG68";

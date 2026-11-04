@@ -8449,6 +8449,150 @@ describe("handleIncomingEvent", () => {
     expect(text).not.toContain(phrase);
   });
 
+  it("tells the actor when the bot is in the chat and cannot moderate", async () => {
+    const kit = deps();
+    const chats = createMemoryChatDirectory();
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_grant",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+        botDelete: "on",
+        botRestrict: "on",
+      }),
+      { ...kit, chats },
+    );
+    expect(kit.reply.sent).toHaveLength(0);
+    expect(await chats.chatsFor("local", "7")).toEqual(["-100586"]);
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_seat",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "gone",
+        botSeat: "in",
+      }),
+      { ...kit, chats },
+    );
+    expect(kit.reply.sent).toEqual([
+      {
+        tenantId: "local",
+        chatId: "7",
+        text: "机器人在 -100586，还不是管理员。私聊 /cani -100586。",
+      },
+    ]);
+    expect(kit.reply.sent.map((message) => message.chatId)).not.toContain(
+      "-100586",
+    );
+    expect(await chats.list("local")).toEqual([]);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+  });
+
+  it("tells the actor when the bot cannot delete", async () => {
+    const kit = deps();
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_delete",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+        botDelete: "off",
+        botRestrict: "on",
+      }),
+      kit,
+    );
+    expect(kit.reply.sent).toEqual([
+      {
+        tenantId: "local",
+        chatId: "7",
+        text: "机器人在 -100586 还不能删除。私聊 /cani -100586。",
+      },
+    ]);
+    const { reply, ...withoutReply } = kit;
+    void reply;
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_quiet",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+        botDelete: "off",
+        botRestrict: "on",
+      }),
+      withoutReply,
+    );
+    expect(kit.reply.sent).toHaveLength(1);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(
+      "bot_setup_notice_failed",
+    );
+  });
+
+  it("stays quiet when the bot can already delete and restrict", async () => {
+    const kit = deps();
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_ready",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+        botDelete: "on",
+        botRestrict: "on",
+      }),
+      kit,
+    );
+    expect(kit.reply.sent).toHaveLength(0);
+  });
+
+  it("keeps the directory when the setup notice cannot be sent", async () => {
+    const kit = deps();
+    const chats = createMemoryChatDirectory();
+    await handleIncomingEvent(
+      parseEvent({
+        id: "evt_delete",
+        tenantId: "local",
+        chatId: "-100586",
+        kind: "bot_membership",
+        occurredAt: "2026-11-01T00:00:00.000Z",
+        actor: { id: "7", isAdmin: false },
+        bot: "admin",
+        botDelete: "off",
+        botRestrict: "on",
+      }),
+      {
+        ...kit,
+        chats,
+        reply: {
+          async send() {
+            throw new Error(phrase);
+          },
+        },
+      },
+    );
+    expect(await chats.chatsFor("local", "7")).toEqual(["-100586"]);
+    expect(JSON.stringify(kit.logger.entries)).toContain(
+      "bot_setup_notice_failed",
+    );
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("还不能删除");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+  });
+
   it("lets the person who promoted the bot manage that chat", async () => {
     const kit = deps();
     const chats = createMemoryChatDirectory();

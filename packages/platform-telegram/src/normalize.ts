@@ -371,6 +371,8 @@ function botMembershipEvent(
     return { status: "ignored" };
   }
   const admins = new Set(input.adminUserIds);
+  const seat = botSeat(value.new_chat_member);
+  const rights = botRights(value.new_chat_member);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -379,7 +381,46 @@ function botMembershipEvent(
     occurredAt: occurredAt(value.date, input.nowIso),
     actor: { id: actor, isAdmin: admins.has(actor) },
     bot: state,
+    ...(seat === undefined ? {} : { botSeat: seat }),
+    ...(rights === undefined
+      ? {}
+      : { botDelete: rights.delete, botRestrict: rights.restrict }),
   });
+}
+
+function botSeat(member: Record<string, unknown>): "in" | undefined {
+  if (member.status === "member") {
+    return "in";
+  }
+  if (member.status !== "restricted") {
+    return undefined;
+  }
+  if (member.is_member === true || member.is_member === undefined) {
+    return "in";
+  }
+  return undefined;
+}
+
+function botRights(
+  member: Record<string, unknown>,
+):
+  | { readonly delete: "on" | "off"; readonly restrict: "on" | "off" }
+  | undefined {
+  if (member.status === "creator") {
+    return { delete: "on", restrict: "on" };
+  }
+  if (member.status !== "administrator") {
+    return undefined;
+  }
+  const canDelete = member.can_delete_messages;
+  const canRestrict = member.can_restrict_members;
+  if (typeof canDelete !== "boolean" || typeof canRestrict !== "boolean") {
+    return undefined;
+  }
+  return {
+    delete: canDelete ? "on" : "off",
+    restrict: canRestrict ? "on" : "off",
+  };
 }
 
 function botState(status: unknown): "admin" | "gone" | null {
