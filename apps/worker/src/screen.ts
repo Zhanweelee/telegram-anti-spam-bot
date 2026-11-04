@@ -82,6 +82,7 @@ import { createNoticeDetector } from "@tasb/detector-notice";
 import { createOwnerDetector } from "@tasb/detector-owner";
 import { createPhotoDetector } from "@tasb/detector-photo";
 import { createPinDetector } from "@tasb/detector-pin";
+import { createPollDetector } from "@tasb/detector-poll";
 import { createPostDetector } from "@tasb/detector-post";
 import { createPriceDetector } from "@tasb/detector-price";
 import { createProximityDetector } from "@tasb/detector-proximity";
@@ -648,6 +649,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.proximityNotice,
         value: createProximityDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.pollNotice,
+        value: createPollDetector(),
       },
       {
         source: "builtin",

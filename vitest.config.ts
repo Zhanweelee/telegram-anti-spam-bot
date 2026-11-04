@@ -40,6 +40,7 @@ export default defineConfig({
       "packages/detectors-call-invite",
       "packages/detectors-owner",
       "packages/detectors-proximity",
+      "packages/detectors-poll",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

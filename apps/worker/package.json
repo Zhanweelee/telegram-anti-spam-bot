@@ -38,6 +38,7 @@
     "@tasb/detector-call-invite": "workspace:*",
     "@tasb/detector-owner": "workspace:*",
     "@tasb/detector-proximity": "workspace:*",
+    "@tasb/detector-poll": "workspace:*",
     "@tasb/detector-via": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",

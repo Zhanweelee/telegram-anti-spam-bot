@@ -5675,6 +5675,173 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a poll option change until that chat asks", async () => {
+    const added = "投票广告选项";
+    const removed = "删掉的广告选项";
+    const question = "原投票题干广告";
+    const actor = "加选项的人";
+    const optionId = "选项编号90203专属";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "added" | "deleted";
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 102, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind === "added"
+              ? {
+                  poll_option_added: {
+                    option_persistent_id: optionId,
+                    option_text: added,
+                    poll_message: {
+                      message_id: 1,
+                      date: 1761955200,
+                      chat: { id: input.chatId, type: "supergroup" },
+                      poll: { question },
+                    },
+                  },
+                }
+              : {}),
+            ...(input.kind === "deleted"
+              ? {
+                  poll_option_deleted: {
+                    option_persistent_id: optionId,
+                    option_text: removed,
+                  },
+                }
+              : {}),
+            ...(input.flag
+              ? { poll_option_added: true, poll_option_deleted: true }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10450,
+      chatId: -1001061,
+      kind: "added",
+    });
+    expect(idle.message?.pollNotice).toBe("added");
+    expect(idle.message?.text).toBe(added);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(actor);
+    expect(idleDump).not.toContain(optionId);
+    expect(idleDump).not.toContain(question);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "poll_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["poll_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removedHit = await screenTelegramEvent(
+      await posted({ updateId: 10451, chatId: -1001062, kind: "added" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removedHit.decision.action).toBe("delete");
+    expect(removedHit.decision.reasons).toContain("poll_notice");
+    expect(removedHit.decision.ruleIds).toContain("poll_notice");
+    expect(removedHit.decision.evidence).toEqual([
+      { kind: "feature", summary: "poll:added" },
+    ]);
+    const deleted = await screenTelegramEvent(
+      await posted({ updateId: 10452, chatId: -1001063, kind: "deleted" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(deleted.decision.action).toBe("delete");
+    expect(deleted.decision.evidence).toEqual([
+      { kind: "feature", summary: "poll:deleted" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10453, chatId: -1001064, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10454,
+        chatId: -1001065,
+        kind: "added",
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removedHit.decision,
+      deleted: deleted.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(added);
+    expect(dumped).not.toContain(removed);
+    expect(dumped).not.toContain(question);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(optionId);
+  });
+
   it("keeps a proximity alert until that chat asks", async () => {
     const traveler = "靠近广告名";
     const watcher = "守位置的人";

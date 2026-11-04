@@ -162,6 +162,7 @@ async function messageEvent(
   const asCallInvite = videoInvite(message);
   const ownerNotice = changedOwner(message);
   const asProximity = nearUsers(message);
+  const pollNotice = changedPoll(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -215,8 +216,29 @@ async function messageEvent(
       ...(asCallInvite ? { asCallInvite: true as const } : {}),
       ...(ownerNotice === undefined ? {} : { ownerNotice }),
       ...(asProximity ? { asProximity: true as const } : {}),
+      ...(pollNotice === undefined ? {} : { pollNotice }),
     },
   });
+}
+
+function changedPoll(
+  message: Record<string, unknown>,
+): "added" | "deleted" | undefined {
+  if (hasPollOptionText(message.poll_option_added)) {
+    return "added";
+  }
+  if (hasPollOptionText(message.poll_option_deleted)) {
+    return "deleted";
+  }
+  return undefined;
+}
+
+function hasPollOptionText(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.option_text === "string" &&
+    value.option_text.length > 0
+  );
 }
 
 function nearUsers(message: Record<string, unknown>): boolean {

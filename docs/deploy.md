@@ -197,6 +197,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> proximity_notice on` 删这个群里的靠近提醒。默认关闭。距离和用户编号不进证据。两个人的名字仍参与关键词。纯坐标仍看 `bare_location`。见 ADR 0493。
 
+`/rule <chatId> poll_notice on` 删这个群里后加投票选项和删除投票选项的提示。默认关闭。选项编号和原投票不进证据。选项文字仍参与关键词。投票题干仍不带这个标记。见 ADR 0494。
+
 ## 确认
 
 ```sh

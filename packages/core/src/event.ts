@@ -127,6 +127,8 @@ export const messageSchema = z
     ownerNotice: z.enum(["changed", "left"]).optional(),
     /** Proximity alert. Distance and user ids stay out. Names stay in the text. */
     asProximity: z.literal(true).optional(),
+    /** Poll option added or deleted. The option id and the poll stay out. */
+    pollNotice: z.enum(["added", "deleted"]).optional(),
   })
   .refine(
     (message) =>
