@@ -20937,6 +20937,188 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.asRichCard).toBeUndefined();
   });
 
+  it("marks a rich block spoiler and leaves the file id out", async () => {
+    const caption = "富文本剧透广告";
+    const actor = "发块剧透的人";
+    const fileId = "AgAC90213blockspoiler";
+    const covered = await normalize({
+      update_id: 4760,
+      message: {
+        message_id: 800,
+        date: 1761955200,
+        chat: { id: -100499760, type: "supergroup" },
+        from: { id: 111, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [{ file_id: fileId, width: 1, height: 1 }],
+              has_spoiler: true,
+              caption: { text: caption },
+            },
+          ],
+        },
+      },
+    });
+    expect(covered.status).toBe("event");
+    if (covered.status !== "event") {
+      return;
+    }
+    expect(covered.event.message?.asSpoiler).toBe(true);
+    expect(covered.event.message?.text).toBe(caption);
+    const coveredDump = JSON.stringify(covered.event);
+    expect(coveredDump).not.toContain(fileId);
+    expect(coveredDump).not.toContain("90213");
+    expect(coveredDump).not.toContain(actor);
+
+    const videoId = "BAAC90214blockspoiler";
+    const nested = await normalize({
+      update_id: 4761,
+      message: {
+        message_id: 801,
+        date: 1761955200,
+        chat: { id: -100499761, type: "supergroup" },
+        from: { id: 111 },
+        rich_message: {
+          blocks: [
+            {
+              type: "slideshow",
+              blocks: [
+                {
+                  type: "video",
+                  video: {
+                    file_id: videoId,
+                    width: 1,
+                    height: 1,
+                    duration: 1,
+                  },
+                  has_spoiler: true,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(nested.status).toBe("event");
+    if (nested.status !== "event") {
+      return;
+    }
+    expect(nested.event.message?.asSpoiler).toBe(true);
+    expect(JSON.stringify(nested.event)).not.toContain(videoId);
+
+    const animationId = "CgAC90215blockspoiler";
+    const animation = await normalize({
+      update_id: 4762,
+      message: {
+        message_id: 802,
+        date: 1761955200,
+        chat: { id: -100499762, type: "supergroup" },
+        from: { id: 111 },
+        rich_message: {
+          blocks: [
+            {
+              type: "animation",
+              animation: {
+                file_id: animationId,
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+              has_spoiler: true,
+            },
+          ],
+        },
+      },
+    });
+    expect(animation.status).toBe("event");
+    if (animation.status !== "event") {
+      return;
+    }
+    expect(animation.event.message?.asSpoiler).toBe(true);
+    expect(JSON.stringify(animation.event)).not.toContain(animationId);
+
+    const plain = await normalize({
+      update_id: 4763,
+      message: {
+        message_id: 803,
+        date: 1761955200,
+        chat: { id: -100499763, type: "supergroup" },
+        from: { id: 111 },
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [{ file_id: fileId, width: 1, height: 1 }],
+              has_spoiler: false,
+              caption: { text: "今天站会" },
+            },
+          ],
+        },
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.asSpoiler).toBeUndefined();
+    expect(plain.event.message?.text).toBe("今天站会");
+
+    const documentId = "BQAC90216blockspoiler";
+    const document = await normalize({
+      update_id: 4764,
+      message: {
+        message_id: 804,
+        date: 1761955200,
+        chat: { id: -100499764, type: "supergroup" },
+        from: { id: 111 },
+        rich_message: {
+          blocks: [
+            {
+              type: "document",
+              document: { file_id: documentId, file_name: "note.txt" },
+              has_spoiler: true,
+            },
+          ],
+        },
+      },
+    });
+    expect(document.status).toBe("event");
+    if (document.status !== "event") {
+      return;
+    }
+    expect(document.event.message?.asSpoiler).toBeUndefined();
+    expect(JSON.stringify(document.event)).not.toContain(documentId);
+
+    const kept = await normalize({
+      update_id: 4765,
+      message: {
+        message_id: 805,
+        date: 1761955200,
+        chat: { id: -100499765, type: "supergroup" },
+        from: { id: 111 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "photo",
+              photo: [{ file_id: fileId, width: 1, height: 1 }],
+              has_spoiler: true,
+              caption: { text: caption },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asSpoiler).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(fileId);
+  });
+
   it("marks spoiler media and leaves the file id out", async () => {
     const caption = "剧透说明广告";
     const actor = "发剧透的人";

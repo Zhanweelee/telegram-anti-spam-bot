@@ -95,3 +95,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。
+
+富文本块 `photo`、`video` 或 `animation` 上 `has_spoiler` 正好是 `true` 时，消息带 `asSpoiler`。`false` 不带这个标记。嵌套在幻灯片里也同样。文件和音频块不带。文件号不进事件。说明仍是正文。已有正文时正文不变。规则仍是 `media_spoiler`。见 ADR 0503。
