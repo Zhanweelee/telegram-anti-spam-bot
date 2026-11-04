@@ -2879,6 +2879,153 @@ describe("screenTelegramEvent", () => {
     expect(spamLogged).not.toContain("ad891");
   });
 
+  it("deletes a short link written on a linked channel mirror's author signature", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "机密频道";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 4937,
+        message: {
+          message_id: 15,
+          date: 1761955200,
+          chat: { id: -100893, type: "supergroup" },
+          from: { id: 8913 },
+          text: "今天站会",
+          is_automatic_forward: true,
+          sender_chat: { id: -1008930, type: "channel", title },
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: {
+              id: -1008930,
+              type: "channel",
+              title: `https://example.com/${title}`,
+            },
+            author_signature: `${phrase} https://bit.ly/ad893`,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.forward).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.reasons).not.toContain("forward_channel");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100893", messageId: "15" },
+    ]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain(title);
+    expect(logged).not.toContain("ad893");
+
+    const words = await normalizeUpdate({
+      update: {
+        update_id: 4938,
+        message: {
+          message_id: 16,
+          date: 1761955200,
+          chat: { id: -100894, type: "supergroup" },
+          from: { id: 8914 },
+          text: "今天站会",
+          is_automatic_forward: true,
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: { id: -1008940, type: "channel", title },
+            author_signature: phrase,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(words.status).toBe("event");
+    if (words.status !== "event") {
+      return;
+    }
+    expect(words.event.message?.text).toBe("今天站会");
+    const wordLog = createMemoryLogger();
+    const wordModerator = createMemoryModerator();
+    const kept = await screenTelegramEvent(words.event, {
+      logger: wordLog,
+      moderator: wordModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(wordModerator.deleted).toEqual([]);
+    const wordLogged = JSON.stringify(wordLog.entries);
+    expect(wordLogged).not.toContain(phrase);
+    expect(wordLogged).not.toContain(title);
+
+    const only = await normalizeUpdate({
+      update: {
+        update_id: 4939,
+        message: {
+          message_id: 17,
+          date: 1761955200,
+          chat: { id: -100895, type: "supergroup" },
+          from: { id: 8915 },
+          photo: [
+            {
+              file_id: "ph-4939",
+              file_unique_id: "ph-4939",
+              width: 1,
+              height: 1,
+            },
+          ],
+          is_automatic_forward: true,
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: { id: -1008950, type: "channel", title },
+            author_signature: phrase,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(only.status).toBe("event");
+    if (only.status !== "event") {
+      return;
+    }
+    expect(only.event.message?.text).toBe(phrase);
+    const onlyLog = createMemoryLogger();
+    const onlyModerator = createMemoryModerator();
+    const named = await screenTelegramEvent(only.event, {
+      logger: onlyLog,
+      moderator: onlyModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(named.decision.action).toBe("delete");
+    expect(named.decision.reasons).toContain("keyword_match");
+    expect(named.decision.reasons).not.toContain("forward_channel");
+    expect(onlyModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100895", messageId: "17" },
+    ]);
+    const onlyLogged = JSON.stringify(onlyLog.entries);
+    expect(onlyLogged).not.toContain(phrase);
+    expect(onlyLogged).not.toContain(title);
+    expect(onlyLogged).not.toContain("ph-4939");
+  });
+
   it("deletes a short link written on a login button's forwarded label", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalizeUpdate({

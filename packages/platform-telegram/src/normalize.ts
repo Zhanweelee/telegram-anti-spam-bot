@@ -3321,6 +3321,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     urls.push(preview.url);
   }
   pushPlainUrls(message.author_signature, urls);
+  pushPlainUrls(mirrorAuthorSignature(message), urls);
   pushPlainUrls(message.sender_tag, urls);
   const declined = message.suggested_post_declined;
   if (isRecord(declined)) {
@@ -5410,6 +5411,10 @@ function messageText(
   if (signature.length > 0) {
     return signature;
   }
+  const mirror = mirrorAuthorSignature(message);
+  if (mirror.length > 0) {
+    return mirror;
+  }
   const tag = senderTag(message);
   if (tag.length > 0) {
     return tag;
@@ -5536,6 +5541,24 @@ function authorSignature(message: Record<string, unknown>): string {
     return message.author_signature.slice(0, MAX_TEXT);
   }
   return "";
+}
+
+/** 讨论组原帖上画出的频道作者签名。成员转发和其它来源不读。 */
+function mirrorAuthorSignature(message: Record<string, unknown>): string {
+  if (message.is_automatic_forward !== true) {
+    return "";
+  }
+  const origin = message.forward_origin;
+  if (!isRecord(origin) || origin.type !== "channel") {
+    return "";
+  }
+  if (
+    typeof origin.author_signature !== "string" ||
+    origin.author_signature.length === 0
+  ) {
+    return "";
+  }
+  return origin.author_signature.slice(0, MAX_TEXT);
 }
 
 function hiddenForwardName(message: Record<string, unknown>): string {
