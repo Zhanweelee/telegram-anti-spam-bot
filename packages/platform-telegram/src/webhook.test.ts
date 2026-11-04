@@ -182,6 +182,102 @@ describe("handleTelegramWebhook", () => {
     expect(JSON.stringify(logger.entries)).not.toContain(token);
   });
 
+  it("tells the member which captcha button to press", async () => {
+    const token = "bot-token";
+    const nonce = "0123456789abcdef";
+    const leaked = "请免费领取礼品";
+    let payload = "";
+    const { response, calls, logger } = await post(
+      JSON.stringify({
+        update_id: 41,
+        callback_query: {
+          id: "cb-decoy",
+          from: { id: 77 },
+          data: `n:${nonce}`,
+          message: {
+            message_id: 4,
+            chat: { id: -100123 },
+            text: leaked,
+          },
+        },
+      }),
+      {
+        header: SECRET,
+        botToken: token,
+        fetchImpl: async (_input, init) => {
+          payload = String(init?.body ?? "");
+          return new Response("ok", { status: 200 });
+        },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true, ignored: true });
+    expect(calls).toBe(0);
+    expect(payload).toContain("请点「我不是机器人」。");
+    expect(payload).not.toContain(nonce);
+    expect(payload).not.toContain(leaked);
+    expect(payload).not.toContain("show_alert");
+    expect(JSON.stringify(logger.entries)).not.toContain(leaked);
+    expect(JSON.stringify(logger.entries)).not.toContain(nonce);
+    expect(JSON.stringify(logger.entries)).not.toContain(token);
+  });
+
+  it("keeps other captcha callbacks free of the decoy hint", async () => {
+    const token = "bot-token";
+    const nonce = "0123456789abcdef";
+    const hint = "请点「我不是机器人」。";
+    const payloads: string[] = [];
+    const fetchImpl: typeof fetch = async (_input, init) => {
+      payloads.push(String(init?.body ?? ""));
+      return new Response("ok", { status: 200 });
+    };
+    const real = await post(
+      JSON.stringify({
+        update_id: 42,
+        callback_query: {
+          id: "cb-real",
+          from: { id: 77 },
+          data: `c:${nonce}`,
+          message: { message_id: 4, chat: { id: -100123 } },
+        },
+      }),
+      { header: SECRET, botToken: token, fetchImpl },
+    );
+    const upper = await post(
+      JSON.stringify({
+        update_id: 43,
+        callback_query: {
+          id: "cb-upper",
+          from: { id: 77 },
+          data: `n:${nonce.toUpperCase()}`,
+          message: { chat: { id: -100123 } },
+        },
+      }),
+      { header: SECRET, botToken: token, fetchImpl },
+    );
+    const short = await post(
+      JSON.stringify({
+        update_id: 44,
+        callback_query: {
+          id: "cb-short",
+          from: { id: 77 },
+          data: "n:0123456789abcde",
+          message: { chat: { id: -100123 } },
+        },
+      }),
+      { header: SECRET, botToken: token, fetchImpl },
+    );
+    expect(real.response.status).toBe(200);
+    expect(real.calls).toBe(1);
+    expect(upper.calls).toBe(0);
+    expect(short.calls).toBe(0);
+    expect(payloads).toHaveLength(3);
+    for (const payload of payloads) {
+      expect(payload).not.toContain(hint);
+      expect(payload).not.toContain(nonce);
+    }
+  });
+
   it("normalizes a valid fixture and hides the text from the response", async () => {
     const { response, events, calls } = await post(
       fixture("message-admin.json"),
