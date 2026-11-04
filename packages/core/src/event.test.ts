@@ -301,6 +301,40 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a shared-story flag and rejects false", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        asStory: true,
+      },
+    });
+    expect(event.message?.asStory).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          asStory: false,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts a shared-contact flag and rejects false", () => {
     const event = parseEvent({
       id: "evt_1",

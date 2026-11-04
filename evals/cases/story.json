@@ -1,0 +1,18 @@
+[
+  {
+    "id": "story_card",
+    "kind": "message",
+    "label": "spam",
+    "asStory": true
+  },
+  {
+    "id": "story_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "story_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

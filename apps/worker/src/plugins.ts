@@ -157,6 +157,12 @@ export const builtinManifests = {
     integrity:
       "29b97f81bf78cce73fe9739a01a0ed62e63cb99fe25dc1ce71e635a810a19582",
   }),
+  sharedStory: manifest({
+    id: "shared_story",
+    kind: "detector",
+    integrity:
+      "344e17ebdabfccc439c7efe8722a50f77255d76640876591619243dcb5e20afc",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

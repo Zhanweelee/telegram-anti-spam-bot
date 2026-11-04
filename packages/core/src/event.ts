@@ -85,6 +85,8 @@ export const messageSchema = z
     notice: z.enum(["join", "leave"]).optional(),
     /** Sent as another channel. Channel ids and titles stay out. */
     asChannel: z.literal(true).optional(),
+    /** Shared story card. Poster names, ids, and usernames stay out. */
+    asStory: z.literal(true).optional(),
   })
   .refine(
     (message) =>

@@ -98,6 +98,9 @@ importers:
       '@tasb/detector-sender':
         specifier: workspace:*
         version: link:../../packages/detectors-sender
+      '@tasb/detector-story':
+        specifier: workspace:*
+        version: link:../../packages/detectors-story
       '@tasb/detector-via':
         specifier: workspace:*
         version: link:../../packages/detectors-via
@@ -162,6 +165,9 @@ importers:
       '@tasb/detector-sender':
         specifier: workspace:*
         version: link:../packages/detectors-sender
+      '@tasb/detector-story':
+        specifier: workspace:*
+        version: link:../packages/detectors-story
       '@tasb/detector-via':
         specifier: workspace:*
         version: link:../packages/detectors-via
@@ -365,6 +371,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-sender:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-story:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

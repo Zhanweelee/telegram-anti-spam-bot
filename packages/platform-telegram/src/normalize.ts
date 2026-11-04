@@ -141,6 +141,7 @@ async function messageEvent(
   const albumId = albumToken(message.media_group_id);
   const notice = serviceNotice(message);
   const asChannel = sentAsForeignChannel(message);
+  const asStory = sharedStory(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -171,8 +172,14 @@ async function messageEvent(
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
       ...(notice === undefined ? {} : { notice }),
       ...(asChannel ? { asChannel: true as const } : {}),
+      ...(asStory ? { asStory: true as const } : {}),
     },
   });
+}
+
+function sharedStory(message: Record<string, unknown>): boolean {
+  const story = message.story;
+  return isRecord(story) && isRecord(story.chat);
 }
 
 function sentAsForeignChannel(message: Record<string, unknown>): boolean {

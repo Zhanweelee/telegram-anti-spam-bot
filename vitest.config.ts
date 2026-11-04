@@ -19,6 +19,7 @@ export default defineConfig({
       "packages/detectors-regex",
       "packages/detectors-script",
       "packages/detectors-sender",
+      "packages/detectors-story",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",
