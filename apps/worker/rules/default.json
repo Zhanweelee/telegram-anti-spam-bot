@@ -75,6 +75,46 @@
       "actions": ["delete"]
     },
     {
+      "id": "media_sticker",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_sticker"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_animation",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_animation"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_voice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_voice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_video_note",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_video_note"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_dice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_dice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

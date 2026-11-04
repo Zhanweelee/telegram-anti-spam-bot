@@ -3583,6 +3583,188 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(text);
   });
 
+  it("keeps silent media until a chat locks that kind", async () => {
+    const pack = "SecretPack";
+    const emoji = "\u{1F3B0}";
+    const kinds = [
+      [
+        "sticker",
+        {
+          sticker: {
+            file_id: "f",
+            file_unique_id: "STICK",
+            set_name: pack,
+            width: 1,
+            height: 1,
+          },
+        },
+      ],
+      [
+        "animation",
+        {
+          animation: {
+            file_id: "f",
+            file_unique_id: "GIF",
+            file_name: "secret.gif",
+            width: 1,
+            height: 1,
+            duration: 1,
+          },
+        },
+      ],
+      [
+        "voice",
+        { voice: { file_id: "f", file_unique_id: "VOICE", duration: 1 } },
+      ],
+      [
+        "video_note",
+        {
+          video_note: {
+            file_id: "f",
+            file_unique_id: "NOTE",
+            length: 1,
+            duration: 1,
+          },
+        },
+      ],
+      ["dice", { dice: { emoji, value: 59 } }],
+    ] as const;
+    const events = [];
+    for (const [index, [kind, body]] of kinds.entries()) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: 6500 + index,
+          message: {
+            message_id: 650 + index,
+            date: 1761955200,
+            chat: { id: -100650 - index, type: "supergroup" },
+            from: { id: 77 },
+            ...body,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status, kind).toBe("event");
+      if (normalized.status !== "event") {
+        return;
+      }
+      expect(normalized.event.message?.media, kind).toBe(kind);
+      const idle = await screenTelegramEvent(normalized.event, {
+        rateWindow: createMemoryRateWindow(),
+      });
+      expect(idle.decision.action, kind).toBe("allow");
+      events.push(normalized.event);
+    }
+    function source(kind: (typeof kinds)[number][0]): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: `media_${kind}`,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [`media_${kind}`],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const sticker = events[0];
+    if (!sticker) {
+      return;
+    }
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(
+      { ...sticker, id: "tg_lock_sticker", chatId: "-100660" },
+      {
+        source: source("sticker"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator,
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("media_sticker");
+    expect(removed.decision.ruleIds).toContain("media_sticker");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:sticker" },
+    ]);
+    expect(moderator.deleted.map((item) => item.messageId)).toEqual(["650"]);
+    const animation = events[1];
+    if (!animation) {
+      return;
+    }
+    const kept = await screenTelegramEvent(
+      { ...animation, id: "tg_lock_gif", chatId: "-100661" },
+      {
+        source: source("sticker"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(kept.decision.action).toBe("allow");
+    const paid = await normalizeUpdate({
+      update: {
+        update_id: 6510,
+        message: {
+          message_id: 651,
+          date: 1761955200,
+          chat: { id: -100662, type: "supergroup" },
+          from: { id: 77 },
+          is_paid_post: true,
+          sticker: {
+            file_id: "f",
+            file_unique_id: "PAIDSTICK",
+            set_name: pack,
+            width: 1,
+            height: 1,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(paid.status).toBe("event");
+    if (paid.status !== "event") {
+      return;
+    }
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(paid.event, {
+      source: source("sticker"),
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+      moderator: paidModerator,
+    });
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(pack);
+    expect(dumped).not.toContain(emoji);
+    expect(dumped).not.toContain("secret.gif");
+    expect(dumped).not.toContain("STICK");
+    expect(JSON.stringify(events[4])).not.toContain(emoji);
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

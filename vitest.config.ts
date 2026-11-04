@@ -9,6 +9,7 @@ export default defineConfig({
       "packages/detectors-bot",
       "packages/detectors-contact",
       "packages/detectors-folder",
+      "packages/detectors-media",
       "packages/detectors-notice",
       "packages/detectors-via",
       "packages/detectors-rate",

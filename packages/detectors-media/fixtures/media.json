@@ -1,0 +1,17 @@
+[
+  { "name": "sticker", "kind": "message", "media": "sticker", "expect": "hit" },
+  {
+    "name": "animation",
+    "kind": "message",
+    "media": "animation",
+    "expect": "miss"
+  },
+  { "name": "voice", "kind": "message", "media": "voice", "expect": "miss" },
+  { "name": "plain", "kind": "message", "expect": "miss" },
+  {
+    "name": "member",
+    "kind": "chat_member",
+    "media": "sticker",
+    "expect": "miss"
+  }
+]

@@ -22982,4 +22982,27 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(queried)).not.toContain("gq414");
     expect(JSON.stringify(queried)).not.toContain("bit.ly");
   });
+
+  it("marks a dice without keeping the face or the emoji", async () => {
+    const emoji = "\u{1F3B0}";
+    const dice = await normalize({
+      update_id: 6401,
+      message: {
+        message_id: 640,
+        date: 1761955200,
+        chat: { id: -100640, type: "supergroup" },
+        from: { id: 77 },
+        dice: { emoji, value: 59 },
+      },
+    });
+    expect(dice.status).toBe("event");
+    if (dice.status !== "event") {
+      return;
+    }
+    expect(dice.event.message?.media).toBe("dice");
+    expect(dice.event.message?.text).toBe("");
+    expect(dice.event.message?.mediaSha256).toBeUndefined();
+    expect(JSON.stringify(dice.event)).not.toContain(emoji);
+    expect(dice.event.message).not.toHaveProperty("value");
+  });
 });

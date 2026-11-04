@@ -109,6 +109,36 @@ export const builtinManifests = {
     integrity:
       "3172784edc1b4d909e8d700cdde26aaa2e6aa88f13b99963f447360040175bbc",
   }),
+  mediaSticker: manifest({
+    id: "media_sticker",
+    kind: "detector",
+    integrity:
+      "d23fd176eb8bbdc576bdd43d4c6679f37c4096743782812e3c2f255db1178fe9",
+  }),
+  mediaAnimation: manifest({
+    id: "media_animation",
+    kind: "detector",
+    integrity:
+      "0acaa1bedc1eb08ea8a51f4d0181d684f7f2879c2e9cfde522940df792e265fe",
+  }),
+  mediaVoice: manifest({
+    id: "media_voice",
+    kind: "detector",
+    integrity:
+      "4a1c5b5c00048784ac2dbe1c8434d8961e498c55aefcdb668fa8d1876e6488e3",
+  }),
+  mediaVideoNote: manifest({
+    id: "media_video_note",
+    kind: "detector",
+    integrity:
+      "c6860d4617f9db87604591b832242cee80df57e02f4a5ebfcfdf2aaee1a6a976",
+  }),
+  mediaDice: manifest({
+    id: "media_dice",
+    kind: "detector",
+    integrity:
+      "24b8cc2782af84d0e6de6681c6978dd5da4e6bce37784f6e56926e691273e952",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

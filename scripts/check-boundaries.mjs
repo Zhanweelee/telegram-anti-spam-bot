@@ -42,6 +42,10 @@ const rules = [
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
   {
+    prefix: "packages/detectors-media/",
+    allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
+  },
+  {
     prefix: "packages/detectors-notice/",
     allow: [/^\.{1,2}\//, /^zod$/, /^@tasb\/core$/, /^node:/, /^vitest$/],
   },
@@ -81,6 +85,7 @@ const rules = [
       /^@tasb\/detector-contact$/,
       /^@tasb\/detector-via$/,
       /^@tasb\/detector-folder$/,
+      /^@tasb\/detector-media$/,
       /^@tasb\/detector-notice$/,
       /^@tasb\/detector-rate$/,
       /^@tasb\/detector-link$/,
@@ -118,6 +123,7 @@ const rules = [
       /^@tasb\/detector-contact$/,
       /^@tasb\/detector-via$/,
       /^@tasb\/detector-folder$/,
+      /^@tasb\/detector-media$/,
       /^@tasb\/detector-notice$/,
       /^node:/,
       /^vitest$/,

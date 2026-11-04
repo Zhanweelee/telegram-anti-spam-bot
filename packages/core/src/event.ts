@@ -28,6 +28,7 @@ export const mediaKinds = [
   "voice",
   "video_note",
   "audio",
+  "dice",
 ] as const;
 export const mediaKindSchema = z.enum(mediaKinds);
 export type MediaKind = z.output<typeof mediaKindSchema>;
