@@ -32,6 +32,7 @@ import {
   type Notifier,
   type PipelineResult,
   type PolicyStore,
+  type RuleActionOverride,
   type RulePackArchive,
   type RulePackSource,
   type RuleSet,
@@ -233,6 +234,15 @@ export async function screenTelegramEvent(
       chatId: event.chatId,
     });
   }
+  let ruleActions: readonly RuleActionOverride[] = [];
+  try {
+    ruleActions = await runtime.listRuleActions(event.tenantId, event.chatId);
+  } catch {
+    logger.warn("runtime_failed", {
+      eventId: event.id,
+      chatId: event.chatId,
+    });
+  }
   const packId = await subscribedPack(event, deps.rulePacks, logger);
   const loaded = await resolveRuleSet({
     tenantId: event.tenantId,
@@ -241,6 +251,7 @@ export async function screenTelegramEvent(
     source: deps.source ?? fileRuleSource,
     logger,
     switches,
+    actions: ruleActions,
     ...(packId && deps.rulePacks
       ? {
           pack: {

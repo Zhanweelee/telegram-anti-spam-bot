@@ -2,7 +2,7 @@ import type { Cache } from "./cache.js";
 import type { Logger } from "./logger.js";
 import { type RuleSet, ruleSetSchema } from "./rule.js";
 import type { RulePackArchive, RulePackSource } from "./rule-pack.js";
-import type { RuleSwitch } from "./runtime.js";
+import type { RuleActionOverride, RuleSwitch } from "./runtime.js";
 
 export const DEFAULT_RULE_CACHE_TTL_SECONDS = 60;
 
@@ -30,6 +30,7 @@ export interface LoadRuleSetInput {
   readonly logger: Logger;
   readonly ttlSeconds?: number;
   readonly switches?: readonly RuleSwitch[];
+  readonly actions?: readonly RuleActionOverride[];
 }
 
 export interface RulePackRequest {
@@ -58,10 +59,33 @@ export function applyRuleSwitches(
   return changed ? { ...rules, rules: next } : rules;
 }
 
+export function applyRuleActions(
+  rules: RuleSet,
+  actions: readonly RuleActionOverride[],
+): RuleSet {
+  if (actions.length === 0) {
+    return rules;
+  }
+  const chosen = new Map(actions.map((item) => [item.ruleId, item.action]));
+  let changed = false;
+  const next = rules.rules.map((rule) => {
+    const action = chosen.get(rule.id);
+    if (action === undefined) {
+      return rule;
+    }
+    if (rule.actions.length === 1 && rule.actions[0] === action) {
+      return rule;
+    }
+    changed = true;
+    return { ...rule, actions: [action] };
+  });
+  return changed ? { ...rules, rules: next } : rules;
+}
+
 export async function loadRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
-  return applyRuleSwitches(
-    await loadStoredRuleSet(input),
-    input.switches ?? [],
+  return applyRuleActions(
+    applyRuleSwitches(await loadStoredRuleSet(input), input.switches ?? []),
+    input.actions ?? [],
   );
 }
 
@@ -125,9 +149,9 @@ async function loadStoredRuleSet(input: LoadRuleSetInput): Promise<RuleSet> {
 export async function resolveRuleSet(
   input: LoadRuleSetInput & { readonly pack?: RulePackRequest },
 ): Promise<RuleSet> {
-  return applyRuleSwitches(
-    await resolveStoredRuleSet(input),
-    input.switches ?? [],
+  return applyRuleActions(
+    applyRuleSwitches(await resolveStoredRuleSet(input), input.switches ?? []),
+    input.actions ?? [],
   );
 }
 

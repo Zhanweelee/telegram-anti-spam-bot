@@ -35,3 +35,4 @@
 - 订阅了规则包时，`/rule` 仍按文件规则校验 id，再按 id 套到 `resolveRuleSet` 的结果上。包里没有这个 id 时，这条覆盖暂时不起作用。`/rules` 后来由 ADR 0038 列出正在执行的那一份，并由 ADR 0040 在每一行标明 `file` 或 `switch`。
 - 云模式超额后，`via`、`regex`、`bot`、`contact` 仍会被降级拿掉。先套开关，再降级。
 - 不新增 wrangler 变量，也不新增依赖。
+- 动作覆盖后来由 ADR 0458 加在另一个键上。这份运行时文档仍只有 `dryRun` 和 `switches`。

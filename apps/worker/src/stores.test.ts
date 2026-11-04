@@ -134,17 +134,31 @@ describe("resolveStores", () => {
     expect(await restarted.runtime.listRuleSwitches("local", "-100")).toEqual([
       { ruleId: "via_inline", enabled: true },
     ]);
+    expect(
+      await first.runtime.setRuleAction(
+        "local",
+        "-100",
+        "spam_keywords",
+        "warn",
+      ),
+    ).toBe(true);
+    expect(await restarted.runtime.listRuleActions("local", "-100")).toEqual([
+      { ruleId: "spam_keywords", action: "warn" },
+    ]);
     await first.policyStore.put("local", "chat_1", {
       exemptAdmins: false,
       allowActorIds: [],
     });
-    expect(values.size).toBe(2);
+    expect(values.size).toBe(3);
     expect([...values.keys()].some((key) => key.startsWith("policy"))).toBe(
       true,
     );
-    expect([...values.keys()].some((key) => key.startsWith("runtime"))).toBe(
+    expect([...values.keys()].some((key) => key.startsWith("runtime\n"))).toBe(
       true,
     );
+    expect(
+      [...values.keys()].some((key) => key.startsWith("runtime-action")),
+    ).toBe(true);
     expect(
       await first.chats.noteBot({
         tenantId: "local",

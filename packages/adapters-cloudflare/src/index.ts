@@ -14,10 +14,14 @@ import {
   MAX_RULE_SWITCHES,
   type PolicyStore,
   prefilterPolicySchema,
+  type RuleActionDocument,
+  type RuleActionOverride,
   type RulePackArchive,
   type RuleSubscriptionStore,
   type RuntimeDocument,
   type RuntimeStore,
+  ruleActionDocumentSchema,
+  ruleActionSchema,
   rulePackIdSchema,
   ruleSetSchema,
   ruleSubscriptionDocumentSchema,
@@ -51,7 +55,7 @@ export {
 /**
  * Cloudflare bindings adapter.
  * D1 stores audits, rule documents, captcha challenges, and warning counts. KV stores prefilter policy,
- * per-chat runtime switches, pack subscription, and the shared
+ * per-chat runtime switches, one action override per rule, pack subscription, and the shared
  * blocklist. Workers AI is optional and stays out
  * of the committed wrangler config. Queues and Durable Objects stay
  * unused. This module must not be imported by @tasb/core, and it does
@@ -93,6 +97,7 @@ export function createKvPolicyStore(kv: StringStore): PolicyStore {
 const DEFAULT_KV_TTL_MS = 60_000;
 
 const emptyRuntime: RuntimeDocument = { dryRun: false, switches: [] };
+const emptyActions: RuleActionDocument = { actions: [] };
 
 export function createKvRuntimeStore(
   kv: StringStore,
@@ -103,6 +108,10 @@ export function createKvRuntimeStore(
   const cache = new Map<
     string,
     { readonly document: RuntimeDocument; readonly expiresAt: number }
+  >();
+  const actionCache = new Map<
+    string,
+    { readonly document: RuleActionDocument; readonly expiresAt: number }
   >();
 
   async function load(
@@ -129,6 +138,32 @@ export function createKvRuntimeStore(
     const parsed = runtimeDocumentSchema.parse(document);
     await kv.put(id, JSON.stringify(parsed));
     cache.set(id, { document: parsed, expiresAt: now() + ttlMs });
+  }
+
+  async function loadActions(
+    tenantId: string,
+    chatId: string,
+  ): Promise<RuleActionDocument> {
+    const id = runtimeActionKey(tenantId, chatId);
+    const at = now();
+    const hit = actionCache.get(id);
+    if (hit && hit.expiresAt > at) {
+      return hit.document;
+    }
+    const document = parseActions(await kv.get(id));
+    actionCache.set(id, { document, expiresAt: at + ttlMs });
+    return document;
+  }
+
+  async function saveActions(
+    tenantId: string,
+    chatId: string,
+    actions: readonly RuleActionOverride[],
+  ): Promise<void> {
+    const id = runtimeActionKey(tenantId, chatId);
+    const parsed = ruleActionDocumentSchema.parse({ actions });
+    await kv.put(id, JSON.stringify(parsed));
+    actionCache.set(id, { document: parsed, expiresAt: now() + ttlMs });
   }
 
   return {
@@ -178,6 +213,38 @@ export function createKvRuntimeStore(
       }
       await save(tenantId, chatId, { ...current, switches });
     },
+    async listRuleActions(tenantId, chatId) {
+      return (await loadActions(tenantId, chatId)).actions;
+    },
+    async setRuleAction(tenantId, chatId, ruleId, action) {
+      if (!ruleActionSchema.safeParse({ ruleId, action }).success) {
+        return false;
+      }
+      const current = await loadActions(tenantId, chatId);
+      const index = current.actions.findIndex((item) => item.ruleId === ruleId);
+      if (index === -1 && current.actions.length >= MAX_RULE_SWITCHES) {
+        return false;
+      }
+      if (index !== -1 && current.actions[index]?.action === action) {
+        return true;
+      }
+      const actions =
+        index === -1
+          ? [...current.actions, { ruleId, action }]
+          : current.actions.map((item) =>
+              item.ruleId === ruleId ? { ruleId, action } : item,
+            );
+      await saveActions(tenantId, chatId, actions);
+      return true;
+    },
+    async clearRuleAction(tenantId, chatId, ruleId) {
+      const current = await loadActions(tenantId, chatId);
+      const actions = current.actions.filter((item) => item.ruleId !== ruleId);
+      if (actions.length === current.actions.length) {
+        return;
+      }
+      await saveActions(tenantId, chatId, actions);
+    },
   };
 }
 
@@ -199,6 +266,22 @@ function recordKey(tenantId: string, chatId: string): string {
 
 function runtimeKey(tenantId: string, chatId: string): string {
   return `runtime\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function runtimeActionKey(tenantId: string, chatId: string): string {
+  return `runtime-action\n${tenantId.length}:${tenantId}${chatId.length}:${chatId}`;
+}
+
+function parseActions(raw: string | null): RuleActionDocument {
+  if (raw === null) {
+    return emptyActions;
+  }
+  try {
+    const parsed = ruleActionDocumentSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : emptyActions;
+  } catch {
+    return emptyActions;
+  }
 }
 
 export function createKvRuleSubscriptionStore(

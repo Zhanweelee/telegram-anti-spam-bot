@@ -161,6 +161,60 @@ describe("kv runtime store", () => {
     ]);
     expect(gets).toBe(1);
   });
+
+  it("keeps a rule action in a separate key", async () => {
+    const backing = createMapStore();
+    const first = createKvRuntimeStore(backing.store);
+    expect(
+      await first.setRuleAction("local", "-100", "spam_keywords", "warn"),
+    ).toBe(true);
+    expect(await first.listRuleSwitches("local", "-100")).toEqual([]);
+    expect(await first.getDryRun("local", "-100")).toBe(false);
+    const second = createKvRuntimeStore(backing.store);
+    expect(await second.listRuleActions("local", "-100")).toEqual([
+      { ruleId: "spam_keywords", action: "warn" },
+    ]);
+    expect(
+      await second.setRuleSwitch("local", "-100", "via_inline", true),
+    ).toBe(true);
+    expect(await second.listRuleActions("local", "-100")).toEqual([
+      { ruleId: "spam_keywords", action: "warn" },
+    ]);
+    const keys = [...backing.values.keys()];
+    expect(keys.some((key) => key.startsWith("runtime-action"))).toBe(true);
+    expect(keys.some((key) => key.startsWith("runtime\n"))).toBe(true);
+    const actionKey = keys.find((key) => key.startsWith("runtime-action"));
+    const runtimeKey = keys.find((key) => key.startsWith("runtime\n"));
+    expect(backing.values.get(runtimeKey ?? "")).not.toContain("warn");
+    expect(backing.values.get(actionKey ?? "")).not.toContain("via_inline");
+    await second.clearRuleAction("local", "-100", "spam_keywords");
+    expect(await second.listRuleActions("local", "-100")).toEqual([]);
+    expect(await second.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+
+    const secret = "请免费领取礼品";
+    if (actionKey !== undefined) {
+      backing.values.set(actionKey, JSON.stringify({ text: secret }));
+    }
+    const fresh = createKvRuntimeStore(backing.store);
+    expect(await fresh.listRuleActions("local", "-100")).toEqual([]);
+    expect(await fresh.listRuleSwitches("local", "-100")).toEqual([
+      { ruleId: "via_inline", enabled: true },
+    ]);
+    expect(
+      JSON.stringify(await fresh.listRuleActions("local", "-100")),
+    ).not.toContain(secret);
+    for (let index = 0; index < 32; index += 1) {
+      expect(
+        await fresh.setRuleAction("local", "full", `rule_${index}`, "log"),
+      ).toBe(true);
+    }
+    expect(
+      await fresh.setRuleAction("local", "full", "rule_extra", "ban"),
+    ).toBe(false);
+    expect([...backing.values.values()].join("\n")).not.toContain("rule_extra");
+  });
 });
 
 describe("kv chat directory", () => {

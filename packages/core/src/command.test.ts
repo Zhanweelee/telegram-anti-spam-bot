@@ -28,7 +28,7 @@ import {
   type RulePackSource,
 } from "./rule-pack.js";
 import type { RuleSource } from "./rules-load.js";
-import type { RuntimeStore } from "./runtime.js";
+import type { RuleActionOverride, RuntimeStore } from "./runtime.js";
 import { createMemoryWarnStore, WarnCapacityError } from "./warn.js";
 
 const phrase = "请免费领取礼品";
@@ -89,6 +89,10 @@ function policyStore(): PolicyStore & { puts: number; gets: number } {
 function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
   const enabled = new Map<string, boolean>();
   const ruleSwitches = new Map<string, Map<string, boolean>>();
+  const ruleActions = new Map<
+    string,
+    Map<string, RuleActionOverride["action"]>
+  >();
   return {
     enabled,
     async getDryRun(tenantId, chatId) {
@@ -119,6 +123,29 @@ function runtime(): RuntimeStore & { readonly enabled: Map<string, boolean> } {
     },
     async clearRuleSwitch(tenantId, chatId, ruleId) {
       ruleSwitches.get(`${tenantId}:${chatId}`)?.delete(ruleId);
+    },
+    async listRuleActions(tenantId, chatId) {
+      const saved = ruleActions.get(`${tenantId}:${chatId}`);
+      if (!saved) {
+        return [];
+      }
+      return [...saved.entries()].map(([ruleId, action]) => ({
+        ruleId,
+        action,
+      }));
+    },
+    async setRuleAction(tenantId, chatId, ruleId, action) {
+      const id = `${tenantId}:${chatId}`;
+      let saved = ruleActions.get(id);
+      if (!saved) {
+        saved = new Map();
+        ruleActions.set(id, saved);
+      }
+      saved.set(ruleId, action);
+      return true;
+    },
+    async clearRuleAction(tenantId, chatId, ruleId) {
+      ruleActions.get(`${tenantId}:${chatId}`)?.delete(ruleId);
     },
   };
 }
@@ -14716,7 +14743,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(fileToggle).toMatchObject({
-      text: "rule -100 spam_keywords disabled switch",
+      text: "rule -100 spam_keywords disabled switch actions delete",
     });
     const packToggle = await runOperatorCommand({
       event: event({
@@ -15700,7 +15727,7 @@ describe("runOperatorCommand", () => {
     expect(on).toMatchObject({
       status: "reply",
       command: "rule",
-      text: "rule -100 via_inline enabled switch",
+      text: "rule -100 via_inline enabled switch actions delete",
     });
     const listed = await runOperatorCommand({
       ...deps,
@@ -15726,7 +15753,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(reset).toMatchObject({
-      text: "rule -100 via_inline disabled file",
+      text: "rule -100 via_inline disabled file actions delete",
     });
     const restored = await runOperatorCommand({
       ...deps,
@@ -15752,7 +15779,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(off).toMatchObject({
-      text: "rule -100 spam_keywords disabled switch",
+      text: "rule -100 spam_keywords disabled switch actions delete",
     });
     const bare = await runOperatorCommand({
       ...deps,
@@ -15761,7 +15788,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(bare).toMatchObject({
-      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
     });
     const status = await runOperatorCommand({
       ...deps,
@@ -15770,7 +15797,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(status).toMatchObject({
-      text: "rule -100 via_inline disabled file",
+      text: "rule -100 via_inline disabled file actions delete",
     });
     const foreign = await runOperatorCommand({
       ...deps,
@@ -15817,7 +15844,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(many).toMatchObject({
-      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
     });
     const mode = await runOperatorCommand({
       ...deps,
@@ -15831,7 +15858,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(mode).toMatchObject({
-      text: "用法：/rule [chatId] <ruleId> [on|off|reset]",
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
     });
     expect(JSON.stringify(mode)).not.toContain("maybe");
     const english = await runOperatorCommand({
@@ -15842,7 +15869,7 @@ describe("runOperatorCommand", () => {
       source: file,
     });
     expect(english).toMatchObject({
-      text: "Usage: /rule [chatId] <ruleId> [on|off|reset]",
+      text: "Usage: /rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
     });
     const full = await runOperatorCommand({
       ...deps,
@@ -15880,8 +15907,152 @@ describe("runOperatorCommand", () => {
     });
     expect(help).toMatchObject({ status: "reply" });
     if (help.status === "reply") {
-      expect(help.text).toContain("/rule [chatId] <ruleId> [on|off|reset]");
+      expect(help.text).toContain(
+        "/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
+      );
     }
+  });
+
+  it("replaces one rule action from private chat and leaves the file alone", async () => {
+    const deps = kit();
+    const file = ruleFile();
+    const scoped = directory(["-100"]);
+    const warned = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -100 spam_keywords warn",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(warned).toMatchObject({
+      status: "reply",
+      command: "rule",
+      text: "rule -100 spam_keywords enabled file actions warn",
+    });
+    const listed = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(listed).toMatchObject({ status: "reply" });
+    if (listed.status === "reply") {
+      expect(listed.text).toContain("spam_keywords enabled file");
+      expect(listed.text).toContain("actions warn");
+      expect(listed.text).toContain("via_inline disabled file");
+    }
+    const off = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -100 spam_keywords off",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(off).toMatchObject({
+      text: "rule -100 spam_keywords disabled switch actions warn",
+    });
+    const other = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -200", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(other).toMatchObject({ status: "reply" });
+    if (other.status === "reply") {
+      expect(other.text).toContain("actions delete");
+      expect(other.text).not.toContain("actions warn");
+    }
+    const restored = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -100 spam_keywords file",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(restored).toMatchObject({
+      text: "rule -100 spam_keywords disabled switch actions delete",
+    });
+    const again = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(again).toMatchObject({ status: "reply" });
+    if (again.status === "reply") {
+      expect(again.text).toContain("actions delete");
+      expect(again.text).not.toContain("actions warn");
+    }
+    const group = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule -100 spam_keywords mute" }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(group).toMatchObject({ status: "skip" });
+    const foreign = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -200 spam_keywords ban",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: scoped,
+      source: file,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const allowed = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -100 spam_keywords allow",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      source: file,
+    });
+    expect(allowed).toMatchObject({
+      text: "用法：/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
+    });
+    const full = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/rule -100 via_inline mute",
+        direct: true,
+      }),
+      adminActorIds: ["42"],
+      source: file,
+      runtime: {
+        ...deps.runtime,
+        async setRuleAction() {
+          return false;
+        },
+      },
+    });
+    expect(full).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("rule_action_full");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const broken = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/rule -100 spam_keywords", direct: true }),
+      adminActorIds: ["42"],
+      source: file,
+      runtime: {
+        ...deps.runtime,
+        async listRuleActions() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(broken).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(deps.logger.entries)).toContain("operator_rejected");
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
   });
 
   it("asks someone already in the chat to pass the button check", async () => {
