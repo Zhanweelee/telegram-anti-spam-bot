@@ -77,6 +77,13 @@ describe("memory adapter", () => {
         durationSeconds: 3600,
       },
     ]);
+    expect(
+      await moderator.kickActor({ tenantId: "t", chatId: "c", actorId: "u" }),
+    ).toBe("removed");
+    expect(moderator.kicked).toEqual([
+      { tenantId: "t", chatId: "c", actorId: "u" },
+    ]);
+    expect(moderator.unbanned).toEqual([]);
     expect(moderator.deleted).toEqual([]);
     await moderator.restrictActor({
       tenantId: "t",

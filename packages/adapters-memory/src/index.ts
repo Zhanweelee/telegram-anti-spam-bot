@@ -155,6 +155,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly restricted: readonly MuteTarget[];
   readonly released: readonly BanTarget[];
   readonly unbanned: readonly BanTarget[];
+  readonly kicked: readonly BanTarget[];
   readonly unmuted: readonly BanTarget[];
   readonly locked: readonly ChatTarget[];
   readonly unlocked: readonly ChatTarget[];
@@ -203,6 +204,7 @@ export function createMemoryModerator(): ModerationPort & {
   const restricted: MuteTarget[] = [];
   const released: BanTarget[] = [];
   const unbanned: BanTarget[] = [];
+  const kicked: BanTarget[] = [];
   const unmuted: BanTarget[] = [];
   const locked: ChatTarget[] = [];
   const unlocked: ChatTarget[] = [];
@@ -251,6 +253,7 @@ export function createMemoryModerator(): ModerationPort & {
     restricted,
     released,
     unbanned,
+    kicked,
     unmuted,
     locked,
     unlocked,
@@ -418,6 +421,10 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async unbanActor(target) {
       unbanned.push({ ...target });
+    },
+    async kickActor(target) {
+      kicked.push({ ...target });
+      return "removed" as const;
     },
     async unmuteActor(target) {
       unmuted.push({ ...target });

@@ -345,6 +345,8 @@ export type TopicPinTarget = ForumTopicTarget;
 
 export type UnmuteResult = "lifted" | "absent";
 
+export type KickResult = "removed" | "absent" | "admin";
+
 export type MemberStanding =
   | { readonly status: "creator" | "administrator" | "member" | "left" }
   | { readonly status: "kicked"; readonly untilDate: number | null }
@@ -471,6 +473,7 @@ export interface ModerationPort {
   revokeInvite(target: InviteLinkTarget): Promise<void>;
   unbanSenderChat(target: SenderChatTarget): Promise<void>;
   unbanActor(target: BanTarget): Promise<void>;
+  kickActor(target: BanTarget): Promise<KickResult>;
   unmuteActor(target: BanTarget): Promise<UnmuteResult>;
   readMember(target: BanTarget): Promise<MemberStanding>;
   readMemberAdmin(target: BanTarget): Promise<MemberAdmin>;

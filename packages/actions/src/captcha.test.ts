@@ -100,6 +100,9 @@ function moderator(
     async lockChat() {},
     async unlockChat() {},
     async unbanActor() {},
+    async kickActor() {
+      return "removed" as const;
+    },
     async unmuteActor() {
       return "lifted" as const;
     },

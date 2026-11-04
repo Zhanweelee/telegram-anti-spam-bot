@@ -88,6 +88,9 @@ describe("delete action", () => {
           async lockChat() {},
           async unlockChat() {},
           async unbanActor() {},
+          async kickActor() {
+            return "removed" as const;
+          },
           async unmuteActor() {
             return "lifted" as const;
           },
@@ -252,6 +255,9 @@ describe("delete action", () => {
         async lockChat() {},
         async unlockChat() {},
         async unbanActor() {},
+        async kickActor() {
+          return "removed" as const;
+        },
         async unmuteActor() {
           return "lifted" as const;
         },
@@ -418,6 +424,9 @@ describe("delete action", () => {
         async lockChat() {},
         async unlockChat() {},
         async unbanActor() {},
+        async kickActor() {
+          return "removed" as const;
+        },
         async unmuteActor() {
           return "lifted" as const;
         },
@@ -586,6 +595,9 @@ function ports(): ModerationPort & {
     async lockChat() {},
     async unlockChat() {},
     async unbanActor() {},
+    async kickActor() {
+      return "removed" as const;
+    },
     async unmuteActor() {
       return "lifted" as const;
     },

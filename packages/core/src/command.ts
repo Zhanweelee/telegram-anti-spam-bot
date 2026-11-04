@@ -159,6 +159,7 @@ const COMMAND_NAMES = [
   "banfor",
   "allows",
   "canadmin",
+  "kick",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -293,6 +294,7 @@ export interface OperatorCommandInput {
       | "deleteStickerSet"
       | "deleteTopic"
       | "hideGeneral"
+      | "kickActor"
       | "leaveChat"
       | "lockChat"
       | "muteActor"
@@ -460,6 +462,8 @@ async function dispatch(
       return showMemberAllows(input, args);
     case "canadmin":
       return showMemberAdmin(input, args);
+    case "kick":
+      return kickMember(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -4869,6 +4873,63 @@ async function unbanMember(
     return say(input, "command.invalid");
   }
   return say(input, "command.unban.done", { chatId, actorId });
+}
+
+async function kickMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.kick.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const kick = input.moderator?.kickActor;
+  if (!kick) {
+    rejectKick(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const result = await kick({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    if (result === "absent") {
+      return say(input, "command.kick.absent", { chatId, actorId });
+    }
+    if (result === "admin") {
+      return say(input, "command.kick.admin", { chatId, actorId });
+    }
+    if (result !== "removed") {
+      rejectKick(input);
+      return say(input, "command.invalid");
+    }
+  } catch {
+    rejectKick(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.kick.done", { chatId, actorId });
+}
+
+function rejectKick(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "kick",
+  });
 }
 
 async function unmuteMember(

@@ -55,6 +55,9 @@ function commandModerator(
     async banActorFor() {
       throw new Error("banfor_unavailable");
     },
+    async kickActor() {
+      throw new Error("kick_unavailable");
+    },
     async banSenderChat() {
       throw new Error("sender_unavailable");
     },

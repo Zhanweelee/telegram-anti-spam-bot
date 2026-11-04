@@ -48,6 +48,9 @@ function createOpenModerator(): ModerationPort {
     async unbanActor() {
       throw new Error("unban_unavailable");
     },
+    async kickActor() {
+      throw new Error("kick_unavailable");
+    },
     async unmuteActor() {
       throw new Error("unmute_unavailable");
     },
