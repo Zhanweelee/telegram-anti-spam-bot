@@ -77,6 +77,7 @@ import {
   resolveRuleSet,
 } from "./rules-load.js";
 import type { RuleSwitch, RuntimeStore } from "./runtime.js";
+import { WARN_LIMIT, type WarnStore } from "./warn.js";
 
 const COMMAND_NAMES = [
   "help",
@@ -166,6 +167,9 @@ const COMMAND_NAMES = [
   "cani",
   "captcha",
   "uncaptcha",
+  "warn",
+  "unwarn",
+  "warns",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -274,6 +278,7 @@ export interface OperatorCommandInput {
   readonly storage: Storage;
   readonly logger: Logger;
   readonly captcha?: CaptchaStore;
+  readonly warns?: WarnStore;
   readonly clock?: Clock;
   readonly createNonce?: () => string;
   readonly fallback?: PrefilterPolicy;
@@ -508,6 +513,12 @@ async function dispatch(
       return challengeMember(input, args);
     case "uncaptcha":
       return releaseCaptcha(input, args);
+    case "warn":
+      return warnMember(input, args);
+    case "unwarn":
+      return clearWarning(input, args);
+    case "warns":
+      return readWarnings(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5212,6 +5223,202 @@ async function releaseCaptcha(
     }
   }
   return say(input, "command.uncaptcha.done", { chatId, actorId });
+}
+
+async function warnMember(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const parsed = warnArgs(input, args, "command.warn.usage");
+  if (typeof parsed === "string") {
+    return parsed;
+  }
+  const store = input.warns;
+  if (!store) {
+    rejectWarn(input, "warn");
+    return say(input, "command.invalid");
+  }
+  const target = {
+    tenantId: input.event.tenantId,
+    chatId: parsed.chatId,
+    actorId: parsed.actorId,
+  };
+  let current = 0;
+  try {
+    current = await store.read(target);
+  } catch {
+    rejectWarn(input, "warn");
+    return say(input, "command.invalid");
+  }
+  if (current >= WARN_LIMIT) {
+    return say(input, "command.warn.already", {
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+      limit: WARN_LIMIT,
+    });
+  }
+  let next = 0;
+  try {
+    next = await store.increment(target);
+  } catch {
+    rejectWarn(input, "warn");
+    return say(input, "command.invalid");
+  }
+  if (next < WARN_LIMIT) {
+    return say(input, "command.warn.counted", {
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+      count: next,
+      limit: WARN_LIMIT,
+    });
+  }
+  const ban = input.moderator?.banActor;
+  if (!ban) {
+    await restoreWarning(store, target, next - 1);
+    rejectWarn(input, "warn");
+    return say(input, "command.invalid");
+  }
+  try {
+    await ban({
+      tenantId: input.event.tenantId,
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+    });
+  } catch {
+    await restoreWarning(store, target, next - 1);
+    rejectWarn(input, "warn");
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.warn.banned", {
+    chatId: parsed.chatId,
+    actorId: parsed.actorId,
+  });
+}
+
+async function clearWarning(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const parsed = warnArgs(input, args, "command.unwarn.usage");
+  if (typeof parsed === "string") {
+    return parsed;
+  }
+  const store = input.warns;
+  if (!store) {
+    rejectWarn(input, "unwarn");
+    return say(input, "command.invalid");
+  }
+  let cleared = false;
+  try {
+    cleared = await store.clear({
+      tenantId: input.event.tenantId,
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+    });
+  } catch {
+    rejectWarn(input, "unwarn");
+    return say(input, "command.invalid");
+  }
+  if (!cleared) {
+    return say(input, "command.unwarn.absent", {
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+    });
+  }
+  return say(input, "command.unwarn.done", {
+    chatId: parsed.chatId,
+    actorId: parsed.actorId,
+  });
+}
+
+async function readWarnings(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  const parsed = warnArgs(input, args, "command.warns.usage");
+  if (typeof parsed === "string") {
+    return parsed;
+  }
+  const store = input.warns;
+  if (!store) {
+    rejectWarn(input, "warns");
+    return say(input, "command.invalid");
+  }
+  let count = 0;
+  try {
+    count = await store.read({
+      tenantId: input.event.tenantId,
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+    });
+  } catch {
+    rejectWarn(input, "warns");
+    return say(input, "command.invalid");
+  }
+  if (count === 0) {
+    return say(input, "command.warns.absent", {
+      chatId: parsed.chatId,
+      actorId: parsed.actorId,
+    });
+  }
+  return say(input, "command.warns.count", {
+    chatId: parsed.chatId,
+    actorId: parsed.actorId,
+    count,
+    limit: WARN_LIMIT,
+  });
+}
+
+function warnArgs(
+  input: OperatorCommandInput,
+  args: readonly string[],
+  usage: MessageKey,
+): { readonly chatId: string; readonly actorId: string } | string {
+  if (args.length !== 2) {
+    return say(input, usage);
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  return { chatId, actorId };
+}
+
+async function restoreWarning(
+  store: WarnStore,
+  target: {
+    readonly tenantId: string;
+    readonly chatId: string;
+    readonly actorId: string;
+  },
+  count: number,
+): Promise<void> {
+  try {
+    await store.write(target, count);
+  } catch {
+    return;
+  }
+}
+
+function rejectWarn(
+  input: OperatorCommandInput,
+  command: "warn" | "unwarn" | "warns",
+): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command,
+  });
 }
 
 function rejectUncaptcha(input: OperatorCommandInput): void {

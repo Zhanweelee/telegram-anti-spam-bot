@@ -14,6 +14,7 @@ import {
   resolveChallenge,
   runOperatorCommand,
   unrestrictChallenge,
+  type WarnStore,
 } from "@tasb/core";
 import { sendCaptchaButton } from "@tasb/platform-telegram";
 import { workerBlocklist } from "./blocklist-runtime.js";
@@ -32,6 +33,7 @@ import {
   workerRuntime,
   workerStorage,
 } from "./screen.js";
+import { workerWarns } from "./warn-runtime.js";
 
 export interface OperateDeps extends ScreenDeps {
   readonly adminActorIds?: readonly string[];
@@ -39,6 +41,7 @@ export interface OperateDeps extends ScreenDeps {
   readonly locale?: Locale;
   readonly review?: ReviewQueue;
   readonly chats?: ChatDirectory;
+  readonly warns?: WarnStore;
 }
 
 function commandModerator(
@@ -273,6 +276,7 @@ export async function handleIncomingEvent(
     deps.moderator ??
     moderatorFor({ token: deps.botToken, fetchImpl: deps.fetchImpl });
   const captchaStore = deps.captchaStore ?? workerCaptcha;
+  const warns = deps.warns ?? workerWarns;
   const blocklist = deps.blocklist ?? workerBlocklist;
   const review = deps.review ?? workerReview;
   const rulePacks = deps.rulePacks ?? workerRulePacks;
@@ -434,6 +438,7 @@ export async function handleIncomingEvent(
       : {}),
     ...(chats ? { chats } : {}),
     captcha: captchaStore,
+    warns,
     clock: deps.clock ?? createSystemClock(),
     createNonce: deps.createNonce ?? createCaptchaNonce,
     moderator: commandModerator(moderator, deps),

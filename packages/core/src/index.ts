@@ -345,3 +345,12 @@ export {
   foldMatchText,
 } from "./text.js";
 export { withTimeout } from "./timeout.js";
+export {
+  createMemoryWarnStore,
+  MAX_WARN_ACTORS,
+  MAX_WARN_CHATS,
+  WARN_LIMIT,
+  WarnCapacityError,
+  type WarnStore,
+  type WarnTarget,
+} from "./warn.js";
