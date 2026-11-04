@@ -192,6 +192,16 @@ function nonEmptyString(value: unknown): boolean {
 function forwardKind(
   message: Record<string, unknown>,
 ): ForwardKind | undefined {
+  const kind = forwardOriginKind(message);
+  if (kind === "channel" && message.is_automatic_forward === true) {
+    return undefined;
+  }
+  return kind;
+}
+
+function forwardOriginKind(
+  message: Record<string, unknown>,
+): ForwardKind | undefined {
   const origin = message.forward_origin;
   if (isRecord(origin)) {
     switch (origin.type) {

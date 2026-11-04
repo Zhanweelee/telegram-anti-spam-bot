@@ -22168,6 +22168,134 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("leaves a linked channel mirror unmarked and keeps a manual channel forward", async () => {
+    const phrase = "请免费领取礼品";
+    const title = "机密频道";
+    const mirror = await normalize({
+      update_id: 4801,
+      message: {
+        message_id: 4801,
+        date: 1761955200,
+        chat: { id: -1004801, type: "supergroup" },
+        from: { id: 4801 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        sender_chat: { id: -10048010, type: "channel", title },
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: {
+            id: -10048010,
+            type: "channel",
+            title: `https://bit.ly/${title}`,
+          },
+        },
+      },
+    });
+    expect(mirror.status).toBe("event");
+    if (mirror.status !== "event") {
+      return;
+    }
+    expect(mirror.event.message?.forward).toBeUndefined();
+    expect(mirror.event.message?.text).toBe("今天站会");
+    const mirrorDump = JSON.stringify(mirror.event);
+    expect(mirrorDump).not.toContain(phrase);
+    expect(mirrorDump).not.toContain(title);
+    expect(mirrorDump).not.toContain("bit.ly");
+    expect(mirrorDump).not.toContain("automatic");
+
+    const edited = await normalize({
+      update_id: 4802,
+      edited_message: {
+        message_id: 4802,
+        date: 1761955200,
+        chat: { id: -1004802, type: "supergroup" },
+        from: { id: 4802 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        forward_from_chat: { id: -10048020, type: "channel", title },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.forward).toBeUndefined();
+    expect(JSON.stringify(edited.event)).not.toContain(title);
+
+    const manual = await normalize({
+      update_id: 4803,
+      message: {
+        message_id: 4803,
+        date: 1761955200,
+        chat: { id: -1004803, type: "supergroup" },
+        from: { id: 4803 },
+        text: "今天站会",
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: -10048030, type: "channel", title },
+        },
+      },
+    });
+    expect(manual.status).toBe("event");
+    if (manual.status !== "event") {
+      return;
+    }
+    expect(manual.event.message?.forward).toBe("channel");
+    expect(JSON.stringify(manual.event)).not.toContain(title);
+
+    const user = await normalize({
+      update_id: 4804,
+      message: {
+        message_id: 4804,
+        date: 1761955200,
+        chat: { id: -1004804, type: "supergroup" },
+        from: { id: 4804 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        forward_origin: {
+          type: "user",
+          date: 1761955200,
+          sender_user: { id: 8, is_bot: false, first_name: title },
+        },
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.forward).toBe("user");
+    expect(JSON.stringify(user.event)).not.toContain(title);
+
+    for (const mark of [false, 1, phrase]) {
+      const outcome = await normalize({
+        update_id: 4805,
+        message: {
+          message_id: 4805,
+          date: 1761955200,
+          chat: { id: -1004805, type: "supergroup" },
+          from: { id: 4805 },
+          text: "今天站会",
+          is_automatic_forward: mark,
+          forward_origin: {
+            type: "channel",
+            date: 1761955200,
+            chat: { id: -10048050, type: "channel", title },
+          },
+        },
+      });
+      expect(outcome.status).toBe("event");
+      if (outcome.status !== "event") {
+        return;
+      }
+      expect(outcome.event.message?.forward).toBe("channel");
+      expect(JSON.stringify(outcome.event)).not.toContain(phrase);
+      expect(JSON.stringify(outcome.event)).not.toContain(title);
+    }
+  });
+
   it("keeps a numeric album id and leaves other group ids out", async () => {
     const albumId = "12532140322504850";
     const phrase = "请免费领取礼品";
