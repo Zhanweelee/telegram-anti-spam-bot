@@ -584,6 +584,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async setTitle(target) {
+      await postTelegram({
+        token: input.token,
+        method: "setChatTitle",
+        fetchImpl: input.fetchImpl,
+        missing: "title_unavailable",
+        failed: "title_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          title: target.title,
+        },
+      });
+    },
   };
 }
 

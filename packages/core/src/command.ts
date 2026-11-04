@@ -106,6 +106,7 @@ const COMMAND_NAMES = [
   "delstickers",
   "boosts",
   "react",
+  "title",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -117,6 +118,7 @@ const TOKEN_LIMIT = 80;
 const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
+const TITLE_LIMIT = 128;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -241,6 +243,7 @@ export interface OperatorCommandInput {
       | "revokeInvite"
       | "setMemberTag"
       | "setReaction"
+      | "setTitle"
       | "showGeneral"
       | "unbanActor"
       | "unbanSenderChat"
@@ -420,6 +423,8 @@ async function dispatch(
       return showBoostCount(input, args);
     case "react":
       return setOneReaction(input, args);
+    case "title":
+      return setOneTitle(input, args);
   }
 }
 
@@ -2200,6 +2205,52 @@ function rejectReact(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "react",
+  });
+}
+
+async function setOneTitle(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.title.usage");
+  }
+  const chatId = args[0];
+  const title = args.slice(1).join(" ");
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    title.length > TITLE_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setTitle;
+  if (!set) {
+    rejectTitle(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      title,
+    });
+  } catch {
+    rejectTitle(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.title.done", { chatId });
+}
+
+function rejectTitle(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "title",
   });
 }
 

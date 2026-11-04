@@ -4963,6 +4963,180 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("changes a chat title and keeps the description", async () => {
+    const deps = kit();
+    const seen: { chatId: string; title: string }[] = [];
+    const remember = {
+      async setTitle(target: { chatId: string; title: string }) {
+        seen.push({ chatId: target.chatId, title: target.title });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/title -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求修改 -100 的标题。简介和头像还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain("hello");
+    expect(seen).toEqual([{ chatId: "-100", title: "hello" }]);
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/title -100 hello world", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求修改 -100 的标题。简介和头像还在。",
+    });
+    expect(JSON.stringify(spaced)).not.toContain("hello");
+    expect(seen[1]).toEqual({ chatId: "-100", title: "hello world" });
+    const positive = await runOperatorCommand({
+      event: event({ text: "/title 42 hello", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(positive).toMatchObject({
+      text: "已请求修改 42 的标题。简介和头像还在。",
+    });
+    expect(seen[2]).toEqual({ chatId: "42", title: "hello" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/title <chatId> <title>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/title -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setTitle() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to change the title of -100. The description and photo stay.",
+    });
+    expect(JSON.stringify(english)).not.toContain("hello");
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/title -100 hello", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setTitle() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/title", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/title <chatId> <title>" });
+    const short = await runOperatorCommand({
+      event: event({ text: "/title -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "用法：/title <chatId> <title>" });
+    const exact = "a".repeat(128);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/title -100 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求修改 -100 的标题。简介和头像还在。",
+    });
+    expect(seen[3]?.title).toBe(exact);
+    const tooLong = "a".repeat(129);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/title -100 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(overflow)).not.toContain(tooLong);
+    expect(seen).toHaveLength(4);
+    const hidden = await runOperatorCommand({
+      event: event({ text: `/title -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(hidden).toMatchObject({
+      text: "已请求修改 -100 的标题。简介和头像还在。",
+    });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(seen[4]?.title).toBe(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/title ${phrase} hello`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/title -100 hello", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: `/title -100 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setTitle() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"title"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/title -200 hello", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setTitle() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];
