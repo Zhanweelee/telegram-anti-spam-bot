@@ -16205,7 +16205,7 @@ describe("runOperatorCommand", () => {
       chats: directory,
       ...deps,
     });
-    expect(noisy).toMatchObject({ text: "用法：/chats" });
+    expect(noisy).toMatchObject({ text: "用法：/chats [skip <count>]" });
     const broken = await runOperatorCommand({
       event: event({ text: "/chats", direct: true, actorId: "9" }),
       adminActorIds: ["42"],
@@ -16440,6 +16440,210 @@ describe("runOperatorCommand", () => {
     expect(blocked).toMatchObject({ text: "没有权限" });
     expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(other)).not.toContain(phrase);
+  });
+
+  it("continues the chat directory after skip", async () => {
+    const deps = kit();
+    const ids = Array.from(
+      { length: 256 },
+      (_, index) => `-${100000000000 + index}`,
+    );
+    const quotaReads: string[] = [];
+    const directory = {
+      async noteBot() {
+        return "ok" as const;
+      },
+      async noteMember() {
+        return "ok" as const;
+      },
+      async chatsFor() {
+        return ["-100"];
+      },
+      async list() {
+        return ids;
+      },
+    };
+    const quota = {
+      async read(_tenantId: string, chatId: string) {
+        quotaReads.push(chatId);
+        return {
+          enabled: true,
+          used: 0,
+          limit: 3000,
+          period: "calendar_month" as const,
+          degraded: false,
+        };
+      },
+    };
+    const first = await runOperatorCommand({
+      event: event({ text: "/chats", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota,
+      ...deps,
+    });
+    expect(first.status).toBe("reply");
+    if (first.status !== "reply") {
+      return;
+    }
+    expect(first.text.length).toBeLessThanOrEqual(3500);
+    expect(first.text.startsWith(`chats\n${ids[0]} 0/3000\n`)).toBe(true);
+    const lines = first.text.split("\n");
+    const omitted = Number(/^\+(\d+)$/.exec(lines.at(-1) ?? "")?.[1]);
+    expect(omitted).toBeGreaterThan(0);
+    const listed = lines.slice(1, -1);
+    expect(listed.length + omitted).toBe(256);
+    expect(listed[0]).toBe(`${ids[0]} 0/3000`);
+    expect(first.text).not.toContain(ids[255]);
+    const same = await runOperatorCommand({
+      event: event({ text: "/chats skip 0", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota,
+      ...kit(),
+    });
+    expect(same).toEqual(first);
+    const kept = 256 - omitted;
+    const tail = await runOperatorCommand({
+      event: event({ text: `/chats skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota,
+      ...kit(),
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith(`chats\n${ids[kept]} 0/3000`)).toBe(true);
+    expect(tail.text).toContain(ids[255]);
+    const lastReads: string[] = [];
+    const last = await runOperatorCommand({
+      event: event({ text: "/chats skip 255", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota: {
+        async read(_tenantId: string, chatId: string) {
+          lastReads.push(chatId);
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month" as const,
+            degraded: false,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(last).toMatchObject({ text: `chats\n${ids[255]} 0/3000` });
+    expect(lastReads).toEqual([ids[255]]);
+    const past = await runOperatorCommand({
+      event: event({ text: "/chats skip 256", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      quota,
+      ...kit(),
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const empty = await runOperatorCommand({
+      event: event({ text: "/chats skip 0", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          return [];
+        },
+      },
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "none" });
+    const emptySkip = await runOperatorCommand({
+      event: event({ text: "/chats skip 1", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          return [];
+        },
+      },
+      ...kit(),
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const off = await runOperatorCommand({
+      event: event({ text: "/chats skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(off).toMatchObject({ text: "chats off" });
+    const bad = await runOperatorCommand({
+      event: event({ text: "/chats skip 01", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const phraseLog = kit();
+    const phraseSkip = await runOperatorCommand({
+      event: event({ text: `/chats skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...phraseLog,
+    });
+    expect(phraseSkip).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(phraseSkip)).not.toContain(phrase);
+    expect(JSON.stringify(phraseLog.logger.entries)).not.toContain(phrase);
+    const extra = await runOperatorCommand({
+      event: event({ text: "/chats skip 1 extra", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/chats [skip <count>]",
+    });
+    const scopedReads: string[] = [];
+    const scoped = await runOperatorCommand({
+      event: event({
+        text: "/chats skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async list() {
+          throw new Error("called");
+        },
+      },
+      quota: {
+        async read(_tenantId: string, chatId: string) {
+          scopedReads.push(chatId);
+          return {
+            enabled: true,
+            used: 0,
+            limit: 3000,
+            period: "calendar_month" as const,
+            degraded: false,
+          };
+        },
+      },
+      ...kit(),
+    });
+    expect(scoped).toMatchObject({ text: "参数无效" });
+    expect(scopedReads).toEqual([]);
+    expect(JSON.stringify(scoped)).not.toContain("called");
   });
 
   it("toggles one rule from private chat without rewriting the file", async () => {

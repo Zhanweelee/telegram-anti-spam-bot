@@ -12,6 +12,8 @@
 
 `/allowhost -100 skip 31` 只列出最后一台放行主机。不写 `skip` 时仍从第一台开始。
 
+`/chats skip 166` 跳过前面的 166 个群再往下列。不写 `skip` 时仍从第一个群开始。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

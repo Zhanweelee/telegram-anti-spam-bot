@@ -7879,8 +7879,12 @@ async function showChats(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  if (args.length !== 0) {
+  const parsed = parseChatsArgs(args);
+  if (parsed === "usage") {
     return say(input, "command.chats.usage");
+  }
+  if (parsed === "invalid") {
+    return say(input, "command.invalid");
   }
   const directory = input.chats;
   if (!directory) {
@@ -7892,10 +7896,16 @@ async function showChats(
       ? await directory.list(input.event.tenantId)
       : scope.ids;
     if (ids.length === 0) {
+      if (parsed.skip > 0) {
+        return say(input, "command.invalid");
+      }
       return say(input, "command.chats.empty");
     }
+    if (parsed.skip >= ids.length) {
+      return say(input, "command.invalid");
+    }
     const lines: string[] = [];
-    for (const id of ids) {
+    for (const id of ids.slice(parsed.skip)) {
       lines.push(await chatQuotaLine(input, id));
     }
     return fitChatLines(input, lines);
@@ -7907,6 +7917,26 @@ async function showChats(
     });
     return say(input, "command.invalid");
   }
+}
+
+function parseChatsArgs(
+  args: readonly string[],
+): "usage" | "invalid" | { readonly skip: number } {
+  if (args.length === 0) {
+    return { skip: 0 };
+  }
+  if (args[0] !== "skip") {
+    return "usage";
+  }
+  const countToken = args[1];
+  if (countToken === undefined) {
+    return "invalid";
+  }
+  const count = rulesSkipCount(countToken);
+  if (count === undefined || args.length !== 2) {
+    return count === undefined && args.length === 2 ? "invalid" : "usage";
+  }
+  return { skip: count };
 }
 
 function fitChatLines(
