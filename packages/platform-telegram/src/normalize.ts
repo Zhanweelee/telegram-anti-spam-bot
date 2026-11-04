@@ -3585,8 +3585,11 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
         }
       }
       const login = button.login_url;
-      if (isRecord(login) && typeof login.url === "string") {
-        urls.push(login.url);
+      if (isRecord(login)) {
+        if (typeof login.url === "string") {
+          urls.push(login.url);
+        }
+        pushPlainUrls(login.forward_text, urls);
       }
       const app = button.web_app;
       if (isRecord(app) && typeof app.url === "string") {
@@ -5289,8 +5292,11 @@ function richButton(value: unknown, urls: string[]): string {
     }
   }
   const login = value.login_url;
-  if (isRecord(login) && typeof login.url === "string") {
-    urls.push(login.url);
+  if (isRecord(login)) {
+    if (typeof login.url === "string") {
+      urls.push(login.url);
+    }
+    pushPlainUrls(login.forward_text, urls);
   }
   const app = value.web_app;
   if (isRecord(app) && typeof app.url === "string") {

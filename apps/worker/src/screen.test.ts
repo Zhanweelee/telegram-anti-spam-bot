@@ -2879,6 +2879,60 @@ describe("screenTelegramEvent", () => {
     expect(spamLogged).not.toContain("ad891");
   });
 
+  it("deletes a short link written on a login button's forwarded label", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 4923,
+        message: {
+          message_id: 14,
+          date: 1761955200,
+          chat: { id: -100892, type: "supergroup" },
+          from: { id: 8912 },
+          text: "今天站会",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: "登录",
+                  login_url: {
+                    url: "https://example.com/login892",
+                    forward_text: `${phrase} https://bit.ly/ad892`,
+                    bot_username: phrase,
+                  },
+                },
+              ],
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("short_link");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100892", messageId: "14" },
+    ]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain("ad892");
+    expect(logged).not.toContain("login892");
+  });
+
   it("keeps keyword deletes after the free quota drops llm", async () => {
     const phrase = "请免费领取礼品";
     let calls = 0;
