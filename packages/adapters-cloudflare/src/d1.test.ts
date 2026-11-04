@@ -111,6 +111,23 @@ describe("d1 storage", () => {
     expect(await store.list("local", "-300")).toEqual([]);
   });
 
+  it("ignores a warning limit that is outside 1 to 10", async () => {
+    const db = openSqlite();
+    const store = createD1WarnStore(db);
+    await store.writeLimit("local", "-100", 4);
+    await db
+      .prepare(
+        `INSERT INTO warn_limits (tenant_id, chat_id, limit_count)
+         VALUES ('local', '-200', 99)`,
+      )
+      .run();
+    expect(await store.readLimit("local", "-100")).toBe(4);
+    expect(await store.readLimit("local", "-200")).toBe(3);
+    expect(await store.readLimit("local", "-300")).toBe(3);
+    await store.writeLimit("local", "-100", 3);
+    expect(await store.readLimit("local", "-100")).toBe(3);
+  });
+
   it("applies the migration twice and then stores a rule set", async () => {
     const db = openSqlite();
     await applyStorageMigrations(db);

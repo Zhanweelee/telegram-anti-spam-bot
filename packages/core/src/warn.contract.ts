@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_WARN_ACTORS,
   MAX_WARN_CHATS,
+  MAX_WARN_LIMIT,
+  MIN_WARN_LIMIT,
+  WARN_LIMIT,
   WarnCapacityError,
   type WarnStore,
 } from "./warn.js";
@@ -91,6 +94,44 @@ export function bindWarnStoreContract(create: () => WarnStore): void {
       await store.write(target, 0);
       expect(await store.read(target)).toBe(0);
       expect(await store.clear(target)).toBe(false);
+    });
+
+    it("keeps a custom limit for one chat", async () => {
+      const store = create();
+      expect(await store.readLimit(target.tenantId, target.chatId)).toBe(
+        WARN_LIMIT,
+      );
+      await store.writeLimit(target.tenantId, target.chatId, 5);
+      await store.writeLimit(target.tenantId, "-200", 2);
+      expect(await store.readLimit(target.tenantId, target.chatId)).toBe(5);
+      expect(await store.readLimit(target.tenantId, "-200")).toBe(2);
+      expect(await store.readLimit(target.tenantId, "-300")).toBe(WARN_LIMIT);
+      await store.writeLimit(target.tenantId, target.chatId, WARN_LIMIT);
+      expect(await store.readLimit(target.tenantId, target.chatId)).toBe(
+        WARN_LIMIT,
+      );
+      expect(await store.readLimit(target.tenantId, "-200")).toBe(2);
+      await expect(
+        store.writeLimit(target.tenantId, target.chatId, MIN_WARN_LIMIT - 1),
+      ).rejects.toBeInstanceOf(WarnCapacityError);
+      await expect(
+        store.writeLimit(target.tenantId, target.chatId, MAX_WARN_LIMIT + 1),
+      ).rejects.toBeInstanceOf(WarnCapacityError);
+      await expect(
+        store.writeLimit(target.tenantId, target.chatId, 1.5),
+      ).rejects.toBeInstanceOf(WarnCapacityError);
+      const crowded = create();
+      for (let index = 0; index < MAX_WARN_CHATS; index += 1) {
+        await crowded.writeLimit(target.tenantId, String(index), 2);
+      }
+      await expect(
+        crowded.writeLimit(target.tenantId, "overflow", 2),
+      ).rejects.toBeInstanceOf(WarnCapacityError);
+      await crowded.writeLimit(target.tenantId, "0", 4);
+      expect(await crowded.readLimit(target.tenantId, "0")).toBe(4);
+      expect(await crowded.readLimit(target.tenantId, "overflow")).toBe(
+        WARN_LIMIT,
+      );
     });
   });
 }

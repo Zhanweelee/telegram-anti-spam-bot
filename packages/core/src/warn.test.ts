@@ -1,8 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { bindWarnStoreContract } from "./warn.contract.js";
-import { createMemoryWarnStore, sortWarnCounts } from "./warn.js";
+import {
+  createMemoryWarnStore,
+  normalizeWarnLimit,
+  sortWarnCounts,
+} from "./warn.js";
 
 bindWarnStoreContract(createMemoryWarnStore);
+
+describe("normalizeWarnLimit", () => {
+  it("keeps 1 through 10 and sends anything else back to 3", () => {
+    expect(normalizeWarnLimit(1)).toBe(1);
+    expect(normalizeWarnLimit(10)).toBe(10);
+    expect(normalizeWarnLimit(3)).toBe(3);
+    expect(normalizeWarnLimit(0)).toBe(3);
+    expect(normalizeWarnLimit(11)).toBe(3);
+    expect(normalizeWarnLimit(1.5)).toBe(3);
+  });
+});
 
 describe("sortWarnCounts", () => {
   it("orders a tie by the decimal actor id", () => {

@@ -7,9 +7,9 @@ import {
   defineAction,
   moreSevere,
   type Notifier,
+  normalizeWarnLimit,
   type Storage,
   supersedeChallenge,
-  WARN_LIMIT,
   type WarnStore,
 } from "@tasb/core";
 import { z } from "zod";
@@ -276,12 +276,15 @@ export function createWarnAction(deps: { readonly store: WarnStore }): Action {
         chatId: ctx.event.chatId,
         actorId: ctx.event.actor.id,
       };
-      if ((await deps.store.read(target)) >= WARN_LIMIT) {
+      const limit = normalizeWarnLimit(
+        await deps.store.readLimit(target.tenantId, target.chatId),
+      );
+      if ((await deps.store.read(target)) >= limit) {
         await ctx.moderator.banActor(target);
         return { actionId: "warn", status: "executed" };
       }
       const next = await deps.store.increment(target);
-      if (next < WARN_LIMIT) {
+      if (next < limit) {
         return { actionId: "warn", status: "executed" };
       }
       try {

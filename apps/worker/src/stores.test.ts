@@ -212,6 +212,7 @@ describe("resolveStores", () => {
       expect.stringContaining("review_samples"),
       expect.stringContaining("captcha_challenges"),
       expect.stringContaining("warn_counts"),
+      expect.stringContaining("warn_limits"),
     ]);
   });
 });

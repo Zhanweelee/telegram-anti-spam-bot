@@ -7298,7 +7298,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(90);
+    expect(menu).toHaveLength(91);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7410,6 +7410,10 @@ describe("runOperatorCommand", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(menu.at(-1)).toEqual({
+      command: "warnlimit",
+      description: "/warnlimit <chatId> [limit|reset]",
+    });
+    expect(menu.find((item) => item.command === "warns")).toEqual({
       command: "warns",
       description: "/warns <chatId> [actorId]",
     });
@@ -16386,6 +16390,12 @@ describe("runOperatorCommand", () => {
       async list(): Promise<readonly { actorId: string; count: number }[]> {
         throw new Error(phrase);
       },
+      async readLimit(): Promise<number> {
+        return 3;
+      },
+      async writeLimit(): Promise<void> {
+        return;
+      },
     };
     const failed = await runOperatorCommand({
       event: event({ text: "/warns -100", direct: true }),
@@ -16398,6 +16408,219 @@ describe("runOperatorCommand", () => {
       "operator_rejected",
     );
     expect(JSON.stringify(logged.logger.entries)).not.toContain(phrase);
+  });
+
+  it("sets a warning limit for one chat", async () => {
+    const deps = kit();
+    const warns = createMemoryWarnStore();
+    let called = 0;
+    const moderator = {
+      async banActor() {
+        called += 1;
+      },
+    };
+    const shown = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      moderator,
+      ...deps,
+    });
+    expect(shown).toMatchObject({ text: "-100 警告上限 3" });
+    const set = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 5", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      moderator,
+      ...deps,
+    });
+    expect(set).toMatchObject({ text: "已设置 -100 警告上限 5" });
+    expect(await warns.readLimit("local", "-100")).toBe(5);
+    expect(await warns.readLimit("local", "-200")).toBe(3);
+    const again = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      moderator,
+      ...deps,
+    });
+    expect(again).toMatchObject({ text: "-100 警告上限 5" });
+    const english = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 reset", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      warns,
+      moderator,
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: "Set the warning limit for -100 to 3",
+    });
+    expect(await warns.readLimit("local", "-100")).toBe(3);
+    const usage = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 5 extra", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/warnlimit <chatId> [limit|reset]",
+    });
+    const bad = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 11", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    const nameless = await runOperatorCommand({
+      event: event({ text: "/warnlimit chat", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(nameless).toMatchObject({ text: "参数无效" });
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/warnlimit -200 4",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      warns,
+      ...deps,
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const grouped = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 4" }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(grouped.status).not.toBe("reply");
+    expect(called).toBe(0);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const logged = kit();
+    const broken = {
+      async read(): Promise<number> {
+        return 0;
+      },
+      async increment(): Promise<number> {
+        return 1;
+      },
+      async write(): Promise<void> {
+        return;
+      },
+      async clear(): Promise<boolean> {
+        return false;
+      },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        return [];
+      },
+      async readLimit(): Promise<number> {
+        throw new Error(phrase);
+      },
+      async writeLimit(): Promise<void> {
+        return;
+      },
+    };
+    const failed = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100", direct: true }),
+      adminActorIds: ["42"],
+      warns: broken,
+      ...logged,
+    });
+    expect(failed).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(logged.logger.entries)).toContain(
+      "operator_rejected",
+    );
+    expect(JSON.stringify(logged.logger.entries)).not.toContain(phrase);
+    const unwritable = {
+      async read(): Promise<number> {
+        return 0;
+      },
+      async increment(): Promise<number> {
+        return 1;
+      },
+      async write(): Promise<void> {
+        return;
+      },
+      async clear(): Promise<boolean> {
+        return false;
+      },
+      async list(): Promise<readonly { actorId: string; count: number }[]> {
+        return [];
+      },
+      async readLimit(): Promise<number> {
+        return 3;
+      },
+      async writeLimit(): Promise<void> {
+        throw new Error(phrase);
+      },
+    };
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100 4", direct: true }),
+      adminActorIds: ["42"],
+      warns: unwritable,
+      ...logged,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(logged.logger.entries)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/warnlimit -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+  });
+
+  it("bans on the second warning when the chat limit is 2", async () => {
+    const deps = kit();
+    const warns = createMemoryWarnStore();
+    await warns.writeLimit("local", "-100", 2);
+    const banned: { chatId: string; actorId: string }[] = [];
+    const first = await runOperatorCommand({
+      event: event({ text: "/warn -100 77", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      moderator: {
+        async banActor(target) {
+          banned.push({ chatId: target.chatId, actorId: target.actorId });
+        },
+      },
+      ...deps,
+    });
+    expect(first).toMatchObject({ text: "已警告 -100 77 1/2" });
+    expect(banned).toEqual([]);
+    const second = await runOperatorCommand({
+      event: event({ text: "/warn -100 77", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      moderator: {
+        async banActor(target) {
+          banned.push({ chatId: target.chatId, actorId: target.actorId });
+        },
+      },
+      ...deps,
+    });
+    expect(second).toMatchObject({ text: "已警告并封禁 -100 77" });
+    expect(banned).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const listed = await runOperatorCommand({
+      event: event({ text: "/warns -100", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(listed).toMatchObject({ text: "-100\n77 2/2" });
+    const shown = await runOperatorCommand({
+      event: event({ text: "/warns -100 77", direct: true }),
+      adminActorIds: ["42"],
+      warns,
+      ...deps,
+    });
+    expect(shown).toMatchObject({ text: "-100 77 警告 2/2" });
+    expect(JSON.stringify(listed)).not.toContain(phrase);
   });
 
   it("rolls the third warning back when the ban fails", async () => {
@@ -16535,6 +16758,12 @@ describe("runOperatorCommand", () => {
       async list(): Promise<readonly { actorId: string; count: number }[]> {
         return [];
       },
+      async readLimit(): Promise<number> {
+        return 3;
+      },
+      async writeLimit(): Promise<void> {
+        return;
+      },
     };
     const unread = await runOperatorCommand({
       event: event({ text: "/warn -100 77", direct: true }),
@@ -16560,6 +16789,12 @@ describe("runOperatorCommand", () => {
       async list(): Promise<readonly { actorId: string; count: number }[]> {
         return [];
       },
+      async readLimit(): Promise<number> {
+        return 3;
+      },
+      async writeLimit(): Promise<void> {
+        return;
+      },
     };
     const full = await runOperatorCommand({
       event: event({ text: "/warn -100 77", direct: true }),
@@ -16584,6 +16819,12 @@ describe("runOperatorCommand", () => {
       },
       async list(): Promise<readonly { actorId: string; count: number }[]> {
         return [];
+      },
+      async readLimit(): Promise<number> {
+        return 3;
+      },
+      async writeLimit(): Promise<void> {
+        return;
       },
     };
     const failedClear = await runOperatorCommand({

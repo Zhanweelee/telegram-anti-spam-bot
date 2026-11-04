@@ -103,6 +103,9 @@ export const messageKeys = [
   "command.warns.count",
   "command.warns.absent",
   "command.warns.empty",
+  "command.warnlimit.usage",
+  "command.warnlimit.show",
+  "command.warnlimit.done",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -456,6 +459,7 @@ const syntax = [
   "/warn <chatId> <actorId>",
   "/unwarn <chatId> <actorId>",
   "/warns <chatId> [actorId]",
+  "/warnlimit <chatId> [limit|reset]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -576,6 +580,9 @@ const zh = {
   "command.warns.count": "{chatId} {actorId} 警告 {count}/{limit}",
   "command.warns.absent": "{chatId} {actorId} 没有警告",
   "command.warns.empty": "{chatId} 没有警告",
+  "command.warnlimit.usage": "用法：/warnlimit <chatId> [limit|reset]",
+  "command.warnlimit.show": "{chatId} 警告上限 {limit}",
+  "command.warnlimit.done": "已设置 {chatId} 警告上限 {limit}",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -979,6 +986,9 @@ const en = {
   "command.warns.count": "{actorId} in {chatId} has {count}/{limit} warnings",
   "command.warns.absent": "{actorId} has no warnings in {chatId}",
   "command.warns.empty": "No warnings in {chatId}",
+  "command.warnlimit.usage": "Usage: /warnlimit <chatId> [limit|reset]",
+  "command.warnlimit.show": "Warning limit for {chatId} is {limit}",
+  "command.warnlimit.done": "Set the warning limit for {chatId} to {limit}",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":

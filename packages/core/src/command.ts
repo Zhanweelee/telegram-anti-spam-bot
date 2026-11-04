@@ -77,7 +77,12 @@ import {
   resolveRuleSet,
 } from "./rules-load.js";
 import type { RuleSwitch, RuntimeStore } from "./runtime.js";
-import { WARN_LIMIT, type WarnCount, type WarnStore } from "./warn.js";
+import {
+  normalizeWarnLimit,
+  WARN_LIMIT,
+  type WarnCount,
+  type WarnStore,
+} from "./warn.js";
 
 const COMMAND_NAMES = [
   "help",
@@ -170,6 +175,7 @@ const COMMAND_NAMES = [
   "warn",
   "unwarn",
   "warns",
+  "warnlimit",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -519,6 +525,8 @@ async function dispatch(
       return clearWarning(input, args);
     case "warns":
       return readWarnings(input, args);
+    case "warnlimit":
+      return setWarnLimit(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -5243,6 +5251,10 @@ async function warnMember(
     chatId: parsed.chatId,
     actorId: parsed.actorId,
   };
+  const limit = await readChatWarnLimit(input, store, parsed.chatId, "warn");
+  if (typeof limit === "string") {
+    return limit;
+  }
   let current = 0;
   try {
     current = await store.read(target);
@@ -5250,11 +5262,11 @@ async function warnMember(
     rejectWarn(input, "warn");
     return say(input, "command.invalid");
   }
-  if (current >= WARN_LIMIT) {
+  if (current >= limit) {
     return say(input, "command.warn.already", {
       chatId: parsed.chatId,
       actorId: parsed.actorId,
-      limit: WARN_LIMIT,
+      limit,
     });
   }
   let next = 0;
@@ -5264,12 +5276,12 @@ async function warnMember(
     rejectWarn(input, "warn");
     return say(input, "command.invalid");
   }
-  if (next < WARN_LIMIT) {
+  if (next < limit) {
     return say(input, "command.warn.counted", {
       chatId: parsed.chatId,
       actorId: parsed.actorId,
       count: next,
-      limit: WARN_LIMIT,
+      limit,
     });
   }
   const ban = input.moderator?.banActor;
@@ -5364,11 +5376,15 @@ async function readWarnings(
       actorId: parsed.actorId,
     });
   }
+  const limit = await readChatWarnLimit(input, store, parsed.chatId, "warns");
+  if (typeof limit === "string") {
+    return limit;
+  }
   return say(input, "command.warns.count", {
     chatId: parsed.chatId,
     actorId: parsed.actorId,
     count,
-    limit: WARN_LIMIT,
+    limit,
   });
 }
 
@@ -5398,11 +5414,82 @@ async function listWarnings(
   if (rows.length === 0) {
     return say(input, "command.warns.empty", { chatId });
   }
+  const limit = await readChatWarnLimit(input, store, chatId, "warns");
+  if (typeof limit === "string") {
+    return limit;
+  }
   const lines = [chatId];
   for (const row of rows) {
-    lines.push(`${row.actorId} ${row.count}/${WARN_LIMIT}`);
+    lines.push(`${row.actorId} ${row.count}/${limit}`);
   }
   return lines.join("\n");
+}
+
+async function setWarnLimit(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1 || args.length > 2) {
+    return say(input, "command.warnlimit.usage");
+  }
+  const chatId = args[0] ?? "";
+  if (!isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const store = input.warns;
+  if (!store) {
+    rejectWarn(input, "warnlimit");
+    return say(input, "command.invalid");
+  }
+  const requested = args[1];
+  if (requested === undefined) {
+    const limit = await readChatWarnLimit(input, store, chatId, "warnlimit");
+    if (typeof limit === "string") {
+      return limit;
+    }
+    return say(input, "command.warnlimit.show", { chatId, limit });
+  }
+  const limit = parseWarnLimit(requested);
+  if (limit === undefined) {
+    return say(input, "command.invalid");
+  }
+  try {
+    await store.writeLimit(input.event.tenantId, chatId, limit);
+  } catch {
+    rejectWarn(input, "warnlimit");
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.warnlimit.done", { chatId, limit });
+}
+
+function parseWarnLimit(value: string): number | undefined {
+  if (value === "reset") {
+    return WARN_LIMIT;
+  }
+  if (!/^(?:[1-9]|10)$/.test(value)) {
+    return undefined;
+  }
+  return Number(value);
+}
+
+async function readChatWarnLimit(
+  input: OperatorCommandInput,
+  store: WarnStore,
+  chatId: string,
+  command: "warn" | "warns" | "warnlimit",
+): Promise<number | string> {
+  try {
+    return normalizeWarnLimit(
+      await store.readLimit(input.event.tenantId, chatId),
+    );
+  } catch {
+    rejectWarn(input, command);
+    return say(input, "command.invalid");
+  }
 }
 
 function warnArgs(
@@ -5448,7 +5535,7 @@ async function restoreWarning(
 
 function rejectWarn(
   input: OperatorCommandInput,
-  command: "warn" | "unwarn" | "warns",
+  command: "warn" | "unwarn" | "warns" | "warnlimit",
 ): void {
   input.logger.warn("operator_rejected", {
     eventId: input.event.id,
