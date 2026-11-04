@@ -12,6 +12,8 @@ import type { PolicyStore } from "./policy-store.js";
 import type {
   AuditRecord,
   DefaultAdministratorRights,
+  DefaultRightsQuery,
+  DefaultRightsSnapshot,
   DefaultRightsTarget,
   Storage,
 } from "./ports.js";
@@ -7050,6 +7052,208 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async setDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("reads this bot's default administrator rights", async () => {
+    const deps = kit();
+    const seen: { forChannels: boolean }[] = [];
+    const off = {
+      anonymous: "off",
+      manageChat: "off",
+      deleteMessages: "off",
+      manageVideoChats: "off",
+      restrictMembers: "off",
+      promoteMembers: "off",
+      changeInfo: "off",
+      inviteUsers: "off",
+      postStories: "off",
+      editStories: "off",
+      deleteStories: "off",
+      postMessages: "off",
+      editMessages: "off",
+      pinMessages: "off",
+      manageTopics: "off",
+      manageDirectMessages: "off",
+      manageTags: "off",
+      sendWelcomeMessages: "off",
+    } as const;
+    const remember = {
+      async readDefaultRights(
+        target: DefaultRightsQuery,
+      ): Promise<DefaultRightsSnapshot> {
+        seen.push({ forChannels: target.forChannels });
+        if (target.forChannels) {
+          return { ...off, postMessages: "on" };
+        }
+        return {
+          ...off,
+          anonymous: "unknown",
+          manageChat: "on",
+        };
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/botrights", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: [
+        "botrights 群",
+        "匿名 未知",
+        "管理 on",
+        "删除 off",
+        "视频 off",
+        "限制 off",
+        "提升 off",
+        "资料 off",
+        "邀请 off",
+        "故事 off",
+        "改故事 off",
+        "删故事 off",
+        "发帖 off",
+        "编辑 off",
+        "置顶 off",
+        "话题 off",
+        "私信 off",
+        "标签 off",
+        "欢迎 off",
+      ].join("\n"),
+    });
+    expect(seen).toEqual([{ forChannels: false }]);
+    expect(seen[0]).not.toHaveProperty("chatId");
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const channels = await runOperatorCommand({
+      event: event({ text: "/botrights channels", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(channels).toMatchObject({
+      text: [
+        "botrights 频道",
+        "匿名 off",
+        "管理 off",
+        "删除 off",
+        "视频 off",
+        "限制 off",
+        "提升 off",
+        "资料 off",
+        "邀请 off",
+        "故事 off",
+        "改故事 off",
+        "删故事 off",
+        "发帖 on",
+        "编辑 off",
+        "置顶 off",
+        "话题 off",
+        "私信 off",
+        "标签 off",
+        "欢迎 off",
+      ].join("\n"),
+    });
+    expect(seen[1]).toEqual({ forChannels: true });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/botrights [channels]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/botrights", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: remember,
+      ...kit(),
+    });
+    expect(english.status).toBe("reply");
+    if (english.status === "reply") {
+      expect(
+        english.text.startsWith(
+          "botrights groups\nanonymous unknown\nmanage on\ndelete off\n",
+        ),
+      ).toBe(true);
+      expect(english.text.split("\n")).toHaveLength(19);
+    }
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/botrights", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readDefaultRights() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/botrights channels extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/botrights [channels]",
+    });
+    expect(seen).toHaveLength(3);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/botrights ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readDefaultRights() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/botrights", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/botrights", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readDefaultRights() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"botrights"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/botrights",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readDefaultRights() {
           throw new Error("called");
         },
       },

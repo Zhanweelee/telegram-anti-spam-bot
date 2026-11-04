@@ -2672,6 +2672,127 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
   });
 
+  it("reads this bot's default administrator rights", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/botrights", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                can_manage_chat: true,
+                can_delete_messages: false,
+                description: phrase,
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      [
+        "botrights 群",
+        "匿名 未知",
+        "管理 on",
+        "删除 off",
+        "视频 未知",
+        "限制 未知",
+        "提升 未知",
+        "资料 未知",
+        "邀请 未知",
+        "故事 未知",
+        "改故事 未知",
+        "删故事 未知",
+        "发帖 未知",
+        "编辑 未知",
+        "置顶 未知",
+        "话题 未知",
+        "私信 未知",
+        "标签 未知",
+        "欢迎 未知",
+      ].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual([
+      "getMyDefaultAdministratorRights",
+    ]);
+    expect(calls[0]?.method).not.toContain("setMyDefaultAdministratorRights");
+    expect(calls[0]?.method).not.toContain("promoteChatMember");
+    expect(calls[0]?.body).toBe("{}");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const channels = deps();
+    const channelCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/botrights channels", direct: true }),
+      {
+        ...channels,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          channelCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { can_post_messages: true },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(channels.reply.sent[0]?.text.startsWith("botrights 频道\n")).toBe(
+      true,
+    );
+    expect(channels.reply.sent[0]?.text).toContain("发帖 on");
+    expect(JSON.parse(channelCalls[0]?.body ?? "null")).toEqual({
+      for_channels: true,
+    });
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/botrights", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/botrights", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { can_manage_chat: phrase },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const kit = deps();
     const calls: { method: string; body: string }[] = [];

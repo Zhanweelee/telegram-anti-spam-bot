@@ -179,6 +179,8 @@ export {
   type ChatTitleTarget,
   type DefaultAdministratorRights,
   type DefaultChatPermissions,
+  type DefaultRightsQuery,
+  type DefaultRightsSnapshot,
   type DefaultRightsTarget,
   type DeleteMessagesTarget,
   type DeleteTarget,

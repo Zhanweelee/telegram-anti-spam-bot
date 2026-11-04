@@ -377,6 +377,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readBoostCount() {
       throw new Error("boosts_unavailable");
     },
+    async readDefaultRights() {
+      throw new Error("botrights_unavailable");
+    },
     async createTopic(_target: NewTopicTarget) {
       throw new Error("newtopic_unavailable");
     },

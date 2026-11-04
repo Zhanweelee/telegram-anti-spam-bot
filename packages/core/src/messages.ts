@@ -209,6 +209,9 @@ export const messageKeys = [
   "command.myrights.channels",
   "command.myrights.cleared",
   "command.myrights.channels_cleared",
+  "command.botrights.usage",
+  "command.botrights.groups",
+  "command.botrights.channels",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -285,6 +288,7 @@ const syntax = [
   "/declinepost <chatId> <messageId> [comment]",
   "/delephemeral <chatId> <userId> <messageId>",
   "/myrights [channels] <clear|right...>",
+  "/botrights [channels]",
 ].join("\n");
 
 const zh = {
@@ -532,6 +536,9 @@ const zh = {
     "已请求清掉这个 bot 在群和超级群里的默认管理员权限。已有群不受影响。",
   "command.myrights.channels_cleared":
     "已请求清掉这个 bot 在频道里的默认管理员权限。已有频道不受影响。",
+  "command.botrights.usage": "用法：/botrights [channels]",
+  "command.botrights.groups": "botrights 群",
+  "command.botrights.channels": "botrights 频道",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -800,6 +807,9 @@ const en = {
     "Asked to clear this bot's default admin rights for groups and supergroups. Existing groups stay.",
   "command.myrights.channels_cleared":
     "Asked to clear this bot's default admin rights for channels. Existing channels stay.",
+  "command.botrights.usage": "Usage: /botrights [channels]",
+  "command.botrights.groups": "botrights groups",
+  "command.botrights.channels": "botrights channels",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

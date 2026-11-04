@@ -521,6 +521,13 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("does not invent default administrator rights", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readDefaultRights({ tenantId: "t", forChannels: false }),
+    ).rejects.toThrow("botrights_unavailable");
+  });
+
   it("does not invent a boost count", async () => {
     const moderator = createMemoryModerator();
     await expect(
