@@ -5675,6 +5675,135 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a video-chat invite until that chat asks", async () => {
+    const name = "视频邀请广告名";
+    const actor = "拉人的人";
+    const userId = 90198;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      invited?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 99, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.invited
+              ? {
+                  video_chat_participants_invited: {
+                    users: [{ id: userId, first_name: name }],
+                  },
+                }
+              : {}),
+            ...(input.flag ? { video_chat_participants_invited: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10420,
+      chatId: -1001048,
+      invited: true,
+    });
+    expect(idle.message?.asCallInvite).toBe(true);
+    expect(idle.message?.text).toBe(name);
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    expect(JSON.stringify(idle)).not.toContain(String(userId));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "call_invite",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["call_invite"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10421, chatId: -1001049, invited: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("call_invite");
+    expect(removed.decision.ruleIds).toContain("call_invite");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "invite:video" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10422, chatId: -1001050, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10423,
+        chatId: -1001051,
+        invited: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(userId));
+    expect(dumped).not.toContain(actor);
+  });
+
   it("copies saved settings when a group becomes a supergroup", async () => {
     const keyword = "迁移专属词";
     const runtime = createMemoryRuntimeStore();

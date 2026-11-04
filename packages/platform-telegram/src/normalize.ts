@@ -159,6 +159,7 @@ async function messageEvent(
   const priceNotice = changedPrice(message);
   const postNotice = suggestedPost(message);
   const checklistNotice = taskNotice(message);
+  const asCallInvite = videoInvite(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -209,8 +210,17 @@ async function messageEvent(
       ...(priceNotice === undefined ? {} : { priceNotice }),
       ...(postNotice === undefined ? {} : { postNotice }),
       ...(checklistNotice === undefined ? {} : { checklistNotice }),
+      ...(asCallInvite ? { asCallInvite: true as const } : {}),
     },
   });
+}
+
+function videoInvite(message: Record<string, unknown>): boolean {
+  const invited = message.video_chat_participants_invited;
+  if (!isRecord(invited) || !Array.isArray(invited.users)) {
+    return false;
+  }
+  return invited.users.some((item) => isRecord(item));
 }
 
 function movedChat(

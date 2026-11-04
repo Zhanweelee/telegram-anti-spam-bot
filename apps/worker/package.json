@@ -35,6 +35,7 @@
     "@tasb/detector-price": "workspace:*",
     "@tasb/detector-post": "workspace:*",
     "@tasb/detector-checklist": "workspace:*",
+    "@tasb/detector-call-invite": "workspace:*",
     "@tasb/detector-via": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",

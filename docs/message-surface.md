@@ -71,3 +71,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `checklist_tasks_done.marked_as_done_task_ids` 全是大于 0 的安全整数时，消息带 `checklistNotice: "done"`。`marked_as_not_done_task_ids` 满足同样条件时带 `undone`。同时出现时先认完成。任务号和原清单不进事件。空对象、0、负数和字符串不带这个标记。新加的任务文字仍按 ADR 0089 成为正文，不带这个标记。规则 `checklist_notice` 默认关闭。见 ADR 0489。
 
 `migrate_to_chat_id` 是非 0 的安全整数，且和当前群不同时，事件带 `chatMove`，`from` 是当前群，`to` 是新编号。`migrate_from_chat_id` 满足同样条件时，`from` 是旧编号，`to` 是当前群。同时出现时先认 `migrate_to_chat_id`。编号不进正文。0、小数、字符串和相同编号不带这个字段。见 ADR 0490。
+
+`video_chat_participants_invited.users` 里至少有一个用户对象时，消息带 `asCallInvite`。用户编号不进事件。被邀请的名字仍按 ADR 0119 成为正文。空对象、空数组和布尔值不带这个标记。这条消息不因此带 `call`。规则 `call_invite` 默认关闭。见 ADR 0491。

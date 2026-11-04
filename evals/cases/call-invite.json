@@ -1,0 +1,18 @@
+[
+  {
+    "id": "call_invite_spam",
+    "kind": "message",
+    "label": "spam",
+    "asCallInvite": true
+  },
+  {
+    "id": "call_invite_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "call_invite_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
