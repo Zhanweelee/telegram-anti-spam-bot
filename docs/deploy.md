@@ -209,6 +209,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> post_pending on` 删这个群里待审建议帖正文。默认关闭。价格和发表时间不进证据。通过、失败、付款和退款仍看 `post_notice`。拒绝仍看 `post_declined`。见 ADR 0499。
 
+`/rule <chatId> media_spoiler on` 删这个群里盖着剧透的媒体。默认关闭。文件号不进证据。说明仍参与关键词。没有剧透的照片和视频仍留下。见 ADR 0500。
+
 ## 确认
 
 ```sh

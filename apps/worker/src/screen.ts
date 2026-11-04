@@ -101,6 +101,7 @@ import {
 import { createScriptDetector } from "@tasb/detector-script";
 import { createSenderDetector } from "@tasb/detector-sender";
 import { createSharedChatDetector } from "@tasb/detector-shared-chat";
+import { createSpoilerDetector } from "@tasb/detector-spoiler";
 import { createStoryDetector } from "@tasb/detector-story";
 import { createTaskDetector } from "@tasb/detector-task";
 import { createTitleDetector } from "@tasb/detector-title";
@@ -684,6 +685,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.postPending,
         value: createPendingDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaSpoiler,
+        value: createSpoilerDetector(),
       },
       {
         source: "builtin",

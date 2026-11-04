@@ -355,6 +355,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "media_spoiler",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_spoiler"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

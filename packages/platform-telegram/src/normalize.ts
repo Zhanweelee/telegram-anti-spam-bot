@@ -168,6 +168,7 @@ async function messageEvent(
   const asPostDeclined = declinedPost(message);
   const asGroupCreated = createdGroup(message);
   const asPostPending = pendingPost(message);
+  const asSpoiler = coveredMedia(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -227,6 +228,7 @@ async function messageEvent(
       ...(asPostDeclined ? { asPostDeclined: true as const } : {}),
       ...(asGroupCreated ? { asGroupCreated: true as const } : {}),
       ...(asPostPending ? { asPostPending: true as const } : {}),
+      ...(asSpoiler ? { asSpoiler: true as const } : {}),
     },
   });
 }
@@ -258,6 +260,10 @@ function createdGroup(message: Record<string, unknown>): boolean {
 function pendingPost(message: Record<string, unknown>): boolean {
   const info = message.suggested_post_info;
   return isRecord(info) && info.state === "pending";
+}
+
+function coveredMedia(message: Record<string, unknown>): boolean {
+  return message.has_media_spoiler === true;
 }
 
 function declinedPost(message: Record<string, unknown>): boolean {

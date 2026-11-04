@@ -51,6 +51,7 @@
     "@tasb/detector-decline": "workspace:*",
     "@tasb/detector-created": "workspace:*",
     "@tasb/detector-pending": "workspace:*",
+    "@tasb/detector-spoiler": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }
