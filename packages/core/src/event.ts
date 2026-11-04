@@ -105,6 +105,8 @@ export const messageSchema = z
     background: z.enum(["wallpaper", "pattern", "fill", "theme"]).optional(),
     /** Gift service line. Star counts, ids, and publisher names stay out. */
     gift: z.enum(["card", "unique", "upgrade"]).optional(),
+    /** Pin service line. The pinned message stays out. */
+    asPin: z.literal(true).optional(),
   })
   .refine(
     (message) =>

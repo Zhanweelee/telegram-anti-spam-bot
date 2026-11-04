@@ -34,6 +34,7 @@
     "@tasb/detector-photo": "workspace:*",
     "@tasb/detector-background": "workspace:*",
     "@tasb/detector-gift": "workspace:*",
+    "@tasb/detector-pin": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

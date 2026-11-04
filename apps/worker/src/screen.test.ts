@@ -5675,6 +5675,139 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a pin until that chat asks", async () => {
+    const pinnedText = "置顶广告正文";
+    const pinnedId = 90182;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      pinned?: boolean;
+      empty?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.pinned
+              ? {
+                  pinned_message: {
+                    message_id: pinnedId,
+                    text: `${pinnedText} https://bit.ly/pin450`,
+                    from: { id: 97, first_name: "置顶的人" },
+                  },
+                }
+              : {}),
+            ...(input.empty ? { pinned_message: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8300,
+      chatId: -100830,
+      pinned: true,
+    });
+    expect(idle.message?.asPin).toBe(true);
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(pinnedText);
+    expect(JSON.stringify(idle)).not.toContain("90182");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "pin_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["pin_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8301, chatId: -100831, pinned: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("pin_notice");
+    expect(removed.decision.ruleIds).toContain("pin_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "pin:notice" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 8302, chatId: -100832, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8303,
+        chatId: -100833,
+        pinned: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(pinnedText);
+    expect(dumped).not.toContain("pin450");
+    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("置顶的人");
+    expect(dumped).not.toContain("90182");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

@@ -173,6 +173,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> gift_card on` 删这个群里的普通礼物、独特礼物和升级购买。默认关闭。星星数量不进证据。附言里的关键词仍删除。见 ADR 0481。
 
+`/rule <chatId> pin_notice on` 删这个群里的置顶提示。默认关闭。被置顶的原文不进证据。置顶本身还在。见 ADR 0482。
+
 ## 确认
 
 ```sh

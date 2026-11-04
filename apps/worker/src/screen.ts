@@ -73,6 +73,7 @@ import { createLocationDetector } from "@tasb/detector-location";
 import { createMediaDetector } from "@tasb/detector-media";
 import { createNoticeDetector } from "@tasb/detector-notice";
 import { createPhotoDetector } from "@tasb/detector-photo";
+import { createPinDetector } from "@tasb/detector-pin";
 import {
   createFloodDetector,
   createRepeatDetector,
@@ -558,6 +559,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.giftCard,
         value: createGiftDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.pinNotice,
+        value: createPinDetector(),
       },
       {
         source: "builtin",

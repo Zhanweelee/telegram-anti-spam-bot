@@ -107,6 +107,9 @@ importers:
       '@tasb/detector-photo':
         specifier: workspace:*
         version: link:../../packages/detectors-photo
+      '@tasb/detector-pin':
+        specifier: workspace:*
+        version: link:../../packages/detectors-pin
       '@tasb/detector-rate':
         specifier: workspace:*
         version: link:../../packages/detectors-rate
@@ -201,6 +204,9 @@ importers:
       '@tasb/detector-photo':
         specifier: workspace:*
         version: link:../packages/detectors-photo
+      '@tasb/detector-pin':
+        specifier: workspace:*
+        version: link:../packages/detectors-pin
       '@tasb/detector-rate':
         specifier: workspace:*
         version: link:../packages/detectors-rate
@@ -452,6 +458,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-photo:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-pin:
     dependencies:
       '@tasb/core':
         specifier: workspace:*
