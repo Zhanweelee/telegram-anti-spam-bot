@@ -189,6 +189,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> checklist_notice on` 删这个群里清单标成完成和取消完成的提示。默认关闭。任务号不进证据。任务完成状态不变。见 ADR 0489。
 
+群升级成超级群时，旧编号上的开关、关键词、洪泛、重复、禁言、验证、允许的主机名和白名单会抄到新编号。新编号已经保存的那一项留下。见 ADR 0490。
+
 ## 确认
 
 ```sh

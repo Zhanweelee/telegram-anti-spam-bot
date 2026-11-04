@@ -69,3 +69,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `suggested_post_approved.send_date` 是大于等于 0 的安全整数时，消息带 `postNotice: "approved"`。`suggested_post_approval_failed.price` 是对象时带 `failed`。`suggested_post_paid.currency` 正好是 `XTR` 或 `TON` 时带 `paid`。`suggested_post_refunded.reason` 正好是 `post_deleted` 或 `payment_refunded` 时带 `refunded`。同时出现时先认通过。原帖、价格、发表时间和退款原因不进事件。空对象和其它币种不带这个标记。拒绝说明不带这个标记，仍按 ADR 0113 成为正文。规则 `post_notice` 默认关闭。见 ADR 0488。
 
 `checklist_tasks_done.marked_as_done_task_ids` 全是大于 0 的安全整数时，消息带 `checklistNotice: "done"`。`marked_as_not_done_task_ids` 满足同样条件时带 `undone`。同时出现时先认完成。任务号和原清单不进事件。空对象、0、负数和字符串不带这个标记。新加的任务文字仍按 ADR 0089 成为正文，不带这个标记。规则 `checklist_notice` 默认关闭。见 ADR 0489。
+
+`migrate_to_chat_id` 是非 0 的安全整数，且和当前群不同时，事件带 `chatMove`，`from` 是当前群，`to` 是新编号。`migrate_from_chat_id` 满足同样条件时，`from` 是旧编号，`to` 是当前群。同时出现时先认 `migrate_to_chat_id`。编号不进正文。0、小数、字符串和相同编号不带这个字段。见 ADR 0490。

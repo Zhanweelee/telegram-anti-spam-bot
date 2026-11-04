@@ -22,6 +22,7 @@ import {
   type Cache,
   type CaptchaStore,
   type Clock,
+  copyMissingChatSettings,
   createSystemClock,
   type Detector,
   defaultPrefilterPolicy,
@@ -266,6 +267,29 @@ export async function screenTelegramEvent(
 ): Promise<PipelineResult> {
   const logger = deps.logger ?? createWorkerLogger();
   const runtime = deps.runtime ?? workerRuntime;
+  if (event.chatMove) {
+    try {
+      const copied = await copyMissingChatSettings({
+        runtime,
+        policy: deps.policyStore ?? workerPolicyStore,
+        tenantId: event.tenantId,
+        fromChatId: event.chatMove.from,
+        toChatId: event.chatMove.to,
+      });
+      if (copied > 0) {
+        logger.info("chat_moved", {
+          eventId: event.id,
+          chatId: event.chatId,
+          copied,
+        });
+      }
+    } catch {
+      logger.warn("chat_move_failed", {
+        eventId: event.id,
+        chatId: event.chatId,
+      });
+    }
+  }
   let switches: readonly RuleSwitch[] = [];
   try {
     switches = await runtime.listRuleSwitches(event.tenantId, event.chatId);

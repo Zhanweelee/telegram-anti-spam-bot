@@ -1,3 +1,4 @@
+import { copyMissingChatSettings } from "@tasb/core";
 import {
   bindBlocklistStoreContract,
   bindPolicyStoreContract,
@@ -93,6 +94,67 @@ describe("kv runtime store", () => {
     expect(await policy.get("local", "-100")).toMatchObject({
       exemptAdmins: true,
     });
+  });
+
+  it("copies missing chat settings onto the new id and keeps the source", async () => {
+    const backing = createMapStore();
+    const runtime = createKvRuntimeStore(backing.store);
+    const policy = createKvPolicyStore(backing.store);
+    const keyword = "迁移专属词";
+    expect(await runtime.addKeyword("local", "-1001046", keyword)).toBe(true);
+    expect(
+      await runtime.setFloodPolicy("local", "-1001046", {
+        threshold: 8,
+        windowSeconds: 20,
+      }),
+    ).toBe(true);
+    await policy.put("local", "-1001046", {
+      exemptAdmins: false,
+      allowActorIds: ["user_kept"],
+    });
+    expect(await runtime.addKeyword("local", "-100880447", "已有词")).toBe(
+      true,
+    );
+    const copied = await copyMissingChatSettings({
+      runtime,
+      policy,
+      tenantId: "local",
+      fromChatId: "-1001046",
+      toChatId: "-100880446",
+    });
+    expect(copied).toBe(3);
+    expect(await runtime.listKeywords("local", "-100880446")).toEqual([
+      keyword,
+    ]);
+    expect(await runtime.listKeywords("local", "-1001046")).toEqual([keyword]);
+    expect(await runtime.getFloodPolicy("local", "-100880446")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await policy.get("local", "-100880446")).toEqual({
+      exemptAdmins: false,
+      allowActorIds: ["user_kept"],
+    });
+    const kept = await copyMissingChatSettings({
+      runtime,
+      policy,
+      tenantId: "local",
+      fromChatId: "-1001046",
+      toChatId: "-100880447",
+    });
+    expect(kept).toBe(2);
+    expect(await runtime.listKeywords("local", "-100880447")).toEqual([
+      "已有词",
+    ]);
+    expect(await runtime.getFloodPolicy("local", "-100880447")).toEqual({
+      threshold: 8,
+      windowSeconds: 20,
+    });
+    expect(await policy.get("local", "-100880447")).toEqual({
+      exemptAdmins: false,
+      allowActorIds: ["user_kept"],
+    });
+    expect(JSON.stringify(backing.values)).not.toContain("请免费领取礼品");
   });
 
   it("treats a corrupt document as empty and hides the text", async () => {
