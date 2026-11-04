@@ -202,6 +202,8 @@ export const messageKeys = [
   "command.admintitle.cleared",
   "command.declinepost.usage",
   "command.declinepost.done",
+  "command.delephemeral.usage",
+  "command.delephemeral.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -276,6 +278,7 @@ const syntax = [
   "/stickers <chatId> <name>",
   "/admintitle <chatId> <userId> [title]",
   "/declinepost <chatId> <messageId> [comment]",
+  "/delephemeral <chatId> <userId> <messageId>",
 ].join("\n");
 
 const zh = {
@@ -510,6 +513,10 @@ const zh = {
     "用法：/declinepost <chatId> <messageId> [comment]",
   "command.declinepost.done":
     "已请求拒绝 {chatId} 的建议帖 {messageId}。这条不会发出。其它建议帖还在。",
+  "command.delephemeral.usage":
+    "用法：/delephemeral <chatId> <userId> <messageId>",
+  "command.delephemeral.done":
+    "已请求删除 {chatId} 里发给 {actorId} 的临时消息 {messageId}。对方离线时可能收不到这次删除。其它消息还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -765,6 +772,10 @@ const en = {
     "Usage: /declinepost <chatId> <messageId> [comment]",
   "command.declinepost.done":
     "Asked to decline suggested post {messageId} in {chatId}. This post stays unpublished. The other suggested posts stay.",
+  "command.delephemeral.usage":
+    "Usage: /delephemeral <chatId> <userId> <messageId>",
+  "command.delephemeral.done":
+    "Asked to delete ephemeral message {messageId} sent to {actorId} in {chatId}. An offline recipient may not see the deletion. The other messages stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

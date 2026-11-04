@@ -159,8 +159,15 @@ describe("memory adapter", () => {
       chatId: "c",
       messageId: "m",
     });
+    await moderator.deleteMessage({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "55",
+      audienceId: "77",
+    });
     expect(moderator.deleted).toEqual([
       { tenantId: "t", chatId: "c", messageId: "m" },
+      { tenantId: "t", chatId: "c", messageId: "55", audienceId: "77" },
     ]);
   });
 
