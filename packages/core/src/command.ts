@@ -25,6 +25,7 @@ import {
   type ChatAdministrator,
   type DefaultAdministratorRights,
   type DefaultChatPermissions,
+  type DefaultRightsSnapshot,
   fitAuditExportDocument,
   type MemberStanding,
   type ModerationPort,
@@ -117,6 +118,7 @@ const COMMAND_NAMES = [
   "declinepost",
   "delephemeral",
   "myrights",
+  "botrights",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -253,6 +255,7 @@ export interface OperatorCommandInput {
       | "pinMessage"
       | "readAdministrators"
       | "readBoostCount"
+      | "readDefaultRights"
       | "readMember"
       | "readMemberCount"
       | "readPermissions"
@@ -466,6 +469,8 @@ async function dispatch(
       return deleteEphemeral(input, args);
     case "myrights":
       return setMyRights(input, args);
+    case "botrights":
+      return showBotRights(input, args);
   }
 }
 
@@ -2830,6 +2835,87 @@ function rejectDefaultRights(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "myrights",
+  });
+}
+
+const defaultRightLines = [
+  ["command.admins.anonymous", "anonymous"],
+  ["command.admins.manage_chat", "manageChat"],
+  ["command.admins.delete_messages", "deleteMessages"],
+  ["command.admins.manage_video_chats", "manageVideoChats"],
+  ["command.admins.restrict_members", "restrictMembers"],
+  ["command.admins.promote_members", "promoteMembers"],
+  ["command.admins.change_info", "changeInfo"],
+  ["command.admins.invite_users", "inviteUsers"],
+  ["command.admins.post_stories", "postStories"],
+  ["command.admins.edit_stories", "editStories"],
+  ["command.admins.delete_stories", "deleteStories"],
+  ["command.admins.post_messages", "postMessages"],
+  ["command.admins.edit_messages", "editMessages"],
+  ["command.admins.pin_messages", "pinMessages"],
+  ["command.admins.manage_topics", "manageTopics"],
+  ["command.admins.manage_direct_messages", "manageDirectMessages"],
+  ["command.admins.manage_tags", "manageTags"],
+  ["command.admins.send_welcome_messages", "sendWelcomeMessages"],
+] as const satisfies ReadonlyArray<
+  readonly [MessageKey, keyof DefaultRightsSnapshot]
+>;
+
+async function showBotRights(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.botrights.usage");
+  }
+  const forChannels = args.length === 1;
+  if (forChannels && args[0] !== "channels") {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readDefaultRights;
+  if (!read) {
+    rejectBotRights(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const rights = await read({
+      tenantId: input.event.tenantId,
+      forChannels,
+    });
+    return describeBotRights(input, forChannels, rights);
+  } catch {
+    rejectBotRights(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function describeBotRights(
+  input: OperatorCommandInput,
+  forChannels: boolean,
+  rights: DefaultRightsSnapshot,
+): string {
+  const lines = [
+    say(
+      input,
+      forChannels ? "command.botrights.channels" : "command.botrights.groups",
+    ),
+  ];
+  for (const [label, field] of defaultRightLines) {
+    lines.push(
+      `${say(input, label)} ${say(input, permissionStateKey(rights[field]))}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function rejectBotRights(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "botrights",
   });
 }
 

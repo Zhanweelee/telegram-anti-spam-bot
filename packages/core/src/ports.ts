@@ -168,6 +168,15 @@ export interface DefaultRightsTarget {
   readonly rights?: DefaultAdministratorRights;
 }
 
+export interface DefaultRightsQuery {
+  readonly tenantId: string;
+  readonly forChannels: boolean;
+}
+
+export type DefaultRightsSnapshot = {
+  readonly [K in keyof DefaultAdministratorRights]: PermissionState;
+};
+
 export interface DefaultChatPermissions {
   readonly sendMessages: PermissionState;
   readonly sendAudios: PermissionState;
@@ -327,6 +336,7 @@ export interface ModerationPort {
   deleteTopic(target: NamedForumTopicTarget): Promise<void>;
   readMemberCount(target: ChatTarget): Promise<number>;
   readBoostCount(target: BanTarget): Promise<number>;
+  readDefaultRights(query: DefaultRightsQuery): Promise<DefaultRightsSnapshot>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;

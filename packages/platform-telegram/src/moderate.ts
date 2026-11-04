@@ -4,6 +4,7 @@ import type {
   ChatAdministrator,
   DefaultAdministratorRights,
   DefaultChatPermissions,
+  DefaultRightsSnapshot,
   MemberStanding,
   ModerationPort,
   MuteTarget,
@@ -494,6 +495,17 @@ export function createTelegramModerator(input: {
       });
       return memberCount(body);
     },
+    async readDefaultRights(query) {
+      const rights = await postTelegram({
+        token: input.token,
+        method: "getMyDefaultAdministratorRights",
+        fetchImpl: input.fetchImpl,
+        missing: "botrights_unavailable",
+        failed: "botrights_failed",
+        body: query.forChannels ? { for_channels: true } : {},
+      });
+      return readDefaultRightsSnapshot(rights);
+    },
     async readBoostCount(target) {
       const body = await postTelegram({
         token: input.token,
@@ -950,6 +962,47 @@ function telegramDefaultRights(
     can_manage_direct_messages: rights.manageDirectMessages,
     can_manage_tags: rights.manageTags,
     can_send_welcome_messages: rights.sendWelcomeMessages,
+  };
+}
+
+function readDefaultRightsSnapshot(body: unknown): DefaultRightsSnapshot {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("botrights_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    throw new Error("botrights_failed");
+  }
+  const raw = result as Record<string, unknown>;
+  const flag = (key: string): PermissionState => {
+    if (!Object.hasOwn(raw, key) || raw[key] === undefined) {
+      return "unknown";
+    }
+    const value = raw[key];
+    if (typeof value !== "boolean") {
+      throw new Error("botrights_failed");
+    }
+    return value ? "on" : "off";
+  };
+  return {
+    anonymous: flag("is_anonymous"),
+    manageChat: flag("can_manage_chat"),
+    deleteMessages: flag("can_delete_messages"),
+    manageVideoChats: flag("can_manage_video_chats"),
+    restrictMembers: flag("can_restrict_members"),
+    promoteMembers: flag("can_promote_members"),
+    changeInfo: flag("can_change_info"),
+    inviteUsers: flag("can_invite_users"),
+    postStories: flag("can_post_stories"),
+    editStories: flag("can_edit_stories"),
+    deleteStories: flag("can_delete_stories"),
+    postMessages: flag("can_post_messages"),
+    editMessages: flag("can_edit_messages"),
+    pinMessages: flag("can_pin_messages"),
+    manageTopics: flag("can_manage_topics"),
+    manageDirectMessages: flag("can_manage_direct_messages"),
+    manageTags: flag("can_manage_tags"),
+    sendWelcomeMessages: flag("can_send_welcome_messages"),
   };
 }
 
