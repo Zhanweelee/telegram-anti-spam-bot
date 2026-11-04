@@ -131,6 +131,8 @@ export const messageSchema = z
     pollNotice: z.enum(["added", "deleted"]).optional(),
     /** Added checklist tasks. Task ids and the checklist stay out. Task text stays in the message. */
     asChecklistAdded: z.literal(true).optional(),
+    /** Forum topic created or renamed. Icon color and emoji id stay out. The name stays in the message. */
+    topicNotice: z.enum(["created", "edited"]).optional(),
   })
   .refine(
     (message) =>

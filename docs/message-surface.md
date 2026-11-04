@@ -81,3 +81,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `poll_option_added.option_text` 是非空字符串时，消息带 `pollNotice: "added"`。`poll_option_deleted.option_text` 满足同样条件时带 `deleted`。同时出现时先认新加。空字符串落到另一种。选项编号和原投票不进事件。选项文字仍按 ADR 0089 成为正文。空对象和布尔值不带这个标记。投票题干不带这个标记。规则 `poll_notice` 默认关闭。见 ADR 0494。
 
 `checklist_tasks_added.tasks` 里至少有一条非空文字时，消息带 `asChecklistAdded`。任务编号、完成者名字和原清单不进事件。任务文字仍按 ADR 0089 成为正文。空数组、只有空文字和布尔值不带这个标记。已有正文时正文不变。完成和取消完成不带这个标记。规则 `checklist_added` 默认关闭。见 ADR 0495。
+
+`forum_topic_created.name` 是非空字符串时，消息带 `topicNotice: "created"`。`forum_topic_edited.name` 是非空字符串，或 `icon_custom_emoji_id` 是字符串时，带 `edited`。同时出现时先认新建。空的新建名字落到改名。图标颜色和自定义表情编号不进事件。话题名仍按 ADR 0088 成为正文。空对象和布尔值不带这个标记。`is_name_implicit` 不改变这个标记。关掉和重开不带这个标记。规则 `topic_notice` 默认关闭。见 ADR 0496。

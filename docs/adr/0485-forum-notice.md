@@ -31,7 +31,7 @@
 ## 后果
 
 - 不打开这条规则的群，这四种提示仍留下。新建和改名的话题名仍参与关键词。
-- 打开 `forum_notice` 后，这个群里的这四种提示会删除。话题开关不变。`/closetopic`、`/opentopic`、`/hidegeneral` 和 `/showgeneral` 仍负责改状态。付费帖仍留下。
+- 打开 `forum_notice` 后，这个群里的这四种提示会删除。话题开关不变。`/closetopic`、`/opentopic`、`/hidegeneral` 和 `/showgeneral` 仍负责改状态。付费帖仍留下。新建和改名可以另开 `topic_notice`。打开 `forum_notice` 仍不删除这两种服务消息。见 ADR 0496。
 - 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `forum_notice` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上这条规则，才会有这个开关。
 - 30 天保留期不动。

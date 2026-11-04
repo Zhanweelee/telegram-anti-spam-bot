@@ -5675,6 +5675,175 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a topic rename until that chat asks", async () => {
+    const created = "新建话题广告名";
+    const actor = "建话题的人";
+    const emoji = "表情编号90206专属";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      created?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 104, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.created
+              ? {
+                  forum_topic_created: {
+                    name: created,
+                    icon_color: 90207,
+                    icon_custom_emoji_id: emoji,
+                    is_name_implicit: true,
+                  },
+                }
+              : {}),
+            ...(input.flag
+              ? { forum_topic_created: true, forum_topic_edited: true }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10470,
+      chatId: -1001070,
+      created: true,
+    });
+    expect(idle.message?.topicNotice).toBe("created");
+    expect(idle.message?.text).toBe(created);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(actor);
+    expect(idleDump).not.toContain(emoji);
+    expect(idleDump).not.toContain("90207");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "topic_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["topic_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10471, chatId: -1001071, created: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("topic_notice");
+    expect(removed.decision.ruleIds).toContain("topic_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "topic:created" },
+    ]);
+    const forumOnly: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "forum_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["forum_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const keptByForum = await screenTelegramEvent(
+      await posted({ updateId: 10472, chatId: -1001072, created: true }),
+      {
+        source: forumOnly,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(keptByForum.decision.action).toBe("allow");
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10473, chatId: -1001073, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10474,
+        chatId: -1001074,
+        created: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      keptByForum: keptByForum.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(created);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(emoji);
+    expect(dumped).not.toContain("90207");
+  });
+
   it("keeps added checklist tasks until that chat asks", async () => {
     const first = "新加的广告事项";
     const title = "原清单标题广告";

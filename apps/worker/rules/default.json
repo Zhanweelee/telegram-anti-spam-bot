@@ -323,6 +323,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "topic_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["topic_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

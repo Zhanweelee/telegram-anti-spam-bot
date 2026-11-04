@@ -40,6 +40,7 @@
     "@tasb/detector-proximity": "workspace:*",
     "@tasb/detector-poll": "workspace:*",
     "@tasb/detector-task": "workspace:*",
+    "@tasb/detector-topic": "workspace:*",
     "@tasb/detector-via": "workspace:*",
     "@tasb/detector-keyword": "workspace:*",
     "@tasb/detector-rate": "workspace:*",

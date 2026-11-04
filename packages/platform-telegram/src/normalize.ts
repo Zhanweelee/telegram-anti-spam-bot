@@ -164,6 +164,7 @@ async function messageEvent(
   const asProximity = nearUsers(message);
   const pollNotice = changedPoll(message);
   const asChecklistAdded = addedChecklist(message);
+  const topicNotice = changedTopic(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -219,6 +220,7 @@ async function messageEvent(
       ...(asProximity ? { asProximity: true as const } : {}),
       ...(pollNotice === undefined ? {} : { pollNotice }),
       ...(asChecklistAdded ? { asChecklistAdded: true as const } : {}),
+      ...(topicNotice === undefined ? {} : { topicNotice }),
     },
   });
 }
@@ -241,6 +243,34 @@ function hasPollOptionText(value: unknown): boolean {
     typeof value.option_text === "string" &&
     value.option_text.length > 0
   );
+}
+
+function changedTopic(
+  message: Record<string, unknown>,
+): "created" | "edited" | undefined {
+  if (hasTopicName(message.forum_topic_created)) {
+    return "created";
+  }
+  if (hasTopicEdit(message.forum_topic_edited)) {
+    return "edited";
+  }
+  return undefined;
+}
+
+function hasTopicName(value: unknown): boolean {
+  return (
+    isRecord(value) && typeof value.name === "string" && value.name.length > 0
+  );
+}
+
+function hasTopicEdit(value: unknown): boolean {
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (typeof value.name === "string" && value.name.length > 0) {
+    return true;
+  }
+  return typeof value.icon_custom_emoji_id === "string";
 }
 
 function addedChecklist(message: Record<string, unknown>): boolean {
