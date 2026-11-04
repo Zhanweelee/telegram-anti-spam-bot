@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-454 每个群可以删掉自动删除提示 — done
+
+验收：`message_auto_delete_timer_changed.message_auto_delete_time` 是大于等于 0 的安全整数时，消息带 `asAutoDelete: true`。秒数和发送者名字不进事件。空对象、负数、小数和字符串不带这个标记。0 带这个标记。已有正文时正文不变。默认留下。私聊 `/rule <chatId> autodelete_notice on` 之后删除这条服务消息，`off` 回到留下。证据只有 `autodelete:changed`。不调用 `setChatMessageAutoDeleteTime`。计时本身还在。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-453 每个群可以删掉论坛提示 — done
 
 验收：`forum_topic_closed` 是对象时，消息带 `forumNotice: "closed"`。`forum_topic_reopened` 是对象时带 `reopened`。`general_forum_topic_hidden` 是对象时带 `hidden`。`general_forum_topic_unhidden` 是对象时带 `shown`。同时出现时先认关掉。名字、图标和话题号不进事件。布尔值不带这个标记。空对象带这个标记。新建和改名不带这个标记，话题名仍按 ADR 0088 成为正文。已有正文时正文不变。默认留下。私聊 `/rule <chatId> forum_notice on` 之后删除这四种提示，`off` 回到留下。证据只有 `forum:closed`、`forum:reopened`、`forum:hidden` 或 `forum:shown`。不调用 `closeForumTopic`、`reopenForumTopic`、`hideGeneralForumTopic` 或 `unhideGeneralForumTopic`。话题开关不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2048,6 +2052,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-454
+
+- 做了什么：改自动删除计时的提示有一条默认关闭的规则。私聊 `/rule` 可以打开。秒数仍不进事件。
+- 学到什么：0 也是一条成员看得见的提示。删掉这一行不会改计时。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-453
 

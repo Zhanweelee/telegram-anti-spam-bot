@@ -5675,6 +5675,136 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps an auto-delete notice until that chat asks", async () => {
+    const seconds = 90186;
+    const actor = "改计时的人";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      seconds?: number;
+      empty?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.seconds === undefined
+              ? {}
+              : {
+                  message_auto_delete_timer_changed: {
+                    message_auto_delete_time: input.seconds,
+                  },
+                }),
+            ...(input.empty ? { message_auto_delete_timer_changed: {} } : {}),
+            ...(input.flag ? { message_auto_delete_timer_changed: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8700,
+      chatId: -100870,
+      seconds,
+    });
+    expect(idle.message?.asAutoDelete).toBe(true);
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(String(seconds));
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "autodelete_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["autodelete_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8701, chatId: -100871, seconds: 0 }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("autodelete_notice");
+    expect(removed.decision.ruleIds).toContain("autodelete_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "autodelete:changed" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 8702, chatId: -100872, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8703,
+        chatId: -100873,
+        seconds,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(String(seconds));
+    expect(dumped).not.toContain(actor);
+  });
+
   it("keeps a forum notice until that chat asks", async () => {
     const title = "关掉广告名";
     async function posted(input: {
