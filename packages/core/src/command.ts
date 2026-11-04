@@ -100,6 +100,7 @@ const COMMAND_NAMES = [
   "pin",
   "unpinmsg",
   "unreact",
+  "delphoto",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -140,6 +141,7 @@ export interface OperatorCommandInput {
       | "declineJoin"
       | "deleteMessage"
       | "deleteMessages"
+      | "deletePhoto"
       | "deleteTopic"
       | "hideGeneral"
       | "lockChat"
@@ -319,6 +321,8 @@ async function dispatch(
       return unpinOneMessage(input, args);
     case "unreact":
       return removeOneReaction(input, args);
+    case "delphoto":
+      return deleteChatPhoto(input, args);
   }
 }
 
@@ -1823,6 +1827,46 @@ function rejectUnreact(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "unreact",
+  });
+}
+
+async function deleteChatPhoto(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 1) {
+    return say(input, "command.delphoto.usage");
+  }
+  const chatId = args[0];
+  if (chatId === undefined || !isTargetId(chatId)) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const remove = input.moderator?.deletePhoto;
+  if (!remove) {
+    rejectPhoto(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await remove({
+      tenantId: input.event.tenantId,
+      chatId,
+    });
+  } catch {
+    rejectPhoto(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.delphoto.done", { chatId });
+}
+
+function rejectPhoto(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "delphoto",
   });
 }
 

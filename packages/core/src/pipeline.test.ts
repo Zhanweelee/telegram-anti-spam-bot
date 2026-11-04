@@ -176,6 +176,7 @@ function harness(options?: { failStorage?: boolean }) {
     async pinMessage() {},
     async unpinMessage() {},
     async removeReaction() {},
+    async deletePhoto() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

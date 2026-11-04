@@ -236,6 +236,7 @@ export interface ModerationPort {
   pinMessage(target: PinnedMessageTarget): Promise<void>;
   unpinMessage(target: PinnedMessageTarget): Promise<void>;
   removeReaction(target: MessageReactionTarget): Promise<void>;
+  deletePhoto(target: ChatTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {
