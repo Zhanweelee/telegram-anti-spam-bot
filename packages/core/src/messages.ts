@@ -138,6 +138,7 @@ export const messageKeys = [
   "command.allowhost.added",
   "command.allowhost.removed",
   "command.allowhost.absent",
+  "command.allowhost.more",
   "bot.setup.present",
   "bot.setup.delete",
   "bot.setup.restrict",
@@ -499,7 +500,7 @@ const syntax = [
   "/rulemute <chatId> [seconds|reset]",
   "/verifyfor <chatId> [seconds|reset]",
   "/verifyfail <chatId> [stay|kick|ban|reset]",
-  "/allowhost <chatId> [add|remove <host>|reset]",
+  "/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
 ].join("\n");
 
 export function commandDescriptions(): ReadonlyMap<string, string> {
@@ -656,11 +657,12 @@ const zh = {
   "command.verifyfail.kick": "移出",
   "command.verifyfail.ban": "封禁",
   "command.allowhost.usage":
-    "用法：/allowhost <chatId> [add|remove <host>|reset]",
+    "用法：/allowhost <chatId> [add|remove <host>|reset|skip <count>]",
   "command.allowhost.show": "{chatId} 放行主机 {count}",
   "command.allowhost.added": "已添加 {chatId} 放行主机 {count}",
   "command.allowhost.removed": "已移除 {chatId} 放行主机 {count}",
   "command.allowhost.absent": "没有这个主机",
+  "command.allowhost.more": "还有 {count} 个",
   "bot.setup.present": "机器人在 {chatId}，还不是管理员。私聊 /cani {chatId}。",
   "bot.setup.delete": "机器人在 {chatId} 还不能删除。私聊 /cani {chatId}。",
   "bot.setup.restrict": "机器人在 {chatId} 还不能限制。私聊 /cani {chatId}。",
@@ -1103,12 +1105,13 @@ const en = {
   "command.verifyfail.kick": "kick",
   "command.verifyfail.ban": "ban",
   "command.allowhost.usage":
-    "Usage: /allowhost <chatId> [add|remove <host>|reset]",
+    "Usage: /allowhost <chatId> [add|remove <host>|reset|skip <count>]",
   "command.allowhost.show": "Allowed hosts for {chatId}: {count}",
   "command.allowhost.added": "Added an allowed host to {chatId}, now {count}",
   "command.allowhost.removed":
     "Removed an allowed host from {chatId}, now {count}",
   "command.allowhost.absent": "No such host",
+  "command.allowhost.more": "{count} more",
   "bot.setup.present":
     "The bot is in {chatId} and is not an admin. Private /cani {chatId}.",
   "bot.setup.delete":
