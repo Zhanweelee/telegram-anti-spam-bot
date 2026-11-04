@@ -313,6 +313,12 @@ export const builtinManifests = {
     integrity:
       "62920f4e40fe6772148d88af786e6c127e6d3c0e030aaa9060457f87c7ac3983",
   }),
+  postPending: manifest({
+    id: "post_pending",
+    kind: "detector",
+    integrity:
+      "bc581778f5473b813d250ea337a63158d701c034f4ad24f2cad51fa5d914e6e5",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

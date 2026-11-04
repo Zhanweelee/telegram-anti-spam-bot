@@ -31,7 +31,7 @@
 ## 后果
 
 - 规则关闭时，拒绝说明留下。说明干净时关键词仍看不见这行，除非说明里本身有关键词或短链。没有说明的那行仍留下。
-- 打开 `post_declined` 后，这个群里的这种提示会删除。打开 `post_notice` 仍不删除拒绝。`/declinepost` 仍负责拒绝。付费帖仍留下。
+- 打开 `post_declined` 后，这个群里的这种提示会删除。打开 `post_notice` 仍不删除拒绝。`/declinepost` 仍负责拒绝。付费帖仍留下。待审正文可以另开 `post_pending`。打开 `post_declined` 仍不删除这条正文。见 ADR 0499。
 - 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `post_declined` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上 `post_declined`，否则 `/rule` 会拒绝。
 - 30 天保留期没有改。

@@ -87,3 +87,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `suggested_post_declined` 是对象时，消息带 `asPostDeclined`。空对象和空说明也带。原帖不进事件。拒绝说明仍按 ADR 0113 成为正文。布尔值不带这个标记。已有正文时正文不变。通过、失败、付款和退款不带这个标记。规则 `post_declined` 默认关闭。见 ADR 0497。
 
 `group_chat_created` 正好是 `true` 时，消息带 `asGroupCreated`。`false`、超级群创建和频道创建不带这个标记。发送者名字不进事件。已有正文时正文不变。规则 `group_created` 默认关闭。见 ADR 0498。
+
+`suggested_post_info.state` 正好是 `pending` 时，消息带 `asPostPending`。`approved`、`declined`、空对象和布尔值不带这个标记。价格和发表时间不进事件。正文仍是这条消息自己的文字。规则 `post_pending` 默认关闭。见 ADR 0499。

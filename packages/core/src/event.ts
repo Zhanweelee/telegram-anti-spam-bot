@@ -137,6 +137,8 @@ export const messageSchema = z
     asPostDeclined: z.literal(true).optional(),
     /** Basic group created. Supergroup and channel creation stay out. */
     asGroupCreated: z.literal(true).optional(),
+    /** Pending suggested post. Price and send date stay out. The post text stays in the message. */
+    asPostPending: z.literal(true).optional(),
   })
   .refine(
     (message) =>

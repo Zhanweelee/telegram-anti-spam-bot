@@ -45,6 +45,7 @@ export default defineConfig({
       "packages/detectors-topic",
       "packages/detectors-decline",
       "packages/detectors-created",
+      "packages/detectors-pending",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

@@ -347,6 +347,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "post_pending",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["post_pending"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

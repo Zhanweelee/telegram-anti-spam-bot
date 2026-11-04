@@ -20614,6 +20614,121 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a pending suggested post and leaves the price out", async () => {
+    const text = "待审建议帖广告";
+    const actor = "投稿的人";
+    const pending = await normalize({
+      update_id: 4720,
+      message: {
+        message_id: 760,
+        date: 1761955200,
+        chat: { id: -100499720, type: "channel" },
+        from: { id: 107, first_name: actor },
+        text,
+        suggested_post_info: {
+          state: "pending",
+          price: { currency: "XTR", amount: 90208 },
+          send_date: 1761959028,
+        },
+      },
+    });
+    expect(pending.status).toBe("event");
+    if (pending.status !== "event") {
+      return;
+    }
+    expect(pending.event.message?.asPostPending).toBe(true);
+    expect(pending.event.message?.text).toBe(text);
+    const pendingDump = JSON.stringify(pending.event);
+    expect(pendingDump).not.toContain("90208");
+    expect(pendingDump).not.toContain("1761959028");
+    expect(pendingDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 4721,
+      message: {
+        message_id: 761,
+        date: 1761955200,
+        chat: { id: -100499721, type: "channel" },
+        from: { id: 107, first_name: actor },
+        text: "今天站会",
+        suggested_post_info: { state: "pending" },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asPostPending).toBe(true);
+
+    const approved = await normalize({
+      update_id: 4722,
+      message: {
+        message_id: 762,
+        date: 1761955200,
+        chat: { id: -100499722, type: "channel" },
+        from: { id: 107 },
+        text: "已经通过",
+        suggested_post_info: { state: "approved" },
+      },
+    });
+    expect(approved.status).toBe("event");
+    if (approved.status !== "event") {
+      return;
+    }
+    expect(approved.event.message?.asPostPending).toBeUndefined();
+
+    const declined = await normalize({
+      update_id: 4723,
+      message: {
+        message_id: 763,
+        date: 1761955200,
+        chat: { id: -100499723, type: "channel" },
+        from: { id: 107 },
+        text: "已经拒绝",
+        suggested_post_info: { state: "declined" },
+      },
+    });
+    expect(declined.status).toBe("event");
+    if (declined.status !== "event") {
+      return;
+    }
+    expect(declined.event.message?.asPostPending).toBeUndefined();
+
+    const empty = await normalize({
+      update_id: 4724,
+      message: {
+        message_id: 764,
+        date: 1761955200,
+        chat: { id: -100499724, type: "channel" },
+        from: { id: 107 },
+        text: "空信息",
+        suggested_post_info: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asPostPending).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4725,
+      message: {
+        message_id: 765,
+        date: 1761955200,
+        chat: { id: -100499725, type: "channel" },
+        from: { id: 107 },
+        suggested_post_info: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asPostPending).toBeUndefined();
+  });
+
   it("marks a created group and leaves the sender out", async () => {
     const actor = "建群的人";
     const created = await normalize({

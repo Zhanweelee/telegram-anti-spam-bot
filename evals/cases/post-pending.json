@@ -1,0 +1,18 @@
+[
+  {
+    "id": "post_pending_spam",
+    "kind": "message",
+    "label": "spam",
+    "asPostPending": true
+  },
+  {
+    "id": "post_pending_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "post_pending_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
