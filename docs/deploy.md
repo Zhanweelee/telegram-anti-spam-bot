@@ -251,6 +251,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> sticker_emoji on` 删这个群里的自定义表情贴纸。默认关闭。编号不进证据。普通贴纸仍看 `media_sticker`。正文里的自定义表情仍看 `custom_emoji`。见 ADR 0520。
 
+`/rules <chatId> skip <count>` 跳过前面的 `count` 条再往下列。不写 `skip` 时仍从第一条开始。见 ADR 0521。
+
 ## 确认
 
 ```sh

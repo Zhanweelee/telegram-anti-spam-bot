@@ -718,6 +718,196 @@ describe("runOperatorCommand", () => {
     expect(english.text.length).toBeLessThanOrEqual(3500);
   });
 
+  it("continues a long rule list after skip", async () => {
+    const deps = kit();
+    const actions = [
+      "log",
+      "report",
+      "captcha",
+      "decline",
+      "delete",
+      "mute",
+      "ban",
+    ];
+    const ids = Array.from(
+      { length: 80 },
+      (_, index) => `r${String(index).padStart(2, "0")}_${"a".repeat(60)}`,
+    );
+    const doc = {
+      version: 1,
+      aggregate: "max" as const,
+      rules: ids.map((id) => ({
+        id,
+        enabled: true,
+        detectorIds: ["keyword"],
+        threshold: 100,
+        actions,
+      })),
+    };
+    const source = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return doc;
+      },
+    };
+    const first = await runOperatorCommand({
+      event: event({ text: "/rules -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    const same = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(same).toEqual(first);
+    const tail = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 70", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith("rules -100\n")).toBe(true);
+    expect(tail.text).toContain(ids[70]);
+    expect(tail.text).toContain(ids[79]);
+    expect(tail.text).not.toContain(ids[0]);
+    expect(tail.text).not.toContain("还有");
+    const middle = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 1", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(middle.status).toBe("reply");
+    if (middle.status !== "reply") {
+      return;
+    }
+    const middleLines = middle.text.split("\n");
+    const middleOmitted = Number(
+      /^还有 (\d+) 条$/.exec(middleLines.at(-1) ?? "")?.[1],
+    );
+    expect(middleLines.slice(1, -1).length + middleOmitted).toBe(79);
+    expect(middleLines[1]).toContain(ids[1]);
+    expect(middle.text).not.toContain(ids[0]);
+    expect(middle.text).not.toContain(ids[79]);
+    const english = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 70", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+      source,
+    });
+    expect(english.status).toBe("reply");
+    if (english.status !== "reply") {
+      return;
+    }
+    expect(english.text).toContain(ids[79]);
+    expect(english.text).not.toContain("more");
+    const directory = {
+      async noteBot() {
+        return "ok" as const;
+      },
+      async noteMember() {
+        return "ok" as const;
+      },
+      async chatsFor() {
+        return ["-100"];
+      },
+      async list() {
+        return ["-100"];
+      },
+    };
+    const granted = await runOperatorCommand({
+      event: event({ text: "/rules skip 70", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+      source,
+    });
+    expect(granted.status).toBe("reply");
+    if (granted.status !== "reply") {
+      return;
+    }
+    expect(granted.text.startsWith("rules -100\n")).toBe(true);
+    expect(granted.text).toContain(ids[79]);
+    const refused = await runOperatorCommand({
+      event: event({
+        text: "/rules -200 skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...deps,
+      source,
+    });
+    expect(refused).toMatchObject({ text: "没有权限" });
+    const emptySource = {
+      async loadChat() {
+        return null;
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max" as const, rules: [] };
+      },
+    };
+    const emptyDeps = kit();
+    const empty = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...emptyDeps,
+      source: emptySource,
+    });
+    expect(empty).toMatchObject({ text: "rules -100\nnone" });
+    const emptySkip = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 1", direct: true }),
+      adminActorIds: ["42"],
+      ...emptyDeps,
+      source: emptySource,
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const past = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 80", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const padded = await runOperatorCommand({
+      event: event({ text: "/rules -100 skip 01", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(padded).toMatchObject({ text: "参数无效" });
+    const word = await runOperatorCommand({
+      event: event({ text: `/rules -100 skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(word).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(word)).not.toContain(phrase);
+    expect(JSON.stringify(deps.logger.entries)).not.toContain(phrase);
+    const usage = await runOperatorCommand({
+      event: event({ text: "/rules -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+      source,
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/rules [chatId] [skip <count>]",
+    });
+  });
+
   it("shows rules and help without echoing extra text", async () => {
     const deps = kit();
     const rules = await runOperatorCommand({
@@ -1063,7 +1253,9 @@ describe("runOperatorCommand", () => {
       adminActorIds: ["42"],
       ...deps,
     });
-    expect(rulesUsage).toMatchObject({ text: "用法：/rules [chatId]" });
+    expect(rulesUsage).toMatchObject({
+      text: "用法：/rules [chatId] [skip <count>]",
+    });
     const badRules = await runOperatorCommand({
       event: event({ text: "/rules", direct: true, chatId: "abc" }),
       adminActorIds: ["42"],
