@@ -3026,6 +3026,94 @@ describe("screenTelegramEvent", () => {
     expect(onlyLogged).not.toContain("ph-4939");
   });
 
+  it("deletes a short link written on the name drawn for a guest bot reply", async () => {
+    const phrase = "请免费领取礼品";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 4947,
+        message: {
+          message_id: 25,
+          date: 1761955200,
+          chat: { id: -100903, type: "supergroup" },
+          from: { id: 8923, first_name: phrase },
+          text: "今天站会",
+          guest_bot_caller_user: {
+            id: 89230,
+            is_bot: false,
+            first_name: `${phrase} https://bit.ly/ad903`,
+            last_name: "https://tinyurl.com/last903",
+            username: "cutt.ly",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100903", messageId: "25" },
+    ]);
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(phrase);
+    expect(logged).not.toContain("ad903");
+    expect(logged).not.toContain("last903");
+    expect(logged).not.toContain("tinyurl.com");
+    expect(logged).not.toContain("cutt.ly");
+
+    const words = await normalizeUpdate({
+      update: {
+        update_id: 4948,
+        message: {
+          message_id: 26,
+          date: 1761955200,
+          chat: { id: -100904, type: "supergroup" },
+          from: { id: 8924 },
+          text: "今天站会",
+          guest_bot_caller_user: {
+            id: 89240,
+            is_bot: false,
+            first_name: phrase,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(words.status).toBe("event");
+    if (words.status !== "event") {
+      return;
+    }
+    expect(words.event.message?.text).toBe("今天站会");
+    expect(words.event.message?.hosts).toBeUndefined();
+    const wordLog = createMemoryLogger();
+    const wordModerator = createMemoryModerator();
+    const kept = await screenTelegramEvent(words.event, {
+      logger: wordLog,
+      moderator: wordModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(wordModerator.deleted).toEqual([]);
+    const wordLogged = JSON.stringify(wordLog.entries);
+    expect(wordLogged).not.toContain(phrase);
+  });
+
   it("deletes a short link written on a login button's forwarded label", async () => {
     const phrase = "请免费领取礼品";
     const outcome = await normalizeUpdate({
