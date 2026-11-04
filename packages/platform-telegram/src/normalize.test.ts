@@ -20614,6 +20614,202 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a rich phone or card and leaves the number out", async () => {
+    const phoneNumber = "+9021190011";
+    const cardNumber = "9021190099990000";
+    const actor = "留号码的人";
+    const phone = await normalize({
+      update_id: 4740,
+      message: {
+        message_id: 780,
+        date: 1761955200,
+        chat: { id: -100499740, type: "supergroup" },
+        from: { id: 109, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bold",
+                text: {
+                  type: "phone_number",
+                  text: "联系方式",
+                  phone_number: phoneNumber,
+                },
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(phone.status).toBe("event");
+    if (phone.status !== "event") {
+      return;
+    }
+    expect(phone.event.message?.asRichPhone).toBe(true);
+    expect(phone.event.message?.asRichCard).toBeUndefined();
+    expect(phone.event.message?.text).toBe("联系方式");
+    const phoneDump = JSON.stringify(phone.event);
+    expect(phoneDump).not.toContain(phoneNumber);
+    expect(phoneDump).not.toContain("9021190011");
+    expect(phoneDump).not.toContain(actor);
+
+    const card = await normalize({
+      update_id: 4741,
+      message: {
+        message_id: 781,
+        date: 1761955200,
+        chat: { id: -100499741, type: "supergroup" },
+        from: { id: 109, first_name: actor },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bank_card_number",
+                text: "付款卡",
+                bank_card_number: cardNumber,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(card.status).toBe("event");
+    if (card.status !== "event") {
+      return;
+    }
+    expect(card.event.message?.asRichCard).toBe(true);
+    expect(card.event.message?.asRichPhone).toBeUndefined();
+    expect(card.event.message?.text).toBe("付款卡");
+    expect(JSON.stringify(card.event)).not.toContain(cardNumber);
+
+    const both = await normalize({
+      update_id: 4742,
+      message: {
+        message_id: 782,
+        date: 1761955200,
+        chat: { id: -100499742, type: "supergroup" },
+        from: { id: 109 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                {
+                  type: "phone_number",
+                  text: "电话",
+                  phone_number: phoneNumber,
+                },
+                {
+                  type: "bank_card_number",
+                  text: "卡号",
+                  bank_card_number: cardNumber,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.asRichPhone).toBe(true);
+    expect(both.event.message?.asRichCard).toBe(true);
+    expect(both.event.message?.text).toBe("电话卡号");
+    const bothDump = JSON.stringify(both.event);
+    expect(bothDump).not.toContain(phoneNumber);
+    expect(bothDump).not.toContain(cardNumber);
+
+    const kept = await normalize({
+      update_id: 4743,
+      message: {
+        message_id: 783,
+        date: 1761955200,
+        chat: { id: -100499743, type: "supergroup" },
+        from: { id: 109 },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "phone_number",
+                text: "联系方式",
+                phone_number: phoneNumber,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asRichPhone).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(phoneNumber);
+
+    const empty = await normalize({
+      update_id: 4744,
+      message: {
+        message_id: 784,
+        date: 1761955200,
+        chat: { id: -100499744, type: "supergroup" },
+        from: { id: 109 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "phone_number",
+                text: "空号码",
+                phone_number: "   ",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空号码");
+    expect(empty.event.message?.asRichPhone).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 4745,
+      message: {
+        message_id: 785,
+        date: 1761955200,
+        chat: { id: -100499745, type: "supergroup" },
+        from: { id: 109 },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "bank_card_number",
+                text: "布尔卡",
+                bank_card_number: true,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔卡");
+    expect(flag.event.message?.asRichCard).toBeUndefined();
+  });
+
   it("marks spoiler media and leaves the file id out", async () => {
     const caption = "剧透说明广告";
     const actor = "发剧透的人";

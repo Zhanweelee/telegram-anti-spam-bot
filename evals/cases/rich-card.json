@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_card_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichCard": true
+  },
+  {
+    "id": "rich_card_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_card_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "rich_phone_spam",
+    "kind": "message",
+    "label": "spam",
+    "asRichPhone": true
+  },
+  {
+    "id": "rich_phone_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "rich_phone_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]
