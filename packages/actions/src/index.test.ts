@@ -120,6 +120,9 @@ describe("delete action", () => {
           async readBotDescription() {
             throw new Error("mydesc_unavailable");
           },
+          async readBotShortDescription() {
+            throw new Error("myshort_unavailable");
+          },
           async createTopic() {
             throw new Error("newtopic_unavailable");
           },
@@ -243,6 +246,9 @@ describe("delete action", () => {
         },
         async readBotDescription() {
           throw new Error("mydesc_unavailable");
+        },
+        async readBotShortDescription() {
+          throw new Error("myshort_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -369,6 +375,9 @@ describe("delete action", () => {
         },
         async readBotDescription() {
           throw new Error("mydesc_unavailable");
+        },
+        async readBotShortDescription() {
+          throw new Error("myshort_unavailable");
         },
         async createTopic() {
           throw new Error("newtopic_unavailable");
@@ -497,6 +506,9 @@ function ports(): ModerationPort & {
     },
     async readBotDescription() {
       throw new Error("mydesc_unavailable");
+    },
+    async readBotShortDescription() {
+      throw new Error("myshort_unavailable");
     },
     async createTopic() {
       throw new Error("newtopic_unavailable");

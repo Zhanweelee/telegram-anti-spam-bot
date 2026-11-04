@@ -178,6 +178,13 @@ describe("memory adapter", () => {
     );
   });
 
+  it("does not invent a bot short description", async () => {
+    const moderator = createMemoryModerator();
+    await expect(
+      moderator.readBotShortDescription({ tenantId: "t" }),
+    ).rejects.toThrow("myshort_unavailable");
+  });
+
   it("does not invent a bot description", async () => {
     const moderator = createMemoryModerator();
     await expect(

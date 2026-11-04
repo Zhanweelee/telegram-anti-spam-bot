@@ -132,6 +132,7 @@ const COMMAND_NAMES = [
   "botdesc",
   "mydesc",
   "botshort",
+  "myshort",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -273,6 +274,7 @@ export interface OperatorCommandInput {
       | "readAdministrators"
       | "readBotDescription"
       | "readBotName"
+      | "readBotShortDescription"
       | "readBoostCount"
       | "readCommandMenu"
       | "readDefaultRights"
@@ -517,6 +519,8 @@ async function dispatch(
       return showBotDescription(input, args);
     case "botshort":
       return setBotShortDescription(input, args);
+    case "myshort":
+      return showBotShortDescription(input, args);
   }
 }
 
@@ -3414,6 +3418,54 @@ function rejectBotShortDescription(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "botshort",
+  });
+}
+
+async function showBotShortDescription(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.myshort.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readBotShortDescription;
+  if (!read) {
+    rejectReadBotShortDescription(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const shortDescription = await read({ tenantId: input.event.tenantId });
+    if (!isBotShortDescription(shortDescription)) {
+      rejectReadBotShortDescription(input);
+      return say(input, "command.invalid");
+    }
+    return shortDescription.length === 0
+      ? say(input, "command.myshort.empty")
+      : say(input, "command.myshort.body", { shortDescription });
+  } catch {
+    rejectReadBotShortDescription(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isBotShortDescription(shortDescription: string): boolean {
+  return (
+    shortDescription.length <= BOT_SHORT_DESCRIPTION_LIMIT &&
+    !/[\r\n]/.test(shortDescription)
+  );
+}
+
+function rejectReadBotShortDescription(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "myshort",
   });
 }
 
