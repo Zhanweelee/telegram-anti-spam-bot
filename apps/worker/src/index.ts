@@ -169,6 +169,7 @@ export function createApp(
           },
           blocklist: stores.blocklist,
           captchaStore: stores.captcha,
+          warns: stores.warns,
           ...(rateWindow ? { rateWindow } : {}),
         });
       },

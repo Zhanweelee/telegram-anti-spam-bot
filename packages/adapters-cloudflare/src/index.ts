@@ -37,6 +37,7 @@ export {
   createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
+  createD1WarnStore,
   type SqlDatabase,
   type SqlPrepared,
   storageMigrationStatements,
@@ -49,7 +50,7 @@ export {
 
 /**
  * Cloudflare bindings adapter.
- * D1 stores audits, rule documents, and captcha challenges. KV stores prefilter policy,
+ * D1 stores audits, rule documents, captcha challenges, and warning counts. KV stores prefilter policy,
  * per-chat runtime switches, pack subscription, and the shared
  * blocklist. Workers AI is optional and stays out
  * of the committed wrangler config. Queues and Durable Objects stay

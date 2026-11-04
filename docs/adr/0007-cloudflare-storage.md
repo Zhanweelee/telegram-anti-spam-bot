@@ -31,7 +31,7 @@ P0-08 要把审计和白名单放到 Cloudflare 免费套餐里。`docs/limits.m
 ## 后果
 
 - 配了 `DB` 之后，每条非 allow、非 dry-run 的决策写一行审计。
-- 冷 isolate 的第一笔存储调用多付建表语句。`captcha_challenges` 由 ADR 0051 补进同一份迁移，仍然只有主键。
+- 冷 isolate 的第一笔存储调用多付建表语句。`captcha_challenges` 由 ADR 0051 补进同一份迁移，仍然只有主键。`warn_counts` 由 ADR 0453 补进同一份迁移，只存次数，不存姓名或消息原文。
 - 审计列表按 `rowid` 从旧到新，靠主键过滤租户和群，不靠额外索引。
 - 规则文档可以经 `putRuleSet` 写到 D1，但当前检测热路径不读它。
 - 30 天清理和导出删除仍是 P0-09。这一轮不删除旧行。

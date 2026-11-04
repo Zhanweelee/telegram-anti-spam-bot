@@ -1,68 +1,14 @@
 import { describe, expect, it } from "vitest";
-import {
-  createMemoryWarnStore,
-  MAX_WARN_ACTORS,
-  MAX_WARN_CHATS,
-  WarnCapacityError,
-} from "./warn.js";
+import { bindWarnStoreContract } from "./warn.contract.js";
+import { createMemoryWarnStore } from "./warn.js";
 
-const target = {
-  tenantId: "local",
-  chatId: "-100",
-  actorId: "77",
-};
+bindWarnStoreContract(createMemoryWarnStore);
 
 describe("createMemoryWarnStore", () => {
-  it("counts one actor and clears that count", async () => {
+  it("keeps the count inside one store object", async () => {
     const store = createMemoryWarnStore();
-    expect(await store.read(target)).toBe(0);
-    expect(await store.increment(target)).toBe(1);
-    expect(await store.increment(target)).toBe(2);
-    expect(await store.read(target)).toBe(2);
-    expect(await store.clear(target)).toBe(true);
-    expect(await store.read(target)).toBe(0);
-    expect(await store.clear(target)).toBe(false);
-  });
-
-  it("keeps two chats apart", async () => {
-    const store = createMemoryWarnStore();
+    const target = { tenantId: "local", chatId: "-100", actorId: "77" };
     await store.increment(target);
-    await store.increment({ ...target, chatId: "-200" });
-    await store.increment({ ...target, chatId: "-200" });
     expect(await store.read(target)).toBe(1);
-    expect(await store.read({ ...target, chatId: "-200" })).toBe(2);
-  });
-
-  it("refuses a new chat or actor past the cap", async () => {
-    const store = createMemoryWarnStore();
-    for (let index = 0; index < MAX_WARN_CHATS; index += 1) {
-      await store.increment({
-        ...target,
-        chatId: String(index),
-        actorId: "1",
-      });
-    }
-    await expect(
-      store.increment({ ...target, chatId: "overflow", actorId: "1" }),
-    ).rejects.toBeInstanceOf(WarnCapacityError);
-    const crowded = createMemoryWarnStore();
-    for (let index = 0; index < MAX_WARN_ACTORS; index += 1) {
-      await crowded.increment({ ...target, actorId: String(index) });
-    }
-    await expect(
-      crowded.increment({ ...target, actorId: "overflow" }),
-    ).rejects.toBeInstanceOf(WarnCapacityError);
-    expect(await crowded.increment({ ...target, actorId: "0" })).toBe(2);
-  });
-
-  it("writes a lower count without keeping a zero", async () => {
-    const store = createMemoryWarnStore();
-    await store.increment(target);
-    await store.increment(target);
-    await store.write(target, 1);
-    expect(await store.read(target)).toBe(1);
-    await store.write(target, 0);
-    expect(await store.read(target)).toBe(0);
-    expect(await store.clear(target)).toBe(false);
   });
 });

@@ -19,7 +19,7 @@
 - `/unwarn` 把这个人的次数清掉。没有次数时回复没有警告。不调用 `unbanChatMember`。
 - `/warns` 只读次数。0 次回复没有警告。
 - 回复和日志不写姓名、消息原文或 token。
-- 进程或 isolate 重启后次数从 0 开始。已经发出的封禁还在 Telegram 上。
+- 没配 DB 时，进程或 isolate 重启后次数从 0 开始。已经发出的封禁还在 Telegram 上。配了 DB 之后，次数改由 ADR 0453 放进 D1。
 
 ## 备选
 

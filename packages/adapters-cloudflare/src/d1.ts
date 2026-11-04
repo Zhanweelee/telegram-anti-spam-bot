@@ -7,6 +7,8 @@ import {
   captchaChallengeSchema,
   isExpired,
   MAX_REVIEW_SAMPLES,
+  MAX_WARN_ACTORS,
+  MAX_WARN_CHATS,
   parseAuditQuery,
   parseAuditRecord,
   parseAuditScope,
@@ -20,6 +22,9 @@ import {
   reviewSampleSchema,
   ruleSetSchema,
   type Storage,
+  WarnCapacityError,
+  type WarnStore,
+  type WarnTarget,
 } from "@tasb/core";
 
 /**
@@ -78,6 +83,13 @@ export const storageMigrationStatements = [
   nonce TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   message_id TEXT,
+  PRIMARY KEY (tenant_id, chat_id, actor_id)
+)`,
+  `CREATE TABLE IF NOT EXISTS warn_counts (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  count INTEGER NOT NULL,
   PRIMARY KEY (tenant_id, chat_id, actor_id)
 )`,
 ] as const;
@@ -236,6 +248,54 @@ const captchaColumnsSql =
 const addCaptchaMessageIdSql =
   "ALTER TABLE captcha_challenges ADD COLUMN message_id TEXT";
 
+const readWarnSql = `SELECT count AS total FROM warn_counts
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
+
+const incrementWarnSql = `INSERT INTO warn_counts (
+  tenant_id, chat_id, actor_id, count
+)
+SELECT ?, ?, ?, 1
+WHERE EXISTS (
+  SELECT 1 FROM warn_counts
+  WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?
+) OR (
+  (SELECT COUNT(*) FROM warn_counts WHERE tenant_id = ? AND chat_id = ?) < ?
+  AND (
+    EXISTS (
+      SELECT 1 FROM warn_counts WHERE tenant_id = ? AND chat_id = ?
+    ) OR (
+      SELECT COUNT(*) FROM (
+        SELECT DISTINCT tenant_id, chat_id FROM warn_counts
+      )
+    ) < ?
+  )
+)
+ON CONFLICT(tenant_id, chat_id, actor_id) DO UPDATE SET count = count + 1
+RETURNING count AS total`;
+
+const updateWarnSql = `UPDATE warn_counts SET count = ?
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
+
+const insertWarnSql = `INSERT INTO warn_counts (
+  tenant_id, chat_id, actor_id, count
+)
+SELECT ?, ?, ?, ?
+WHERE (
+  SELECT COUNT(*) FROM warn_counts WHERE tenant_id = ? AND chat_id = ?
+) < ?
+AND (
+  EXISTS (
+    SELECT 1 FROM warn_counts WHERE tenant_id = ? AND chat_id = ?
+  ) OR (
+    SELECT COUNT(*) FROM (
+      SELECT DISTINCT tenant_id, chat_id FROM warn_counts
+    )
+  ) < ?
+)`;
+
+const deleteWarnSql = `DELETE FROM warn_counts
+WHERE tenant_id = ? AND chat_id = ? AND actor_id = ?`;
+
 const migrations = new WeakMap<SqlDatabase, Promise<void>>();
 
 export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
@@ -360,6 +420,123 @@ export function createD1CaptchaStore(db: SqlDatabase): CaptchaStore {
       return due;
     },
   };
+}
+
+export function createD1WarnStore(db: SqlDatabase): WarnStore {
+  return {
+    async read(target) {
+      await migrationsFor(db);
+      return readWarnCount(db, target);
+    },
+    async increment(target) {
+      await migrationsFor(db);
+      const rows = await db
+        .prepare(incrementWarnSql)
+        .bind(
+          target.tenantId,
+          target.chatId,
+          target.actorId,
+          target.tenantId,
+          target.chatId,
+          target.actorId,
+          target.tenantId,
+          target.chatId,
+          MAX_WARN_ACTORS,
+          target.tenantId,
+          target.chatId,
+          MAX_WARN_CHATS,
+        )
+        .all();
+      const count = readWarnTotal(rows.results?.[0]);
+      if (count === undefined) {
+        throw new WarnCapacityError();
+      }
+      return count;
+    },
+    async write(target, count) {
+      if (!Number.isInteger(count) || count < 0) {
+        throw new WarnCapacityError();
+      }
+      await migrationsFor(db);
+      if (count === 0) {
+        await db
+          .prepare(deleteWarnSql)
+          .bind(target.tenantId, target.chatId, target.actorId)
+          .run();
+        return;
+      }
+      const current = await readWarnCount(db, target);
+      if (current === count) {
+        return;
+      }
+      if (current > 0) {
+        await db
+          .prepare(updateWarnSql)
+          .bind(count, target.tenantId, target.chatId, target.actorId)
+          .run();
+        return;
+      }
+      const inserted = await db
+        .prepare(insertWarnSql)
+        .bind(
+          target.tenantId,
+          target.chatId,
+          target.actorId,
+          count,
+          target.tenantId,
+          target.chatId,
+          MAX_WARN_ACTORS,
+          target.tenantId,
+          target.chatId,
+          MAX_WARN_CHATS,
+        )
+        .run();
+      if (readChanges(inserted) < 1) {
+        throw new WarnCapacityError();
+      }
+    },
+    async clear(target) {
+      await migrationsFor(db);
+      const result = await db
+        .prepare(deleteWarnSql)
+        .bind(target.tenantId, target.chatId, target.actorId)
+        .run();
+      return readChanges(result) >= 1;
+    },
+  };
+}
+
+async function readWarnCount(
+  db: SqlDatabase,
+  target: WarnTarget,
+): Promise<number> {
+  const rows = await db
+    .prepare(readWarnSql)
+    .bind(target.tenantId, target.chatId, target.actorId)
+    .all();
+  return readWarnTotal(rows.results?.[0]) ?? 0;
+}
+
+function readWarnTotal(row: unknown): number | undefined {
+  if (typeof row !== "object" || row === null) {
+    return undefined;
+  }
+  const value = (row as Record<string, unknown>).total;
+  if (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    Number.isSafeInteger(value)
+  ) {
+    return value;
+  }
+  if (typeof value === "bigint" && value >= 0n) {
+    const asNumber = Number(value);
+    if (Number.isSafeInteger(asNumber)) {
+      return asNumber;
+    }
+  }
+  return undefined;
 }
 
 function readCaptcha(row: unknown): CaptchaChallenge | null {

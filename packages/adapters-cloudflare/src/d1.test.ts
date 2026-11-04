@@ -5,6 +5,7 @@ import {
   bindCaptchaStoreContract,
   bindReviewQueueContract,
   bindStorageContract,
+  bindWarnStoreContract,
 } from "@tasb/core/testing";
 import { describe, expect, it } from "vitest";
 import {
@@ -12,6 +13,7 @@ import {
   createD1CaptchaStore,
   createD1ReviewQueue,
   createD1Storage,
+  createD1WarnStore,
   type SqlDatabase,
   type SqlPrepared,
   storageMigrationStatements,
@@ -20,6 +22,7 @@ import {
 bindStorageContract(() => createD1Storage(openSqlite()));
 bindReviewQueueContract(() => createD1ReviewQueue(openSqlite()));
 bindCaptchaStoreContract(() => createD1CaptchaStore(openSqlite()));
+bindWarnStoreContract(() => createD1WarnStore(openSqlite()));
 
 describe("d1 storage", () => {
   it("keeps the sql file equal to the exported statements", () => {
@@ -69,6 +72,21 @@ describe("d1 storage", () => {
       ...challenge,
       messageId: "42",
     });
+  });
+
+  it("keeps a warning count across two store objects", async () => {
+    const db = openSqlite();
+    const first = createD1WarnStore(db);
+    const second = createD1WarnStore(db);
+    const target = { tenantId: "local", chatId: "-100", actorId: "77" };
+    expect(await first.increment(target)).toBe(1);
+    expect(await second.read(target)).toBe(1);
+    expect(await second.increment(target)).toBe(2);
+    expect(await first.read(target)).toBe(2);
+    await second.write(target, 1);
+    expect(await first.read(target)).toBe(1);
+    expect(await second.clear(target)).toBe(true);
+    expect(await first.read(target)).toBe(0);
   });
 
   it("applies the migration twice and then stores a rule set", async () => {

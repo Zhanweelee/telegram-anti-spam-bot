@@ -43,3 +43,11 @@ CREATE TABLE IF NOT EXISTS captcha_challenges (
   message_id TEXT,
   PRIMARY KEY (tenant_id, chat_id, actor_id)
 );
+
+CREATE TABLE IF NOT EXISTS warn_counts (
+  tenant_id TEXT NOT NULL,
+  chat_id TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  PRIMARY KEY (tenant_id, chat_id, actor_id)
+);

@@ -77,7 +77,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/uncaptcha <chatId> <actorId>` 取消尚未完成的验证。先取走挑战，再 `restrictChatMember` 把每一项权限打开，不带 `until_date`，然后 `deleteMessage` 删掉按钮。没有待验证时不调用。放行失败时把挑战放回去，不删按钮。nonce 不进回复，也不进日志。不改 `/unmute`。见 ADR 0451。
 
-`/warn <chatId> <actorId>` 给同一个人记一次警告。未满 3 次不调用 Telegram。第 3 次调用 `banActor`，也就是 `banChatMember`，`revoke_messages` 仍是 false，不带 `until_date`。封禁失败时次数退回，回复「参数无效」。已经满 3 次时不再封禁。`/unwarn` 只把次数清掉，不调用 `unbanChatMember`。`/warns` 只读次数。次数在内存里，进程重启后从 0 开始。名字不进回复，也不进日志。见 ADR 0452。
+`/warn <chatId> <actorId>` 给同一个人记一次警告。未满 3 次不调用 Telegram。第 3 次调用 `banActor`，也就是 `banChatMember`，`revoke_messages` 仍是 false，不带 `until_date`。封禁失败时次数退回，回复「参数无效」。已经满 3 次时不再封禁。`/unwarn` 只把次数清掉，不调用 `unbanChatMember`。`/warns` 只读次数。配了 DB 时次数在 D1，没配时仍在内存，重启后从 0 开始。名字不进回复，也不进日志。见 ADR 0453。
 
 机器人还在群里但不是管理员，或管理员缺删除、缺限制时，给改了它的那个人发一条私聊。已经离开或被移出时不发。两条权限都在时不发。不发到群里。见 ADR 0436。
 
