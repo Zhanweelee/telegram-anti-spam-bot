@@ -1,0 +1,18 @@
+[
+  {
+    "id": "proximity_notice_spam",
+    "kind": "message",
+    "label": "spam",
+    "asProximity": true
+  },
+  {
+    "id": "proximity_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "proximity_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

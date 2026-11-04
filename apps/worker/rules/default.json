@@ -299,6 +299,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "proximity_notice",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["proximity_notice"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

@@ -5675,6 +5675,157 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a proximity alert until that chat asks", async () => {
+    const traveler = "靠近广告名";
+    const watcher = "守位置的人";
+    const actor = "报位置的人";
+    const travelerId = 90200;
+    const watcherId = 90201;
+    const distance = 90202;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      alert?: boolean;
+      bad?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 101, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.alert
+              ? {
+                  proximity_alert_triggered: {
+                    traveler: {
+                      id: travelerId,
+                      is_bot: false,
+                      first_name: traveler,
+                    },
+                    watcher: {
+                      id: watcherId,
+                      is_bot: false,
+                      first_name: watcher,
+                    },
+                    distance,
+                  },
+                }
+              : {}),
+            ...(input.bad
+              ? { proximity_alert_triggered: { distance: -1 } }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10440,
+      chatId: -1001057,
+      alert: true,
+    });
+    expect(idle.message?.asProximity).toBe(true);
+    expect(idle.message?.text).toBe(`${traveler} ${watcher}`);
+    const idleDump = JSON.stringify(idle);
+    expect(idleDump).not.toContain(actor);
+    expect(idleDump).not.toContain(String(travelerId));
+    expect(idleDump).not.toContain(String(watcherId));
+    expect(idleDump).not.toContain(String(distance));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "proximity_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["proximity_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10441, chatId: -1001058, alert: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("proximity_notice");
+    expect(removed.decision.ruleIds).toContain("proximity_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "proximity:near" },
+    ]);
+    const bad = await screenTelegramEvent(
+      await posted({ updateId: 10442, chatId: -1001059, bad: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(bad.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10443,
+        chatId: -1001060,
+        alert: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      bad: bad.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(traveler);
+    expect(dumped).not.toContain(watcher);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(String(travelerId));
+    expect(dumped).not.toContain(String(watcherId));
+    expect(dumped).not.toContain(String(distance));
+  });
+
   it("keeps an owner change until that chat asks", async () => {
     const name = "新群主广告名";
     const actor = "交群的人";
