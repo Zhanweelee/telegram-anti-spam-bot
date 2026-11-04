@@ -71,6 +71,11 @@ export const messageSchema = z
     media: mediaKindSchema.optional(),
     /** Digest of the file class and file_unique_id. The id stays out. */
     mediaSha256: sha256Schema.optional(),
+    /** One album. Digits only, so a caption cannot ride along. */
+    albumId: z
+      .string()
+      .regex(/^[0-9]{1,20}$/)
+      .optional(),
     /** Only user who can see this message. Names stay out. */
     audienceId: idSchema.optional(),
   })

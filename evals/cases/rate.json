@@ -27,6 +27,29 @@
     "sameText": true
   },
   {
+    "id": "flood-album",
+    "detector": "flood",
+    "label": "ham",
+    "messages": 8,
+    "gapMs": 100,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "albumId": "12532140322504850"
+  },
+  {
+    "id": "flood-album-edit",
+    "detector": "flood",
+    "label": "spam",
+    "messages": 5,
+    "gapMs": 100,
+    "sameActor": true,
+    "sameText": true,
+    "text": "",
+    "albumId": "12532140322504850",
+    "edited": true
+  },
+  {
     "id": "flood-actors",
     "detector": "flood",
     "label": "ham",

@@ -52,6 +52,8 @@ function messageEvent(input: {
   readonly chatId?: string;
   readonly media?: "sticker";
   readonly mediaSha256?: string;
+  readonly albumId?: string;
+  readonly edited?: true;
 }): Event {
   return parseEvent({
     id: input.id,
@@ -60,12 +62,14 @@ function messageEvent(input: {
     kind: "message",
     occurredAt: input.occurredAt,
     actor: { id: input.actorId, isAdmin: false },
+    ...(input.edited ? { edited: true } : {}),
     message: {
       id: input.id,
       text: input.text,
       textSha256: input.textSha256,
       ...(input.media ? { media: input.media } : {}),
       ...(input.mediaSha256 ? { mediaSha256: input.mediaSha256 } : {}),
+      ...(input.albumId ? { albumId: input.albumId } : {}),
     },
   });
 }
@@ -89,6 +93,93 @@ async function lastHit(
 }
 
 describe("flood and repeat fixtures", () => {
+  it("counts one album as a single flood sample", async () => {
+    const albumId = "12532140322504850";
+    const logger = createMemoryLogger();
+    const detector = createFloodDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 10,
+      threshold: 5,
+    });
+    const album = Array.from({ length: 8 }, (_, index) =>
+      messageEvent({
+        id: `album_${index}`,
+        actorId: "user_1",
+        text: "",
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        albumId,
+      }),
+    );
+    expect(await lastHit(detector, album, logger)).toBeNull();
+    const under = Array.from({ length: 3 }, (_, index) =>
+      messageEvent({
+        id: `plain_${index}`,
+        actorId: "user_1",
+        text: "今天站会",
+        textSha256: HASH,
+        occurredAt: isoAt(1000 + index * 10),
+      }),
+    );
+    expect(await lastHit(detector, under, logger)).toBeNull();
+    const hit = await lastHit(
+      detector,
+      [
+        messageEvent({
+          id: "plain_3",
+          actorId: "user_1",
+          text: "今天站会",
+          textSha256: HASH,
+          occurredAt: isoAt(1500),
+        }),
+      ],
+      logger,
+    );
+    expect(hit?.evidence[0]?.summary).toBe("flood:5");
+    expect(JSON.stringify(hit)).not.toContain(albumId);
+    expect(JSON.stringify(logger.entries)).not.toContain(albumId);
+  });
+
+  it("counts each edited album message and each distinct album", async () => {
+    const albumId = "12532140322504850";
+    const edited = createFloodDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 10,
+      threshold: 5,
+    });
+    const edits = Array.from({ length: 5 }, (_, index) =>
+      messageEvent({
+        id: `edit_${index}`,
+        actorId: "user_1",
+        text: "",
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        albumId,
+        edited: true,
+      }),
+    );
+    const editedHit = await lastHit(edited, edits, createMemoryLogger());
+    expect(editedHit?.evidence[0]?.summary).toBe("flood:5");
+
+    const separate = createFloodDetector({
+      window: createMemoryRateWindow(),
+      windowSeconds: 10,
+      threshold: 5,
+    });
+    const albums = Array.from({ length: 5 }, (_, index) =>
+      messageEvent({
+        id: `group_${index}`,
+        actorId: "user_1",
+        text: "",
+        textSha256: HASH,
+        occurredAt: isoAt(index * 10),
+        albumId: `${index + 1}`,
+      }),
+    );
+    const separateHit = await lastHit(separate, albums, createMemoryLogger());
+    expect(separateHit?.evidence[0]?.summary).toBe("flood:5");
+  });
+
   it("matches flood fixtures without storing text", async () => {
     for (const fixture of floodFixtures) {
       const logger = createMemoryLogger();
