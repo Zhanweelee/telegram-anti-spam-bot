@@ -97,6 +97,9 @@ describe("delete action", () => {
           async readMemberAllows() {
             throw new Error("allows_unavailable");
           },
+          async readMemberAdmin() {
+            throw new Error("canadmin_unavailable");
+          },
           async readPermissions() {
             throw new Error("perms_unavailable");
           },
@@ -257,6 +260,9 @@ describe("delete action", () => {
         },
         async readMemberAllows() {
           throw new Error("allows_unavailable");
+        },
+        async readMemberAdmin() {
+          throw new Error("canadmin_unavailable");
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
@@ -420,6 +426,9 @@ describe("delete action", () => {
         },
         async readMemberAllows() {
           throw new Error("allows_unavailable");
+        },
+        async readMemberAdmin() {
+          throw new Error("canadmin_unavailable");
         },
         async readPermissions() {
           throw new Error("perms_unavailable");
@@ -585,6 +594,9 @@ function ports(): ModerationPort & {
     },
     async readMemberAllows() {
       throw new Error("allows_unavailable");
+    },
+    async readMemberAdmin() {
+      throw new Error("canadmin_unavailable");
     },
     async readPermissions() {
       throw new Error("perms_unavailable");

@@ -2826,7 +2826,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(82);
+    expect(body.commands).toHaveLength(83);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2890,9 +2890,13 @@ describe("handleIncomingEvent", () => {
       command: "banfor",
       description: "/banfor <chatId> <actorId> <seconds>",
     });
-    expect(body.commands.at(-1)).toEqual({
+    expect(body.commands.find((item) => item.command === "allows")).toEqual({
       command: "allows",
       description: "/allows <chatId> <actorId>",
+    });
+    expect(body.commands.at(-1)).toEqual({
+      command: "canadmin",
+      description: "/canadmin <chatId> <actorId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -6495,6 +6499,86 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/allows -100 77", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("reads one member's admin rights", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    const flags = {
+      can_be_edited: true,
+      is_anonymous: false,
+      can_manage_chat: true,
+      can_delete_messages: false,
+      can_manage_video_chats: false,
+      can_restrict_members: false,
+      can_promote_members: false,
+      can_change_info: false,
+      can_invite_users: false,
+      can_post_stories: false,
+      can_edit_stories: false,
+      can_delete_stories: false,
+      can_send_welcome_messages: false,
+    };
+    await handleIncomingEvent(
+      await incoming({ text: "/canadmin -100 77", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                status: "administrator",
+                user: { id: 77, first_name: phrase },
+                custom_title: phrase,
+                ...flags,
+              },
+            }),
+            { status: 200 },
+          );
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      ["群 -100 77", "77 管理员 管理 可改 on"].join("\n"),
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["getChatMember"]);
+    expect(JSON.stringify(calls)).not.toContain("promoteChatMember");
+    expect(calls[0]?.body).toContain('"user_id":77');
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("bot-token");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/canadmin -100 77", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/canadmin -100 77", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

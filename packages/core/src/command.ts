@@ -32,6 +32,7 @@ import {
   type DefaultRightsSnapshot,
   fitAuditExportDocument,
   type JoinBot,
+  type MemberAdmin,
   type MemberAllows,
   type MemberStanding,
   type MenuButtonState,
@@ -157,6 +158,7 @@ const COMMAND_NAMES = [
   "privacy",
   "banfor",
   "allows",
+  "canadmin",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -308,6 +310,7 @@ export interface OperatorCommandInput {
       | "readDefaultRights"
       | "readJoinBot"
       | "readMember"
+      | "readMemberAdmin"
       | "readMemberAllows"
       | "readMemberCount"
       | "readMenuButton"
@@ -455,6 +458,8 @@ async function dispatch(
       return banMemberFor(input, args);
     case "allows":
       return showMemberAllows(input, args);
+    case "canadmin":
+      return showMemberAdmin(input, args);
     case "mute":
       return muteMember(input, args);
     case "member":
@@ -1332,6 +1337,106 @@ function rejectMemberAllows(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "allows",
+  });
+}
+
+async function showMemberAdmin(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.canadmin.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readMemberAdmin;
+  if (!read) {
+    rejectMemberAdmin(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const admin = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    if (!isMemberAdmin(admin, actorId)) {
+      rejectMemberAdmin(input);
+      return say(input, "command.invalid");
+    }
+    return describeMemberAdmin(input, chatId, actorId, admin);
+  } catch {
+    rejectMemberAdmin(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isMemberAdmin(value: MemberAdmin, actorId: string): boolean {
+  if (value.kind === "none") {
+    return true;
+  }
+  if (value.kind !== "admin") {
+    return false;
+  }
+  const admin = value.admin;
+  if (
+    admin.actorId !== actorId ||
+    typeof admin.bot !== "boolean" ||
+    typeof admin.anonymous !== "boolean" ||
+    (admin.role !== "creator" && admin.role !== "administrator") ||
+    !knownRights(admin.rights)
+  ) {
+    return false;
+  }
+  if (admin.role === "creator") {
+    return admin.rights.length === 0 && value.editable === null;
+  }
+  return value.editable === "on" || value.editable === "off";
+}
+
+function knownRights(rights: readonly AdministratorRight[]): boolean {
+  return rights.every((right) => administratorRights.includes(right));
+}
+
+function describeMemberAdmin(
+  input: OperatorCommandInput,
+  chatId: string,
+  actorId: string,
+  value: MemberAdmin,
+): string {
+  const lines = [say(input, "command.canadmin.header", { chatId, actorId })];
+  if (value.kind === "none") {
+    lines.push(say(input, "command.canadmin.none"));
+    return lines.join("\n");
+  }
+  const line = administratorLine(input, value.admin);
+  if (value.editable === null) {
+    lines.push(line);
+    return lines.join("\n");
+  }
+  lines.push(
+    `${line} ${say(input, "command.canadmin.editable")} ${say(input, permissionStateKey(value.editable))}`,
+  );
+  return lines.join("\n");
+}
+
+function rejectMemberAdmin(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "canadmin",
   });
 }
 

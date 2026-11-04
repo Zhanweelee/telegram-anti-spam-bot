@@ -9,6 +9,7 @@ import type {
   DefaultChatPermissions,
   DefaultRightsSnapshot,
   JoinBot,
+  MemberAdmin,
   MemberAllows,
   MemberStanding,
   MenuButtonState,
@@ -376,6 +377,20 @@ export function createTelegramModerator(input: {
         },
       });
       return readMemberAllowsValue(member, target.actorId);
+    },
+    async readMemberAdmin(target): Promise<MemberAdmin> {
+      const member = await postTelegram({
+        token: input.token,
+        method: "getChatMember",
+        fetchImpl: input.fetchImpl,
+        missing: "canadmin_unavailable",
+        failed: "canadmin_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      return readMemberAdminValue(member, target.actorId);
     },
     async readPermissions(target) {
       const chat = await postTelegram({
@@ -2099,6 +2114,112 @@ const allowsFlagKeys = [
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const requiredAdministratorFields = new Set<string>([
+  "can_manage_chat",
+  "can_delete_messages",
+  "can_manage_video_chats",
+  "can_restrict_members",
+  "can_promote_members",
+  "can_change_info",
+  "can_invite_users",
+  "can_post_stories",
+  "can_edit_stories",
+  "can_delete_stories",
+  "can_send_welcome_messages",
+]);
+
+function readMemberAdminValue(body: unknown, actorId: string): MemberAdmin {
+  const result = memberAdminResult(body);
+  const user = result.user;
+  if (
+    !isRecord(user) ||
+    typeof user.id !== "number" ||
+    !Number.isSafeInteger(user.id) ||
+    String(user.id) !== actorId
+  ) {
+    throw new Error("canadmin_failed");
+  }
+  if (result.status === "creator") {
+    return {
+      kind: "admin",
+      editable: null,
+      admin: {
+        actorId,
+        bot: user.is_bot === true,
+        role: "creator",
+        anonymous: requiredAdminFlag(result, "is_anonymous"),
+        rights: [],
+      },
+    };
+  }
+  if (result.status === "administrator") {
+    return {
+      kind: "admin",
+      editable: requiredAdminFlag(result, "can_be_edited") ? "on" : "off",
+      admin: {
+        actorId,
+        bot: user.is_bot === true,
+        role: "administrator",
+        anonymous: requiredAdminFlag(result, "is_anonymous"),
+        rights: memberAdminRights(result),
+      },
+    };
+  }
+  if (
+    result.status === "member" ||
+    result.status === "restricted" ||
+    result.status === "left" ||
+    result.status === "kicked"
+  ) {
+    return { kind: "none" };
+  }
+  throw new Error("canadmin_failed");
+}
+
+function memberAdminResult(body: unknown): Record<string, unknown> {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("canadmin_failed");
+  }
+  const result = body.result;
+  if (!isRecord(result) || typeof result.status !== "string") {
+    throw new Error("canadmin_failed");
+  }
+  return result;
+}
+
+function requiredAdminFlag(
+  record: Record<string, unknown>,
+  key: string,
+): boolean {
+  const value = record[key];
+  if (typeof value !== "boolean") {
+    throw new Error("canadmin_failed");
+  }
+  return value;
+}
+
+function memberAdminRights(
+  record: Record<string, unknown>,
+): readonly AdministratorRight[] {
+  const rights: AdministratorRight[] = [];
+  for (const [field, right] of administratorFields) {
+    const value = record[field];
+    if (value === undefined) {
+      if (requiredAdministratorFields.has(field)) {
+        throw new Error("canadmin_failed");
+      }
+      continue;
+    }
+    if (typeof value !== "boolean") {
+      throw new Error("canadmin_failed");
+    }
+    if (value) {
+      rights.push(right);
+    }
+  }
+  return rights;
 }
 
 function readMemberAllowsValue(body: unknown, actorId: string): MemberAllows {
