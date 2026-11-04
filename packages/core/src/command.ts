@@ -98,6 +98,7 @@ const COMMAND_NAMES = [
   "deltopic",
   "count",
   "pin",
+  "unpinmsg",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -155,6 +156,7 @@ export interface OperatorCommandInput {
       | "unmuteActor"
       | "unlockChat"
       | "unpinChat"
+      | "unpinMessage"
       | "unpinTopic"
     >
   >;
@@ -311,6 +313,8 @@ async function dispatch(
       return showMemberCount(input, args);
     case "pin":
       return pinOneMessage(input, args);
+    case "unpinmsg":
+      return unpinOneMessage(input, args);
   }
 }
 
@@ -1713,6 +1717,53 @@ function rejectPin(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "pin",
+  });
+}
+
+async function unpinOneMessage(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.unpinmsg.usage");
+  }
+  const chatId = args[0];
+  const messageId = args[1];
+  if (
+    chatId === undefined ||
+    messageId === undefined ||
+    !isTargetId(chatId) ||
+    !isMessageId(messageId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const unpin = input.moderator?.unpinMessage;
+  if (!unpin) {
+    rejectUnpinMessage(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await unpin({
+      tenantId: input.event.tenantId,
+      chatId,
+      messageId,
+    });
+  } catch {
+    rejectUnpinMessage(input);
+    return say(input, "command.invalid");
+  }
+  return say(input, "command.unpinmsg.done", { chatId, messageId });
+}
+
+function rejectUnpinMessage(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "unpinmsg",
   });
 }
 

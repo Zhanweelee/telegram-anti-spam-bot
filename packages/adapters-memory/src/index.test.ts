@@ -235,6 +235,20 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one unpinned message id", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.unpinMessage({
+      tenantId: "t",
+      chatId: "c",
+      messageId: "55",
+    });
+    expect(moderator.messagesUnpinned).toEqual([
+      { tenantId: "t", chatId: "c", messageId: "55" },
+    ]);
+    expect(moderator.messagesPinned).toEqual([]);
+    expect(moderator.unpinned).toEqual([]);
+  });
+
   it("records one pinned message id", async () => {
     const moderator = createMemoryModerator();
     await moderator.pinMessage({

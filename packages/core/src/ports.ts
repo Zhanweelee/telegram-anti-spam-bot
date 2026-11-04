@@ -226,6 +226,7 @@ export interface ModerationPort {
   deleteTopic(target: NamedForumTopicTarget): Promise<void>;
   readMemberCount(target: ChatTarget): Promise<number>;
   pinMessage(target: PinnedMessageTarget): Promise<void>;
+  unpinMessage(target: PinnedMessageTarget): Promise<void>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

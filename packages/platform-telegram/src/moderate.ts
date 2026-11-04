@@ -477,6 +477,19 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async unpinMessage(target) {
+      await postTelegram({
+        token: input.token,
+        method: "unpinChatMessage",
+        fetchImpl: input.fetchImpl,
+        missing: "unpinmsg_unavailable",
+        failed: "unpinmsg_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          message_id: telegramId(target.messageId),
+        },
+      });
+    },
   };
 }
 

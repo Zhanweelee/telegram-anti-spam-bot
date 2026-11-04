@@ -1042,6 +1042,54 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("unpins one message and leaves the other pins", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.unpinMessage({
+      tenantId: "local",
+      chatId: "-100",
+      messageId: "1",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/unpinChatMessage`,
+    ]);
+    const body = JSON.parse(calls[0]?.body ?? "{}") as {
+      chat_id?: number;
+      message_id?: number;
+      business_connection_id?: string;
+    };
+    expect(body.chat_id).toBe(-100);
+    expect(body.message_id).toBe(1);
+    expect(body.business_connection_id).toBeUndefined();
+    expect(calls[0]?.method).not.toContain("unpinAll");
+    expect(calls[0]?.method).not.toContain("/pinChatMessage");
+    expect(calls[0]?.method).not.toContain("delete");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).unpinMessage({
+        tenantId: "local",
+        chatId: "-100",
+        messageId: "55",
+      }),
+    ).rejects.toThrow("unpinmsg_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
