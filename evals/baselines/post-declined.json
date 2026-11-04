@@ -1,0 +1,5 @@
+{
+  "detector": "post_declined",
+  "precision": 1,
+  "recall": 1
+}

@@ -403,6 +403,40 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a declined suggested post and rejects other marks", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        asPostDeclined: true,
+      },
+    });
+    expect(event.message?.asPostDeclined).toBe(true);
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          asPostDeclined: false,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts a topic rename and rejects other marks", () => {
     const event = parseEvent({
       id: "evt_1",

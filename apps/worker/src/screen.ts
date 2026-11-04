@@ -63,6 +63,7 @@ import { createCallInviteDetector } from "@tasb/detector-call-invite";
 import { createChecklistDetector } from "@tasb/detector-checklist";
 import { createCommunityDetector } from "@tasb/detector-community";
 import { createContactDetector } from "@tasb/detector-contact";
+import { createDeclineDetector } from "@tasb/detector-decline";
 import { createFolderDetector } from "@tasb/detector-folder";
 import { createForumDetector } from "@tasb/detector-forum";
 import {
@@ -666,6 +667,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.topicNotice,
         value: createTopicDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.postDeclined,
+        value: createDeclineDetector(),
       },
       {
         source: "builtin",

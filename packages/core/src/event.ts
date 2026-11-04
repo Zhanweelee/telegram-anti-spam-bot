@@ -133,6 +133,8 @@ export const messageSchema = z
     asChecklistAdded: z.literal(true).optional(),
     /** Forum topic created or renamed. Icon color and emoji id stay out. The name stays in the message. */
     topicNotice: z.enum(["created", "edited"]).optional(),
+    /** Declined suggested post. The nested post stays out. The comment stays in the message. */
+    asPostDeclined: z.literal(true).optional(),
   })
   .refine(
     (message) =>

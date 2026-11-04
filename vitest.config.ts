@@ -43,6 +43,7 @@ export default defineConfig({
       "packages/detectors-poll",
       "packages/detectors-task",
       "packages/detectors-topic",
+      "packages/detectors-decline",
       "packages/detectors-forward",
       "packages/actions",
       "packages/adapters-memory",

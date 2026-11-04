@@ -165,6 +165,7 @@ async function messageEvent(
   const pollNotice = changedPoll(message);
   const asChecklistAdded = addedChecklist(message);
   const topicNotice = changedTopic(message);
+  const asPostDeclined = declinedPost(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
   return finish({
@@ -221,6 +222,7 @@ async function messageEvent(
       ...(pollNotice === undefined ? {} : { pollNotice }),
       ...(asChecklistAdded ? { asChecklistAdded: true as const } : {}),
       ...(topicNotice === undefined ? {} : { topicNotice }),
+      ...(asPostDeclined ? { asPostDeclined: true as const } : {}),
     },
   });
 }
@@ -243,6 +245,10 @@ function hasPollOptionText(value: unknown): boolean {
     typeof value.option_text === "string" &&
     value.option_text.length > 0
   );
+}
+
+function declinedPost(message: Record<string, unknown>): boolean {
+  return isRecord(message.suggested_post_declined);
 }
 
 function changedTopic(
