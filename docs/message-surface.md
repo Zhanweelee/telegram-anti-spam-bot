@@ -109,3 +109,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `rich_message` 里 `type` 为 `hashtag` 且标签去掉空白后非空时，消息带 `asRichHashtag`。空白、布尔值和缺标签不带这个标记。行情标签不带。标签不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_hashtag` 默认关闭。见 ADR 0508。
 
 `rich_message` 里 `type` 为 `cashtag` 且行情代码去掉空白后非空时，消息带 `asRichCashtag`。空白、布尔值和缺行情代码不带这个标记。话题标签不带。行情代码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_cashtag` 默认关闭。见 ADR 0509。
+
+`rich_message` 里 `type` 为 `anchor` 且名字去掉空白后非空时，消息带 `asRichAnchor`。空白、布尔值和缺名字不带这个标记。行情标签和指向锚点的链接不带。名字不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_anchor` 默认关闭。见 ADR 0510。
