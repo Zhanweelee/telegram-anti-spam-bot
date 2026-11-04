@@ -20614,6 +20614,108 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a declined suggested post and keeps the comment", async () => {
+    const comment = "拒绝说明广告";
+    const original = "原建议帖广告";
+    const actor = "拒稿的人";
+    const declined = await normalize({
+      update_id: 4690,
+      message: {
+        message_id: 740,
+        date: 1761955200,
+        chat: { id: -100499690, type: "supergroup" },
+        from: { id: 105, first_name: actor },
+        suggested_post_declined: {
+          comment,
+          suggested_post_message: {
+            message_id: 1,
+            date: 1761955200,
+            chat: { id: -100499690, type: "supergroup" },
+            text: original,
+          },
+        },
+      },
+    });
+    expect(declined.status).toBe("event");
+    if (declined.status !== "event") {
+      return;
+    }
+    expect(declined.event.message?.asPostDeclined).toBe(true);
+    expect(declined.event.message?.text).toBe(comment);
+    const dumped = JSON.stringify(declined.event);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(original);
+
+    const kept = await normalize({
+      update_id: 4691,
+      message: {
+        message_id: 741,
+        date: 1761955200,
+        chat: { id: -100499691, type: "supergroup" },
+        from: { id: 105, first_name: actor },
+        text: "今天站会",
+        suggested_post_declined: { comment },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asPostDeclined).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain(comment);
+
+    const blank = await normalize({
+      update_id: 4692,
+      message: {
+        message_id: 742,
+        date: 1761955200,
+        chat: { id: -100499692, type: "supergroup" },
+        from: { id: 105 },
+        suggested_post_declined: { comment: "" },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.asPostDeclined).toBe(true);
+    expect(blank.event.message?.text).toBe("");
+
+    const empty = await normalize({
+      update_id: 4693,
+      message: {
+        message_id: 743,
+        date: 1761955200,
+        chat: { id: -100499693, type: "supergroup" },
+        from: { id: 105 },
+        suggested_post_declined: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asPostDeclined).toBe(true);
+    expect(empty.event.message?.text).toBe("");
+
+    const flag = await normalize({
+      update_id: 4694,
+      message: {
+        message_id: 744,
+        date: 1761955200,
+        chat: { id: -100499694, type: "supergroup" },
+        from: { id: 105 },
+        suggested_post_declined: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asPostDeclined).toBeUndefined();
+  });
+
   it("marks a topic rename and keeps the topic name", async () => {
     const created = "新建话题广告名";
     const edited = "改名后的广告名";

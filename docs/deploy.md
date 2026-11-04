@@ -203,6 +203,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> topic_notice on` 删这个群里新建话题和改名的提示。默认关闭。图标颜色和自定义表情编号不进证据。话题名仍参与关键词。只改图标时这行也会删除。关掉和重开仍看 `forum_notice`。见 ADR 0496。
 
+`/rule <chatId> post_declined on` 删这个群里建议帖被拒绝的提示。默认关闭。原帖不进证据。拒绝说明仍参与关键词。没有说明时这行也会删除。通过、失败、付款和退款仍看 `post_notice`。见 ADR 0497。
+
 ## 确认
 
 ```sh

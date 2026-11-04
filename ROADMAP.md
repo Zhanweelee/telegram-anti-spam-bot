@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-465 每个群可以删掉建议帖拒绝 — done
+
+验收：`suggested_post_declined` 是对象时，消息带 `asPostDeclined: true`。空对象和空说明也带。拒绝说明仍按 ADR 0113 成为正文。原帖不进事件。布尔值不带这个标记。已有正文时正文不变，说明不并进去。默认留下。私聊 `/rule <chatId> post_declined on` 之后删除这种提示，`off` 回到留下。证据只有 `decline:post`。不并进 `post_notice`。不调用 `declineSuggestedPost`。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-464 每个群可以删掉话题新建和改名 — done
 
 验收：`forum_topic_created.name` 是非空字符串时，消息带 `topicNotice: "created"`。`forum_topic_edited.name` 是非空字符串，或 `icon_custom_emoji_id` 是字符串时，带 `edited`。同时出现时先认新建。空的新建名字落到改名。话题名仍按 ADR 0088 成为正文。图标颜色和自定义表情编号不进事件。空对象和布尔值不带这个标记。`is_name_implicit` 不改变这个标记。已有正文时正文不变，名字不并进去。只改图标时正文为空，仍带 `edited`。默认留下。私聊 `/rule <chatId> topic_notice on` 之后删除这两种提示，`off` 回到留下。证据只有 `topic:created` 或 `topic:edited`。不并进 `forum_notice`。不调用 `editForumTopic`。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2092,6 +2096,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-465
+
+- 做了什么：建议帖被拒绝有一条默认关闭的规则。私聊 `/rule` 可以打开。拒绝说明仍是正文。
+- 学到什么：说明干净时这行会留下。没有说明时正文是空的。把它并进 `post_notice` 会让只想删通过和付款的群把拒绝也删掉。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-464
 

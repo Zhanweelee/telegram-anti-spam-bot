@@ -1,0 +1,18 @@
+[
+  {
+    "id": "post_declined_spam",
+    "kind": "message",
+    "label": "spam",
+    "asPostDeclined": true
+  },
+  {
+    "id": "post_declined_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "post_declined_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

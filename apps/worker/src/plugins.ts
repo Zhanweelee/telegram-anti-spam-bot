@@ -301,6 +301,12 @@ export const builtinManifests = {
     integrity:
       "b4ce647502ced0d809d3a536ee4d3730fa7220c37807ceba4d8943a49f026bee",
   }),
+  postDeclined: manifest({
+    id: "post_declined",
+    kind: "detector",
+    integrity:
+      "2af6f13de72b56377559c043f91c46559b7da2c4dcb1afc0f209e8932b2e271c",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",
