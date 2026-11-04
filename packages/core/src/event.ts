@@ -119,6 +119,8 @@ export const messageSchema = z
     priceNotice: z.enum(["paid", "direct"]).optional(),
     /** Suggested-post service line. The nested post stays out. */
     postNotice: z.enum(["approved", "failed", "paid", "refunded"]).optional(),
+    /** Checklist done or undone service line. Task ids stay out. */
+    checklistNotice: z.enum(["done", "undone"]).optional(),
   })
   .refine(
     (message) =>

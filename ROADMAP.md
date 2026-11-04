@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-457 每个群可以删掉清单完成提示 — done
+
+验收：`checklist_tasks_done.marked_as_done_task_ids` 全是大于 0 的安全整数时，消息带 `checklistNotice: "done"`。`marked_as_not_done_task_ids` 满足同样条件时带 `undone`。同时出现时先认完成。任务号和原清单不进事件。空对象、空数组、0、负数、小数、字符串和布尔值不带这个标记。新加的任务不带这个标记，文字仍按 ADR 0089 成为正文。已有正文时正文不变。默认留下。私聊 `/rule <chatId> checklist_notice on` 之后删除这两种提示，`off` 回到留下。证据只有 `checklist:done` 或 `checklist:undone`。不调用 `editMessageChecklist`。任务完成状态不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-456 每个群可以删掉建议帖提示 — done
 
 验收：`suggested_post_approved.send_date` 是大于等于 0 的安全整数时，消息带 `postNotice: "approved"`。`suggested_post_approval_failed.price` 是对象时带 `failed`。`suggested_post_paid.currency` 正好是 `XTR` 或 `TON` 时带 `paid`。`suggested_post_refunded.reason` 正好是 `post_deleted` 或 `payment_refunded` 时带 `refunded`。同时出现时先认通过。原帖、价格、发表时间和退款原因不进事件。空对象、负数、其它币种和其它原因不带这个标记。拒绝说明不带这个标记，仍按 ADR 0113 成为正文。已有正文时正文不变。默认留下。私聊 `/rule <chatId> post_notice on` 之后删除这四种提示，`off` 回到留下。证据只有 `post:approved`、`post:failed`、`post:paid` 或 `post:refunded`。不调用 `approveSuggestedPost` 或 `declineSuggestedPost`。稿子状态不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2060,6 +2064,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-457
+
+- 做了什么：清单标成完成和取消完成有一条默认关闭的规则。私聊 `/rule` 可以打开。任务号仍不进事件。
+- 学到什么：这两条提示的正文是空的，原清单在另一条消息上。删掉这一行不会改变任务完成状态。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-456
 

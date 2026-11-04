@@ -187,6 +187,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> post_notice on` 删这个群里建议帖通过、付款失败、付款和退款的提示。默认关闭。原帖和价格不进证据。稿子状态不变。见 ADR 0488。
 
+`/rule <chatId> checklist_notice on` 删这个群里清单标成完成和取消完成的提示。默认关闭。任务号不进证据。任务完成状态不变。见 ADR 0489。
+
 ## 确认
 
 ```sh

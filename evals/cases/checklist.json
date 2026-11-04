@@ -1,0 +1,24 @@
+[
+  {
+    "id": "checklist_notice_done",
+    "kind": "message",
+    "label": "spam",
+    "checklistNotice": "done"
+  },
+  {
+    "id": "checklist_notice_undone",
+    "kind": "message",
+    "label": "spam",
+    "checklistNotice": "undone"
+  },
+  {
+    "id": "checklist_notice_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "checklist_notice_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

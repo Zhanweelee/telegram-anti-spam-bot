@@ -5675,6 +5675,148 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("owned449");
   });
 
+  it("keeps a checklist notice until that chat asks", async () => {
+    const title = "勾完的广告事项";
+    const actor = "勾任务的人";
+    const doneId = 90196;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      done?: boolean;
+      undone?: boolean;
+      flag?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 97, first_name: actor },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.done
+              ? {
+                  checklist_tasks_done: {
+                    marked_as_done_task_ids: [doneId],
+                    checklist_message: { text: title },
+                  },
+                }
+              : {}),
+            ...(input.undone
+              ? {
+                  checklist_tasks_done: {
+                    marked_as_not_done_task_ids: [90197],
+                    checklist_message: { text: title },
+                  },
+                }
+              : {}),
+            ...(input.flag ? { checklist_tasks_done: true } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 10400,
+      chatId: -1001040,
+      done: true,
+    });
+    expect(idle.message?.checklistNotice).toBe("done");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain(actor);
+    expect(JSON.stringify(idle)).not.toContain(String(doneId));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "checklist_notice",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["checklist_notice"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 10401, chatId: -1001041, undone: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("checklist_notice");
+    expect(removed.decision.ruleIds).toContain("checklist_notice");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "checklist:undone" },
+    ]);
+    const flag = await screenTelegramEvent(
+      await posted({ updateId: 10402, chatId: -1001042, flag: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(flag.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 10403,
+        chatId: -1001043,
+        done: true,
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      flag: flag.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(actor);
+    expect(dumped).not.toContain(String(doneId));
+    expect(dumped).not.toContain("90197");
+  });
+
   it("keeps a suggested-post notice until that chat asks", async () => {
     const title = "建议帖广告正文";
     const actor = "过稿的人";

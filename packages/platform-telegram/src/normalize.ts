@@ -158,6 +158,7 @@ async function messageEvent(
   const asAutoDelete = autoDeleteNotice(message);
   const priceNotice = changedPrice(message);
   const postNotice = suggestedPost(message);
+  const checklistNotice = taskNotice(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -205,8 +206,36 @@ async function messageEvent(
       ...(asAutoDelete ? { asAutoDelete: true as const } : {}),
       ...(priceNotice === undefined ? {} : { priceNotice }),
       ...(postNotice === undefined ? {} : { postNotice }),
+      ...(checklistNotice === undefined ? {} : { checklistNotice }),
     },
   });
+}
+
+function taskNotice(
+  message: Record<string, unknown>,
+): "done" | "undone" | undefined {
+  const done = message.checklist_tasks_done;
+  if (!isRecord(done)) {
+    return undefined;
+  }
+  if (taskIds(done.marked_as_done_task_ids)) {
+    return "done";
+  }
+  if (taskIds(done.marked_as_not_done_task_ids)) {
+    return "undone";
+  }
+  return undefined;
+}
+
+function taskIds(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (item) =>
+        typeof item === "number" && Number.isSafeInteger(item) && item > 0,
+    )
+  );
 }
 
 function suggestedPost(
