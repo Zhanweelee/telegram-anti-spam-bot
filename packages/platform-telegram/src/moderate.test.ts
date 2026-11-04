@@ -1567,6 +1567,49 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("sets the default menu button without a web app", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await moderator.setMenuButton({ tenantId: "local", kind: "commands" });
+    await moderator.setMenuButton({ tenantId: "local", kind: "default" });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/setChatMenuButton`,
+      `https://api.telegram.org/bot${token}/setChatMenuButton`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      menu_button: { type: "commands" },
+    });
+    expect(JSON.parse(calls[1]?.body ?? "null")).toEqual({
+      menu_button: { type: "default" },
+    });
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(calls[0]?.body).not.toContain("web_app");
+    expect(calls[0]?.method).not.toContain("getChatMenuButton");
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).setMenuButton({
+        tenantId: "local",
+        kind: "commands",
+      }),
+    ).rejects.toThrow("menubutton_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("clears the private command menu without a language", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

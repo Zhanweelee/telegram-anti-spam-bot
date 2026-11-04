@@ -64,6 +64,7 @@ describe("operator command example", () => {
     expect(help).toContain("/setcommands [private]");
     expect(help).toContain("/commands [private]");
     expect(help).toContain("/delcommands [private]");
+    expect(help).toContain("/menubutton <commands|default>");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -300,6 +301,14 @@ describe("operator command example", () => {
       "已请求清掉私聊里的命令菜单。更高一层的菜单会显示出来。群菜单不变。已有单独语言列表的人不受影响。",
     );
     expect(clearedMenu).not.toContain("/help");
+    const menuButton = await runPrivateCommand({
+      text: "/menubutton commands",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(menuButton).toBe(
+      "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
+    );
     const reacted = await runPrivateCommand({
       text: "/react -100 55 👍",
       actorId: "42",

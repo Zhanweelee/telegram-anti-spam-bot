@@ -2826,11 +2826,11 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(62);
+    expect(body.commands).toHaveLength(63);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.at(-1)).toEqual({
-      command: "delcommands",
-      description: "/delcommands [private]",
+      command: "menubutton",
+      description: "/menubutton <commands|default>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -3152,6 +3152,129 @@ describe("handleIncomingEvent", () => {
     const rejected = deps();
     await handleIncomingEvent(
       await incoming({ text: "/delcommands", direct: true }),
+      {
+        ...rejected,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: false, description: phrase }), {
+            status: 400,
+          }),
+      },
+    );
+    expect(rejected.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+  });
+
+  it("sets the default menu button without a private chat", async () => {
+    const kit = deps();
+    const calls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/menubutton commands", direct: true }),
+      {
+        ...kit,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          calls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["setChatMenuButton"]);
+    expect(calls[0]?.method).not.toContain("getChatMenuButton");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({
+      menu_button: { type: "commands" },
+    });
+    expect(calls[0]?.body).not.toContain("chat_id");
+    expect(calls[0]?.body).not.toContain("web_app");
+    expect(calls[0]?.body).not.toContain(phrase);
+    const restored = deps();
+    const restoredCalls: { method: string; body: string }[] = [];
+    await handleIncomingEvent(
+      await incoming({ text: "/menubutton default", direct: true }),
+      {
+        ...restored,
+        botToken: "bot-token",
+        fetchImpl: async (input, init) => {
+          const url = String(input);
+          restoredCalls.push({
+            method: url.slice(url.lastIndexOf("/") + 1),
+            body: String(init?.body ?? ""),
+          });
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(restored.reply.sent.map((message) => message.text)).toEqual([
+      "已请求把默认菜单按钮恢复成默认。某个私聊里单独设过的按钮不受影响。",
+    ]);
+    expect(JSON.parse(restoredCalls[0]?.body ?? "null")).toEqual({
+      menu_button: { type: "default" },
+    });
+    expect(restoredCalls[0]?.body).not.toContain("chat_id");
+    const usage = deps();
+    let used = false;
+    await handleIncomingEvent(
+      await incoming({ text: "/menubutton", direct: true }),
+      {
+        ...usage,
+        botToken: "bot-token",
+        fetchImpl: async () => {
+          used = true;
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(used).toBe(false);
+    expect(usage.reply.sent.map((message) => message.text)).toEqual([
+      "用法：/menubutton <commands|default>",
+    ]);
+    const invalid = deps();
+    let called = false;
+    await handleIncomingEvent(
+      await incoming({ text: `/menubutton ${phrase}`, direct: true }),
+      {
+        ...invalid,
+        botToken: "bot-token",
+        fetchImpl: async () => {
+          called = true;
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        },
+      },
+    );
+    expect(called).toBe(false);
+    expect(invalid.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(invalid.reply.sent)).not.toContain(phrase);
+    const offline = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/menubutton commands", direct: true }),
+      offline,
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    const rejected = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/menubutton default", direct: true }),
       {
         ...rejected,
         botToken: "bot-token",

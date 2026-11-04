@@ -7295,7 +7295,7 @@ describe("runOperatorCommand", () => {
     });
     expect(seen).toHaveLength(1);
     const menu = seen[0]?.commands ?? [];
-    expect(menu).toHaveLength(62);
+    expect(menu).toHaveLength(63);
     expect(menu.length).toBeLessThanOrEqual(100);
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
@@ -7314,9 +7314,13 @@ describe("runOperatorCommand", () => {
       command: "commands",
       description: "/commands [private]",
     });
-    expect(menu.at(-1)).toEqual({
+    expect(menu.find((item) => item.command === "delcommands")).toEqual({
       command: "delcommands",
       description: "/delcommands [private]",
+    });
+    expect(menu.at(-1)).toEqual({
+      command: "menubutton",
+      description: "/menubutton <commands|default>",
     });
     expect(new Set(menu.map((item) => item.command)).size).toBe(menu.length);
     for (const item of menu) {
@@ -7802,6 +7806,182 @@ describe("runOperatorCommand", () => {
       chats: directory(["-100"]),
       moderator: {
         async deleteCommandMenu() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreignPhrase).toMatchObject({ text: "参数无效" });
+  });
+
+  it("sets the default menu button to the command list", async () => {
+    const deps = kit();
+    const seen: { tenantId: string; kind: string; keys: readonly string[] }[] =
+      [];
+    const remember = {
+      async setMenuButton(target: { tenantId: string; kind: string }) {
+        seen.push({
+          tenantId: target.tenantId,
+          kind: target.kind,
+          keys: Object.keys(target),
+        });
+      },
+    };
+    const done = await runOperatorCommand({
+      event: event({ text: "/menubutton commands", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求把默认菜单按钮设成命令列表。某个私聊里单独设过的按钮不受影响。",
+    });
+    expect(seen).toEqual([
+      { tenantId: "local", kind: "commands", keys: ["tenantId", "kind"] },
+    ]);
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    const restored = await runOperatorCommand({
+      event: event({ text: "/menubutton default", direct: true }),
+      adminActorIds: ["42"],
+      moderator: remember,
+      ...kit(),
+    });
+    expect(restored).toMatchObject({
+      text: "已请求把默认菜单按钮恢复成默认。某个私聊里单独设过的按钮不受影响。",
+    });
+    expect(seen[1]).toEqual({
+      tenantId: "local",
+      kind: "default",
+      keys: ["tenantId", "kind"],
+    });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/menubutton <commands|default>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/menubutton commands", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: remember,
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set the default menu button to the command list. A button set for one private chat stays.",
+    });
+    const englishDefault = await runOperatorCommand({
+      event: event({ text: "/menubutton default", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: remember,
+      ...kit(),
+    });
+    expect(englishDefault).toMatchObject({
+      text: "Asked to restore the default menu button. A button set for one private chat stays.",
+    });
+    expect(seen).toHaveLength(4);
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/menubutton commands", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMenuButton() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/menubutton", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMenuButton() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/menubutton <commands|default>",
+    });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/menubutton commands extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMenuButton() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/menubutton <commands|default>",
+    });
+    expect(seen).toHaveLength(4);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/menubutton ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMenuButton() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/menubutton commands", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const rejected = await runOperatorCommand({
+      event: event({ text: "/menubutton default", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMenuButton() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(rejected).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"menubutton"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({
+        text: "/menubutton commands",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setMenuButton() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+    const foreignPhrase = await runOperatorCommand({
+      event: event({
+        text: `/menubutton ${phrase}`,
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setMenuButton() {
           throw new Error("called");
         },
       },
