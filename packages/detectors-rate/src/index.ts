@@ -57,7 +57,7 @@ function createRateDetector(
           key,
           nowMs: Date.parse(ctx.event.occurredAt),
           windowMs: parsed.windowSeconds * 1000,
-          eventId: ctx.event.id,
+          eventId: id === "flood" ? floodSampleId(ctx.event) : ctx.event.id,
         });
       } catch {
         ctx.logger.warn("rate_window_failed", {
@@ -91,6 +91,14 @@ function createRateDetector(
 
 function floodKey(event: Event): string {
   return `f\n${event.tenantId}\n${event.chatId}\n${event.actor.id}`;
+}
+
+function floodSampleId(event: Event): string {
+  const album = event.message?.albumId;
+  if (event.edited === true || album === undefined) {
+    return event.id;
+  }
+  return `a.${album}`;
 }
 
 function repeatDigest(message: NonNullable<Event["message"]>): string | null {

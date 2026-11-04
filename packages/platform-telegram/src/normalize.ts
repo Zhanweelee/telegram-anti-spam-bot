@@ -135,6 +135,7 @@ async function messageEvent(
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
+  const albumId = albumToken(message.media_group_id);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -159,10 +160,18 @@ async function messageEvent(
       ...(isRecord(message.contact) ? { contact: true as const } : {}),
       ...(isRecord(message.via_bot) ? { via: true as const } : {}),
       ...(message.is_paid_post === true ? { paid: true as const } : {}),
+      ...(albumId ? { albumId } : {}),
       ...(media ? { media: media.kind } : {}),
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
     },
   });
+}
+
+function albumToken(value: unknown): string | undefined {
+  if (typeof value !== "string" || !/^[0-9]{1,20}$/.test(value)) {
+    return undefined;
+  }
+  return value;
 }
 
 function foreignChat(message: Record<string, unknown>): boolean {

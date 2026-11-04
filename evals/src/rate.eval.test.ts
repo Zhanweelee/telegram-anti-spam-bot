@@ -21,6 +21,8 @@ interface RateCase {
   readonly maxKeys?: number;
   readonly media?: "sticker";
   readonly sameMedia?: boolean;
+  readonly albumId?: string;
+  readonly edited?: boolean;
 }
 
 interface Baseline {
@@ -52,10 +54,12 @@ function eventFor(item: RateCase, index: number) {
       id: item.sameActor ? "user_eval" : `user_${index}`,
       isAdmin: false,
     },
+    ...(item.edited ? { edited: true } : {}),
     message: {
       id: `${index}`,
       text,
       textSha256: item.sameText ? "e".repeat(64) : `${index}`.padStart(64, "a"),
+      ...(item.albumId ? { albumId: item.albumId } : {}),
       ...(item.media
         ? {
             media: item.media,

@@ -22107,4 +22107,81 @@ describe("normalizeUpdate", () => {
       expect(dumped).not.toContain("draft_secret");
     }
   });
+
+  it("keeps a numeric album id and leaves other group ids out", async () => {
+    const albumId = "12532140322504850";
+    const phrase = "请免费领取礼品";
+    const album = await normalize({
+      update_id: 4501,
+      message: {
+        message_id: 4501,
+        date: 1761955200,
+        chat: { id: -1004501, type: "supergroup" },
+        from: { id: 4501 },
+        media_group_id: albumId,
+        photo: [{ file_id: phrase, file_unique_id: "photo-4501" }],
+      },
+    });
+    expect(album.status).toBe("event");
+    if (album.status !== "event") {
+      return;
+    }
+    expect(album.event.message?.albumId).toBe(albumId);
+    expect(album.event.message?.media).toBe("photo");
+    expect(JSON.stringify(album.event)).not.toContain(phrase);
+
+    const edited = await normalize({
+      update_id: 4502,
+      edited_message: {
+        message_id: 4502,
+        date: 1761955200,
+        chat: { id: -1004502, type: "supergroup" },
+        from: { id: 4502 },
+        media_group_id: albumId,
+        text: "今天站会",
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.albumId).toBe(albumId);
+
+    const named = await normalize({
+      update_id: 4503,
+      message: {
+        message_id: 4503,
+        date: 1761955200,
+        chat: { id: -1004503, type: "supergroup" },
+        from: { id: 4503 },
+        media_group_id: phrase,
+        text: "今天站会",
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.albumId).toBeUndefined();
+    expect(JSON.stringify(named)).not.toContain(phrase);
+
+    const numeric = await normalize({
+      update_id: 4504,
+      message: {
+        message_id: 4504,
+        date: 1761955200,
+        chat: { id: -1004504, type: "supergroup" },
+        from: { id: 4504 },
+        media_group_id: 860043,
+        text: "今天站会",
+      },
+    });
+    expect(numeric.status).toBe("event");
+    if (numeric.status !== "event") {
+      return;
+    }
+    expect(numeric.event.message?.albumId).toBeUndefined();
+    expect(JSON.stringify(numeric)).not.toContain("860043");
+  });
 });
