@@ -36,6 +36,7 @@
     "@tasb/detector-gift": "workspace:*",
     "@tasb/detector-pin": "workspace:*",
     "@tasb/detector-giveaway-notice": "workspace:*",
+    "@tasb/detector-boost": "workspace:*",
     "@tasb/detector-via": "workspace:*"
   }
 }

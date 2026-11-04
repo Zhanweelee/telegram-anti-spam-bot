@@ -20614,6 +20614,87 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("marks a boost and leaves the count out", async () => {
+    const booster = "助推的人";
+    const count = 90185;
+    const boosted = await normalize({
+      update_id: 4520,
+      message: {
+        message_id: 570,
+        date: 1761955200,
+        chat: { id: -100499500, type: "supergroup" },
+        from: { id: 96, first_name: booster },
+        boost_added: { boost_count: count },
+      },
+    });
+    expect(boosted.status).toBe("event");
+    if (boosted.status !== "event") {
+      return;
+    }
+    expect(boosted.event.message?.asBoost).toBe(true);
+    expect(boosted.event.message?.text).toBe("");
+    expect(boosted.event.actor).toEqual({ id: "96", isAdmin: false });
+    const boostedDump = JSON.stringify(boosted.event);
+    expect(boostedDump).not.toContain(booster);
+    expect(boostedDump).not.toContain(String(count));
+
+    const alongside = await normalize({
+      update_id: 4521,
+      message: {
+        message_id: 571,
+        date: 1761955200,
+        chat: { id: -100499501, type: "supergroup" },
+        from: { id: 96, first_name: booster },
+        text: "今天站会",
+        boost_added: { boost_count: count },
+      },
+    });
+    expect(alongside.status).toBe("event");
+    if (alongside.status !== "event") {
+      return;
+    }
+    expect(alongside.event.message?.asBoost).toBe(true);
+    expect(alongside.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(alongside.event)).not.toContain(booster);
+    expect(JSON.stringify(alongside.event)).not.toContain(String(count));
+
+    const empty = await normalize({
+      update_id: 4522,
+      message: {
+        message_id: 572,
+        date: 1761955200,
+        chat: { id: -100499502, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        boost_added: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asBoost).toBeUndefined();
+    expect(empty.event.message?.text).toBe("今天站会");
+
+    const zero = await normalize({
+      update_id: 4523,
+      message: {
+        message_id: 573,
+        date: 1761955200,
+        chat: { id: -100499503, type: "supergroup" },
+        from: { id: 96 },
+        text: "今天站会",
+        boost_added: { boost_count: 0 },
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asBoost).toBeUndefined();
+    expect(zero.event.message?.text).toBe("今天站会");
+  });
+
   it("marks a giveaway notice and leaves the prize message out", async () => {
     const prize = "抽奖广告正文";
     const prizeId = 90184;

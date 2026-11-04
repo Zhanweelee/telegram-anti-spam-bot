@@ -59,6 +59,9 @@ importers:
       '@tasb/detector-blocklist':
         specifier: workspace:*
         version: link:../../packages/detectors-blocklist
+      '@tasb/detector-boost':
+        specifier: workspace:*
+        version: link:../../packages/detectors-boost
       '@tasb/detector-bot':
         specifier: workspace:*
         version: link:../../packages/detectors-bot
@@ -162,6 +165,9 @@ importers:
       '@tasb/detector-blocklist':
         specifier: workspace:*
         version: link:../packages/detectors-blocklist
+      '@tasb/detector-boost':
+        specifier: workspace:*
+        version: link:../packages/detectors-boost
       '@tasb/detector-bot':
         specifier: workspace:*
         version: link:../packages/detectors-bot
@@ -320,6 +326,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-blocklist:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-boost:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

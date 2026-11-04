@@ -54,6 +54,7 @@ import {
 } from "@tasb/core";
 import { createBackgroundDetector } from "@tasb/detector-background";
 import { createBlocklistDetector } from "@tasb/detector-blocklist";
+import { createBoostDetector } from "@tasb/detector-boost";
 import { createBotDetector } from "@tasb/detector-bot";
 import { createCallDetector } from "@tasb/detector-call";
 import { createCommunityDetector } from "@tasb/detector-community";
@@ -570,6 +571,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.giveawayNotice,
         value: createGiveawayNoticeDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.chatBoost,
+        value: createBoostDetector(),
       },
       {
         source: "builtin",

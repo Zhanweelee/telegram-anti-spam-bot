@@ -1,0 +1,18 @@
+[
+  {
+    "id": "chat_boost",
+    "kind": "message",
+    "label": "spam",
+    "asBoost": true
+  },
+  {
+    "id": "chat_boost_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "chat_boost_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

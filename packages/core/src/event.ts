@@ -109,6 +109,8 @@ export const messageSchema = z
     asPin: z.literal(true).optional(),
     /** Giveaway creation or private completion. Counts and the prize message stay out. */
     giveawayNotice: z.enum(["created", "completed"]).optional(),
+    /** Boost service line. The boost count stays out. */
+    asBoost: z.literal(true).optional(),
   })
   .refine(
     (message) =>
