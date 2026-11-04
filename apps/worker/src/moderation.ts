@@ -57,6 +57,9 @@ function createOpenModerator(): ModerationPort {
     async readBoostCount() {
       throw new Error("boosts_unavailable");
     },
+    async createTopic() {
+      throw new Error("newtopic_unavailable");
+    },
     clearReactions: (target) => memory.clearReactions(target),
     revokeInvite: (target) => memory.revokeInvite(target),
     unpinChat: (target) => memory.unpinChat(target),

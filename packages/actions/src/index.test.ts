@@ -97,6 +97,9 @@ describe("delete action", () => {
           async readBoostCount() {
             throw new Error("boosts_unavailable");
           },
+          async createTopic() {
+            throw new Error("newtopic_unavailable");
+          },
           async clearReactions() {},
           async revokeInvite() {},
           async unpinChat() {},
@@ -190,6 +193,9 @@ describe("delete action", () => {
         },
         async readBoostCount() {
           throw new Error("boosts_unavailable");
+        },
+        async createTopic() {
+          throw new Error("newtopic_unavailable");
         },
         async clearReactions() {},
         async revokeInvite() {},
@@ -286,6 +292,9 @@ describe("delete action", () => {
         },
         async readBoostCount() {
           throw new Error("boosts_unavailable");
+        },
+        async createTopic() {
+          throw new Error("newtopic_unavailable");
         },
         async clearReactions() {},
         async revokeInvite() {},
@@ -384,6 +393,9 @@ function ports(): ModerationPort & {
     },
     async readBoostCount() {
       throw new Error("boosts_unavailable");
+    },
+    async createTopic() {
+      throw new Error("newtopic_unavailable");
     },
     async clearReactions() {},
     async revokeInvite() {},

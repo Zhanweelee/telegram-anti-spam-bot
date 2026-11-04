@@ -20,6 +20,7 @@ import {
   type ModerationPort,
   type MuteTarget,
   type NamedForumTopicTarget,
+  type NewTopicTarget,
   type PinnedMessageTarget,
   type PolicyStore,
   parseAuditQuery,
@@ -324,6 +325,9 @@ export function createMemoryModerator(): ModerationPort & {
     },
     async readBoostCount() {
       throw new Error("boosts_unavailable");
+    },
+    async createTopic(_target: NewTopicTarget) {
+      throw new Error("newtopic_unavailable");
     },
     async clearReactions(target) {
       reactionsCleared.push({

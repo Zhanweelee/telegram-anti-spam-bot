@@ -610,6 +610,20 @@ export function createTelegramModerator(input: {
         },
       });
     },
+    async createTopic(target) {
+      const body = await postTelegram({
+        token: input.token,
+        method: "createForumTopic",
+        fetchImpl: input.fetchImpl,
+        missing: "newtopic_unavailable",
+        failed: "newtopic_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          name: target.name,
+        },
+      });
+      return createdTopicId(body);
+    },
   };
 }
 
@@ -874,6 +888,29 @@ function memberCount(body: unknown): number {
     throw new Error("count_failed");
   }
   return result;
+}
+
+function createdTopicId(body: unknown): string {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("newtopic_failed");
+  }
+  const result = body.result;
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    !("message_thread_id" in result)
+  ) {
+    throw new Error("newtopic_failed");
+  }
+  const threadId = result.message_thread_id;
+  if (
+    typeof threadId !== "number" ||
+    !Number.isSafeInteger(threadId) ||
+    threadId <= 0
+  ) {
+    throw new Error("newtopic_failed");
+  }
+  return String(threadId);
 }
 
 function boostCount(body: unknown): number {

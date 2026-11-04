@@ -207,6 +207,12 @@ export interface NamedForumTopicTarget {
   readonly threadId: string;
 }
 
+export interface NewTopicTarget {
+  readonly tenantId: string;
+  readonly chatId: string;
+  readonly name: string;
+}
+
 export interface PinnedMessageTarget {
   readonly tenantId: string;
   readonly chatId: string;
@@ -270,6 +276,7 @@ export interface ModerationPort {
   setReaction(target: ReactionChoice): Promise<void>;
   setTitle(target: ChatTitleTarget): Promise<void>;
   setDescription(target: ChatDescriptionTarget): Promise<void>;
+  createTopic(target: NewTopicTarget): Promise<string>;
 }
 
 export function parseAuditRecord(input: unknown): AuditRecord {

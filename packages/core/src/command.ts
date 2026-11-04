@@ -108,6 +108,7 @@ const COMMAND_NAMES = [
   "react",
   "title",
   "desc",
+  "newtopic",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -121,6 +122,7 @@ const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
 const DESCRIPTION_LIMIT = 255;
+const TOPIC_NAME_LIMIT = 128;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -223,6 +225,7 @@ export interface OperatorCommandInput {
       | "banActor"
       | "banSenderChat"
       | "clearReactions"
+      | "createTopic"
       | "closeTopic"
       | "declineJoin"
       | "deleteMessage"
@@ -430,6 +433,8 @@ async function dispatch(
       return setOneTitle(input, args);
     case "desc":
       return setOneDescription(input, args);
+    case "newtopic":
+      return createOneTopic(input, args);
   }
 }
 
@@ -2306,6 +2311,56 @@ function rejectDescription(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "desc",
+  });
+}
+
+async function createOneTopic(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 2) {
+    return say(input, "command.newtopic.usage");
+  }
+  const chatId = args[0];
+  const name = args.slice(1).join(" ");
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    name.length > TOPIC_NAME_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const create = input.moderator?.createTopic;
+  if (!create) {
+    rejectNewTopic(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const threadId = await create({
+      tenantId: input.event.tenantId,
+      chatId,
+      name,
+    });
+    if (!isMessageId(threadId)) {
+      rejectNewTopic(input);
+      return say(input, "command.invalid");
+    }
+    return say(input, "command.newtopic.done", { chatId, threadId });
+  } catch {
+    rejectNewTopic(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function rejectNewTopic(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "newtopic",
   });
 }
 

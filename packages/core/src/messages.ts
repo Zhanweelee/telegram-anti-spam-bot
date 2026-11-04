@@ -189,6 +189,8 @@ export const messageKeys = [
   "command.desc.usage",
   "command.desc.done",
   "command.desc.cleared",
+  "command.newtopic.usage",
+  "command.newtopic.done",
   "command.chats.disabled",
   "command.chats.empty",
   "command.chats.body",
@@ -257,6 +259,7 @@ const syntax = [
   "/react <chatId> <messageId> <emoji>",
   "/title <chatId> <title>",
   "/desc <chatId> [description]",
+  "/newtopic <chatId> <name>",
 ].join("\n");
 
 const zh = {
@@ -472,6 +475,8 @@ const zh = {
   "command.desc.usage": "用法：/desc <chatId> [description]",
   "command.desc.done": "已请求修改 {chatId} 的简介。标题和头像还在。",
   "command.desc.cleared": "已请求清掉 {chatId} 的简介。标题和头像还在。",
+  "command.newtopic.usage": "用法：/newtopic <chatId> <name>",
+  "command.newtopic.done": "已在 {chatId} 建好话题 {threadId}。其它话题还在。",
   "command.chats.disabled": "chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",
@@ -706,6 +711,9 @@ const en = {
     "Asked to change the description of {chatId}. The title and photo stay.",
   "command.desc.cleared":
     "Asked to clear the description of {chatId}. The title and photo stay.",
+  "command.newtopic.usage": "Usage: /newtopic <chatId> <name>",
+  "command.newtopic.done":
+    "Created topic {threadId} in {chatId}. The other topics stay.",
   "command.chats.disabled": "Chats off",
   "command.chats.empty": "none",
   "command.chats.body": "chats\n{chats}",

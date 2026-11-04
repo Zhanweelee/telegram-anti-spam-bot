@@ -1547,6 +1547,84 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("creates one forum topic and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            message_thread_id: 55,
+            name: phrase,
+            icon_color: 7322096,
+            icon_custom_emoji_id: "emoji-secret",
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.createTopic({
+        tenantId: "local",
+        chatId: "-100",
+        name: phrase,
+      }),
+    ).resolves.toBe("55");
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/createForumTopic`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      name: phrase,
+    });
+    expect(calls[0]?.method).not.toContain("editForumTopic");
+    expect(calls[0]?.method).not.toContain("getForumTopicIconStickers");
+    expect(calls[0]?.body).not.toContain("icon_color");
+    expect(calls[0]?.body).not.toContain("emoji-secret");
+    expect(calls[0]?.body).not.toContain(token);
+    const missing: typeof fetch = async () =>
+      new Response(JSON.stringify({ ok: true, result: { name: phrase } }), {
+        status: 200,
+      });
+    await expect(
+      createTelegramModerator({ token, fetchImpl: missing }).createTopic({
+        tenantId: "local",
+        chatId: "-100",
+        name: phrase,
+      }),
+    ).rejects.toThrow("newtopic_failed");
+    const zero: typeof fetch = async () =>
+      new Response(
+        JSON.stringify({ ok: true, result: { message_thread_id: 0 } }),
+        { status: 200 },
+      );
+    await expect(
+      createTelegramModerator({ token, fetchImpl: zero }).createTopic({
+        tenantId: "local",
+        chatId: "-100",
+        name: phrase,
+      }),
+    ).rejects.toThrow("newtopic_failed");
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).createTopic({
+        tenantId: "local",
+        chatId: "-100",
+        name: phrase,
+      }),
+    ).rejects.toThrow("newtopic_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("reads default speaking permissions and drops the chat title", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
