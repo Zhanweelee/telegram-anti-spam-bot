@@ -235,6 +235,17 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one changed chat title", async () => {
+    const moderator = createMemoryModerator();
+    const title = "请免费领取礼品";
+    await moderator.setTitle({ tenantId: "t", chatId: "c", title });
+    expect(moderator.titlesSet).toEqual([
+      { tenantId: "t", chatId: "c", title },
+    ]);
+    expect(JSON.stringify(moderator.titlesSet)).not.toContain("description");
+    expect(JSON.stringify(moderator.titlesSet)).not.toContain("photo");
+  });
+
   it("records one set emoji reaction", async () => {
     const moderator = createMemoryModerator();
     await moderator.setReaction({

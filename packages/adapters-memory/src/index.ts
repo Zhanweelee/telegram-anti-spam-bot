@@ -6,6 +6,7 @@ import {
   type CaptchaChallenge,
   type CaptchaStore,
   type ChatTarget,
+  type ChatTitleTarget,
   captchaChallengeSchema,
   type DeleteMessagesTarget,
   type DeleteTarget,
@@ -150,6 +151,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly memberTagsSet: readonly MemberTagTarget[];
   readonly stickerSetsDeleted: readonly ChatTarget[];
   readonly reactionsSet: readonly ReactionChoice[];
+  readonly titlesSet: readonly ChatTitleTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -183,6 +185,7 @@ export function createMemoryModerator(): ModerationPort & {
   const memberTagsSet: MemberTagTarget[] = [];
   const stickerSetsDeleted: ChatTarget[] = [];
   const reactionsSet: ReactionChoice[] = [];
+  const titlesSet: ChatTitleTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -216,6 +219,7 @@ export function createMemoryModerator(): ModerationPort & {
     memberTagsSet,
     stickerSetsDeleted,
     reactionsSet,
+    titlesSet,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -392,6 +396,13 @@ export function createMemoryModerator(): ModerationPort & {
         chatId: target.chatId,
         messageId: target.messageId,
         emoji: target.emoji,
+      });
+    },
+    async setTitle(target) {
+      titlesSet.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        title: target.title,
       });
     },
     async unpinTopic(target) {

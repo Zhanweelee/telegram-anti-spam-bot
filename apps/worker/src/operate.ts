@@ -115,6 +115,9 @@ function commandModerator(
     async setReaction() {
       throw new Error("react_unavailable");
     },
+    async setTitle() {
+      throw new Error("title_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

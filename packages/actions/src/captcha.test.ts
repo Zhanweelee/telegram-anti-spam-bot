@@ -120,6 +120,7 @@ function moderator(
     async setMemberTag() {},
     async deleteStickerSet() {},
     async setReaction() {},
+    async setTitle() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},
