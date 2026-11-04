@@ -1567,6 +1567,122 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("reads the bot identity and drops the display name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: 42,
+            is_bot: true,
+            first_name: phrase,
+            username: "giftbot",
+            can_join_groups: true,
+            can_read_all_group_messages: false,
+            note: phrase,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.readBotIdentity({ tenantId: "local" }),
+    ).resolves.toEqual({
+      id: "42",
+      username: "giftbot",
+      joinGroups: "on",
+      readAllGroupMessages: "off",
+    });
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getMe`,
+    ]);
+    expect(calls[0]?.method).not.toContain("logOut");
+    expect(calls[0]?.method).not.toContain("close");
+    expect("getMe").not.toContain("logOut");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({});
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({ ok: true, result: { id: 7, is_bot: true } }),
+            { status: 200 },
+          ),
+      }).readBotIdentity({ tenantId: "local" }),
+    ).resolves.toEqual({
+      id: "7",
+      username: "",
+      joinGroups: "unknown",
+      readAllGroupMessages: "unknown",
+    });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readBotIdentity({
+        tenantId: "local",
+      }),
+    ).rejects.toThrow("who_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: 42, is_bot: false, first_name: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readBotIdentity({ tenantId: "local" }),
+    ).rejects.toThrow("who_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: 42,
+                is_bot: true,
+                username: "x".repeat(33),
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readBotIdentity({ tenantId: "local" }),
+    ).rejects.toThrow("who_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: 42,
+                is_bot: true,
+                can_join_groups: "yes",
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readBotIdentity({ tenantId: "local" }),
+    ).rejects.toThrow("who_failed");
+  });
+
   it("reads the default bot short description and drops extra fields", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

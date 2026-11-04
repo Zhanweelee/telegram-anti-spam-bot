@@ -167,6 +167,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/myshort` 调用 `readBotShortDescription`。配了 token 时使用 `getMyShortDescription`，不送 `language_code`，所以读的是默认短简介。空短简介写空。回复带上短简介，日志不带。换行、超长或非字符串时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份短简介。不调用 `setMyShortDescription`。见 ADR 0417。
 
+`/who` 调用 `readBotIdentity`。配了 token 时使用 `getMe`，不带参数。回复写编号、用户名、能否入群，以及是否看得到全部群消息。缺用户名写空。缺开关写未知。名字和其它字段不进回复，也不进日志。用户名不合规则或不是 bot 时整份回复是「参数无效」。只有配置里的管理员可以看。没有 token 时不编一份身份。不调用 `logOut` 或 `close`。见 ADR 0418。
+
 `/evals` 读 `ReviewQueue.list`，再用 `buildFeedbackCase` 收成评测样本。`confirmed` 是 `spam`，`false_positive` 是 `ham`。文档不带原文，也不能送回检测器重放。放不下全部样本时返回最近的一页，并写上省略条数。见 ADR 0016 和 ADR 0330。形状在 `evals/cases/feedback.json`。
 
 `llm` 检测器在 `packages/detectors-llm`。没有 `LlmClassifier` 时返回 null。分类器抛错或超时记 `llm_failed`，也返回 null。证据只写 `llm:` 加标签。默认模型和使用方式见 ADR 0015。评测在 `evals/cases/llm.json`。

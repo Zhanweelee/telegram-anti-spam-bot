@@ -22,6 +22,7 @@ import {
   type AuditScope,
   administratorRights,
   auditExportDocument,
+  type BotIdentity,
   type ChatAdministrator,
   type DefaultAdministratorRights,
   type DefaultChatPermissions,
@@ -133,6 +134,7 @@ const COMMAND_NAMES = [
   "mydesc",
   "botshort",
   "myshort",
+  "who",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -273,6 +275,7 @@ export interface OperatorCommandInput {
       | "pinMessage"
       | "readAdministrators"
       | "readBotDescription"
+      | "readBotIdentity"
       | "readBotName"
       | "readBotShortDescription"
       | "readBoostCount"
@@ -521,6 +524,8 @@ async function dispatch(
       return setBotShortDescription(input, args);
     case "myshort":
       return showBotShortDescription(input, args);
+    case "who":
+      return showBotIdentity(input, args);
   }
 }
 
@@ -3466,6 +3471,82 @@ function rejectReadBotShortDescription(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "myshort",
+  });
+}
+
+async function showBotIdentity(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length > 1) {
+    return say(input, "command.who.usage");
+  }
+  if (args.length === 1) {
+    return say(input, "command.invalid");
+  }
+  if (!scopeOf(input).all) {
+    return say(input, "command.denied");
+  }
+  const read = input.moderator?.readBotIdentity;
+  if (!read) {
+    rejectBotIdentity(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const identity = await read({ tenantId: input.event.tenantId });
+    if (!isBotIdentity(identity)) {
+      rejectBotIdentity(input);
+      return say(input, "command.invalid");
+    }
+    return describeBotIdentity(input, identity);
+  } catch {
+    rejectBotIdentity(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function isBotIdentity(identity: BotIdentity): boolean {
+  return (
+    isBotUserId(identity.id) &&
+    isBotUsername(identity.username) &&
+    isPermissionState(identity.joinGroups) &&
+    isPermissionState(identity.readAllGroupMessages)
+  );
+}
+
+function isBotUserId(id: string): boolean {
+  return /^[1-9]\d{0,15}$/.test(id) && Number.isSafeInteger(Number(id));
+}
+
+function isBotUsername(username: string): boolean {
+  return username.length === 0 || /^[A-Za-z0-9_]{1,32}$/.test(username);
+}
+
+function isPermissionState(state: string): state is PermissionState {
+  return state === "on" || state === "off" || state === "unknown";
+}
+
+function describeBotIdentity(
+  input: OperatorCommandInput,
+  identity: BotIdentity,
+): string {
+  const username =
+    identity.username.length === 0
+      ? say(input, "command.who.username_empty")
+      : say(input, "command.who.username", { username: identity.username });
+  return [
+    say(input, "command.who.id", { id: identity.id }),
+    username,
+    `${say(input, "command.who.groups")} ${say(input, permissionStateKey(identity.joinGroups))}`,
+    `${say(input, "command.who.messages")} ${say(input, permissionStateKey(identity.readAllGroupMessages))}`,
+  ].join("\n");
+}
+
+function rejectBotIdentity(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "who",
   });
 }
 
