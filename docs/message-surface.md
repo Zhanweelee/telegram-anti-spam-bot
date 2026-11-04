@@ -35,3 +35,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `sender_chat.type` 正好是 `channel`，并且频道号和本群不同时，消息带 `asChannel`。讨论组自动转发、本群匿名管理员和群身份不带这个标记。频道号和标题不进事件。规则 `channel_sender` 默认关闭。见 ADR 0471。
 
 `message.story` 带有 `chat` 时，消息带 `asStory`。只回复一条故事不带这个标记。发布者名字仍只留主机名。用户名和故事编号不进事件。规则 `shared_story` 默认关闭。见 ADR 0472。
+
+`message.location` 同时有纬度和经度、并且没有 `venue` 时，消息带 `asLocation`。坐标、精度、方向和实时时长不进事件。场馆消息不带这个标记。规则 `bare_location` 默认关闭。见 ADR 0473。

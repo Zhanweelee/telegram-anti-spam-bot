@@ -163,6 +163,12 @@ export const builtinManifests = {
     integrity:
       "344e17ebdabfccc439c7efe8722a50f77255d76640876591619243dcb5e20afc",
   }),
+  bareLocation: manifest({
+    id: "bare_location",
+    kind: "detector",
+    integrity:
+      "8e1e49f3e645e6775df242d1cd2e06598e7e14f71d8ba1eaf399ba43f77f8bab",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

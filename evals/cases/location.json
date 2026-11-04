@@ -1,0 +1,18 @@
+[
+  {
+    "id": "location_pin",
+    "kind": "message",
+    "label": "spam",
+    "asLocation": true
+  },
+  {
+    "id": "location_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "location_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

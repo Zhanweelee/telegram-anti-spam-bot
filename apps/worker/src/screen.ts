@@ -64,6 +64,7 @@ import { createJoinDetector } from "@tasb/detector-join";
 import { createKeywordDetector } from "@tasb/detector-keyword";
 import { createLinkDetector } from "@tasb/detector-link";
 import { createLlmDetector } from "@tasb/detector-llm";
+import { createLocationDetector } from "@tasb/detector-location";
 import { createMediaDetector } from "@tasb/detector-media";
 import { createNoticeDetector } from "@tasb/detector-notice";
 import {
@@ -504,6 +505,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.sharedStory,
         value: createStoryDetector(),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.bareLocation,
+        value: createLocationDetector(),
       },
       {
         source: "builtin",

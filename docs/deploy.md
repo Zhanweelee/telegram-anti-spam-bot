@@ -155,6 +155,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> shared_story on` 删这个群里转发来的故事卡片。默认关闭。只回复一条故事的消息仍留下。见 ADR 0472。
 
+`/rule <chatId> bare_location on` 删这个群里只有坐标的位置消息。默认关闭。带标题的场馆消息仍留下。见 ADR 0473。
+
 ## 确认
 
 ```sh
