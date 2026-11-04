@@ -112,6 +112,18 @@ const regexDetector = createRegexDetector({
 const forwardDetector = createForwardDetector({
   kinds: [...defaultForwardKinds],
 });
+const hiddenForwardDetector = createForwardDetector(
+  { kinds: ["hidden"] },
+  "forward_hidden",
+);
+const chatForwardDetector = createForwardDetector(
+  { kinds: ["chat"] },
+  "forward_chat",
+);
+const userForwardDetector = createForwardDetector(
+  { kinds: ["user"] },
+  "forward_user",
+);
 const linkDetector = createLinkDetector();
 
 export function createWorkerLogger(): Logger {
@@ -398,6 +410,21 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.forward,
         value: forwardDetector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.forwardHidden,
+        value: hiddenForwardDetector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.forwardChat,
+        value: chatForwardDetector,
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.forwardUser,
+        value: userForwardDetector,
       },
       {
         source: "builtin",

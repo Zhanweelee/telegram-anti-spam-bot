@@ -75,4 +75,37 @@ describe("forward detector", () => {
     expect(await detector.detect({ event: member, logger, signal })).toBeNull();
     expect(() => createForwardDetector({ kinds: [] })).toThrow();
   });
+
+  it("can score one forward kind under its own id", async () => {
+    const hidden = createForwardDetector(
+      { kinds: ["hidden"] },
+      "forward_hidden",
+    );
+    const hit = await hidden.detect({
+      event: messageEvent(title, "hidden"),
+      logger,
+      signal,
+    });
+    expect(hit).toEqual({
+      detectorId: "forward_hidden",
+      score: 1,
+      reasons: ["forward_hidden"],
+      evidence: [{ kind: "feature", summary: "forward:hidden" }],
+    });
+    expect(JSON.stringify(hit)).not.toContain(title);
+    expect(
+      await hidden.detect({
+        event: messageEvent(title, "channel"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    expect(
+      await hidden.detect({
+        event: messageEvent(title, "user"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+  });
 });

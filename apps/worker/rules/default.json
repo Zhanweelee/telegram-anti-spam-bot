@@ -51,6 +51,30 @@
       "actions": ["delete"]
     },
     {
+      "id": "hidden_forward",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["forward_hidden"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "chat_forward",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["forward_chat"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "user_forward",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["forward_user"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },
