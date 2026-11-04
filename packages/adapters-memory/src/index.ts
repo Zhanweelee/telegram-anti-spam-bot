@@ -13,6 +13,7 @@ import {
   isExpired,
   type JoinTarget,
   MAX_RULE_SWITCHES,
+  type MemberTagTarget,
   type MessageReactionTarget,
   type ModerationPort,
   type MuteTarget,
@@ -145,6 +146,7 @@ export function createMemoryModerator(): ModerationPort & {
   readonly messageReactionsRemoved: readonly MessageReactionTarget[];
   readonly photosDeleted: readonly ChatTarget[];
   readonly chatsLeft: readonly ChatTarget[];
+  readonly memberTagsSet: readonly MemberTagTarget[];
 } {
   const deleted: DeleteTarget[] = [];
   const deletedMessages: DeleteMessagesTarget[] = [];
@@ -175,6 +177,7 @@ export function createMemoryModerator(): ModerationPort & {
   const messageReactionsRemoved: MessageReactionTarget[] = [];
   const photosDeleted: ChatTarget[] = [];
   const chatsLeft: ChatTarget[] = [];
+  const memberTagsSet: MemberTagTarget[] = [];
   return {
     deleted,
     deletedMessages,
@@ -205,6 +208,7 @@ export function createMemoryModerator(): ModerationPort & {
     messageReactionsRemoved,
     photosDeleted,
     chatsLeft,
+    memberTagsSet,
     async deleteMessage(target) {
       deleted.push({ ...target });
     },
@@ -356,6 +360,14 @@ export function createMemoryModerator(): ModerationPort & {
       chatsLeft.push({
         tenantId: target.tenantId,
         chatId: target.chatId,
+      });
+    },
+    async setMemberTag(target) {
+      memberTagsSet.push({
+        tenantId: target.tenantId,
+        chatId: target.chatId,
+        actorId: target.actorId,
+        tag: target.tag,
       });
     },
     async unpinTopic(target) {

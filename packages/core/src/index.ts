@@ -181,6 +181,7 @@ export {
   type InviteLinkTarget,
   type JoinTarget,
   type MemberStanding,
+  type MemberTagTarget,
   type MessageReactionTarget,
   type ModerationPort,
   type MuteTarget,

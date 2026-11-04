@@ -103,6 +103,9 @@ function commandModerator(
     async leaveChat() {
       throw new Error("leave_unavailable");
     },
+    async setMemberTag() {
+      throw new Error("tag_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

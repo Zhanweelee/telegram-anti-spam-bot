@@ -4319,6 +4319,232 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("sets a member tag and keeps the name", async () => {
+    const deps = kit();
+    const seen: { chatId: string; actorId: string; tag: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag(target) {
+          seen.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            tag: target.tag,
+          });
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({
+      text: "已请求设置 -100 里 77 的标签。名字还在。",
+    });
+    expect(JSON.stringify(done)).not.toContain("ops");
+    expect(seen).toEqual([{ chatId: "-100", actorId: "77", tag: "ops" }]);
+    const spaced = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 hello world", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag(target) {
+          seen.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            tag: target.tag,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(spaced).toMatchObject({
+      text: "已请求设置 -100 里 77 的标签。名字还在。",
+    });
+    expect(seen[1]).toEqual({
+      chatId: "-100",
+      actorId: "77",
+      tag: "hello world",
+    });
+    const cleared = await runOperatorCommand({
+      event: event({ text: "/tag -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag(target) {
+          seen.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            tag: target.tag,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(cleared).toMatchObject({
+      text: "已请求清掉 -100 里 77 的标签。名字还在。",
+    });
+    expect(seen[2]?.tag).toBe("");
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/tag <chatId> <userId> [tag]");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setMemberTag() {},
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "Asked to set the tag of 77 in -100. The name stays.",
+    });
+    expect(JSON.stringify(english)).not.toContain("ops");
+    const englishClear = await runOperatorCommand({
+      event: event({ text: "/tag -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async setMemberTag() {},
+      },
+      ...kit(),
+    });
+    expect(englishClear).toMatchObject({
+      text: "Asked to clear the tag of 77 in -100. The name stays.",
+    });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 ops", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/tag", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({
+      text: "用法：/tag <chatId> <userId> [tag]",
+    });
+    const short = await runOperatorCommand({
+      event: event({ text: "/tag -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({
+      text: "用法：/tag <chatId> <userId> [tag]",
+    });
+    const exact = "a".repeat(16);
+    const fitted = await runOperatorCommand({
+      event: event({ text: `/tag -100 77 ${exact}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag(target) {
+          seen.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            tag: target.tag,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(fitted).toMatchObject({
+      text: "已请求设置 -100 里 77 的标签。名字还在。",
+    });
+    expect(seen[3]?.tag).toBe(exact);
+    const tooLong = "a".repeat(17);
+    const overflow = await runOperatorCommand({
+      event: event({ text: `/tag -100 77 ${tooLong}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(overflow).toMatchObject({ text: "参数无效" });
+    expect(seen).toHaveLength(4);
+    const hiddenTag = await runOperatorCommand({
+      event: event({ text: `/tag -100 77 ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag(target) {
+          seen.push({
+            chatId: target.chatId,
+            actorId: target.actorId,
+            tag: target.tag,
+          });
+        },
+      },
+      ...kit(),
+    });
+    expect(hiddenTag).toMatchObject({
+      text: "已请求设置 -100 里 77 的标签。名字还在。",
+    });
+    expect(JSON.stringify(hiddenTag)).not.toContain(phrase);
+    expect(seen[4]?.tag).toBe(phrase);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/tag ${phrase} 77 ops`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/tag -100 77 ops", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async setMemberTag() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).not.toContain("ops");
+    expect(JSON.stringify(failed.logger.entries)).toContain('"command":"tag"');
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/tag -200 77 ops", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async setMemberTag() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];
