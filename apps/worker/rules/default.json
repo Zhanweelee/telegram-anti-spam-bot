@@ -139,6 +139,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "shared_story",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["shared_story"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

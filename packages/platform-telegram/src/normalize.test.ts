@@ -16804,6 +16804,96 @@ describe("normalizeUpdate", () => {
     expect(group.event.message?.asChannel).toBeUndefined();
   });
 
+  it("marks a shared story card and leaves the poster out", async () => {
+    const title = "故事频道";
+    const username = "storyposter440";
+    const storyId = 880440;
+    const posterId = -100777440;
+    const posted = await normalize({
+      update_id: 4950,
+      message: {
+        message_id: 30,
+        date: 1761955200,
+        chat: { id: -100690, type: "supergroup" },
+        from: { id: 81 },
+        story: {
+          chat: { id: posterId, type: "channel", title, username },
+          id: storyId,
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.asStory).toBe(true);
+    expect(posted.event.message?.text).toBe("");
+    expect(posted.event.message?.hosts).toBeUndefined();
+    expect(posted.event.actor).toEqual({ id: "81", isAdmin: false });
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain(String(storyId));
+    expect(dumped).not.toContain(String(posterId));
+
+    const replied = await normalize({
+      update_id: 4951,
+      message: {
+        message_id: 31,
+        date: 1761955200,
+        chat: { id: -100691, type: "supergroup" },
+        from: { id: 82 },
+        text: "今天站会",
+        reply_to_story: {
+          chat: { id: posterId, type: "channel", title, username },
+          id: storyId,
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.asStory).toBeUndefined();
+    expect(replied.event.message?.text).toBe("今天站会");
+    expect(JSON.stringify(replied.event)).not.toContain(title);
+
+    const empty = await normalize({
+      update_id: 4952,
+      message: {
+        message_id: 32,
+        date: 1761955200,
+        chat: { id: -100692, type: "supergroup" },
+        from: { id: 83 },
+        text: "今天站会",
+        story: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asStory).toBeUndefined();
+
+    const bare = await normalize({
+      update_id: 4953,
+      message: {
+        message_id: 33,
+        date: 1761955200,
+        chat: { id: -100693, type: "supergroup" },
+        from: { id: 84 },
+        text: "今天站会",
+        story: { id: storyId },
+      },
+    });
+    expect(bare.status).toBe("event");
+    if (bare.status !== "event") {
+      return;
+    }
+    expect(bare.event.message?.asStory).toBeUndefined();
+    expect(JSON.stringify(bare.event)).not.toContain(String(storyId));
+  });
+
   it("rejects updates that are not objects or lack update_id", async () => {
     expect((await normalize([])).status).toBe("invalid");
     expect((await normalize({})).status).toBe("invalid");

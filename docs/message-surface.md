@@ -33,3 +33,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已经写进正文的阿拉伯字母或西里尔字母可以按群删除。至少 4 个，并且要多于其它字母。数字和音标不计。证据只有 `script:` 加文字。两条规则默认关闭。见 ADR 0470。
 
 `sender_chat.type` 正好是 `channel`，并且频道号和本群不同时，消息带 `asChannel`。讨论组自动转发、本群匿名管理员和群身份不带这个标记。频道号和标题不进事件。规则 `channel_sender` 默认关闭。见 ADR 0471。
+
+`message.story` 带有 `chat` 时，消息带 `asStory`。只回复一条故事不带这个标记。发布者名字仍只留主机名。用户名和故事编号不进事件。规则 `shared_story` 默认关闭。见 ADR 0472。

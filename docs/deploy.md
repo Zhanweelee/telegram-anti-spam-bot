@@ -153,6 +153,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> channel_sender on` 删这个群里别的频道以自己身份发出的消息。默认关闭。讨论组里关联频道的自动转发仍留下。见 ADR 0471。
 
+`/rule <chatId> shared_story on` 删这个群里转发来的故事卡片。默认关闭。只回复一条故事的消息仍留下。见 ADR 0472。
+
 ## 确认
 
 ```sh
