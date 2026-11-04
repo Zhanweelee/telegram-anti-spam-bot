@@ -135,6 +135,8 @@ export const messageSchema = z
     topicNotice: z.enum(["created", "edited"]).optional(),
     /** Declined suggested post. The nested post stays out. The comment stays in the message. */
     asPostDeclined: z.literal(true).optional(),
+    /** Basic group created. Supergroup and channel creation stay out. */
+    asGroupCreated: z.literal(true).optional(),
   })
   .refine(
     (message) =>

@@ -85,3 +85,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `forum_topic_created.name` 是非空字符串时，消息带 `topicNotice: "created"`。`forum_topic_edited.name` 是非空字符串，或 `icon_custom_emoji_id` 是字符串时，带 `edited`。同时出现时先认新建。空的新建名字落到改名。图标颜色和自定义表情编号不进事件。话题名仍按 ADR 0088 成为正文。空对象和布尔值不带这个标记。`is_name_implicit` 不改变这个标记。关掉和重开不带这个标记。规则 `topic_notice` 默认关闭。见 ADR 0496。
 
 `suggested_post_declined` 是对象时，消息带 `asPostDeclined`。空对象和空说明也带。原帖不进事件。拒绝说明仍按 ADR 0113 成为正文。布尔值不带这个标记。已有正文时正文不变。通过、失败、付款和退款不带这个标记。规则 `post_declined` 默认关闭。见 ADR 0497。
+
+`group_chat_created` 正好是 `true` 时，消息带 `asGroupCreated`。`false`、超级群创建和频道创建不带这个标记。发送者名字不进事件。已有正文时正文不变。规则 `group_created` 默认关闭。见 ADR 0498。

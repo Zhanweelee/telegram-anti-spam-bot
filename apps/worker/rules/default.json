@@ -339,6 +339,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "group_created",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["group_created"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },
