@@ -110,6 +110,9 @@ function createOpenModerator(): ModerationPort {
     async readPersonalChat() {
       throw new Error("personal_unavailable");
     },
+    async readPrivatePrivacy() {
+      throw new Error("privacy_unavailable");
+    },
     async createTopic() {
       throw new Error("newtopic_unavailable");
     },

@@ -2091,6 +2091,145 @@ describe("telegram captcha transport", () => {
     ).rejects.toThrow("personal_failed");
   });
 
+  it("reads private-chat privacy and drops the name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const invite = `https://t.me/+${phrase}`;
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: -100,
+            type: "private",
+            first_name: phrase,
+            last_name: phrase,
+            username: phrase,
+            bio: phrase,
+            invite_link: invite,
+            has_private_forwards: true,
+            has_restricted_voice_and_video_messages: true,
+          },
+        }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    const resolved = await moderator.readPrivatePrivacy({
+      tenantId: "local",
+      chatId: "-100",
+    });
+    expect(resolved).toEqual({
+      privateForwards: "on",
+      restrictedVoice: "on",
+    });
+    expect(resolved).not.toHaveProperty("bio");
+    expect(resolved).not.toHaveProperty("first_name");
+    expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getChat`,
+    ]);
+    expect(calls[0]?.method).not.toContain("setChatPermissions");
+    expect("getChat").not.toContain("setChatPermissions");
+    expect(JSON.parse(calls[0]?.body ?? "null")).toEqual({ chat_id: -100 });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: { id: -100, type: "private", first_name: phrase },
+            }),
+            { status: 200 },
+          ),
+      }).readPrivatePrivacy({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({
+      privateForwards: "unknown",
+      restrictedVoice: "unknown",
+    });
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                has_private_forwards: false,
+                bio: phrase,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPrivatePrivacy({ tenantId: "local", chatId: "-100" }),
+    ).resolves.toEqual({
+      privateForwards: "off",
+      restrictedVoice: "unknown",
+    });
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readPrivatePrivacy({
+        tenantId: "local",
+        chatId: "-100",
+      }),
+    ).rejects.toThrow("privacy_unavailable");
+    expect(called).toBe(false);
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -200,
+                first_name: phrase,
+                has_private_forwards: true,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPrivatePrivacy({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("privacy_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                bio: phrase,
+                has_private_forwards: "yes",
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readPrivatePrivacy({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("privacy_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(JSON.stringify({ ok: true, result: null }), {
+            status: 200,
+          }),
+      }).readPrivatePrivacy({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("privacy_failed");
+  });
+
   it("reads the allowed reactions and drops the emoji", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";
