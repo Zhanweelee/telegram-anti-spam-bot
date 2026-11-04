@@ -247,6 +247,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> login_forward on` 删这个群里带有转发后替换文字的登录按钮。默认关闭。替换文字不进证据。看得见的按钮文字仍参与关键词。内联查询仍看 `switch_query`。见 ADR 0518。
 
+`/rule <chatId> button_emoji on` 删这个群里带有自定义表情图标的内联按钮。默认关闭。编号不进证据。看得见的按钮文字仍参与关键词。正文里的自定义表情仍看 `custom_emoji`。见 ADR 0519。
+
 ## 确认
 
 ```sh

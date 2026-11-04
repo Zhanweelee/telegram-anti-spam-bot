@@ -195,6 +195,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 登录按钮转发后的文字可以按群删除。规则 `login_forward` 默认关闭。见 ADR 0518。
 
+内联按钮上的自定义表情可以按群删除。规则 `button_emoji` 默认关闭。见 ADR 0519。
+
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 
 `textSha256` 在这个包里用 Web Crypto 计算。`packages/sdk` 的 `sha256Hex` 依赖 `node:crypto`，Worker 不要 import 它。

@@ -175,6 +175,7 @@ async function messageEvent(
   const asCopyText = copyTextMark(message);
   const asSwitchQuery = switchQueryMark(message);
   const asLoginForward = loginForwardMark(message);
+  const asButtonEmoji = buttonEmojiMark(message);
   const asRichMap = richMap(message);
   const chatMove = movedChat(message, chatId);
   const direct = isPrivateChat(message.chat);
@@ -256,6 +257,7 @@ async function messageEvent(
       ...(asCopyText ? { asCopyText: true as const } : {}),
       ...(asSwitchQuery ? { asSwitchQuery: true as const } : {}),
       ...(asLoginForward ? { asLoginForward: true as const } : {}),
+      ...(asButtonEmoji ? { asButtonEmoji: true as const } : {}),
     },
   });
 }
@@ -718,6 +720,31 @@ function richLoginForward(value: unknown): boolean {
     }
   }
   return false;
+}
+
+function buttonEmojiMark(message: Record<string, unknown>): boolean {
+  return inlineButtonEmoji(message.reply_markup);
+}
+
+function inlineButtonEmoji(markup: unknown): boolean {
+  if (!isRecord(markup) || !Array.isArray(markup.inline_keyboard)) {
+    return false;
+  }
+  for (const row of markup.inline_keyboard) {
+    if (!Array.isArray(row)) {
+      continue;
+    }
+    for (const button of row) {
+      if (buttonShowsEmoji(button)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function buttonShowsEmoji(button: unknown): boolean {
+  return isRecord(button) && hiddenSecret(button.icon_custom_emoji_id);
 }
 
 function mentionedUser(value: unknown): boolean {

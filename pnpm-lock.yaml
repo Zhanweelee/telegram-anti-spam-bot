@@ -113,6 +113,9 @@ importers:
       '@tasb/detector-giveaway-notice':
         specifier: workspace:*
         version: link:../../packages/detectors-giveaway-notice
+      '@tasb/detector-icon':
+        specifier: workspace:*
+        version: link:../../packages/detectors-icon
       '@tasb/detector-join':
         specifier: workspace:*
         version: link:../../packages/detectors-join
@@ -282,6 +285,9 @@ importers:
       '@tasb/detector-giveaway-notice':
         specifier: workspace:*
         version: link:../packages/detectors-giveaway-notice
+      '@tasb/detector-icon':
+        specifier: workspace:*
+        version: link:../packages/detectors-icon
       '@tasb/detector-keyword':
         specifier: workspace:*
         version: link:../packages/detectors-keyword
@@ -614,6 +620,15 @@ importers:
         version: 4.6.7
 
   packages/detectors-giveaway-notice:
+    dependencies:
+      '@tasb/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
+  packages/detectors-icon:
     dependencies:
       '@tasb/core':
         specifier: workspace:*

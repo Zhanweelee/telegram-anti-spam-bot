@@ -433,6 +433,12 @@ export const builtinManifests = {
     integrity:
       "ededc096d00552ca55ffedae398303078746a7478592c00a971323b520c7e999",
   }),
+  buttonEmoji: manifest({
+    id: "button_emoji",
+    kind: "detector",
+    integrity:
+      "07c8c7b233ceee4d88a6ba8b38715d87a1ac8a98c330c800c7f737a4ba90f254",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

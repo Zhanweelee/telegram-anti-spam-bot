@@ -21178,6 +21178,310 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(anchor.event)).not.toContain("90227");
   });
 
+  it("marks a button emoji and leaves the id out", async () => {
+    const emojiId = "emoji90269";
+    const actor = "发图标的人";
+    const marked = await normalize({
+      update_id: 79080,
+      message: {
+        message_id: 79080,
+        date: 1761955200,
+        chat: { id: -100499980, type: "supergroup" },
+        from: { id: 128, first_name: actor },
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "图标广告",
+                icon_custom_emoji_id: emojiId,
+                url: "https://example.com/keep",
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(marked.status).toBe("event");
+    if (marked.status !== "event") {
+      return;
+    }
+    expect(marked.event.message?.asButtonEmoji).toBe(true);
+    expect(marked.event.message?.asCustomEmoji).toBeUndefined();
+    expect(marked.event.message?.text).toBe("图标广告");
+    const markedDump = JSON.stringify(marked.event);
+    expect(markedDump).not.toContain(emojiId);
+    expect(markedDump).not.toContain("90269");
+    expect(markedDump).not.toContain(actor);
+
+    const kept = await normalize({
+      update_id: 79081,
+      message: {
+        message_id: 79081,
+        date: 1761955200,
+        chat: { id: -100499981, type: "supergroup" },
+        from: { id: 128 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "图标广告", icon_custom_emoji_id: emojiId }],
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.asButtonEmoji).toBe(true);
+    expect(JSON.stringify(kept.event)).not.toContain("90269");
+
+    const blank = await normalize({
+      update_id: 79082,
+      message: {
+        message_id: 79082,
+        date: 1761955200,
+        chat: { id: -100499982, type: "supergroup" },
+        from: { id: 128 },
+        text: "空图标",
+        reply_markup: {
+          inline_keyboard: [[{ text: "空按钮", icon_custom_emoji_id: "   " }]],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空图标");
+    expect(blank.event.message?.asButtonEmoji).toBeUndefined();
+
+    const empty = await normalize({
+      update_id: 79083,
+      message: {
+        message_id: 79083,
+        date: 1761955200,
+        chat: { id: -100499983, type: "supergroup" },
+        from: { id: 128 },
+        text: "空串图标",
+        reply_markup: {
+          inline_keyboard: [[{ text: "空串按钮", icon_custom_emoji_id: "" }]],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("空串图标");
+    expect(empty.event.message?.asButtonEmoji).toBeUndefined();
+
+    const flag = await normalize({
+      update_id: 79084,
+      message: {
+        message_id: 79084,
+        date: 1761955200,
+        chat: { id: -100499984, type: "supergroup" },
+        from: { id: 128 },
+        text: "布尔图标",
+        reply_markup: {
+          inline_keyboard: [[{ text: "布尔按钮", icon_custom_emoji_id: true }]],
+        },
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.text).toBe("布尔图标");
+    expect(flag.event.message?.asButtonEmoji).toBeUndefined();
+
+    const link = await normalize({
+      update_id: 79085,
+      message: {
+        message_id: 79085,
+        date: 1761955200,
+        chat: { id: -100499985, type: "supergroup" },
+        from: { id: 128 },
+        text: "链接留下",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "打开", url: "https://example.com/keep" }],
+          ],
+        },
+      },
+    });
+    expect(link.status).toBe("event");
+    if (link.status !== "event") {
+      return;
+    }
+    expect(link.event.message?.text).toBe("链接留下");
+    expect(link.event.message?.asButtonEmoji).toBeUndefined();
+
+    const keyboard = await normalize({
+      update_id: 79086,
+      message: {
+        message_id: 79086,
+        date: 1761955200,
+        chat: { id: -100499986, type: "supergroup" },
+        from: { id: 128 },
+        text: "键盘留下",
+        reply_markup: {
+          keyboard: [
+            [{ text: "键盘按钮", icon_custom_emoji_id: "emoji90270" }],
+          ],
+        },
+      },
+    });
+    expect(keyboard.status).toBe("event");
+    if (keyboard.status !== "event") {
+      return;
+    }
+    expect(keyboard.event.message?.text).toBe("键盘留下");
+    expect(keyboard.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(keyboard.event)).not.toContain("90270");
+
+    const rich = await normalize({
+      update_id: 79087,
+      message: {
+        message_id: 79087,
+        date: 1761955200,
+        chat: { id: -100499987, type: "supergroup" },
+        from: { id: 128 },
+        text: "富文本留下",
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [
+                {
+                  text: "嵌套按钮",
+                  url: "https://example.com/keep",
+                  icon_custom_emoji_id: "emoji90275",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.text).toBe("富文本留下");
+    expect(rich.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(rich.event)).not.toContain("90275");
+
+    const emoji = await normalize({
+      update_id: 79088,
+      message: {
+        message_id: 79088,
+        date: 1761955200,
+        chat: { id: -100499988, type: "supergroup" },
+        from: { id: 128 },
+        text: "表情留下",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji90271",
+          },
+        ],
+      },
+    });
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.text).toBe("表情留下");
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("90271");
+
+    const login = await normalize({
+      update_id: 79089,
+      message: {
+        message_id: 79089,
+        date: 1761955200,
+        chat: { id: -100499989, type: "supergroup" },
+        from: { id: 128 },
+        text: "登录留下",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "登录广告",
+                login_url: {
+                  url: "https://example.com/keep",
+                  forward_text: "口令90272",
+                },
+              },
+            ],
+          ],
+        },
+      },
+    });
+    expect(login.status).toBe("event");
+    if (login.status !== "event") {
+      return;
+    }
+    expect(login.event.message?.text).toBe("登录留下");
+    expect(login.event.message?.asLoginForward).toBe(true);
+    expect(login.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(login.event)).not.toContain("90272");
+
+    const topic = await normalize({
+      update_id: 79090,
+      message: {
+        message_id: 79090,
+        date: 1761955200,
+        chat: { id: -100499990, type: "supergroup" },
+        from: { id: 128 },
+        forum_topic_edited: {
+          name: "话题留下",
+          icon_custom_emoji_id: "emoji90273",
+        },
+      },
+    });
+    expect(topic.status).toBe("event");
+    if (topic.status !== "event") {
+      return;
+    }
+    expect(topic.event.message?.text).toBe("话题留下");
+    expect(topic.event.message?.topicNotice).toBe("edited");
+    expect(topic.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(topic.event)).not.toContain("90273");
+
+    const dated = await normalize({
+      update_id: 79091,
+      message: {
+        message_id: 79091,
+        date: 1761955200,
+        chat: { id: -100499991, type: "supergroup" },
+        from: { id: 128 },
+        text: "日期留下",
+        entities: [
+          {
+            type: "date_time",
+            offset: 0,
+            length: 4,
+            unix_time: 90274,
+            date_time_format: "d",
+          },
+        ],
+      },
+    });
+    expect(dated.status).toBe("event");
+    if (dated.status !== "event") {
+      return;
+    }
+    expect(dated.event.message?.text).toBe("日期留下");
+    expect(dated.event.message?.asButtonEmoji).toBeUndefined();
+    expect(JSON.stringify(dated.event)).not.toContain("90274");
+  });
+
   it("marks a login forward and leaves the sentence out", async () => {
     const sentence = "口令90261";
     const actor = "发登录的人";
