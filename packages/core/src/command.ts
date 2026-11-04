@@ -763,12 +763,16 @@ async function showRules(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  if (args.length > 1) {
+  const parsed = parseRulesArgs(args);
+  if (parsed === "usage") {
     return say(input, "command.rules.usage");
+  }
+  if (parsed === "invalid") {
+    return say(input, "command.invalid");
   }
   const scope = scopeOf(input);
   const chatId =
-    args[0] ?? (scope.all ? input.event.chatId : defaultChat(scope));
+    parsed.chatId ?? (scope.all ? input.event.chatId : defaultChat(scope));
   if (!chatId || !isTargetId(chatId)) {
     return say(input, scope.all ? "command.invalid" : "command.rules.usage");
   }
@@ -811,8 +815,14 @@ async function showRules(
         }),
   ];
   if (rules.rules.length === 0) {
+    if (parsed.skip > 0) {
+      return say(input, "command.invalid");
+    }
     lines.push(say(input, "command.rules.empty"));
     return lines.join("\n");
+  }
+  if (parsed.skip >= rules.rules.length) {
+    return say(input, "command.invalid");
   }
   for (const rule of rules.rules) {
     const state = say(
@@ -836,19 +846,52 @@ async function showRules(
         : line,
     );
   }
-  return fitRuleLines(input, lines);
+  return fitRuleLines(input, lines, parsed.skip);
+}
+
+function parseRulesArgs(
+  args: readonly string[],
+): "usage" | "invalid" | { readonly chatId?: string; readonly skip: number } {
+  if (args.length === 0) {
+    return { skip: 0 };
+  }
+  if (args.length === 1) {
+    const chatId = args[0];
+    return chatId === undefined ? "usage" : { chatId, skip: 0 };
+  }
+  if (args.length === 2 && args[0] === "skip") {
+    const skip = rulesSkipCount(args[1] ?? "");
+    return skip === undefined ? "invalid" : { skip };
+  }
+  if (args.length === 3 && args[1] === "skip") {
+    const chatId = args[0];
+    const skip = rulesSkipCount(args[2] ?? "");
+    if (chatId === undefined || skip === undefined) {
+      return "invalid";
+    }
+    return { chatId, skip };
+  }
+  return "usage";
+}
+
+function rulesSkipCount(value: string): number | undefined {
+  if (!/^(?:0|[1-9]\d{0,4})$/.test(value)) {
+    return undefined;
+  }
+  return Number(value);
 }
 
 function fitRuleLines(
   input: OperatorCommandInput,
   lines: readonly string[],
+  skip: number,
 ): string {
-  const full = lines.join("\n");
+  const header = lines[0] ?? "";
+  const rules = lines.slice(1).slice(skip);
+  const full = [header, ...rules].join("\n");
   if (full.length <= EXPORT_REPLY_LIMIT) {
     return full;
   }
-  const header = lines[0] ?? "";
-  const rules = lines.slice(1);
   const rest = (omitted: number): string =>
     say(input, "command.rules.more", { count: omitted });
   for (let kept = rules.length - 1; kept >= 0; kept -= 1) {

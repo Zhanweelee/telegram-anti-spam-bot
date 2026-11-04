@@ -394,7 +394,7 @@ export type MessageKey = (typeof messageKeys)[number];
 
 const syntax = [
   "/help",
-  "/rules [chatId]",
+  "/rules [chatId] [skip <count>]",
   "/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
   "/whitelist <chatId>",
   "/whitelist <chatId> add <actorId>",
@@ -518,7 +518,7 @@ const zh = {
   "command.denied": "没有权限",
   "command.invalid": "参数无效",
   "command.help": `命令：\n${syntax}`,
-  "command.rules.usage": "用法：/rules [chatId]",
+  "command.rules.usage": "用法：/rules [chatId] [skip <count>]",
   "command.rules.header": "rules {chatId}",
   "command.rules.pack": "rules {chatId} {pack}",
   "command.rules.empty": "none",
@@ -961,7 +961,7 @@ const en = {
   "command.denied": "No permission",
   "command.invalid": "Invalid argument",
   "command.help": `Commands:\n${syntax}`,
-  "command.rules.usage": "Usage: /rules [chatId]",
+  "command.rules.usage": "Usage: /rules [chatId] [skip <count>]",
   "command.rules.header": "rules {chatId}",
   "command.rules.pack": "rules {chatId} {pack}",
   "command.rules.empty": "none",
