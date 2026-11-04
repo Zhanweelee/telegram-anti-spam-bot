@@ -171,6 +171,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> chat_background on` 删这个群里换背景的服务消息。默认关闭。文件名不进证据。背景本身不变。见 ADR 0480。
 
+`/rule <chatId> gift_card on` 删这个群里的普通礼物、独特礼物和升级购买。默认关闭。星星数量不进证据。附言里的关键词仍删除。见 ADR 0481。
+
 ## 确认
 
 ```sh

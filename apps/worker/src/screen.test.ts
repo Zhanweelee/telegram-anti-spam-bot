@@ -5493,6 +5493,188 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("90179");
   });
 
+  it("keeps a gift until that chat asks", async () => {
+    const title = "礼物广告标题";
+    const username = "giftposter449";
+    const fileId = "AgADgift449";
+    const giftId = "giftid449";
+    const slug = "PlushSlug449";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind?: "card" | "unique" | "upgrade";
+      empty?: boolean;
+      paid?: boolean;
+    }) {
+      const gift =
+        input.kind === "card" || input.kind === "upgrade"
+          ? {
+              gift: {
+                id: giftId,
+                star_count: 90180,
+                sticker: { file_id: fileId, file_unique_id: "uniqgift449" },
+                publisher_chat: { username, title },
+              },
+            }
+          : input.kind === "unique"
+            ? {
+                gift: {
+                  name: slug,
+                  number: 90181,
+                  base_name: "收藏广告名字",
+                },
+                origin: "upgrade",
+                owned_gift_id: "owned449",
+              }
+            : undefined;
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 96 },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.kind === "card" ? { gift } : {}),
+            ...(input.kind === "unique" ? { unique_gift: gift } : {}),
+            ...(input.kind === "upgrade" ? { gift_upgrade_sent: gift } : {}),
+            ...(input.empty ? { gift: {} } : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 8100,
+      chatId: -100810,
+      kind: "card",
+    });
+    expect(idle.message?.gift).toBe("card");
+    expect(idle.message?.text).toBe("");
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain(fileId);
+    expect(JSON.stringify(idle)).not.toContain("90180");
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "gift_card",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["gift_card"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 8101, chatId: -100811, kind: "card" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("gift_card");
+    expect(removed.decision.ruleIds).toContain("gift_card");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "gift:card" },
+    ]);
+    const unique = await screenTelegramEvent(
+      await posted({ updateId: 8102, chatId: -100812, kind: "unique" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(unique.decision.action).toBe("delete");
+    expect(unique.decision.evidence).toEqual([
+      { kind: "feature", summary: "gift:unique" },
+    ]);
+    const upgrade = await screenTelegramEvent(
+      await posted({ updateId: 8103, chatId: -100813, kind: "upgrade" }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(upgrade.decision.action).toBe("delete");
+    expect(upgrade.decision.evidence).toEqual([
+      { kind: "feature", summary: "gift:upgrade" },
+    ]);
+    const empty = await screenTelegramEvent(
+      await posted({ updateId: 8104, chatId: -100814, empty: true }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(empty.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 8105,
+        chatId: -100815,
+        kind: "card",
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      unique: unique.decision,
+      upgrade: upgrade.decision,
+      empty: empty.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain(fileId);
+    expect(dumped).not.toContain(giftId);
+    expect(dumped).not.toContain(slug);
+    expect(dumped).not.toContain("收藏广告名字");
+    expect(dumped).not.toContain("90180");
+    expect(dumped).not.toContain("90181");
+    expect(dumped).not.toContain("owned449");
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";

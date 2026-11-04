@@ -1,0 +1,5 @@
+{
+  "detector": "gift_card",
+  "precision": 1,
+  "recall": 1
+}

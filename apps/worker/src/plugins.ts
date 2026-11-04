@@ -211,6 +211,12 @@ export const builtinManifests = {
     integrity:
       "a00c71d31da2e68833160157dee61947da5f57c64d802a7e844a9504007a498f",
   }),
+  giftCard: manifest({
+    id: "gift_card",
+    kind: "detector",
+    integrity:
+      "55aa4b28c6a3a4c3cd82ff8bad6ad3f9922d6d525c35055fa54e51051ad95f62",
+  }),
   flood: manifest({
     id: "flood",
     kind: "detector",

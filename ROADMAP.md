@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-449 每个群可以删掉礼物卡片 — done
+
+验收：`gift.gift` 是对象时，消息带 `gift: "card"`。`unique_gift.gift` 是对象时带 `unique`。`gift_upgrade_sent.gift` 是对象时带 `upgrade`。几种同时出现时先认普通礼物。星星数量、礼物编号、贴纸文件号、短名和发布者名字不因这个标记进事件。空对象不带这个标记。已有正文时正文不变。没有更前面的正文时，附言和独特礼物的收藏名仍按 ADR 0087 和 ADR 0324 成为正文。发布者用户名仍只留主机名。默认留下。私聊 `/rule <chatId> gift_card on` 之后删除这三种卡片，`off` 回到留下。证据只有 `gift:card`、`gift:unique` 或 `gift:upgrade`。星星不退回。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
+
 ### P3-448 每个群可以删掉换背景 — done
 
 验收：`chat_background_set.type.type` 是 `wallpaper`、`pattern`、`fill` 或 `chat_theme` 时，消息带 `background`，取值是 `wallpaper`、`pattern`、`fill` 或 `theme`。文件名、文件号、颜色和主题名不进事件。空对象和其它类型不带这个标记。已有正文时正文不变。壁纸和图案文件名里的主机名仍按 ADR 0430 抽取。默认留下。私聊 `/rule <chatId> chat_background on` 之后删除这四种服务消息，`off` 回到留下。证据只有 `background:wallpaper`、`background:pattern`、`background:fill` 或 `background:theme`。背景本身不变。付费帖仍不删除。没有新命令，菜单仍是 99 条。`chats.json` 整份替换的群要自己加上这条规则。不改 ADR 0026 的基础检测器名单。规则、白名单、额度和 30 天保留期不动。
@@ -2028,6 +2032,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-449
+
+- 做了什么：普通礼物、独特礼物和升级购买有一条默认关闭的规则。私聊 `/rule` 可以打开。星星数量仍不进事件。
+- 学到什么：没有附言的普通礼物只剩发布者用户名。用户名里的关键词看不见，短链却已经能删。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-448
 

@@ -103,6 +103,8 @@ export const messageSchema = z
     photo: z.enum(["set", "cleared"]).optional(),
     /** Chat background service line. Filenames, file ids, and theme names stay out. */
     background: z.enum(["wallpaper", "pattern", "fill", "theme"]).optional(),
+    /** Gift service line. Star counts, ids, and publisher names stay out. */
+    gift: z.enum(["card", "unique", "upgrade"]).optional(),
   })
   .refine(
     (message) =>
