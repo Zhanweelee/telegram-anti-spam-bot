@@ -83,6 +83,8 @@ export const messageSchema = z
     audienceId: idSchema.optional(),
     /** Join or leave service line. Names stay in the visible text, if any. */
     notice: z.enum(["join", "leave"]).optional(),
+    /** Sent as another channel. Channel ids and titles stay out. */
+    asChannel: z.literal(true).optional(),
   })
   .refine(
     (message) =>

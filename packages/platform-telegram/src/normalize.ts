@@ -140,6 +140,7 @@ async function messageEvent(
   const media = await mediaMark(message);
   const albumId = albumToken(message.media_group_id);
   const notice = serviceNotice(message);
+  const asChannel = sentAsForeignChannel(message);
   const direct = isPrivateChat(message.chat);
   return finish({
     id: `tg_${updateId}`,
@@ -169,8 +170,22 @@ async function messageEvent(
       ...(media ? { media: media.kind } : {}),
       ...(media?.sha256 ? { mediaSha256: media.sha256 } : {}),
       ...(notice === undefined ? {} : { notice }),
+      ...(asChannel ? { asChannel: true as const } : {}),
     },
   });
+}
+
+function sentAsForeignChannel(message: Record<string, unknown>): boolean {
+  if (message.is_automatic_forward === true) {
+    return false;
+  }
+  const sender = message.sender_chat;
+  if (!isRecord(sender) || sender.type !== "channel") {
+    return false;
+  }
+  const chat = nestedId(message.chat);
+  const senderId = nestedId(sender);
+  return chat !== null && senderId !== null && chat !== senderId;
 }
 
 function serviceNotice(

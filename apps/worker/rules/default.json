@@ -131,6 +131,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "channel_sender",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["channel_sender"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "llm_hint",
       "enabled": false,
       "when": { "eventKind": "message" },

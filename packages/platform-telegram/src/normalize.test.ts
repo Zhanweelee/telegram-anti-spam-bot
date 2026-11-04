@@ -16719,6 +16719,91 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.actor).toEqual({ id: "-5", isAdmin: true });
   });
 
+  it("marks a foreign channel voice and leaves the channel id out", async () => {
+    const title = "机密频道代发";
+    const channelId = -100777001;
+    const posted = await normalize({
+      update_id: 4940,
+      message: {
+        message_id: 20,
+        date: 1761955200,
+        chat: { id: -100680, type: "supergroup" },
+        from: { id: 77 },
+        text: "今天站会",
+        sender_chat: { id: channelId, type: "channel", title },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.asChannel).toBe(true);
+    expect(posted.event.actor).toEqual({ id: "77", isAdmin: false });
+    expect(posted.event.message?.forward).toBeUndefined();
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(String(channelId));
+
+    const sameChat = await normalize({
+      update_id: 4941,
+      message: {
+        message_id: 21,
+        date: 1761955200,
+        chat: { id: -100681, type: "supergroup" },
+        from: { id: 78 },
+        text: "今天站会",
+        sender_chat: { id: -100681, type: "channel", title },
+      },
+    });
+    expect(sameChat.status).toBe("event");
+    if (sameChat.status !== "event") {
+      return;
+    }
+    expect(sameChat.event.message?.asChannel).toBeUndefined();
+
+    const mirror = await normalize({
+      update_id: 4942,
+      message: {
+        message_id: 22,
+        date: 1761955200,
+        chat: { id: -100682, type: "supergroup" },
+        from: { id: 79 },
+        text: "今天站会",
+        is_automatic_forward: true,
+        sender_chat: { id: channelId, type: "channel", title },
+        forward_origin: {
+          type: "channel",
+          date: 1761955200,
+          chat: { id: channelId, type: "channel", title },
+        },
+      },
+    });
+    expect(mirror.status).toBe("event");
+    if (mirror.status !== "event") {
+      return;
+    }
+    expect(mirror.event.message?.asChannel).toBeUndefined();
+    expect(mirror.event.message?.forward).toBeUndefined();
+    expect(JSON.stringify(mirror.event)).not.toContain(title);
+
+    const group = await normalize({
+      update_id: 4943,
+      message: {
+        message_id: 23,
+        date: 1761955200,
+        chat: { id: -100683, type: "supergroup" },
+        from: { id: 80 },
+        text: "今天站会",
+        sender_chat: { id: -100777002, type: "supergroup", title },
+      },
+    });
+    expect(group.status).toBe("event");
+    if (group.status !== "event") {
+      return;
+    }
+    expect(group.event.message?.asChannel).toBeUndefined();
+  });
+
   it("rejects updates that are not objects or lack update_id", async () => {
     expect((await normalize([])).status).toBe("invalid");
     expect((await normalize({})).status).toBe("invalid");

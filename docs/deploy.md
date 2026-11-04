@@ -151,6 +151,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> script_arabic on` 删这个群里阿拉伯字母占多数的消息。`script_cyrillic` 删西里尔文。至少 4 个字母，并且要多于其它字母。两条默认关闭。见 ADR 0470。
 
+`/rule <chatId> channel_sender on` 删这个群里别的频道以自己身份发出的消息。默认关闭。讨论组里关联频道的自动转发仍留下。见 ADR 0471。
+
 ## 确认
 
 ```sh

@@ -76,6 +76,7 @@ import {
   defaultRegexPatterns,
 } from "@tasb/detector-regex";
 import { createScriptDetector } from "@tasb/detector-script";
+import { createSenderDetector } from "@tasb/detector-sender";
 import { createViaDetector } from "@tasb/detector-via";
 import { type AlbumWatch, sweepAlbum, workerAlbumWatch } from "./album.js";
 import { workerBlocklist } from "./blocklist-runtime.js";
@@ -492,6 +493,11 @@ export async function screenTelegramEvent(
         source: "builtin",
         manifest: builtinManifests.scriptCyrillic,
         value: createScriptDetector("cyrillic"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.channelSender,
+        value: createSenderDetector(),
       },
       {
         source: "builtin",

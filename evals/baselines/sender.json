@@ -1,0 +1,5 @@
+{
+  "detector": "channel_sender",
+  "precision": 1,
+  "recall": 1
+}

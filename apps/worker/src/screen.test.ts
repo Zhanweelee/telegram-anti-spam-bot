@@ -3903,6 +3903,160 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(chinese);
   });
 
+  it("keeps messages sent as another channel until that chat asks", async () => {
+    const title = "机密频道代发";
+    const channelId = -100777001;
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      senderId?: number;
+      senderType?: string;
+      automatic?: boolean;
+      paid?: boolean;
+      text?: string;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup" },
+            from: { id: 77 },
+            text: input.text ?? "今天站会",
+            ...(input.paid ? { is_paid_post: true } : {}),
+            ...(input.automatic ? { is_automatic_forward: true } : {}),
+            ...(input.senderId === undefined
+              ? {}
+              : {
+                  sender_chat: {
+                    id: input.senderId,
+                    ...(input.senderType ? { type: input.senderType } : {}),
+                    title,
+                  },
+                }),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const idle = await posted({
+      updateId: 6900,
+      chatId: -100690,
+      senderId: channelId,
+      senderType: "channel",
+    });
+    expect(idle.message?.asChannel).toBe(true);
+    expect(JSON.stringify(idle)).not.toContain(title);
+    expect(JSON.stringify(idle)).not.toContain(String(channelId));
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const source: RuleSource = {
+      async loadChat() {
+        return {
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "channel_sender",
+              enabled: true,
+              when: { eventKind: "message" },
+              detectorIds: ["channel_sender"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        };
+      },
+      async loadDefault() {
+        return { version: 1, aggregate: "max", rules: [] };
+      },
+    };
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 6901,
+        chatId: -100691,
+        senderId: channelId,
+        senderType: "channel",
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("channel_sender");
+    expect(removed.decision.ruleIds).toContain("channel_sender");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "sender:channel" },
+    ]);
+    const mirror = await screenTelegramEvent(
+      await posted({
+        updateId: 6902,
+        chatId: -100692,
+        senderId: channelId,
+        senderType: "channel",
+        automatic: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(mirror.decision.action).toBe("allow");
+    const member = await screenTelegramEvent(
+      await posted({ updateId: 6903, chatId: -100693 }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+      },
+    );
+    expect(member.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 6904,
+        chatId: -100694,
+        senderId: channelId,
+        senderType: "channel",
+        paid: true,
+      }),
+      {
+        source,
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      mirror: mirror.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain(String(channelId));
+  });
+
   it("keeps a linked channel mirror and still deletes its short link", async () => {
     const phrase = "请免费领取礼品";
     const title = "机密频道";
