@@ -170,6 +170,9 @@ function harness(options?: { failStorage?: boolean }) {
     async readMemberCount() {
       throw new Error("count_unavailable");
     },
+    async readBoostCount() {
+      throw new Error("boosts_unavailable");
+    },
     async clearReactions() {},
     async revokeInvite() {},
     async unpinChat() {},

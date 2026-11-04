@@ -991,6 +991,80 @@ describe("telegram captcha transport", () => {
     expect(called).toBe(false);
   });
 
+  it("counts chat boosts and drops the booster name", async () => {
+    const token = "bot-token";
+    const phrase = "请免费领取礼品";
+    const calls: { method: string; body: string }[] = [];
+    let called = false;
+    const boost = {
+      boost_id: "boost-secret",
+      add_date: 1,
+      expiration_date: 2,
+      source: {
+        source: "premium",
+        user: { id: 77, first_name: phrase },
+      },
+    };
+    const fetchImpl: typeof fetch = async (input, init) => {
+      called = true;
+      calls.push({
+        method: String(input),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(
+        JSON.stringify({ ok: true, result: { boosts: [boost, boost] } }),
+        { status: 200 },
+      );
+    };
+    const moderator = createTelegramModerator({ token, fetchImpl });
+    await expect(
+      moderator.readBoostCount({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).resolves.toBe(2);
+    expect(calls.map((call) => call.method)).toEqual([
+      `https://api.telegram.org/bot${token}/getUserChatBoosts`,
+    ]);
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      chat_id: -100,
+      user_id: 77,
+    });
+    expect(calls[0]?.body).not.toContain(phrase);
+    expect(calls[0]?.body).not.toContain(token);
+    expect(calls[0]?.body).not.toContain("boost-secret");
+    const empty: typeof fetch = async () =>
+      new Response(JSON.stringify({ ok: true, result: { boosts: [] } }), {
+        status: 200,
+      });
+    await expect(
+      createTelegramModerator({ token, fetchImpl: empty }).readBoostCount({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).resolves.toBe(0);
+    const missing: typeof fetch = async () =>
+      new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 });
+    await expect(
+      createTelegramModerator({ token, fetchImpl: missing }).readBoostCount({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("boosts_failed");
+    called = false;
+    await expect(
+      createTelegramModerator({ token: " ", fetchImpl }).readBoostCount({
+        tenantId: "local",
+        chatId: "-100",
+        actorId: "77",
+      }),
+    ).rejects.toThrow("boosts_unavailable");
+    expect(called).toBe(false);
+  });
+
   it("pins one message without clearing the other pins", async () => {
     const token = "bot-token";
     const phrase = "请免费领取礼品";

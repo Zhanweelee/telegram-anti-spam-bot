@@ -310,6 +310,9 @@ export function createMemoryModerator(): ModerationPort & {
     async readMemberCount() {
       throw new Error("count_unavailable");
     },
+    async readBoostCount() {
+      throw new Error("boosts_unavailable");
+    },
     async clearReactions(target) {
       reactionsCleared.push({
         tenantId: target.tenantId,

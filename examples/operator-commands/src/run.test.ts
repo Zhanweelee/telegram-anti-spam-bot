@@ -48,6 +48,7 @@ describe("operator command example", () => {
     expect(help).toContain("/leave");
     expect(help).toContain("/tag");
     expect(help).toContain("/delstickers");
+    expect(help).toContain("/boosts");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -183,6 +184,12 @@ describe("operator command example", () => {
       adminActorIds: ["42"],
     });
     expect(members).toBe("参数无效");
+    const boosts = await runPrivateCommand({
+      text: "/boosts -100 77",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(boosts).toBe("参数无效");
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",

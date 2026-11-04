@@ -4660,6 +4660,143 @@ describe("runOperatorCommand", () => {
     expect(foreign).toMatchObject({ text: "没有权限" });
   });
 
+  it("reports a boost count and drops the booster name", async () => {
+    const deps = kit();
+    const seen: { chatId: string; actorId: string }[] = [];
+    const done = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount(target) {
+          seen.push({ chatId: target.chatId, actorId: target.actorId });
+          return 2;
+        },
+      },
+      ...deps,
+    });
+    expect(done).toMatchObject({ text: "77 在 -100 有 2 次助推" });
+    expect(JSON.stringify(done)).not.toContain(phrase);
+    expect(seen).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const zero = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          return 0;
+        },
+      },
+      ...kit(),
+    });
+    expect(zero).toMatchObject({ text: "77 在 -100 有 0 次助推" });
+    const help = await runOperatorCommand({
+      event: event({ text: "/help", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(help.status).toBe("reply");
+    if (help.status === "reply") {
+      expect(help.text).toContain("/boosts <chatId> <userId>");
+    }
+    const english = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator: {
+        async readBoostCount() {
+          return 2;
+        },
+      },
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "77 has 2 boosts in -100" });
+    const skipped = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", chatId: "-100" }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(skipped.status).toBe("skip");
+    const usage = await runOperatorCommand({
+      event: event({ text: "/boosts", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(usage).toMatchObject({ text: "用法：/boosts <chatId> <userId>" });
+    const short = await runOperatorCommand({
+      event: event({ text: "/boosts -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(short).toMatchObject({ text: "用法：/boosts <chatId> <userId>" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({ text: "用法：/boosts <chatId> <userId>" });
+    expect(seen).toEqual([{ chatId: "-100", actorId: "77" }]);
+    const invalid = await runOperatorCommand({
+      event: event({ text: `/boosts ${phrase} 77`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(invalid).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(invalid)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const failed = kit();
+    const hidden = await runOperatorCommand({
+      event: event({ text: "/boosts -100 77", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readBoostCount() {
+          throw new Error(phrase);
+        },
+      },
+      ...failed,
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(failed.logger.entries)).not.toContain(phrase);
+    expect(JSON.stringify(failed.logger.entries)).toContain(
+      '"command":"boosts"',
+    );
+    const foreign = await runOperatorCommand({
+      event: event({ text: "/boosts -200 77", direct: true, actorId: "7" }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readBoostCount() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
   it("reports default speaking permissions without the chat title", async () => {
     const deps = kit();
     const seen: string[] = [];

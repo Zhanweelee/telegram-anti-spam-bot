@@ -464,6 +464,20 @@ export function createTelegramModerator(input: {
       });
       return memberCount(body);
     },
+    async readBoostCount(target) {
+      const body = await postTelegram({
+        token: input.token,
+        method: "getUserChatBoosts",
+        fetchImpl: input.fetchImpl,
+        missing: "boosts_unavailable",
+        failed: "boosts_failed",
+        body: {
+          chat_id: telegramId(target.chatId),
+          user_id: telegramId(target.actorId),
+        },
+      });
+      return boostCount(body);
+    },
     async pinMessage(target) {
       await postTelegram({
         token: input.token,
@@ -820,6 +834,21 @@ function memberCount(body: unknown): number {
     throw new Error("count_failed");
   }
   return result;
+}
+
+function boostCount(body: unknown): number {
+  if (typeof body !== "object" || body === null || !("result" in body)) {
+    throw new Error("boosts_failed");
+  }
+  const result = body.result;
+  if (typeof result !== "object" || result === null || !("boosts" in result)) {
+    throw new Error("boosts_failed");
+  }
+  const boosts = result.boosts;
+  if (!Array.isArray(boosts)) {
+    throw new Error("boosts_failed");
+  }
+  return boosts.length;
 }
 
 function oneAdministrator(item: unknown): ChatAdministrator {

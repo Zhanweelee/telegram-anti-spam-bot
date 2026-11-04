@@ -104,6 +104,7 @@ const COMMAND_NAMES = [
   "leave",
   "tag",
   "delstickers",
+  "boosts",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -155,6 +156,7 @@ export interface OperatorCommandInput {
       | "openTopic"
       | "pinMessage"
       | "readAdministrators"
+      | "readBoostCount"
       | "readMember"
       | "readMemberCount"
       | "readPermissions"
@@ -336,6 +338,8 @@ async function dispatch(
       return setOneMemberTag(input, args);
     case "delstickers":
       return deleteGroupStickerSet(input, args);
+    case "boosts":
+      return showBoostCount(input, args);
   }
 }
 
@@ -2014,6 +2018,57 @@ function rejectStickers(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "delstickers",
+  });
+}
+
+async function showBoostCount(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length !== 2) {
+    return say(input, "command.boosts.usage");
+  }
+  const chatId = args[0];
+  const actorId = args[1];
+  if (
+    chatId === undefined ||
+    actorId === undefined ||
+    !isTargetId(chatId) ||
+    !isTargetId(actorId)
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const read = input.moderator?.readBoostCount;
+  if (!read) {
+    rejectBoosts(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    const count = await read({
+      tenantId: input.event.tenantId,
+      chatId,
+      actorId,
+    });
+    return say(input, "command.boosts.done", {
+      chatId,
+      actorId,
+      count: String(count),
+    });
+  } catch {
+    rejectBoosts(input);
+    return say(input, "command.invalid");
+  }
+}
+
+function rejectBoosts(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "boosts",
   });
 }
 
