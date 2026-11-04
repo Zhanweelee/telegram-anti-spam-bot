@@ -21,6 +21,7 @@ import {
   type BlocklistStore,
   createFixedClock,
   createMemoryLogger,
+  createMemoryWarnStore,
   parseEvent,
 } from "@tasb/core";
 import { createMemoryRateWindow } from "@tasb/detector-rate";
@@ -2826,7 +2827,7 @@ describe("handleIncomingEvent", () => {
     expect(body.scope).toEqual({ type: "all_private_chats" });
     expect(body).not.toHaveProperty("language_code");
     expect(body).not.toHaveProperty("chat_id");
-    expect(body.commands).toHaveLength(87);
+    expect(body.commands).toHaveLength(90);
     expect(body.commands[0]).toEqual({ command: "help", description: "/help" });
     expect(body.commands.find((item) => item.command === "botdesc")).toEqual({
       command: "botdesc",
@@ -2903,8 +2904,12 @@ describe("handleIncomingEvent", () => {
       description: "/kick <chatId> <actorId>",
     });
     expect(body.commands.at(-1)).toEqual({
-      command: "uncaptcha",
-      description: "/uncaptcha <chatId> <actorId>",
+      command: "warns",
+      description: "/warns <chatId> <actorId>",
+    });
+    expect(body.commands.find((item) => item.command === "warn")).toEqual({
+      command: "warn",
+      description: "/warn <chatId> <actorId>",
     });
     expect(calls[0]?.body).not.toContain("is_ephemeral");
     expect(calls[0]?.body).not.toContain(phrase);
@@ -8955,5 +8960,67 @@ describe("handleIncomingEvent", () => {
       messageId: "55",
     });
     expect(JSON.stringify(offline.logger.entries)).not.toContain(nonce);
+  });
+
+  it("bans a member on the third warning", async () => {
+    const kit = deps();
+    const warns = createMemoryWarnStore();
+    const calls: { method: string; body: string }[] = [];
+    const fetchImpl: typeof fetch = async (input, init) => {
+      const url = String(input);
+      calls.push({
+        method: url.slice(url.lastIndexOf("/") + 1),
+        body: String(init?.body ?? ""),
+      });
+      return new Response(JSON.stringify({ ok: true, result: true }), {
+        status: 200,
+      });
+    };
+    const options = {
+      ...kit,
+      botToken: "bot-token",
+      warns,
+      fetchImpl,
+    };
+    await handleIncomingEvent(
+      await incoming({ text: "/warn -100 77", direct: true }),
+      options,
+    );
+    await handleIncomingEvent(
+      await incoming({ text: "/warn -100 77", direct: true }),
+      options,
+    );
+    expect(calls).toEqual([]);
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已警告 -100 77 1/3",
+      "已警告 -100 77 2/3",
+    ]);
+    await handleIncomingEvent(
+      await incoming({ text: "/warn -100 77", direct: true }),
+      options,
+    );
+    expect(kit.reply.sent.map((message) => message.text)).toEqual([
+      "已警告 -100 77 1/3",
+      "已警告 -100 77 2/3",
+      "已警告并封禁 -100 77",
+    ]);
+    expect(calls.map((call) => call.method)).toEqual(["banChatMember"]);
+    expect(calls[0]?.body).toContain('"revoke_messages":false');
+    expect(calls[0]?.body).toContain('"user_id":77');
+    expect(calls[0]?.body).not.toContain("until_date");
+    expect(JSON.stringify(calls)).not.toContain(phrase);
+    const offline = deps();
+    const kept = createMemoryWarnStore();
+    await kept.write({ tenantId: "local", chatId: "-100", actorId: "77" }, 2);
+    await handleIncomingEvent(
+      await incoming({ text: "/warn -100 77", direct: true }),
+      { ...offline, warns: kept },
+    );
+    expect(offline.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(
+      await kept.read({ tenantId: "local", chatId: "-100", actorId: "77" }),
+    ).toBe(2);
   });
 });
