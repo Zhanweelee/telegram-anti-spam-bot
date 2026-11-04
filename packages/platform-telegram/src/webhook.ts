@@ -1,5 +1,5 @@
 import type { Event, Logger } from "@tasb/core";
-import { answerCallbackQuery } from "./moderate.js";
+import { answerCallbackQuery, captchaDecoyHint } from "./moderate.js";
 import { normalizeUpdate } from "./normalize.js";
 import { secretsMatch } from "./secret.js";
 
@@ -67,7 +67,7 @@ export async function handleTelegramWebhook(
   const callbackId = callbackQueryId(parsed);
   if (outcome.status === "ignored") {
     deps.logger?.info("webhook_ignored", {});
-    await ackCallback(callbackId, deps);
+    await ackCallback(callbackId, deps, decoyHint(parsed));
     return json(200, { ok: true, ignored: true });
   }
 
@@ -119,6 +119,7 @@ function callbackQueryId(update: unknown): string | null {
 async function ackCallback(
   callbackId: string | null,
   deps: WebhookDependencies,
+  text?: string,
 ): Promise<void> {
   if (!callbackId) {
     return;
@@ -131,11 +132,23 @@ async function ackCallback(
     await answerCallbackQuery({
       token,
       callbackId,
+      ...(text !== undefined ? { text } : {}),
       ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
     });
   } catch {
     deps.logger?.warn("callback_ack_failed", {});
   }
+}
+
+function decoyHint(update: unknown): string | undefined {
+  if (!isRecord(update) || !isRecord(update.callback_query)) {
+    return undefined;
+  }
+  const data = update.callback_query.data;
+  if (typeof data === "string" && /^n:[a-f0-9]{16}$/.test(data)) {
+    return captchaDecoyHint;
+  }
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -69,6 +69,8 @@ const speaking = {
 
 export const captchaPrompt = "请点「我不是机器人」。点「我是机器人」不会通过。";
 
+export const captchaDecoyHint = "请点「我不是机器人」。";
+
 export function createTelegramModerator(input: {
   readonly token: string | undefined;
   readonly fetchImpl?: typeof fetch;
@@ -1149,15 +1151,20 @@ function readTelegramMessageId(body: unknown): string | null {
 export async function answerCallbackQuery(input: {
   readonly token: string | undefined;
   readonly callbackId: string;
+  readonly text?: string;
   readonly fetchImpl?: typeof fetch;
 }): Promise<void> {
+  const text = input.text;
   await postTelegram({
     token: input.token,
     method: "answerCallbackQuery",
     fetchImpl: input.fetchImpl,
     missing: "callback_unavailable",
     failed: "callback_failed",
-    body: { callback_query_id: input.callbackId },
+    body: {
+      callback_query_id: input.callbackId,
+      ...(text !== undefined && text.length > 0 ? { text } : {}),
+    },
   });
 }
 
