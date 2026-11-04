@@ -51,6 +51,7 @@ describe("operator command example", () => {
     expect(help).toContain("/boosts");
     expect(help).toContain("/react <chatId> <messageId> <emoji>");
     expect(help).toContain("/title <chatId> <title>");
+    expect(help).toContain("/desc <chatId> [description]");
     const stickers = await runPrivateCommand({
       text: "/delstickers -100",
       actorId: "42",
@@ -207,6 +208,19 @@ describe("operator command example", () => {
     });
     expect(titled).toBe("已请求修改 -100 的标题。简介和头像还在。");
     expect(titled).not.toContain("hello");
+    const described = await runPrivateCommand({
+      text: "/desc -100 hello",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(described).toBe("已请求修改 -100 的简介。标题和头像还在。");
+    expect(described).not.toContain("hello");
+    const clearedDescription = await runPrivateCommand({
+      text: "/desc -100",
+      actorId: "42",
+      adminActorIds: ["42"],
+    });
+    expect(clearedDescription).toBe("已请求清掉 -100 的简介。标题和头像还在。");
     const perms = await runPrivateCommand({
       text: "/perms -100",
       actorId: "42",

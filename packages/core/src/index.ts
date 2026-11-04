@@ -172,6 +172,7 @@ export {
   auditScopeSchema,
   type BanTarget,
   type ChatAdministrator,
+  type ChatDescriptionTarget,
   type ChatTarget,
   type ChatTitleTarget,
   type DefaultChatPermissions,

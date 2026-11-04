@@ -235,6 +235,26 @@ describe("memory adapter", () => {
     ]);
   });
 
+  it("records one changed chat description including an empty one", async () => {
+    const moderator = createMemoryModerator();
+    await moderator.setDescription({
+      tenantId: "t",
+      chatId: "c",
+      description: "hello",
+    });
+    await moderator.setDescription({
+      tenantId: "t",
+      chatId: "c",
+      description: "",
+    });
+    expect(moderator.descriptionsSet).toEqual([
+      { tenantId: "t", chatId: "c", description: "hello" },
+      { tenantId: "t", chatId: "c", description: "" },
+    ]);
+    expect(JSON.stringify(moderator.descriptionsSet)).not.toContain("title");
+    expect(JSON.stringify(moderator.descriptionsSet)).not.toContain("photo");
+  });
+
   it("records one changed chat title", async () => {
     const moderator = createMemoryModerator();
     const title = "请免费领取礼品";

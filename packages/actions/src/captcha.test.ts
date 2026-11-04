@@ -121,6 +121,7 @@ function moderator(
     async deleteStickerSet() {},
     async setReaction() {},
     async setTitle() {},
+    async setDescription() {},
     async unpinTopic() {},
     async closeTopic() {},
     async openTopic() {},

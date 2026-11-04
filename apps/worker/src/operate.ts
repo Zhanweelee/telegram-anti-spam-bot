@@ -118,6 +118,9 @@ function commandModerator(
     async setTitle() {
       throw new Error("title_unavailable");
     },
+    async setDescription() {
+      throw new Error("desc_unavailable");
+    },
     async unpinTopic() {
       throw new Error("untopic_unavailable");
     },

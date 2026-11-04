@@ -107,6 +107,7 @@ const COMMAND_NAMES = [
   "boosts",
   "react",
   "title",
+  "desc",
 ] as const;
 type CommandName = (typeof COMMAND_NAMES)[number];
 
@@ -119,6 +120,7 @@ const MAX_DELETE_MESSAGES = 100;
 const EXPORT_REPLY_LIMIT = 3500;
 const MEMBER_TAG_LIMIT = 16;
 const TITLE_LIMIT = 128;
+const DESCRIPTION_LIMIT = 255;
 
 const REACTION_EMOJI = new Set<string>([
   "\u2764",
@@ -241,6 +243,7 @@ export interface OperatorCommandInput {
       | "readPermissions"
       | "removeReaction"
       | "revokeInvite"
+      | "setDescription"
       | "setMemberTag"
       | "setReaction"
       | "setTitle"
@@ -425,6 +428,8 @@ async function dispatch(
       return setOneReaction(input, args);
     case "title":
       return setOneTitle(input, args);
+    case "desc":
+      return setOneDescription(input, args);
   }
 }
 
@@ -2251,6 +2256,56 @@ function rejectTitle(input: OperatorCommandInput): void {
     eventId: input.event.id,
     chatId: input.event.chatId,
     command: "title",
+  });
+}
+
+async function setOneDescription(
+  input: OperatorCommandInput,
+  args: readonly string[],
+): Promise<string> {
+  if (args.length < 1) {
+    return say(input, "command.desc.usage");
+  }
+  const chatId = args[0];
+  const description = args.slice(1).join(" ");
+  if (
+    chatId === undefined ||
+    !isTargetId(chatId) ||
+    description.length > DESCRIPTION_LIMIT
+  ) {
+    return say(input, "command.invalid");
+  }
+  const refused = refuseChat(input, chatId);
+  if (refused) {
+    return refused;
+  }
+  const set = input.moderator?.setDescription;
+  if (!set) {
+    rejectDescription(input);
+    return say(input, "command.invalid");
+  }
+  try {
+    await set({
+      tenantId: input.event.tenantId,
+      chatId,
+      description,
+    });
+  } catch {
+    rejectDescription(input);
+    return say(input, "command.invalid");
+  }
+  return say(
+    input,
+    description.length === 0 ? "command.desc.cleared" : "command.desc.done",
+    { chatId },
+  );
+}
+
+function rejectDescription(input: OperatorCommandInput): void {
+  input.logger.warn("operator_rejected", {
+    eventId: input.event.id,
+    chatId: input.event.chatId,
+    command: "desc",
   });
 }
 
