@@ -29,6 +29,9 @@ export function createMemoryChatDirectory(options?: {
     async chatsFor(tenantId, actorId) {
       return chatsFor(rooms, tenantId, actorId);
     },
+    async operators(tenantId, chatId) {
+      return operators(rooms, tenantId, chatId);
+    },
     async list(tenantId) {
       return listChats(rooms, tenantId);
     },
@@ -115,6 +118,17 @@ function chatsFor(
   }
   ids.sort();
   return ids;
+}
+
+function operators(
+  rooms: Map<string, Room>,
+  tenantId: string,
+  chatId: string,
+): readonly string[] {
+  if (!validTenant(tenantId) || !validId(chatId)) {
+    return [];
+  }
+  return [...(rooms.get(roomKey(tenantId, chatId))?.actors ?? [])];
 }
 
 function listChats(

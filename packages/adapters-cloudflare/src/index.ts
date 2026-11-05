@@ -1347,6 +1347,14 @@ export function createKvChatDirectory(
         .map((room) => room.chatId)
         .sort();
     },
+    async operators(tenantId, chatId) {
+      if (!validTenant(tenantId) || !validId(chatId)) {
+        return [];
+      }
+      const document = await load(tenantId);
+      const room = document.rooms.find((item) => item.chatId === chatId);
+      return room ? [...room.actorIds] : [];
+    },
     async list(tenantId) {
       if (!validTenant(tenantId)) {
         return [];

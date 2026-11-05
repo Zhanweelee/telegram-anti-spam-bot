@@ -744,6 +744,7 @@ describe("kv chat directory", () => {
     ).toBe("ok");
     const second = createKvChatDirectory(backing.store);
     expect(await second.chatsFor("local", "7")).toEqual(["-100"]);
+    expect(await second.operators("local", "-100")).toEqual(["7"]);
     expect(await second.list("local")).toEqual(["-100"]);
     expect(await second.chatsFor("other", "7")).toEqual([]);
     await second.noteMember({
@@ -753,6 +754,10 @@ describe("kv chat directory", () => {
       admin: true,
     });
     expect(await second.chatsFor("local", "8")).toEqual(["-100"]);
+    expect(await second.operators("local", "-100")).toEqual(["7", "8"]);
+    const copied = await second.operators("local", "-100");
+    (copied as string[]).push("9");
+    expect(await second.operators("local", "-100")).toEqual(["7", "8"]);
     await second.noteMember({
       tenantId: "local",
       chatId: "-100",
@@ -760,6 +765,8 @@ describe("kv chat directory", () => {
       admin: false,
     });
     expect(await second.chatsFor("local", "8")).toEqual([]);
+    expect(await second.operators("local", "-100")).toEqual(["7"]);
+    expect(await second.operators("local", "-200")).toEqual([]);
     expect(await second.list("local")).toEqual(["-100"]);
     await second.noteBot({
       tenantId: "local",
@@ -768,6 +775,7 @@ describe("kv chat directory", () => {
       state: "gone",
     });
     expect(await second.list("local")).toEqual([]);
+    expect(await second.operators("local", "-100")).toEqual([]);
     expect(await second.chatsFor("local", "7")).toEqual([]);
     const key = [...backing.values.keys()][0];
     expect(key?.startsWith("chats")).toBe(true);
@@ -789,7 +797,11 @@ describe("kv chat directory", () => {
     }
     const fresh = createKvChatDirectory(backing.store);
     expect(await fresh.list("local")).toEqual([]);
+    expect(await fresh.operators("local", "-100")).toEqual([]);
     expect(JSON.stringify(await fresh.list("local"))).not.toContain(title);
+    expect(
+      JSON.stringify(await fresh.operators("local", "-100")),
+    ).not.toContain(title);
   });
 
   it("stops new chats at 256 and extra actors at 32", async () => {
@@ -834,6 +846,8 @@ describe("kv chat directory", () => {
       }),
     ).toBe("ok");
     expect(await store.chatsFor("local", "999")).toEqual([]);
+    expect(await store.operators("local", "-1000")).toHaveLength(32);
+    expect((await store.operators("local", "-1000"))[31]).toBe("130");
     expect(
       await store.noteBot({
         tenantId: "local\nextra",

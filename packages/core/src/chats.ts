@@ -68,5 +68,7 @@ export interface ChatDirectory {
     input: ChatNote & { readonly admin: boolean },
   ): Promise<ChatDirectoryResult>;
   chatsFor(tenantId: string, actorId: string): Promise<readonly string[]>;
+  /** People remembered for one chat, in the order they were noted. */
+  operators(tenantId: string, chatId: string): Promise<readonly string[]>;
   list(tenantId: string): Promise<readonly string[]>;
 }

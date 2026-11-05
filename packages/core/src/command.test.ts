@@ -972,6 +972,9 @@ describe("runOperatorCommand", () => {
       async chatsFor() {
         return ["-100"];
       },
+      async operators() {
+        return [];
+      },
       async list() {
         return ["-100"];
       },
@@ -1180,6 +1183,9 @@ describe("runOperatorCommand", () => {
       },
       async chatsFor() {
         return ["-100"];
+      },
+      async operators() {
+        return [];
       },
       async list() {
         return ["-100"];
@@ -16471,6 +16477,9 @@ describe("runOperatorCommand", () => {
       async chatsFor() {
         return ["-100"];
       },
+      async operators() {
+        return [];
+      },
       async list() {
         return ["-100", "-200"];
       },
@@ -16525,7 +16534,7 @@ describe("runOperatorCommand", () => {
       chats: directory,
       ...deps,
     });
-    expect(noisy).toMatchObject({ text: "用法：/chats [skip <count>]" });
+    expect(noisy).toMatchObject({ text: "用法：/chats [chatId|skip <count>]" });
     const broken = await runOperatorCommand({
       event: event({ text: "/chats", direct: true, actorId: "9" }),
       adminActorIds: ["42"],
@@ -16779,6 +16788,9 @@ describe("runOperatorCommand", () => {
       async chatsFor() {
         return ["-100"];
       },
+      async operators() {
+        return [];
+      },
       async list() {
         return ids;
       },
@@ -16931,7 +16943,7 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(extra).toMatchObject({
-      text: "用法：/chats [skip <count>]",
+      text: "用法：/chats [chatId|skip <count>]",
     });
     const scopedReads: string[] = [];
     const scoped = await runOperatorCommand({
@@ -16964,6 +16976,105 @@ describe("runOperatorCommand", () => {
     expect(scoped).toMatchObject({ text: "参数无效" });
     expect(scopedReads).toEqual([]);
     expect(JSON.stringify(scoped)).not.toContain("called");
+  });
+
+  it("lists the operators remembered for one chat", async () => {
+    const reads: string[] = [];
+    const directory = {
+      async noteBot() {
+        return "ok" as const;
+      },
+      async noteMember() {
+        return "ok" as const;
+      },
+      async chatsFor() {
+        return ["-100"];
+      },
+      async list() {
+        throw new Error("called");
+      },
+      async operators(tenantId: string, chatId: string) {
+        reads.push(`${tenantId}:${chatId}`);
+        return chatId === "-100" ? ["7", "8"] : [];
+      },
+    };
+    const shown = await runOperatorCommand({
+      event: event({ text: "/chats -100", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...kit(),
+    });
+    expect(shown).toMatchObject({ text: "chats -100\n7\n8" });
+    expect(reads).toEqual(["local:-100"]);
+    expect(JSON.stringify(shown)).not.toContain("called");
+    const english = await runOperatorCommand({
+      event: event({ text: "/chats -100", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      chats: directory,
+      ...kit(),
+    });
+    expect(english).toMatchObject({ text: "chats -100\n7\n8" });
+    const empty = await runOperatorCommand({
+      event: event({ text: "/chats -200", direct: true }),
+      adminActorIds: ["42"],
+      chats: directory,
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "chats -200\nnone" });
+    const off = await runOperatorCommand({
+      event: event({ text: "/chats -100", direct: true }),
+      adminActorIds: ["42"],
+      ...kit(),
+    });
+    expect(off).toMatchObject({ text: "chats off" });
+    const extra = await runOperatorCommand({
+      event: event({ text: "/chats -100 extra", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async operators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/chats [chatId|skip <count>]",
+    });
+    expect(JSON.stringify(extra)).not.toContain("called");
+    const phraseLog = kit();
+    const hidden = await runOperatorCommand({
+      ...phraseLog,
+      event: event({ text: "/chats -100", direct: true }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async operators() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(hidden).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(hidden)).not.toContain(phrase);
+    expect(JSON.stringify(phraseLog.logger.entries)).not.toContain(phrase);
+    const denied = await runOperatorCommand({
+      event: event({
+        text: "/chats -200",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: {
+        ...directory,
+        async operators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(denied)).not.toContain("called");
   });
 
   it("toggles one rule from private chat without rewriting the file", async () => {
@@ -19794,6 +19905,9 @@ function directory(ids: readonly string[]) {
     },
     async chatsFor() {
       return ids;
+    },
+    async operators() {
+      return [];
     },
     async list() {
       return ids;
