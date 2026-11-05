@@ -4411,6 +4411,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
         }
         pushPlainUrls(task.text, urls);
         pushTextLinks(task.text_entities, urls);
+        pushTaskCompleterUrls(task, urls);
       }
     }
   }
@@ -4505,6 +4506,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
       }
       pushPlainUrls(task.text, urls);
       pushTextLinks(task.text_entities, urls);
+      pushTaskCompleterUrls(task, urls);
     }
   }
   const preview = message.link_preview_options;
@@ -4585,7 +4587,26 @@ function pushPollAdderUrls(
   option: Record<string, unknown>,
   urls: string[],
 ): void {
-  const user = option.added_by_user;
+  pushVisiblePartyUrls(option.added_by_user, option.added_by_chat, urls);
+}
+
+/**
+ * 清单任务上画出的完成者名字只留主机名。
+ * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
+ * 没有用户对象时只读群标题。名字不进正文。嵌套原清单不读。
+ */
+function pushTaskCompleterUrls(
+  task: Record<string, unknown>,
+  urls: string[],
+): void {
+  pushVisiblePartyUrls(task.completed_by_user, task.completed_by_chat, urls);
+}
+
+function pushVisiblePartyUrls(
+  user: unknown,
+  chat: unknown,
+  urls: string[],
+): void {
   if (isRecord(user)) {
     if (typeof user.first_name === "string" && user.first_name.length > 0) {
       pushPlainUrls(user.first_name, urls);
@@ -4600,7 +4621,6 @@ function pushPollAdderUrls(
     }
     return;
   }
-  const chat = option.added_by_chat;
   if (isRecord(chat)) {
     pushPlainUrls(chat.title, urls);
   }
