@@ -263,6 +263,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 改名或只换图标的人画出的全名也只留主机名。名字不进事件。见 ADR 0626。
 
+勾完或取消勾完清单的人画出的全名也只留主机名。名字不进事件。见 ADR 0627。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。
