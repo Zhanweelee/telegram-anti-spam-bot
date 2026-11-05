@@ -161,6 +161,7 @@ async function messageEvent(
   const sideDecline = besideDeclineComment(message, text);
   const sideAdded = besideAddedText(message, text);
   const sideHidden = besideHiddenName(message, text);
+  const sideMember = besideMemberName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -255,6 +256,7 @@ async function messageEvent(
       ...(sideDecline.length > 0 ? { declineComment: sideDecline } : {}),
       ...(sideAdded.length > 0 ? { addedText: sideAdded } : {}),
       ...(sideHidden.length > 0 ? { hiddenName: sideHidden } : {}),
+      ...(sideMember.length > 0 ? { memberName: sideMember } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -4435,7 +4437,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(message.new_chat_title, urls);
   pushBackgroundFilename(message, urls);
-  pushPlainUrls(memberNames(message), urls);
+  pushPlainUrls(memberNameSource(message), urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -6558,6 +6560,10 @@ function messageText(
 }
 
 function memberNames(message: Record<string, unknown>): string {
+  return memberNameSource(message).slice(0, MAX_TEXT);
+}
+
+function memberNameSource(message: Record<string, unknown>): string {
   const parts: string[] = [];
   pushUserLabels(message.new_chat_members, parts);
   const invited = message.video_chat_participants_invited;
@@ -6577,7 +6583,7 @@ function memberNames(message: Record<string, unknown>): string {
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ").slice(0, MAX_TEXT);
+  return parts.join(" ");
 }
 
 function sharedUserNames(message: Record<string, unknown>): string {
@@ -6725,6 +6731,18 @@ function besideHiddenName(
     return "";
   }
   const source = message.forward_sender_name;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+/** 已有别的正文时，入群、邀请、换群主和靠近提醒的可见名字另留最多 4096 字。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
+function besideMemberName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = memberNameSource(message);
   if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
     return "";
   }

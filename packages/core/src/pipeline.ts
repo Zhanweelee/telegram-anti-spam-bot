@@ -325,6 +325,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("hiddenName" in when) {
     return "hiddenName";
   }
+  if ("memberName" in when) {
+    return "memberName";
+  }
   return undefined;
 }
 
@@ -461,6 +464,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.declineComment,
     event.message?.addedText,
     event.message?.hiddenName,
+    event.message?.memberName,
     event.profile?.text,
   ];
   const texts: string[] = [];

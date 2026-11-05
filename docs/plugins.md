@@ -87,6 +87,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `hidden_name_regex` 默认打开。隐藏转发的显示名命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0553。
 
+`member_name_regex` 默认打开。入群、邀请、换群主或靠近提醒的可见名字命中同一份正则时删除。这段干净，或自己就是正文时，仍按原来的服务消息规则。见 ADR 0554。
+
 `folder` 在 `packages/detectors-folder`。只在 `chat_member` 且 `folderInvite` 为 true 时返回 score 1。证据是 `folder:invite`。邀请链接不进事件。默认规则 `folder_join` 关闭。打开后封禁。见 ADR 0429。
 
 `notice` 在 `packages/detectors-notice`。只在 `message.notice` 是 `join` 或 `leave` 时返回 score 1。证据是 `notice:join` 或 `notice:leave`。名字不进证据。默认规则 `service_notice` 关闭。打开后删除入群和退群提示。见 ADR 0467。
