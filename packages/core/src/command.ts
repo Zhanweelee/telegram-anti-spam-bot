@@ -1819,16 +1819,25 @@ async function showAdministrators(
   input: OperatorCommandInput,
   args: readonly string[],
 ): Promise<string> {
-  if (args.length !== 1) {
+  if (args.length === 0) {
     return say(input, "command.admins.usage");
   }
   const chatId = args[0];
   if (chatId === undefined || !isTargetId(chatId)) {
-    return say(input, "command.invalid");
+    return args.length === 1
+      ? say(input, "command.invalid")
+      : say(input, "command.admins.usage");
   }
   const refused = refuseChat(input, chatId);
   if (refused) {
     return refused;
+  }
+  const skip = parseAdminsSkip(args);
+  if (skip === "usage") {
+    return say(input, "command.admins.usage");
+  }
+  if (skip === "invalid") {
+    return say(input, "command.invalid");
   }
   const read = input.moderator?.readAdministrators;
   if (!read) {
@@ -1840,25 +1849,52 @@ async function showAdministrators(
       tenantId: input.event.tenantId,
       chatId,
     });
-    return describeAdministrators(input, chatId, admins);
+    return describeAdministrators(input, chatId, admins, skip);
   } catch {
     rejectAdministrators(input);
     return say(input, "command.invalid");
   }
 }
 
+function parseAdminsSkip(
+  args: readonly string[],
+): "usage" | "invalid" | number {
+  if (args.length === 1) {
+    return 0;
+  }
+  if (args[1] !== "skip") {
+    return "usage";
+  }
+  const countToken = args[2];
+  if (countToken === undefined) {
+    return "invalid";
+  }
+  const count = rulesSkipCount(countToken);
+  if (count === undefined || args.length !== 3) {
+    return count === undefined && args.length === 3 ? "invalid" : "usage";
+  }
+  return count;
+}
+
 function describeAdministrators(
   input: OperatorCommandInput,
   chatId: string,
   admins: readonly ChatAdministrator[],
+  skip = 0,
 ): string {
   const header = say(input, "command.admins.header", { chatId });
   if (admins.length === 0) {
+    if (skip > 0) {
+      return say(input, "command.invalid");
+    }
     return `${header}\n${say(input, "command.admins.empty")}`;
+  }
+  if (skip >= admins.length) {
+    return say(input, "command.invalid");
   }
   return fitAdministratorLines(
     header,
-    admins.map((admin) => administratorLine(input, admin)),
+    admins.slice(skip).map((admin) => administratorLine(input, admin)),
     (count) => say(input, "command.admins.more", { count }),
   );
 }

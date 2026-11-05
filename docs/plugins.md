@@ -349,6 +349,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `/whitelist <chatId> skip <count>` 先按原顺序跳过前面的 `count` 个 id 再列。不写 `skip` 或 `count` 为 0 时回复不变。见 ADR 0526。
 
+`/admins <chatId> skip <count>` 先按返回顺序跳过前面的 `count` 个人再列。不写 `skip` 或 `count` 为 0 时回复不变。见 ADR 0527。
+
 插件清单含 `id`、`version`、`kind`、`schema`、`integrity`，外部包还可以有 `signature`。完整性是 canonical JSON 的 sha256。签名是同一段 JSON 的 HMAC-SHA256。内置清单可以不签名。外部清单没有有效签名时不会进入流水线，除非自部署把 `ALLOW_UNSIGNED_PLUGINS` 设为 `true`。`DEPLOYMENT_MODE=cloud` 时这个变量无效。坏签名在两种模式下都拒绝。见 ADR 0018 和 `examples/plugin-manifest`。
 
 平台包把 Telegram `Update` 收成 `Event`。参考 `packages/platform-telegram` 和 `examples/telegram-webhook`。Webhook 失败时不要调用 `onEvent`。私聊管理命令见 `examples/operator-commands` 和 ADR 0006。`/logs` 一行放不下全部规则或原因时，保留前面的若干个并写上剩下的个数。见 ADR 0334。回复只通过 `ReplyPort` 发送，不要在 core 里调用 Bot API。

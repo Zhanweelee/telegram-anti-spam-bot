@@ -3256,7 +3256,9 @@ describe("runOperatorCommand", () => {
       adminActorIds: ["42"],
       ...kit(),
     });
-    expect(usage).toMatchObject({ text: "用法：/admins <chatId>" });
+    expect(usage).toMatchObject({
+      text: "用法：/admins <chatId> [skip <count>]",
+    });
     const invalid = await runOperatorCommand({
       event: event({ text: `/admins ${phrase}`, direct: true }),
       adminActorIds: ["42"],
@@ -3303,6 +3305,175 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(foreign).toMatchObject({ text: "没有权限" });
+  });
+
+  it("continues the administrator list after skip", async () => {
+    const many = Array.from({ length: 400 }, (_, index) => ({
+      actorId: `9${String(index).padStart(5, "0")}`,
+      bot: false as const,
+      role: "administrator" as const,
+      anonymous: false,
+      rights: ["deleteMessages"] as const,
+    }));
+    const reads: string[] = [];
+    const moderator = {
+      async readAdministrators(target: { chatId: string }) {
+        reads.push(target.chatId);
+        return target.chatId === "-100" ? many : [];
+      },
+    };
+    const first = await runOperatorCommand({
+      event: event({ text: "/admins -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(first.status).toBe("reply");
+    if (first.status !== "reply") {
+      return;
+    }
+    expect(first.text.length).toBeLessThanOrEqual(3500);
+    expect(first.text.startsWith("admins -100\n")).toBe(true);
+    const lines = first.text.split("\n");
+    const omitted = Number(/^\+(\d+)$/.exec(lines.at(-1) ?? "")?.[1]);
+    expect(omitted).toBeGreaterThan(0);
+    const listed = lines.slice(1, -1);
+    expect(listed.length + omitted).toBe(400);
+    expect(listed[0]).toBe("900000 管理员 删除");
+    expect(first.text).not.toContain("900399");
+    const same = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(same).toEqual(first);
+    const kept = listed.length;
+    const tail = await runOperatorCommand({
+      event: event({ text: `/admins -100 skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith("admins -100\n")).toBe(true);
+    expect(tail.text).toContain(
+      `9${String(kept).padStart(5, "0")} 管理员 删除`,
+    );
+    expect(tail.text).toContain("900399 管理员 删除");
+    const last = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 399", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(last).toMatchObject({ text: "admins -100\n900399 管理员 删除" });
+    const english = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 399", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      moderator,
+      ...kit(),
+    });
+    expect(english).toMatchObject({
+      text: "admins -100\n900399 administrator delete",
+    });
+    const past = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 400", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const empty = await runOperatorCommand({
+      event: event({ text: "/admins -200 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(empty).toMatchObject({ text: "admins -200\nnone" });
+    const emptySkip = await runOperatorCommand({
+      event: event({ text: "/admins -200 skip 1", direct: true }),
+      adminActorIds: ["42"],
+      moderator,
+      ...kit(),
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const bad = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 01", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(bad)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error(phrase);
+        },
+      },
+      ...kit(),
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const phraseLog = kit();
+    const phraseSkip = await runOperatorCommand({
+      ...phraseLog,
+      event: event({ text: `/admins -100 skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(phraseSkip).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(phraseSkip)).not.toContain(phrase);
+    expect(JSON.stringify(phraseLog.logger.entries)).not.toContain(phrase);
+    const extra = await runOperatorCommand({
+      event: event({ text: "/admins -100 skip 1 extra", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readAdministrators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/admins <chatId> [skip <count>]",
+    });
+    expect(JSON.stringify(extra)).not.toContain("called");
+    const denied = await runOperatorCommand({
+      event: event({
+        text: "/admins -200 skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      moderator: {
+        async readAdministrators() {
+          throw new Error("called");
+        },
+      },
+      ...kit(),
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(denied)).not.toContain("called");
+    expect(
+      reads.every((chatId) => chatId === "-100" || chatId === "-200"),
+    ).toBe(true);
   });
 
   it("unpins a forum topic and leaves the messages", async () => {

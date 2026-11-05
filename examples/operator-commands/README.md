@@ -16,6 +16,8 @@
 
 `/whitelist -100 skip 164` 从第 165 个豁免号继续列。不写 `skip` 时仍从第一个开始。
 
+`/admins -100 skip 248` 跳过前面的 248 个管理员再往下列。不写 `skip` 时仍从第一个人开始。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
