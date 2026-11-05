@@ -569,6 +569,7 @@ describe("event schema", () => {
         addedText: "后加选项",
         hiddenName: "隐藏名字",
         memberName: "成员名字",
+        sharedName: "分享名字",
       },
     });
     expect(played.message?.gameText).toBe("加微x");
@@ -590,6 +591,7 @@ describe("event schema", () => {
     expect(played.message?.addedText).toBe("后加选项");
     expect(played.message?.hiddenName).toBe("隐藏名字");
     expect(played.message?.memberName).toBe("成员名字");
+    expect(played.message?.sharedName).toBe("分享名字");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -1003,6 +1005,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           memberName: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          sharedName: "a".repeat(4097),
         },
       }),
     ).toThrow();

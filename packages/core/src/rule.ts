@@ -32,6 +32,7 @@ export type RuleWhen =
   | { readonly addedText: true }
   | { readonly hiddenName: true }
   | { readonly memberName: true }
+  | { readonly sharedName: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -67,6 +68,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ addedText: z.literal(true) }),
     z.strictObject({ hiddenName: z.literal(true) }),
     z.strictObject({ memberName: z.literal(true) }),
+    z.strictObject({ sharedName: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -205,6 +207,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("memberName" in when) {
     return memberName(event);
   }
+  if ("sharedName" in when) {
+    return sharedName(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -252,6 +257,10 @@ function hiddenName(event: Event): boolean {
 
 function memberName(event: Event): boolean {
   return event.message?.memberName !== undefined;
+}
+
+function sharedName(event: Event): boolean {
+  return event.message?.sharedName !== undefined;
 }
 
 function invoiceTitle(event: Event): boolean {

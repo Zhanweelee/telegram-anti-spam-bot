@@ -621,6 +621,22 @@ describe("regex detector", () => {
     });
     expect(memberHit?.places).toEqual(["memberName"]);
     expect(JSON.stringify(memberHit)).not.toContain(name);
+    const shared = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        sharedName: `打开 ${name}`,
+      },
+    });
+    const sharedHit = await detector.detect({
+      event: shared,
+      logger,
+      signal,
+    });
+    expect(sharedHit?.places).toEqual(["sharedName"]);
+    expect(JSON.stringify(sharedHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

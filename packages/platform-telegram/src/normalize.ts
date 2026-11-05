@@ -162,6 +162,7 @@ async function messageEvent(
   const sideAdded = besideAddedText(message, text);
   const sideHidden = besideHiddenName(message, text);
   const sideMember = besideMemberName(message, text);
+  const sideShared = besideSharedName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -257,6 +258,7 @@ async function messageEvent(
       ...(sideAdded.length > 0 ? { addedText: sideAdded } : {}),
       ...(sideHidden.length > 0 ? { hiddenName: sideHidden } : {}),
       ...(sideMember.length > 0 ? { memberName: sideMember } : {}),
+      ...(sideShared.length > 0 ? { sharedName: sideShared } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -4449,7 +4451,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(sharedChat.title, urls);
     pushPlainUrls(sharedChat.username, urls);
   }
-  pushPlainUrls(sharedUserNames(message), urls);
+  pushPlainUrls(sharedUserNameSource(message), urls);
   pushPlainUrls(managedBotNames(message), urls);
   pushPlainUrls(writeAccessName(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
@@ -6587,6 +6589,10 @@ function memberNameSource(message: Record<string, unknown>): string {
 }
 
 function sharedUserNames(message: Record<string, unknown>): string {
+  return sharedUserNameSource(message).slice(0, MAX_TEXT);
+}
+
+function sharedUserNameSource(message: Record<string, unknown>): string {
   const shared = message.users_shared;
   if (!isRecord(shared)) {
     return "";
@@ -6596,7 +6602,7 @@ function sharedUserNames(message: Record<string, unknown>): string {
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ").slice(0, MAX_TEXT);
+  return parts.join(" ");
 }
 
 function managedBotNames(message: Record<string, unknown>): string {
@@ -6743,6 +6749,18 @@ function besideMemberName(
   text: string,
 ): string {
   const source = memberNameSource(message);
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+/** 已有别的正文时，分享来的用户名字另留最多 4096 字。这段自己就是正文时不重复。请求编号、用户编号、头像、发送者姓名和聊天标题不进这个字段。 */
+function besideSharedName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = sharedUserNameSource(message);
   if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
     return "";
   }

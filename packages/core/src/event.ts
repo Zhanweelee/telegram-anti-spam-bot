@@ -110,6 +110,8 @@ export const messageSchema = z
     hiddenName: z.string().min(1).max(4096).optional(),
     /** Visible member names beside another body. Joined and capped at 4096. Absent when that text is the body. */
     memberName: z.string().min(1).max(4096).optional(),
+    /** Shared user names beside another body. Joined and capped at 4096. Absent when that text is the body. */
+    sharedName: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

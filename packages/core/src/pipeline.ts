@@ -328,6 +328,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("memberName" in when) {
     return "memberName";
   }
+  if ("sharedName" in when) {
+    return "sharedName";
+  }
   return undefined;
 }
 
@@ -465,6 +468,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.addedText,
     event.message?.hiddenName,
     event.message?.memberName,
+    event.message?.sharedName,
     event.profile?.text,
   ];
   const texts: string[] = [];

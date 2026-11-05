@@ -61,6 +61,7 @@ function withoutButtonText(event: object): string {
       addedText: undefined,
       hiddenName: undefined,
       memberName: undefined,
+      sharedName: undefined,
     },
   });
 }
@@ -20640,6 +20641,7 @@ describe("normalizeUpdate", () => {
     }
     expect(users.event.message?.asSharedChat).toBeUndefined();
     expect(users.event.message?.text).toBe("干净名字");
+    expect(users.event.message?.sharedName).toBeUndefined();
     expect(JSON.stringify(users.event)).not.toContain(String(requestId));
     expect(JSON.stringify(users.event)).not.toContain("991446");
 
@@ -29280,7 +29282,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.sharedName).toBe(
+      `${visible} https://ow.ly/last288 user288`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name288");
@@ -29318,7 +29323,10 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.sharedName).toBe(
+      "https://example.com/ok288",
+    );
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok288");
     expect(ordinaryDump).not.toContain("kept288");
     expect(ordinaryDump).not.toContain(phrase);
@@ -29353,6 +29361,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.sharedName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from288b");
@@ -32693,6 +32702,79 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain(left);
     expect(asNameDump).not.toContain("93019");
+  });
+
+  it("keeps the first 4096 characters of a shared user name", async () => {
+    const tail = "TAIL25";
+    const path = "share25";
+    const photo = "AgADshare25";
+    const labeled = await normalize({
+      update_id: 5825,
+      message: {
+        message_id: 5825,
+        date: 1761955200,
+        chat: { id: -1005825, type: "private", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        users_shared: {
+          request_id: 582525,
+          users: [
+            {
+              user_id: 93025,
+              first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+              photo: [{ file_id: photo, file_unique_id: "uniq25" }],
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.sharedName).toHaveLength(4096);
+    expect(labeled.event.message?.sharedName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(photo);
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain("93025");
+    expect(labeledDump).not.toContain("582525");
+
+    const asName = await normalize({
+      update_id: 5826,
+      message: {
+        message_id: 5826,
+        date: 1761955200,
+        chat: { id: -1005826, type: "private" },
+        from: { id: 93 },
+        users_shared: {
+          request_id: 582626,
+          users: [
+            {
+              user_id: 93026,
+              first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+            },
+          ],
+        },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.sharedName).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain("93026");
+    expect(asNameDump).not.toContain("582626");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {
