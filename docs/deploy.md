@@ -395,6 +395,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 把人移出群的人画出的全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0623。
 
+离开的人画出的全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0624。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。
