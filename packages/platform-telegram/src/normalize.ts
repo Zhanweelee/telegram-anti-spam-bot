@@ -5256,9 +5256,10 @@ function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
 }
 
 /**
- * 联系人卡片上的 URL 行和可见名字只留主机名。
+ * 联系人卡片上的 URL 行、可见名字和公司名只留主机名。
  * 名的长度大于 0 时不读姓。空白也算有名。
- * 电话、用户编号、邮箱和备注不读。名字不进正文。
+ * 公司名是气泡副标题里最后一条以 ORG 开头的值。
+ * 电话、用户编号、邮箱、职务和备注不读。名字不进正文。
  */
 function pushContactUrls(
   message: Record<string, unknown>,
@@ -5274,6 +5275,65 @@ function pushContactUrls(
     }
   }
   pushVisiblePartyUrls(contact, undefined, urls);
+  if (typeof contact.vcard === "string") {
+    pushPlainUrls(vcardCompany(contact.vcard), urls);
+  }
+}
+
+/**
+ * 气泡副标题里最后一张名片的公司名。
+ * 属性名以 ORG 开头才算。后写的盖住先写的。空值也盖住。
+ * 见到新的 BEGIN 就换一张名片。没有 END 时客户端不画。
+ * 职务、分组行和小写 org 不读。折行不拼回公司名。
+ */
+function vcardCompany(vcard: string): string | undefined {
+  const raw = vcard.slice(0, 16384).split(/\r\n|\n|\r/);
+  let open = false;
+  let finished = false;
+  let company: string | undefined;
+  let pending: string | undefined;
+  for (const originalLine of raw) {
+    if (originalLine.startsWith("PHOTO")) {
+      continue;
+    }
+    if (originalLine.includes(":")) {
+      if (originalLine.startsWith("BEGIN:VCARD")) {
+        open = true;
+        company = undefined;
+      } else if (originalLine.startsWith("END:VCARD") && open) {
+        finished = true;
+      }
+    }
+    let line = originalLine;
+    if (pending !== undefined) {
+      line = pending + line;
+      pending = undefined;
+    }
+    if (line.includes("=QUOTED-PRINTABLE") && line.endsWith("=")) {
+      pending = line.slice(0, -1);
+      continue;
+    }
+    if (!open) {
+      continue;
+    }
+    const colon = line.indexOf(":");
+    if (colon < 0) {
+      continue;
+    }
+    const left = line.slice(0, colon);
+    if (!left.startsWith("ORG")) {
+      continue;
+    }
+    let value = line.slice(colon + 1).trim();
+    if (/encoding=quoted-printable/i.test(left)) {
+      value = decodeQuotedPrintable(value).trim();
+    }
+    company = value.replace(/;/g, " ");
+  }
+  if (!finished || company === undefined || company.length === 0) {
+    return undefined;
+  }
+  return company;
 }
 
 function vcardUrlValues(vcard: string): string[] {
