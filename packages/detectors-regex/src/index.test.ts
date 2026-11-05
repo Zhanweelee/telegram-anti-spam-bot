@@ -653,6 +653,22 @@ describe("regex detector", () => {
     });
     expect(managedHit?.places).toEqual(["managedName"]);
     expect(JSON.stringify(managedHit)).not.toContain(name);
+    const access = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        accessName: `打开 ${name}`,
+      },
+    });
+    const accessHit = await detector.detect({
+      event: access,
+      logger,
+      signal,
+    });
+    expect(accessHit?.places).toEqual(["accessName"]);
+    expect(JSON.stringify(accessHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

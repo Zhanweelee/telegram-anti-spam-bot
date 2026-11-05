@@ -164,6 +164,7 @@ async function messageEvent(
   const sideMember = besideMemberName(message, text);
   const sideShared = besideSharedName(message, text);
   const sideManaged = besideManagedName(message, text);
+  const sideAccess = besideAccessName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -261,6 +262,7 @@ async function messageEvent(
       ...(sideMember.length > 0 ? { memberName: sideMember } : {}),
       ...(sideShared.length > 0 ? { sharedName: sideShared } : {}),
       ...(sideManaged.length > 0 ? { managedName: sideManaged } : {}),
+      ...(sideAccess.length > 0 ? { accessName: sideAccess } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -4455,7 +4457,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(sharedUserNameSource(message), urls);
   pushPlainUrls(managedBotNameSource(message), urls);
-  pushPlainUrls(writeAccessName(message), urls);
+  pushPlainUrls(writeAccessNameSource(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -6626,11 +6628,15 @@ function managedBotNameSource(message: Record<string, unknown>): string {
 
 /** 用户允许 bot 发消息时带上的小程序名字。来源布尔值不读。 */
 function writeAccessName(message: Record<string, unknown>): string {
+  return writeAccessNameSource(message).slice(0, MAX_TEXT);
+}
+
+function writeAccessNameSource(message: Record<string, unknown>): string {
   const allowed = message.write_access_allowed;
   if (!isRecord(allowed) || typeof allowed.web_app_name !== "string") {
     return "";
   }
-  return allowed.web_app_name.trim().slice(0, MAX_TEXT);
+  return allowed.web_app_name.trim();
 }
 
 function pushUserLabels(value: unknown, parts: string[]): void {
@@ -6779,6 +6785,18 @@ function besideManagedName(
   text: string,
 ): string {
   const source = managedBotNameSource(message);
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+/** 已有别的正文时，允许发消息带上的小程序名字另留最多 4096 字。这段自己就是正文时不重复。来源布尔值、发送者姓名和聊天标题不进这个字段。 */
+function besideAccessName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = writeAccessNameSource(message);
   if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
     return "";
   }
