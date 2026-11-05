@@ -30,3 +30,4 @@ Telegram 的 `contact` 消息带电话、姓名、user id 和 vCard。可见正�
 - 云模式超过当月次数后，这条规则会停，直到 `QUOTA_BASIC` 写上 `contact`。
 - `chats.json` 整份替换的群要自己加上 `shared_contact`。
 - 只写在正文里的电话号码这轮不会删。
+- 卡片上看得见的名字后来由 ADR 0609 只留下主机名。名字本身仍不进事件。关掉 `shared_contact` 后，短链仍由 `links` 删除。电话、用户编号和 vCard 原文仍不进事件。

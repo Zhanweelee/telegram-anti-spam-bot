@@ -5199,18 +5199,25 @@ function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
   );
 }
 
-/** 联系人卡片里的 URL 行会打开浏览器。电话、邮箱和备注不打开。 */
+/**
+ * 联系人卡片上的 URL 行和可见名字只留主机名。
+ * 名的长度大于 0 时不读姓。空白也算有名。
+ * 电话、用户编号、邮箱和备注不读。名字不进正文。
+ */
 function pushContactUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   const contact = message.contact;
-  if (!isRecord(contact) || typeof contact.vcard !== "string") {
+  if (!isRecord(contact)) {
     return;
   }
-  for (const value of vcardUrlValues(contact.vcard)) {
-    urls.push(/^https?:/i.test(value) ? value : `http://${value}`);
+  if (typeof contact.vcard === "string") {
+    for (const value of vcardUrlValues(contact.vcard)) {
+      urls.push(/^https?:/i.test(value) ? value : `http://${value}`);
+    }
   }
+  pushVisiblePartyUrls(contact, undefined, urls);
 }
 
 function vcardUrlValues(vcard: string): string[] {
