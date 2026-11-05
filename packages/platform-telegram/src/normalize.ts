@@ -168,6 +168,7 @@ async function messageEvent(
   const sideGameFile = besideGameFile(message, text);
   const sideAudioFile = besideAudioFile(message, text);
   const sidePaidFile = besidePaidFile(message, text);
+  const sideRichName = besideRichName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -269,6 +270,7 @@ async function messageEvent(
       ...(sideGameFile.length > 0 ? { gameFile: sideGameFile } : {}),
       ...(sideAudioFile.length > 0 ? { audioFile: sideAudioFile } : {}),
       ...(sidePaidFile.length > 0 ? { paidFile: sidePaidFile } : {}),
+      ...(sideRichName.length > 0 ? { richName: sideRichName } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6898,6 +6900,95 @@ function paidVideoNames(message: Record<string, unknown>): string[] {
     names.push(name);
   }
   return names;
+}
+
+/** 富文本里的文件名、音频标题和表演者另留最多 4096 字。这段自己就是正文时不重复。说明、照片、语音和文件编号不进这个字段。 */
+function besideRichName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const rich = message.rich_message;
+  if (!isRecord(rich)) {
+    return "";
+  }
+  const parts: string[] = [];
+  walkRichNameBlocks(rich.blocks, text, mediaLabel(message), parts);
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function walkRichNameBlocks(
+  blocks: unknown,
+  text: string,
+  label: string,
+  parts: string[],
+): void {
+  if (!Array.isArray(blocks)) {
+    return;
+  }
+  for (const block of blocks) {
+    if (!isRecord(block)) {
+      continue;
+    }
+    if (block.type === "list" && Array.isArray(block.items)) {
+      for (const item of block.items) {
+        if (isRecord(item)) {
+          walkRichNameBlocks(item.blocks, text, label, parts);
+        }
+      }
+      continue;
+    }
+    if (
+      block.type === "blockquote" ||
+      block.type === "collage" ||
+      block.type === "slideshow" ||
+      block.type === "details"
+    ) {
+      walkRichNameBlocks(block.blocks, text, label, parts);
+      continue;
+    }
+    if (
+      block.type !== "animation" &&
+      block.type !== "video" &&
+      block.type !== "audio" &&
+      block.type !== "document"
+    ) {
+      continue;
+    }
+    const media = block[block.type];
+    if (!isRecord(media)) {
+      continue;
+    }
+    if (block.type === "audio") {
+      pushRichName(media.title, text, label, parts);
+      pushRichName(media.file_name, text, label, parts);
+      pushRichName(media.performer, text, label, parts);
+      continue;
+    }
+    pushRichName(media.file_name, text, label, parts);
+  }
+}
+
+function pushRichName(
+  name: unknown,
+  text: string,
+  label: string,
+  parts: string[],
+): void {
+  if (typeof name !== "string") {
+    return;
+  }
+  const slice = name.slice(0, MAX_TEXT);
+  if (slice.length === 0 || text === slice || label === slice) {
+    return;
+  }
+  const trimmed = name.trim();
+  if (trimmed.length === 0) {
+    return;
+  }
+  parts.push(trimmed);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

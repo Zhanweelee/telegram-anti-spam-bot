@@ -67,6 +67,7 @@ function withoutButtonText(event: object): string {
       gameFile: undefined,
       audioFile: undefined,
       paidFile: undefined,
+      richName: undefined,
     },
   });
 }
@@ -19487,6 +19488,13 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "ow.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.richName).toBe(
+      `https://bit.ly/doc75 https://ow.ly/song75 https://t.me/+${code}`,
+    );
+    expect(outcome.event.message?.richName).not.toContain("附件说明");
+    expect(outcome.event.message?.richName).not.toContain("pic75");
+    expect(outcome.event.message?.richName).not.toContain("voice75");
+    expect(outcome.event.message?.richName).not.toContain("id75");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("doc75");
     expect(dumped).not.toContain("song75");
@@ -33164,6 +33172,86 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(tail);
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain("VID5870");
+  });
+
+  it("keeps the first 4096 characters of a rich media name", async () => {
+    const tail = "TAIL31";
+    const path = "rich31";
+    const labeled = await normalize({
+      update_id: 5877,
+      message: {
+        message_id: 5877,
+        date: 1761955200,
+        chat: { id: -1005877, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "collage",
+              blocks: [
+                {
+                  type: "document",
+                  document: {
+                    file_id: "DOC5877",
+                    file_unique_id: "DUNIQ5877",
+                    file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.richName).toHaveLength(4096);
+    expect(labeled.event.message?.richName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("DOC5877");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asText = await normalize({
+      update_id: 5878,
+      message: {
+        message_id: 5878,
+        date: 1761955200,
+        chat: { id: -1005878, type: "supergroup" },
+        from: { id: 93 },
+        text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        rich_message: {
+          blocks: [
+            {
+              type: "video",
+              video: {
+                file_id: "VID5878",
+                file_unique_id: "VUNIQ5878",
+                file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(asText.status).toBe("event");
+    if (asText.status !== "event") {
+      return;
+    }
+    expect(asText.event.message?.text).toHaveLength(4096);
+    expect(asText.event.message?.richName).toBeUndefined();
+    expect(asText.event.message?.hosts).toEqual(["bit.ly"]);
+    const asTextDump = JSON.stringify(asText.event);
+    expect(asTextDump).not.toContain(tail);
+    expect(asTextDump).not.toContain(path);
+    expect(asTextDump).not.toContain("VID5878");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {
