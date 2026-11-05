@@ -410,6 +410,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ quoteText: true }, serviceEvent({ giftText: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ giftLabel: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ giftLabel: true }, serviceEvent({ giftText: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ giftLabel: true }, serviceEvent({ giftLabel: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ giftText: true }, serviceEvent({ giftLabel: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
