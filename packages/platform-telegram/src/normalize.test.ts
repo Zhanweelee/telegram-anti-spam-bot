@@ -31666,14 +31666,13 @@ describe("normalizeUpdate", () => {
     }
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
-    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from86b");
     expect(aloneDump).not.toContain("88002");
     expect(aloneDump).not.toContain("88003");
-    expect(aloneDump).not.toContain("tinyurl.com");
   });
 
   it("marks a video-chat notice and leaves the time out", async () => {

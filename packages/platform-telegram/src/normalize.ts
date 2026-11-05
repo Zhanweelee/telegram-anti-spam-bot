@@ -4536,6 +4536,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPriceSenderUrls(message, urls);
   pushPinSenderUrls(message, urls);
   pushCreatedGroupSenderUrls(message, urls);
+  pushCallSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4760,6 +4761,21 @@ function pushCreatedGroupSenderUrls(
   urls: string[],
 ): void {
   if (!createdGroup(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 视频聊天开始、结束或预约上的发送者只留主机名。
+ * 空的结束或预约不读。时长和开始时间不读。只有邀请名单时不读。
+ * 用户名不读。普通消息的发送者不读。
+ */
+function pushCallSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (callNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
