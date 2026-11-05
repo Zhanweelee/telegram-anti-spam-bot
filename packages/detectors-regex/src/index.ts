@@ -102,6 +102,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["memberName", ctx.event.message?.memberName],
         ["sharedName", ctx.event.message?.sharedName],
         ["managedName", ctx.event.message?.managedName],
+        ["accessName", ctx.event.message?.accessName],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];
