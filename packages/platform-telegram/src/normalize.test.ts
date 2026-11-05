@@ -27904,7 +27904,11 @@ describe("normalizeUpdate", () => {
         message_id: 710,
         date: 1761955200,
         chat: { id: -100499650, type: "supergroup" },
-        from: { id: 102, first_name: actor },
+        from: {
+          id: 102,
+          first_name: "https://tinyurl.com/from102",
+          last_name: actor,
+        },
         poll_option_added: {
           option_persistent_id: optionId,
           option_text: added,
@@ -27924,7 +27928,9 @@ describe("normalizeUpdate", () => {
     expect(created.event.message?.pollNotice).toBe("added");
     expect(created.event.message?.text).toBe(added);
     expect(created.event.message?.addedText).toBeUndefined();
+    expect(created.event.message?.hosts).toEqual(["tinyurl.com"]);
     const dumped = JSON.stringify(created.event);
+    expect(dumped).not.toContain("from102");
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(optionId);
     expect(dumped).not.toContain(question);
@@ -27935,7 +27941,7 @@ describe("normalizeUpdate", () => {
         message_id: 711,
         date: 1761955200,
         chat: { id: -100499651, type: "supergroup" },
-        from: { id: 102, first_name: actor },
+        from: { id: 102, first_name: "请免费领取礼品" },
         poll_option_deleted: {
           option_persistent_id: optionId,
           option_text: removed,
@@ -27949,7 +27955,10 @@ describe("normalizeUpdate", () => {
     expect(deleted.event.message?.pollNotice).toBe("deleted");
     expect(deleted.event.message?.text).toBe(removed);
     expect(deleted.event.message?.addedText).toBeUndefined();
-    expect(JSON.stringify(deleted.event)).not.toContain(optionId);
+    expect(deleted.event.message?.hosts).toBeUndefined();
+    const deletedDump = JSON.stringify(deleted.event);
+    expect(deletedDump).not.toContain("请免费领取礼品");
+    expect(deletedDump).not.toContain(optionId);
 
     const kept = await normalize({
       update_id: 4662,
@@ -27957,7 +27966,7 @@ describe("normalizeUpdate", () => {
         message_id: 712,
         date: 1761955200,
         chat: { id: -100499652, type: "supergroup" },
-        from: { id: 102, first_name: actor },
+        from: { id: 102, first_name: "请免费领取礼品" },
         text: "今天站会",
         poll_option_added: {
           option_persistent_id: optionId,
@@ -27972,7 +27981,9 @@ describe("normalizeUpdate", () => {
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.pollNotice).toBe("added");
     expect(kept.event.message?.addedText).toBe(added);
+    expect(kept.event.message?.hosts).toBeUndefined();
     expect(withoutButtonText(kept.event)).not.toContain(added);
+    expect(withoutButtonText(kept.event)).not.toContain("请免费领取礼品");
 
     const both = await normalize({
       update_id: 4663,
@@ -27980,7 +27991,7 @@ describe("normalizeUpdate", () => {
         message_id: 713,
         date: 1761955200,
         chat: { id: -100499653, type: "supergroup" },
-        from: { id: 102 },
+        from: { id: 102, first_name: "https://bit.ly/both102" },
         poll_option_added: { option_text: added },
         poll_option_deleted: { option_text: removed },
       },
@@ -27992,6 +28003,8 @@ describe("normalizeUpdate", () => {
     expect(both.event.message?.pollNotice).toBe("added");
     expect(both.event.message?.text).toBe(added);
     expect(both.event.message?.addedText).toBe(removed);
+    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(both.event)).not.toContain("both102");
     expect(withoutButtonText(both.event)).not.toContain(removed);
 
     const blankAdded = await normalize({
@@ -28000,7 +28013,7 @@ describe("normalizeUpdate", () => {
         message_id: 714,
         date: 1761955200,
         chat: { id: -100499654, type: "supergroup" },
-        from: { id: 102 },
+        from: { id: 102, first_name: "https://tinyurl.com/fall102" },
         poll_option_added: { option_text: "" },
         poll_option_deleted: { option_text: removed },
       },
@@ -28012,6 +28025,8 @@ describe("normalizeUpdate", () => {
     expect(blankAdded.event.message?.pollNotice).toBe("deleted");
     expect(blankAdded.event.message?.text).toBe(removed);
     expect(blankAdded.event.message?.addedText).toBeUndefined();
+    expect(blankAdded.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(blankAdded.event)).not.toContain("fall102");
 
     const empty = await normalize({
       update_id: 4665,
@@ -28019,7 +28034,7 @@ describe("normalizeUpdate", () => {
         message_id: 715,
         date: 1761955200,
         chat: { id: -100499655, type: "supergroup" },
-        from: { id: 102 },
+        from: { id: 102, first_name: "https://ow.ly/empty102" },
         poll_option_added: {},
       },
     });
@@ -28028,6 +28043,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.pollNotice).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty102");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
 
     const flag = await normalize({
       update_id: 4666,
@@ -28035,7 +28053,7 @@ describe("normalizeUpdate", () => {
         message_id: 716,
         date: 1761955200,
         chat: { id: -100499656, type: "supergroup" },
-        from: { id: 102 },
+        from: { id: 102, first_name: "https://bit.ly/flag102" },
         poll_option_added: true,
         poll_option_deleted: true,
       },
@@ -28045,6 +28063,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(flag.event.message?.pollNotice).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag102");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
   });
 
   it("marks a proximity alert and keeps the names", async () => {
