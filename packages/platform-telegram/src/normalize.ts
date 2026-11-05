@@ -595,7 +595,11 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   const lists: unknown[] = [message.entities, message.caption_entities];
   const poll = message.poll;
   if (isRecord(poll)) {
-    lists.push(poll.question_entities, poll.explanation_entities);
+    lists.push(
+      poll.question_entities,
+      poll.explanation_entities,
+      poll.description_entities,
+    );
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (isRecord(option)) {

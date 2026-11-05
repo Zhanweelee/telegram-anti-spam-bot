@@ -8357,6 +8357,150 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("animgame");
   });
 
+  it("deletes a poll description emoji when that chat asks", async () => {
+    const emojiId = "emoji8805954";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind: "emoji" | "blank";
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 124, first_name: "Ada" },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            poll: {
+              id: "polldescemoji",
+              question: "投票留下",
+              description: "描述表情",
+              description_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: input.kind === "blank" ? " " : emojiId,
+                },
+              ],
+              options: [{ text: "甲" }],
+              total_voter_count: 0,
+              is_closed: false,
+              is_anonymous: true,
+              type: "regular",
+              allows_multiple_answers: false,
+            },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "custom_emoji",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["custom_emoji"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 5954,
+      chatId: -1005954,
+      kind: "emoji",
+    });
+    expect(idle.message?.text).toBe("投票留下");
+    expect(idle.message?.pollDescription).toBe("描述表情");
+    expect(idle.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(idle)).not.toContain(emojiId);
+    const logger = createMemoryLogger();
+    const allowed = await screenTelegramEvent(idle, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 5955, chatId: -1005955, kind: "emoji" }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator,
+        logger,
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("custom_emoji");
+    expect(removed.decision.ruleIds).toContain("custom_emoji");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "entity:custom_emoji" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005955", messageId: "5955" },
+    ]);
+    const blank = await posted({
+      updateId: 5956,
+      chatId: -1005956,
+      kind: "blank",
+    });
+    expect(blank.message?.asCustomEmoji).toBeUndefined();
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 5957,
+        chatId: -1005957,
+        kind: "emoji",
+        paid: true,
+      }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      skipped: skipped.decision,
+      logs: logger.entries,
+    });
+    expect(dumped).not.toContain(emojiId);
+    expect(dumped).not.toContain("Ada");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("keeps a rich reference link until that chat asks", async () => {
     const referenceName = "cite90235";
     const actor = "发引用链接的人";
