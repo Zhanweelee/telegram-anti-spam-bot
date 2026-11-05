@@ -542,6 +542,11 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   const checklist = message.checklist;
   if (isRecord(checklist)) {
     lists.push(checklist.title_entities);
+    pushTaskMentionLists(checklist.tasks, lists);
+  }
+  const addedTasks = message.checklist_tasks_added;
+  if (isRecord(addedTasks)) {
+    pushTaskMentionLists(addedTasks.tasks, lists);
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {
@@ -558,6 +563,18 @@ function textMentionMark(message: Record<string, unknown>): boolean {
     }
   }
   return false;
+}
+
+/** 清单任务上的按标识提及。投票选项和手动引用不读。 */
+function pushTaskMentionLists(tasks: unknown, lists: unknown[]): void {
+  if (!Array.isArray(tasks)) {
+    return;
+  }
+  for (const task of tasks) {
+    if (isRecord(task)) {
+      lists.push(task.text_entities);
+    }
+  }
 }
 
 function customEmojiMark(message: Record<string, unknown>): boolean {

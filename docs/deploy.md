@@ -325,6 +325,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> text_mention on` 删这个群里按用户标识的普通提及。默认关闭。用户编号不进证据。看得见的字仍参与关键词。富文本提及仍看 `rich_text_mention`。见 ADR 0514。
 
+清单任务和后加任务上的按标识提及也算。投票选项和手动引用仍不算。见 ADR 0567。
+
 `/rule <chatId> custom_emoji on` 删这个群里的自定义表情。默认关闭。编号不进证据。看得见的字仍参与关键词。按标识提及仍看 `text_mention`。见 ADR 0515。
 
 `/rule <chatId> copy_text on` 删这个群里复制到剪贴板的按钮。默认关闭。复制句子不进证据。看得见的按钮文字仍参与关键词。自定义表情仍看 `custom_emoji`。见 ADR 0516。
