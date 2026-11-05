@@ -97,6 +97,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 贴纸、动图、语音、视频留言和骰子可以按群删除。规则 `media_sticker`、`media_animation`、`media_voice`、`media_video_note`、`media_dice` 默认关闭。见 ADR 0469。
 
+照片、视频、文件和音频可以按群删除。规则 `media_photo`、`media_video`、`media_document`、`media_audio` 默认关闭。见 ADR 0575。
+
 阿拉伯文和西里尔文可以按群删除。规则 `script_arabic`、`script_cyrillic` 默认关闭。见 ADR 0470。
 
 别的频道代发可以按群删除。规则 `channel_sender` 默认关闭。见 ADR 0471。

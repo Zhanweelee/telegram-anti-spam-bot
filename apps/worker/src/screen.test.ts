@@ -3919,6 +3919,247 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(events[4])).not.toContain(emoji);
   });
 
+  it("deletes a photo when that chat asks", async () => {
+    const photoId = "photouniq5972";
+    const videoName = "领取5974.mp4";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind: "photo" | "video" | "document" | "audio" | "gif" | "voice" | "live";
+      paid?: boolean;
+    }) {
+      const file = {
+        file_id: "f",
+        file_unique_id: `${input.kind}${input.updateId}`,
+        width: 1,
+        height: 1,
+        duration: 1,
+      };
+      const body =
+        input.kind === "photo" || input.kind === "live"
+          ? {
+              photo: [
+                {
+                  file_id: "f",
+                  file_unique_id: photoId,
+                  width: 1,
+                  height: 1,
+                },
+              ],
+              ...(input.kind === "live"
+                ? {
+                    live_photo: {
+                      file_id: "f",
+                      file_unique_id: `live${input.updateId}`,
+                      width: 1,
+                      height: 1,
+                      duration: 1,
+                    },
+                  }
+                : {}),
+            }
+          : input.kind === "gif"
+            ? {
+                animation: { ...file, file_name: "secret.gif" },
+                document: { ...file, file_name: "secret.gif" },
+              }
+            : {
+                [input.kind]: {
+                  ...file,
+                  ...(input.kind === "video" ? { file_name: videoName } : {}),
+                },
+              };
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 124, first_name: "Ada" },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            caption: "今天站会",
+            ...body,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(id: string): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id,
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: [id],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 5972,
+      chatId: -1005972,
+      kind: "photo",
+    });
+    expect(idle.message?.media).toBe("photo");
+    expect(idle.message?.text).toBe("今天站会");
+    expect(JSON.stringify(idle)).not.toContain(photoId);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 5973, chatId: -1005973, kind: "photo" }),
+      {
+        source: rule("media_photo"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator,
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("media_photo");
+    expect(removed.decision.ruleIds).toContain("media_photo");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:photo" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005973", messageId: "5973" },
+    ]);
+    const videoKept = await screenTelegramEvent(
+      await posted({ updateId: 5974, chatId: -1005974, kind: "video" }),
+      {
+        source: rule("media_photo"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(videoKept.decision.action).toBe("allow");
+    const video = await screenTelegramEvent(
+      await posted({ updateId: 5975, chatId: -1005975, kind: "video" }),
+      {
+        source: rule("media_video"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(video.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:video" },
+    ]);
+    const document = await screenTelegramEvent(
+      await posted({ updateId: 5976, chatId: -1005976, kind: "document" }),
+      {
+        source: rule("media_document"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(document.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:document" },
+    ]);
+    const audio = await screenTelegramEvent(
+      await posted({ updateId: 5977, chatId: -1005977, kind: "audio" }),
+      {
+        source: rule("media_audio"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(audio.decision.evidence).toEqual([
+      { kind: "feature", summary: "media:audio" },
+    ]);
+    const gif = await screenTelegramEvent(
+      await posted({ updateId: 5978, chatId: -1005978, kind: "gif" }),
+      {
+        source: rule("media_document"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(gif.decision.action).toBe("allow");
+    const voice = await screenTelegramEvent(
+      await posted({ updateId: 5979, chatId: -1005979, kind: "voice" }),
+      {
+        source: rule("media_audio"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(voice.decision.action).toBe("allow");
+    const live = await posted({
+      updateId: 5980,
+      chatId: -1005980,
+      kind: "live",
+    });
+    expect(live.message?.media).toBe("photo");
+    const liveRemoved = await screenTelegramEvent(live, {
+      source: rule("media_photo"),
+      cache: createMemoryCache(),
+      rateWindow: createMemoryRateWindow(),
+      moderator: createMemoryModerator(),
+    });
+    expect(liveRemoved.decision.action).toBe("delete");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 5981,
+        chatId: -1005981,
+        kind: "photo",
+        paid: true,
+      }),
+      {
+        source: rule("media_photo"),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      video: video.decision,
+      document: document.decision,
+      audio: audio.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(photoId);
+    expect(dumped).not.toContain(videoName);
+    expect(dumped).not.toContain("Ada");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";

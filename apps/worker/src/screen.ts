@@ -549,6 +549,26 @@ export async function screenTelegramEvent(
       },
       {
         source: "builtin",
+        manifest: builtinManifests.mediaPhoto,
+        value: createMediaDetector("photo"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaVideo,
+        value: createMediaDetector("video"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaDocument,
+        value: createMediaDetector("document"),
+      },
+      {
+        source: "builtin",
+        manifest: builtinManifests.mediaAudio,
+        value: createMediaDetector("audio"),
+      },
+      {
+        source: "builtin",
         manifest: builtinManifests.scriptArabic,
         value: createScriptDetector("arabic"),
       },

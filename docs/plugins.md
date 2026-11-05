@@ -119,6 +119,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `media_sticker`、`media_animation`、`media_voice`、`media_video_note` 和 `media_dice` 在 `packages/detectors-media`。只在 `message.media` 正好是这一种时返回 score 1。证据是 `media:` 加类别。贴纸包名、文件名、点数和表情不进证据。五条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0469。
 
+`media_photo`、`media_video`、`media_document` 和 `media_audio` 也在 `packages/detectors-media`。只在 `message.media` 正好是这一种时返回 score 1。证据是 `media:` 加类别。文件号、文件名、类型和时长不进证据。四条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0575。
+
 `script_arabic` 和 `script_cyrillic` 在 `packages/detectors-script`。这种字母至少 4 个，并且多于其它字母时返回 score 1。证据是 `script:` 加文字。正文不进证据。两条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0470。
 
 `channel_sender` 在 `packages/detectors-sender`。只在 `message.asChannel` 为 true 时返回 score 1。证据是 `sender:channel`。频道号和标题不进证据。规则默认关闭。私聊 `/rule` 打开后删除别的频道代发。见 ADR 0471。

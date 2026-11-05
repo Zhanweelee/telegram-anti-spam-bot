@@ -139,6 +139,30 @@ export const builtinManifests = {
     integrity:
       "24b8cc2782af84d0e6de6681c6978dd5da4e6bce37784f6e56926e691273e952",
   }),
+  mediaPhoto: manifest({
+    id: "media_photo",
+    kind: "detector",
+    integrity:
+      "bc7fc54eac3e67bb4fe28809e8db87473182d205c4b46a4e71fa148c83667f4f",
+  }),
+  mediaVideo: manifest({
+    id: "media_video",
+    kind: "detector",
+    integrity:
+      "26db9d3e342ede71cb21d131f9d812634f462da1f54a84d67b05c9a0c5dd7cd7",
+  }),
+  mediaDocument: manifest({
+    id: "media_document",
+    kind: "detector",
+    integrity:
+      "fa4707fccb72ff3a5cc243ddb12738faa2bdf49f9f9dcbafcf036f072df06072",
+  }),
+  mediaAudio: manifest({
+    id: "media_audio",
+    kind: "detector",
+    integrity:
+      "25f9e94eb597eae1cb88b592627f06a6a47c9446758b29befe3b9d3da290b354",
+  }),
   scriptArabic: manifest({
     id: "script_arabic",
     kind: "detector",

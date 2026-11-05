@@ -115,6 +115,38 @@
       "actions": ["delete"]
     },
     {
+      "id": "media_photo",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_photo"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_video",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_video"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_document",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_document"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "media_audio",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["media_audio"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "script_arabic",
       "enabled": false,
       "when": { "eventKind": "message" },
