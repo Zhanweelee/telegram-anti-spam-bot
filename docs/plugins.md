@@ -53,6 +53,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `author_signature_regex` 和 `mirror_signature_regex` 默认打开。正文旁边的作者签名，以及讨论组原帖来源上的签名，命中同一份正则时删除。签名干净，或签名自己就是正文时，仍留下。见 ADR 0536。
 
+`poll_option_regex` 默认打开。投票选项命中同一份正则时删除。选项干净，或选项自己就是题干时，仍留下。见 ADR 0537。
+
 `folder` 在 `packages/detectors-folder`。只在 `chat_member` 且 `folderInvite` 为 true 时返回 score 1。证据是 `folder:invite`。邀请链接不进事件。默认规则 `folder_join` 关闭。打开后封禁。见 ADR 0429。
 
 `notice` 在 `packages/detectors-notice`。只在 `message.notice` 是 `join` 或 `leave` 时返回 score 1。证据是 `notice:join` 或 `notice:leave`。名字不进证据。默认规则 `service_notice` 关闭。打开后删除入群和退群提示。见 ADR 0467。

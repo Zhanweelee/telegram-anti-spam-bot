@@ -9,6 +9,7 @@ export type RuleWhen =
   | { readonly buttonText: true }
   | { readonly authorSignature: true }
   | { readonly mirrorSignature: true }
+  | { readonly pollOption: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -21,6 +22,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ buttonText: z.literal(true) }),
     z.strictObject({ authorSignature: z.literal(true) }),
     z.strictObject({ mirrorSignature: z.literal(true) }),
+    z.strictObject({ pollOption: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -90,6 +92,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("mirrorSignature" in when) {
     return mirrorSignature(event);
   }
+  if ("pollOption" in when) {
+    return pollOption(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -97,6 +102,10 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
     return when.any.some((item) => matchesWhen(item, event));
   }
   return !matchesWhen(when.not, event);
+}
+
+function pollOption(event: Event): boolean {
+  return event.message?.pollOption !== undefined;
 }
 
 function mirrorSignature(event: Event): boolean {

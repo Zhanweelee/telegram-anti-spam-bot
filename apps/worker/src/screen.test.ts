@@ -13816,6 +13816,190 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(keptChannel)).not.toContain(phrase);
   });
 
+  it("deletes a poll whose option text matches a keyword or regex", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const keyworded = await normalizeUpdate({
+      update: {
+        update_id: 5661,
+        message: {
+          message_id: 5661,
+          date: 1761955200,
+          chat: { id: -1005661, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          poll: {
+            question: "今天站会",
+            options: [{ text: phrase, voter_count: 0 }],
+            explanation: "说明不进事件",
+            total_voter_count: 3,
+            is_closed: false,
+            is_anonymous: true,
+            type: "regular",
+            allows_multiple_answers: false,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(keyworded.status).toBe("event");
+    if (keyworded.status !== "event") {
+      return;
+    }
+    expect(keyworded.event.message?.text).toBe("今天站会");
+    expect(keyworded.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(keyworded.event.message?.pollOption).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(keyworded.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005661", messageId: "5661" },
+    ]);
+    const dumped = JSON.stringify({
+      result,
+      logs: logger.entries,
+      event: keyworded.event,
+    });
+    expect(dumped).not.toContain("说明不进事件");
+    expect(dumped).not.toContain("Ada");
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5662,
+        message: {
+          message_id: 5662,
+          date: 1761955200,
+          chat: { id: -1005662, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          poll: {
+            question: "今天站会",
+            options: [{ text: "打开" }, { text: label }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.pollOption).toBe(`打开 ${label}`);
+    const patternLog = createMemoryLogger();
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      logger: patternLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("poll_option_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patternLog.entries)).not.toContain(label);
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5663,
+        message: {
+          message_id: 5663,
+          date: 1761955200,
+          chat: { id: -1005663, type: "supergroup" },
+          from: { id: 93 },
+          poll: {
+            question: "今天站会",
+            options: [{ text: "你好" }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    expect(clean.event.message?.pollOption).toBe("你好");
+    const kept = await screenTelegramEvent(clean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5664,
+        message: {
+          message_id: 5664,
+          date: 1761955200,
+          chat: { id: -1005664, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          poll: {
+            question: label,
+            options: [{ text: label }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.pollOption).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5665,
+        message: {
+          message_id: 5665,
+          date: 1761955200,
+          chat: { id: -1005665, type: "supergroup" },
+          from: { id: 93 },
+          poll: {
+            question: label,
+            options: [{ text: "你好" }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.pollOption).toBe("你好");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

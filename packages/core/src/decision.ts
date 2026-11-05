@@ -50,6 +50,7 @@ export const textPlaces = [
   "buttonText",
   "authorSignature",
   "mirrorSignature",
+  "pollOption",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

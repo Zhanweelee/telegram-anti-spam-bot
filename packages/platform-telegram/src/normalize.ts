@@ -139,6 +139,7 @@ async function messageEvent(
   const sideButtons = besideButtonText(message, text);
   const sideSignature = besideAuthorSignature(message, text);
   const sideMirror = besideMirrorSignature(message, text);
+  const sidePoll = besidePollOption(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -205,6 +206,7 @@ async function messageEvent(
       ...(sideButtons.length > 0 ? { buttonText: sideButtons } : {}),
       ...(sideSignature.length > 0 ? { authorSignature: sideSignature } : {}),
       ...(sideMirror.length > 0 ? { mirrorSignature: sideMirror } : {}),
+      ...(sidePoll.length > 0 ? { pollOption: sidePoll } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6639,6 +6641,41 @@ function besideAuthorSignature(
     return "";
   }
   return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，投票选项另留最多 1211 字。选项自己就是正文时不重复。 */
+function besidePollOption(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = pollOptionText(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 1211);
+}
+
+function pollOptionText(message: Record<string, unknown>): string {
+  const poll = message.poll;
+  if (!isRecord(poll) || !Array.isArray(poll.options)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const option of poll.options) {
+    if (
+      !isRecord(option) ||
+      typeof option.text !== "string" ||
+      option.text.length === 0
+    ) {
+      continue;
+    }
+    parts.push(option.text);
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
 }
 
 /** 已有别的正文时，讨论组原帖来源上的作者签名另留最多 256 字。签名自己就是正文时不重复。 */

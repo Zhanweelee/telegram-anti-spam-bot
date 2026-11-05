@@ -145,6 +145,34 @@ describe("rules", () => {
         serviceEvent({ mirrorSignature: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ pollOption: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { pollOption: true },
+        serviceEvent({ authorSignature: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { pollOption: true },
+        serviceEvent({ mirrorSignature: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ pollOption: true }, serviceEvent({ pollOption: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { authorSignature: true },
+        serviceEvent({ pollOption: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { mirrorSignature: true },
+        serviceEvent({ pollOption: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
