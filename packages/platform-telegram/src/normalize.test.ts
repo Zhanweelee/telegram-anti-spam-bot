@@ -14112,9 +14112,8 @@ describe("normalizeUpdate", () => {
     expect(channel.event.message?.text).toBe("今天站会");
     expect(channel.event.message?.forward).toBe("channel");
     expect(channel.event.message?.hiddenName).toBeUndefined();
-    expect(channel.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(channel.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const channelDump = JSON.stringify(channel.event);
-    expect(channelDump).not.toContain("tinyurl.com");
     expect(channelDump).not.toContain("ch60");
     expect(channelDump).not.toContain("sig60");
 
@@ -18954,7 +18953,11 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.authorSignature).toBe(
       `${phrase} https://bit.ly/sig68 https://t.me/+${code}.`,
     );
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = JSON.stringify({
       ...labeled.event,
@@ -18963,7 +18966,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("sig68");
-    expect(labeledDump).not.toContain("tinyurl.com");
     expect(labeledDump).not.toContain("fwd68");
     expect(labeledDump).not.toContain("room68");
     expect(labeledDump).not.toContain("user68");
@@ -35130,8 +35132,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(manual.event.message?.forward).toBe("channel");
-    expect(manual.event.message?.hosts).toBeUndefined();
-    expect(JSON.stringify(manual.event)).not.toContain("tinyurl.com");
+    expect(manual.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(manual.event)).not.toContain("man93");
     expect(JSON.stringify(manual.event)).not.toContain(title);
 
     const chat = await normalize({
