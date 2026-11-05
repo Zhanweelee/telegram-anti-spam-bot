@@ -53,6 +53,7 @@ function withoutButtonText(event: object): string {
       invoiceTitle: undefined,
       venueTitle: undefined,
       webAppButtonText: undefined,
+      quoteText: undefined,
     },
   });
 }
@@ -12231,6 +12232,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe(quoted);
+    expect(outcome.event.message?.quoteText).toBeUndefined();
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(quoted));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
@@ -12271,6 +12273,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("");
+    expect(outcome.event.message?.quoteText).toBeUndefined();
     expect(outcome.event.message?.hosts).toBeUndefined();
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
@@ -12306,6 +12309,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.quoteText).toBe("免费领取");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
@@ -12348,13 +12352,16 @@ describe("normalizeUpdate", () => {
     }
     expect(manual.event.message?.text).toBe("今天站会");
     expect(manual.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(manual.event.message?.quoteText).toBe(
+      `${phrase} https://bit.ly/q54 https://t.me/+${code}.`,
+    );
     expect(manual.event.message?.hosts).toEqual([
       "bit.ly",
       "t.me",
       "www.tinyurl.com",
     ]);
     expect(manual.event.message?.invites).toEqual(["t.me"]);
-    const manualDump = JSON.stringify(manual.event);
+    const manualDump = withoutButtonText(manual.event);
     expect(manualDump).not.toContain(phrase);
     expect(manualDump).not.toContain(code);
     expect(manualDump).not.toContain("/q54");
@@ -12396,6 +12403,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(automatic.event.message?.text).toBe("今天站会");
+    expect(automatic.event.message?.quoteText).toBeUndefined();
     expect(automatic.event.message?.hosts).toBeUndefined();
     const automaticDump = JSON.stringify(automatic.event);
     expect(automaticDump).not.toContain(phrase);
@@ -12423,6 +12431,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.quoteText).toBeUndefined();
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
@@ -12753,6 +12762,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会.pdf");
+    expect(outcome.event.message?.quoteText).toBe("免费领取");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
@@ -14740,6 +14750,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.quoteText).toBe("免费领取");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
@@ -32038,6 +32049,76 @@ describe("normalizeUpdate", () => {
     const asBodyDump = JSON.stringify(asBody.event);
     expect(asBodyDump).not.toContain(tail);
     expect(asBodyDump).not.toContain("DATASECRET79");
+  });
+
+  it("keeps the first 4096 characters of a manual quote", async () => {
+    const tail = "TAIL80";
+    const path = "quote80";
+    const labeled = await normalize({
+      update_id: 5751,
+      message: {
+        message_id: 5751,
+        date: 1761955200,
+        chat: { id: -1005751, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        quote: {
+          text: `${"引".repeat(4096)}${tail} https://bit.ly/${path}`,
+          position: 80,
+          is_manual: true,
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: { id: 9080, first_name: "引9080" },
+            },
+          ],
+        },
+        reply_to_message: {
+          message_id: 1,
+          text: "REPLYSECRET80",
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.quoteText).toHaveLength(4096);
+    expect(labeled.event.message?.quoteText).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("REPLYSECRET80");
+    expect(labeledDump).not.toContain("9080");
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain('"position"');
+
+    const asQuote = await normalize({
+      update_id: 5752,
+      message: {
+        message_id: 5752,
+        date: 1761955200,
+        chat: { id: -1005752, type: "supergroup" },
+        from: { id: 93 },
+        quote: {
+          text: `${"引".repeat(4096)}${tail}`,
+          position: 1,
+          is_manual: true,
+        },
+      },
+    });
+    expect(asQuote.status).toBe("event");
+    if (asQuote.status !== "event") {
+      return;
+    }
+    expect(asQuote.event.message?.text).toHaveLength(4096);
+    expect(asQuote.event.message?.quoteText).toBeUndefined();
+    expect(JSON.stringify(asQuote.event)).not.toContain(tail);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

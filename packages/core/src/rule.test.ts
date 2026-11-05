@@ -384,6 +384,22 @@ describe("rules", () => {
         serviceEvent({ webAppButtonText: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ quoteText: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { quoteText: true },
+        serviceEvent({ webAppButtonText: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ quoteText: true }, serviceEvent({ quoteText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { webAppButtonText: true },
+        serviceEvent({ quoteText: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

@@ -65,6 +65,7 @@ export const textPlaces = [
   "invoiceTitle",
   "venueTitle",
   "webAppButtonText",
+  "quoteText",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;
