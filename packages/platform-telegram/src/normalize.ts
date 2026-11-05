@@ -4366,6 +4366,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
         }
         pushPlainUrls(option.text, urls);
         pushTextLinks(option.text_entities, urls);
+        pushPollAdderUrls(option, urls);
       }
     }
     pushPlainUrls(poll.explanation, urls);
@@ -4572,6 +4573,36 @@ function pushPollMedia(media: unknown, urls: string[]): void {
   if (isRecord(media.venue)) {
     pushPlainUrls(media.venue.title, urls);
     pushPlainUrls(media.venue.address, urls);
+  }
+}
+
+/**
+ * 投票选项上画出的添加者名字只留主机名。
+ * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
+ * 没有用户对象时只读群标题。名字不进正文。
+ */
+function pushPollAdderUrls(
+  option: Record<string, unknown>,
+  urls: string[],
+): void {
+  const user = option.added_by_user;
+  if (isRecord(user)) {
+    if (typeof user.first_name === "string" && user.first_name.length > 0) {
+      pushPlainUrls(user.first_name, urls);
+      return;
+    }
+    if (
+      (user.first_name === undefined || user.first_name === "") &&
+      typeof user.last_name === "string" &&
+      user.last_name.length > 0
+    ) {
+      pushPlainUrls(user.last_name, urls);
+    }
+    return;
+  }
+  const chat = option.added_by_chat;
+  if (isRecord(chat)) {
+    pushPlainUrls(chat.title, urls);
   }
 }
 
