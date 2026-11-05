@@ -4842,8 +4842,10 @@ function pushAutoDeleteSenderUrls(
 }
 
 /**
- * 改价提示上的发送者只留主机名。
- * 不是真实的付费发言或私信开关时不读。星星数量和开关不读。普通消息的发送者不读。
+ * 改价提示上画出的发送者全名只留主机名。
+ * 付费发言的星星数量大于等于 0 时读。私信开关正好是布尔值时读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 同时出现时先认付费发言。星星数量和开关不读。用户名不读。
  */
 function pushPriceSenderUrls(
   message: Record<string, unknown>,
@@ -4852,7 +4854,7 @@ function pushPriceSenderUrls(
   if (changedPrice(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
