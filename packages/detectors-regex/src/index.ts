@@ -95,6 +95,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["quoteText", ctx.event.message?.quoteText],
         ["giftText", ctx.event.message?.giftText],
         ["giftLabel", ctx.event.message?.giftLabel],
+        ["topicName", ctx.event.message?.topicName],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

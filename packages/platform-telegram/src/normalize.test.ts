@@ -56,6 +56,7 @@ function withoutButtonText(event: object): string {
       quoteText: undefined,
       giftText: undefined,
       giftLabel: undefined,
+      topicName: undefined,
     },
   });
 }
@@ -13173,9 +13174,12 @@ describe("normalizeUpdate", () => {
     }
     expect(created.event.message?.text).toBe("今天站会");
     expect(created.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(created.event.message?.topicName).toBe(
+      `${phrase} https://bit.ly/topic57 https://t.me/+${code}.`,
+    );
     expect(created.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(created.event.message?.invites).toEqual(["t.me"]);
-    const createdDump = JSON.stringify(created.event);
+    const createdDump = withoutButtonText(created.event);
     expect(createdDump).not.toContain(phrase);
     expect(createdDump).not.toContain(code);
     expect(createdDump).not.toContain("topic57");
@@ -13202,8 +13206,11 @@ describe("normalizeUpdate", () => {
     }
     expect(edited.event.message?.text).toBe("今天站会");
     expect(edited.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(edited.event.message?.topicName).toBe(
+      `${phrase} https://example.com/page57`,
+    );
     expect(edited.event.message?.hosts).toEqual(["example.com"]);
-    const editedDump = JSON.stringify(edited.event);
+    const editedDump = withoutButtonText(edited.event);
     expect(editedDump).not.toContain(phrase);
     expect(editedDump).not.toContain("page57");
     expect(editedDump).not.toContain("emoji57");
@@ -13249,6 +13256,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.topicName).toBeUndefined();
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
@@ -27002,7 +27010,8 @@ describe("normalizeUpdate", () => {
     }
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.topicNotice).toBe("created");
-    expect(JSON.stringify(kept.event)).not.toContain(created);
+    expect(kept.event.message?.topicName).toBe(created);
+    expect(withoutButtonText(kept.event)).not.toContain(created);
 
     const both = await normalize({
       update_id: 4683,
@@ -27021,6 +27030,7 @@ describe("normalizeUpdate", () => {
     }
     expect(both.event.message?.topicNotice).toBe("created");
     expect(both.event.message?.text).toBe(created);
+    expect(both.event.message?.topicName).toBe(edited);
 
     const blankCreated = await normalize({
       update_id: 4684,
@@ -27039,6 +27049,7 @@ describe("normalizeUpdate", () => {
     }
     expect(blankCreated.event.message?.topicNotice).toBe("edited");
     expect(blankCreated.event.message?.text).toBe(edited);
+    expect(blankCreated.event.message?.topicName).toBeUndefined();
 
     const iconOnly = await normalize({
       update_id: 4685,
@@ -32262,6 +32273,67 @@ describe("normalizeUpdate", () => {
     expect(asLabelDump).not.toContain(tail);
     expect(asLabelDump).not.toContain(path);
     expect(asLabelDump).not.toContain("NFTSLUG");
+  });
+
+  it("keeps the first 128 characters of a forum topic name", async () => {
+    const tail = "TAIL83";
+    const path = "topic83";
+    const labeled = await normalize({
+      update_id: 5777,
+      message: {
+        message_id: 5777,
+        date: 1761955200,
+        chat: { id: -1005777, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        forum_topic_created: {
+          name: `${"题".repeat(128)}${tail} https://bit.ly/${path}`,
+          icon_color: 9367192,
+          icon_custom_emoji_id: "TOPICEMOJI",
+          is_name_implicit: true,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.topicName).toHaveLength(128);
+    expect(labeled.event.message?.topicName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("TOPICEMOJI");
+    expect(labeledDump).not.toContain("9367192");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asTopic = await normalize({
+      update_id: 5778,
+      message: {
+        message_id: 5778,
+        date: 1761955200,
+        chat: { id: -1005778, type: "supergroup" },
+        from: { id: 93 },
+        forum_topic_edited: {
+          name: `${"题".repeat(4096)}${tail} https://bit.ly/${path}`,
+          icon_custom_emoji_id: "TOPICEMOJI",
+        },
+      },
+    });
+    expect(asTopic.status).toBe("event");
+    if (asTopic.status !== "event") {
+      return;
+    }
+    expect(asTopic.event.message?.text).toHaveLength(4096);
+    expect(asTopic.event.message?.topicName).toBeUndefined();
+    expect(asTopic.event.message?.hosts).toEqual(["bit.ly"]);
+    const asTopicDump = JSON.stringify(asTopic.event);
+    expect(asTopicDump).not.toContain(tail);
+    expect(asTopicDump).not.toContain(path);
+    expect(asTopicDump).not.toContain("TOPICEMOJI");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

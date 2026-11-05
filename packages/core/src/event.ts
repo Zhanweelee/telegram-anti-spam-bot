@@ -100,6 +100,8 @@ export const messageSchema = z
     giftText: z.string().min(1).max(128).optional(),
     /** Unique gift collection label beside another body. Capped at 4096. Absent when it is the body. */
     giftLabel: z.string().min(1).max(4096).optional(),
+    /** Forum topic name beside another body. Capped at 128. Absent when it is the body. */
+    topicName: z.string().min(1).max(128).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

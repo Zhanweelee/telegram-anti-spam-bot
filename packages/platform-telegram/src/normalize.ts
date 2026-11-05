@@ -157,6 +157,7 @@ async function messageEvent(
   const sideQuote = besideManualQuote(message, text);
   const sideGift = besideGiftText(message, text);
   const sideGiftLabel = besideGiftLabel(message, text);
+  const sideTopic = besideTopicName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -247,6 +248,7 @@ async function messageEvent(
       ...(sideQuote.length > 0 ? { quoteText: sideQuote } : {}),
       ...(sideGift.length > 0 ? { giftText: sideGift } : {}),
       ...(sideGiftLabel.length > 0 ? { giftLabel: sideGiftLabel } : {}),
+      ...(sideTopic.length > 0 ? { topicName: sideTopic } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6626,6 +6628,29 @@ function pushUserLabels(value: unknown, parts: string[]): void {
       }
     }
   }
+}
+
+/** 已有别的正文时，话题名另留最多 128 字。先看新建，再看改名。这段自己就是正文时改看下一种。图标不进这个字段。 */
+function besideTopicName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  for (const field of ["forum_topic_created", "forum_topic_edited"]) {
+    const value = message[field];
+    if (!isRecord(value) || typeof value.name !== "string") {
+      continue;
+    }
+    const source = value.name;
+    if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+      continue;
+    }
+    const raw = clipped(source, 128);
+    if (raw.length === 0) {
+      continue;
+    }
+    return raw;
+  }
+  return "";
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

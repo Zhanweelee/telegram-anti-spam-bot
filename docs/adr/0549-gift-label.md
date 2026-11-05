@@ -46,3 +46,4 @@ Bot API 把 `UniqueGift.base_name`、`UniqueGiftModel.name`、`UniqueGiftSymbol.
 - 关掉 `gift_label_regex` 后，这种收藏名回到只看关键词和短链。别的旁路字段不受影响。
 - 整份替换规则的群要自己加上这条，才会删除收藏名上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来由 ADR 0550 加上 `topicName`。话题名的规则只认自己的字段。
