@@ -433,7 +433,7 @@ const syntax = [
   "/clearreact <chatId> <actorId>",
   "/revoke <chatId> <inviteLink>",
   "/unpin <chatId>",
-  "/admins <chatId>",
+  "/admins <chatId> [skip <count>]",
   "/untopic <chatId> [threadId]",
   "/closetopic <chatId> [threadId]",
   "/opentopic <chatId> [threadId]",
@@ -730,7 +730,7 @@ const zh = {
   "command.unpin.usage": "用法：/unpin <chatId>",
   "command.unpin.done":
     "已请求撤下 {chatId} 的全部置顶。消息还在。话题里的置顶不在这次里",
-  "command.admins.usage": "用法：/admins <chatId>",
+  "command.admins.usage": "用法：/admins <chatId> [skip <count>]",
   "command.admins.header": "admins {chatId}",
   "command.admins.empty": "none",
   "command.admins.more": "+{count}",
@@ -1188,7 +1188,7 @@ const en = {
   "command.unpin.usage": "Usage: /unpin <chatId>",
   "command.unpin.done":
     "Asked to clear every pin in {chatId}. The messages stay. Pins inside topics are not part of this call.",
-  "command.admins.usage": "Usage: /admins <chatId>",
+  "command.admins.usage": "Usage: /admins <chatId> [skip <count>]",
   "command.admins.header": "admins {chatId}",
   "command.admins.empty": "none",
   "command.admins.more": "+{count}",
