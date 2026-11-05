@@ -111,6 +111,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["pollDescription", ctx.event.message?.pollDescription],
         ["richText", ctx.event.message?.richText],
         ["richButton", ctx.event.message?.richButton],
+        ["laterName", ctx.event.message?.laterName],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

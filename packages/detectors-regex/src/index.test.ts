@@ -797,6 +797,22 @@ describe("regex detector", () => {
     });
     expect(richButtonHit?.places).toEqual(["richButton"]);
     expect(JSON.stringify(richButtonHit)).not.toContain(name);
+    const laterName = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        laterName: `打开 ${name}`,
+      },
+    });
+    const laterNameHit = await detector.detect({
+      event: laterName,
+      logger,
+      signal,
+    });
+    expect(laterNameHit?.places).toEqual(["laterName"]);
+    expect(JSON.stringify(laterNameHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

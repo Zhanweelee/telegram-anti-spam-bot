@@ -613,6 +613,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ richText: true }, serviceEvent({ richButton: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ laterName: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ laterName: true }, serviceEvent({ richButton: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ laterName: true }, serviceEvent({ laterName: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ richButton: true }, serviceEvent({ laterName: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

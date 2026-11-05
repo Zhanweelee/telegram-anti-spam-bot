@@ -1829,6 +1829,11 @@ describe("runPipeline", () => {
         ruleId: "rich_button_regex",
         label: "按钮请免费领取礼品",
       },
+      {
+        field: "laterName",
+        ruleId: "later_name_regex",
+        label: "后段请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1915,6 +1920,7 @@ describe("runPipeline", () => {
       { field: "pollDescription", ruleId: "poll_description_regex" },
       { field: "richText", ruleId: "rich_text_regex" },
       { field: "richButton", ruleId: "rich_button_regex" },
+      { field: "laterName", ruleId: "later_name_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();

@@ -361,6 +361,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("richButton" in when) {
     return "richButton";
   }
+  if ("laterName" in when) {
+    return "laterName";
+  }
   return undefined;
 }
 
@@ -509,6 +512,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.pollDescription,
     event.message?.richText,
     event.message?.richButton,
+    event.message?.laterName,
     event.profile?.text,
   ];
   const texts: string[] = [];

@@ -45,4 +45,5 @@ ADR 0076 在没有别的可见文字时，用富文本按钮上的字当正文�
 - 复制句子、`callback_data` 和内联查询仍不进这个字段。
 - 关掉 `rich_button_regex` 后，这种按钮回到只看关键词和短链。`rich_text_regex` 和 `button_text_regex` 不受影响。
 - 整份替换规则的群要自己加上这条，才会删除富文本按钮上的「加微x」。
+- `places` 后来加上 `laterName`。选中名称之后的文件名另留。见 ADR 0566。
 - 30 天保留期没有改。
