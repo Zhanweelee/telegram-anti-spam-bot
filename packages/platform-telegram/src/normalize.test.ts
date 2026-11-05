@@ -31600,7 +31600,12 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "ow.ly",
+      "tinyurl.com",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.notice).toBeUndefined();
     expect(labeled.event.message?.memberName).toBe(
@@ -31616,7 +31621,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("grp86");
     expect(labeledDump).not.toContain("88001");
     expect(labeledDump).not.toContain("cutt.ly");
-    expect(labeledDump).not.toContain("tinyurl.com");
 
     const ordinary = await normalize({
       update_id: 5611,
