@@ -265,6 +265,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("checklistTask" in when) {
     return "checklistTask";
   }
+  if ("mediaName" in when) {
+    return "mediaName";
+  }
   return undefined;
 }
 
@@ -382,6 +385,7 @@ function eventTexts(event: Event): readonly string[] {
   const mirror = event.message?.mirrorSignature;
   const poll = event.message?.pollOption;
   const tasks = event.message?.checklistTask;
+  const media = event.message?.mediaName;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -434,6 +438,19 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(tasks);
   }
   if (
+    media &&
+    media.length > 0 &&
+    media !== message &&
+    media !== tag &&
+    media !== buttons &&
+    media !== signature &&
+    media !== mirror &&
+    media !== poll &&
+    media !== tasks
+  ) {
+    texts.push(media);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -442,7 +459,8 @@ function eventTexts(event: Event): readonly string[] {
     profile !== signature &&
     profile !== mirror &&
     profile !== poll &&
-    profile !== tasks
+    profile !== tasks &&
+    profile !== media
   ) {
     texts.push(profile);
   }

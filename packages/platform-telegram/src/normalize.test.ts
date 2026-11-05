@@ -40,6 +40,7 @@ function withoutButtonText(event: object): string {
       mirrorSignature: undefined,
       pollOption: undefined,
       checklistTask: undefined,
+      mediaName: undefined,
     },
   });
 }
@@ -11198,6 +11199,65 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(outcome.event)).not.toContain(path);
   });
 
+  it("keeps the first 4096 characters of a filename beside a caption", async () => {
+    const tail = "TAIL59";
+    const path = "file59";
+    const outcome = await normalize({
+      update_id: 5678,
+      message: {
+        message_id: 5678,
+        date: 1761955200,
+        chat: { id: -1005678, type: "supergroup" },
+        from: { id: 96 },
+        caption: "今天站会",
+        document: {
+          file_id: "DOC64ID",
+          file_unique_id: "UNIQ64",
+          file_name: `${"a".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.mediaName).toHaveLength(4096);
+    expect(outcome.event.message?.mediaName).not.toContain(tail);
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    const dumped = JSON.stringify(outcome.event);
+    expect(dumped).not.toContain(tail);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("DOC64ID");
+    expect(dumped).not.toContain("UNIQ64");
+
+    const titled = await normalize({
+      update_id: 5679,
+      message: {
+        message_id: 5679,
+        date: 1761955200,
+        chat: { id: -1005679, type: "supergroup" },
+        from: { id: 96 },
+        caption: "今天站会",
+        audio: {
+          file_id: "AUD59ID",
+          file_unique_id: "AUNIQ59",
+          duration: 1,
+          title: "今天的歌",
+          file_name: `${tail}.mp3`,
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.mediaName).toBe("今天的歌");
+    expect(JSON.stringify(titled.event)).not.toContain(tail);
+    expect(JSON.stringify(titled.event)).not.toContain("AUD59ID");
+  });
+
   it("keeps hostnames from question, prize, and checklist titles", async () => {
     const phrase = "请免费领取礼品";
     const code = "PLAIN52";
@@ -12298,7 +12358,10 @@ describe("normalizeUpdate", () => {
     );
     expect(document.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(document.event.message?.invites).toEqual(["t.me"]);
-    const documentDump = JSON.stringify(document.event);
+    expect(document.event.message?.mediaName).toBe(
+      `${phrase} https://bit.ly/doc53.pdf https://t.me/+${code}.`,
+    );
+    const documentDump = withoutButtonText(document.event);
     expect(documentDump).not.toContain(phrase);
     expect(documentDump).not.toContain(code);
     expect(documentDump).not.toContain("/doc53");
@@ -12333,7 +12396,8 @@ describe("normalizeUpdate", () => {
       "is.gd",
     ]);
     expect(audio.event.message?.invites).toEqual(["t.me"]);
-    const audioDump = JSON.stringify(audio.event);
+    expect(audio.event.message?.mediaName).toBe("www.tinyurl.com/a53");
+    const audioDump = withoutButtonText(audio.event);
     expect(audioDump).not.toContain(code);
     expect(audioDump).not.toContain("/a53");
     expect(audioDump).not.toContain("perf53");
@@ -12371,9 +12435,10 @@ describe("normalizeUpdate", () => {
     }
     expect(clips.event.message?.text).toBe("今天站会");
     expect(clips.event.message?.hosts).toEqual(["cutt.ly", "example.com"]);
-    const clipsDump = JSON.stringify(clips.event);
+    expect(clips.event.message?.mediaName).toBe("https://cutt.ly/anim53.gif");
+    const clipsDump = withoutButtonText(clips.event);
     expect(clipsDump).not.toContain("/anim53");
-    expect(clipsDump).not.toContain("/vid53");
+    expect(JSON.stringify(clips.event)).not.toContain("/vid53");
     expect(clipsDump).not.toContain(fileId);
 
     const asBody = "免费领取 https://bit.ly/body53.pdf";
@@ -13268,7 +13333,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.mediaName).toBe(
+      `${phrase} https://bit.ly/paid59 https://t.me/+${code}.`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("paid59");
@@ -13306,7 +13374,10 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.mediaName).toBe(
+      `${phrase} https://example.com/page59`,
+    );
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain(phrase);
     expect(ordinaryDump).not.toContain("page59");
     expect(ordinaryDump).not.toContain("is.gd");
@@ -13960,7 +14031,8 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.mediaName).toBe("会议录音");
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain(phrase);
     expect(ordinaryDump).not.toContain("page61");
     expect(ordinaryDump).not.toContain("会议录音");

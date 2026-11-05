@@ -334,6 +334,33 @@ describe("keyword detector", () => {
     expect(JSON.stringify(hit)).not.toContain(label);
   });
 
+  it("matches a media name without copying it", async () => {
+    const label = "请免费领取礼品";
+    const hit = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          mediaName: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["keyword_match"]);
+    expect(hit?.evidence).toEqual([
+      { kind: "keyword", summary: "keyword:免费领取" },
+    ]);
+    expect(JSON.stringify(hit)).not.toContain(label);
+  });
+
   it("does not treat a variation-selector keyword as a match for every message", async () => {
     const detector = createKeywordDetector({ keywords: ["\uFE0F"] });
     const hit = await detector.detect({

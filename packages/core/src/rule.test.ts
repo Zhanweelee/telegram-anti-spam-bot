@@ -192,6 +192,22 @@ describe("rules", () => {
         serviceEvent({ checklistTask: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ mediaName: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { mediaName: true },
+        serviceEvent({ checklistTask: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ mediaName: true }, serviceEvent({ mediaName: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { checklistTask: true },
+        serviceEvent({ mediaName: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

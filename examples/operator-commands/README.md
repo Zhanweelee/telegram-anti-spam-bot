@@ -40,6 +40,8 @@
 
 清单任务写成「加微x」或「免费领取」时，这条消息会被删掉。任务自己就是标题时仍要打开 `regex_hint`。完成者不进事件。
 
+说明旁边的文件名写成「加微x」或「免费领取」时，这条消息会被删掉。音频标题也一样。名称自己就是正文时仍要打开 `regex_hint`。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
