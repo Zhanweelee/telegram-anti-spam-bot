@@ -5001,9 +5001,10 @@ function pushCommunitySenderUrls(
 }
 
 /**
- * 交群或离开的人只留主机名。
+ * 交群或离开的人画出的全名只留主机名。
  * 换人要有新群主对象。离开只要是对象，空对象也读。
- * 空的换人对象、布尔值不读。新群主的名字仍按原来的正文。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 空的换人对象、布尔值不读。新群主的名字仍按原来的正文，排在前面。
  * 用户编号不读。用户名不读。
  */
 function pushOwnerSenderUrls(
@@ -5013,7 +5014,7 @@ function pushOwnerSenderUrls(
   if (changedOwner(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
