@@ -75,6 +75,7 @@ describe("receiveUpdate", () => {
       kind: "join_request",
       actor: { id: "83", isAdmin: false },
       profile: { text: bio },
+      nameHosts: ["tinyurl.com"],
     });
     expect(result.events[0]?.message).toBeUndefined();
     const dumped = JSON.stringify(result.events[0]);

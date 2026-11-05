@@ -12679,3 +12679,64 @@ describe("link fixtures", () => {
     expect(JSON.stringify(suffix)).not.toContain(path);
   });
 });
+
+describe("join request names", () => {
+  it("reads carried hosts when the request has no bio", async () => {
+    const detector = createLinkDetector();
+    const event = parseEvent({
+      id: "evt_join_name",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "83", isAdmin: false },
+      nameHosts: ["bit.ly"],
+    });
+    const hit = await detector.detect({
+      event,
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["short_link"]);
+    expect(hit?.evidence[0]?.summary).toBe("short_link:bit.ly");
+
+    const bio = parseEvent({
+      id: "evt_join_bio",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "83", isAdmin: false },
+      profile: {
+        text: "https://cutt.ly/bio84",
+        textSha256: HASH,
+      },
+      nameHosts: ["bit.ly"],
+    });
+    const both = await detector.detect({
+      event: bio,
+      logger: createMemoryLogger(),
+      signal,
+    });
+    expect(both?.evidence.map((item) => item.summary)).toEqual([
+      "short_link:cutt.ly",
+    ]);
+    expect(JSON.stringify(both)).not.toContain("bio84");
+
+    const empty = parseEvent({
+      id: "evt_join_empty",
+      tenantId: "tenant_demo",
+      chatId: "chat_demo",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00.000Z",
+      actor: { id: "83", isAdmin: false },
+    });
+    expect(
+      await detector.detect({
+        event: empty,
+        logger: createMemoryLogger(),
+        signal,
+      }),
+    ).toBeNull();
+  });
+});

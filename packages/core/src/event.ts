@@ -319,6 +319,10 @@ export const eventSchema = z
       .string()
       .regex(/^[A-Za-z0-9_-]{1,128}$/)
       .optional(),
+    /** Hostnames from a join-request name. The name stays out. */
+    nameHosts: z.array(hostnameSchema).min(1).max(8).optional(),
+    /** Invite hostnames from a join-request name. The invite code stays out. */
+    nameInvites: z.array(hostnameSchema).min(1).max(8).optional(),
     /** Joined through a chat-folder invite. The invite link stays out. */
     folderInvite: z.literal(true).optional(),
     /** This chat's saved settings also belong on `to`. The source stays. */
