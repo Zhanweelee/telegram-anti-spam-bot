@@ -22,6 +22,8 @@
 
 `/guard -100` 写出这个群现在的付费发言星星数，以及频道是否接受付费媒体。缺字段写未知。0 写成 0。
 
+`/guard -100` 写出这个群接受无限礼物、限量礼物、独特礼物、会员订阅和频道礼物。缺字段写未知。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

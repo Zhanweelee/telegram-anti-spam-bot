@@ -1334,11 +1334,41 @@ function readChatGuardValue(body: unknown, chatId: string): ChatGuard {
     boostExemption: readGuardCount(record.unrestrict_boost_count),
     paidStars: readGuardCount(record.paid_message_star_count),
     paidMedia: readGuardFlag(record.can_send_paid_media),
+    ...readGiftFlags(record.accepted_gift_types),
     protectedContent: readGuardFlag(record.has_protected_content),
     hiddenMembers: readGuardFlag(record.has_hidden_members),
     visibleHistory: readGuardFlag(record.has_visible_history),
     maxReactions: readGuardRequiredCount(record.max_reaction_count),
     linkedChatId: readLinkedChat(record.linked_chat_id),
+  };
+}
+
+function readGiftFlags(value: unknown): {
+  readonly unlimitedGifts: PermissionState;
+  readonly limitedGifts: PermissionState;
+  readonly uniqueGifts: PermissionState;
+  readonly premiumGifts: PermissionState;
+  readonly channelGifts: PermissionState;
+} {
+  if (value === undefined) {
+    return {
+      unlimitedGifts: "unknown",
+      limitedGifts: "unknown",
+      uniqueGifts: "unknown",
+      premiumGifts: "unknown",
+      channelGifts: "unknown",
+    };
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("guard_failed");
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    unlimitedGifts: readGuardFlag(record.unlimited_gifts),
+    limitedGifts: readGuardFlag(record.limited_gifts),
+    uniqueGifts: readGuardFlag(record.unique_gifts),
+    premiumGifts: readGuardFlag(record.premium_subscription),
+    channelGifts: readGuardFlag(record.gifts_from_channels),
   };
 }
 
