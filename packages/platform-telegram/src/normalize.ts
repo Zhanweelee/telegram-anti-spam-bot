@@ -4533,6 +4533,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushVisiblePartyUrls(message.left_chat_member, undefined, urls);
   pushBoostSenderUrls(message, urls);
   pushAutoDeleteSenderUrls(message, urls);
+  pushPriceSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4713,6 +4714,20 @@ function pushAutoDeleteSenderUrls(
   urls: string[],
 ): void {
   if (!autoDeleteNotice(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 改价提示上的发送者只留主机名。
+ * 不是真实的付费发言或私信开关时不读。星星数量和开关不读。普通消息的发送者不读。
+ */
+function pushPriceSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (changedPrice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

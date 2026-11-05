@@ -71,6 +71,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改自动删除计时的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0584。
 
+改价的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0585。
+
 `checklist_task_regex` 默认打开。清单任务命中同一份正则时删除。任务干净，或任务自己就是标题时，仍留下。见 ADR 0538。
 
 `media_name_regex` 默认打开。说明旁边的文件名或音频标题命中同一份正则时删除。名称干净，或名称自己就是正文时，仍留下。见 ADR 0539。
