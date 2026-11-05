@@ -639,6 +639,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   if (isRecord(game)) {
     lists.push(game.text_entities);
   }
+  const quote = message.quote;
+  if (isRecord(quote) && quote.is_manual === true) {
+    lists.push(quote.entities);
+  }
   for (const list of lists) {
     if (!Array.isArray(list)) {
       continue;

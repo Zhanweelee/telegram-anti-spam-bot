@@ -23988,6 +23988,7 @@ describe("normalizeUpdate", () => {
         quote: {
           text: "另一条",
           is_manual: true,
+          position: 8804902,
           entities: [
             {
               type: "custom_emoji",
@@ -24004,8 +24005,101 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(quoted.event.message?.text).toBe("引用留下");
-    expect(quoted.event.message?.asCustomEmoji).toBeUndefined();
+    expect(quoted.event.message?.asCustomEmoji).toBe(true);
+    expect(quoted.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(quoted.event)).not.toContain("90248");
+    expect(JSON.stringify(quoted.event)).not.toContain("8804902");
+
+    const automatic = await normalize({
+      update_id: 4916,
+      message: {
+        message_id: 956,
+        date: 1761955200,
+        chat: { id: -100499916, type: "supergroup" },
+        from: { id: 124 },
+        text: "自动引用留下",
+        quote: {
+          text: "服务器摘录",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90260",
+            },
+          ],
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955200,
+          chat: { id: -100499916, type: "supergroup" },
+          text: "原消息表情",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90261",
+            },
+          ],
+        },
+      },
+    });
+    expect(automatic.status).toBe("event");
+    if (automatic.status !== "event") {
+      return;
+    }
+    expect(automatic.event.message?.text).toBe("自动引用留下");
+    expect(automatic.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(automatic.event)).not.toContain("emoji90260");
+    expect(JSON.stringify(automatic.event)).not.toContain("emoji90261");
+    expect(JSON.stringify(automatic.event)).not.toContain("原消息表情");
+
+    const blankQuote = await normalize({
+      update_id: 4917,
+      message: {
+        message_id: 957,
+        date: 1761955200,
+        chat: { id: -100499917, type: "supergroup" },
+        from: { id: 124 },
+        text: "空白引用留下",
+        quote: {
+          text: "空白编号",
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: " ",
+            },
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 2,
+              user: { id: 90262, first_name: "引90262" },
+            },
+            {
+              type: "date_time",
+              offset: 0,
+              length: 2,
+              unix_time: 90263,
+              date_time_format: "d",
+            },
+          ],
+        },
+      },
+    });
+    expect(blankQuote.status).toBe("event");
+    if (blankQuote.status !== "event") {
+      return;
+    }
+    expect(blankQuote.event.message?.text).toBe("空白引用留下");
+    expect(blankQuote.event.message?.asCustomEmoji).toBeUndefined();
+    expect(blankQuote.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(blankQuote.event)).not.toContain("90262");
+    expect(JSON.stringify(blankQuote.event)).not.toContain("引90262");
+    expect(JSON.stringify(blankQuote.event)).not.toContain("90263");
 
     const gift = await normalize({
       update_id: 4903,

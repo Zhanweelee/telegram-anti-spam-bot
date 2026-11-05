@@ -341,6 +341,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 后加和删掉的投票选项上的自定义表情也算。选项编号不进证据。见 ADR 0573。
 
+手动引用上的自定义表情也算。引用位置不进证据。见 ADR 0574。
+
 `/rule <chatId> copy_text on` 删这个群里复制到剪贴板的按钮。默认关闭。复制句子不进证据。看得见的按钮文字仍参与关键词。自定义表情仍看 `custom_emoji`。见 ADR 0516。
 
 `/rule <chatId> switch_query on` 删这个群里按下后把查询插进输入框的按钮。默认关闭。查询不进证据。看得见的按钮文字仍参与关键词。复制按钮仍看 `copy_text`。见 ADR 0517。

@@ -12,7 +12,7 @@
 ## 决策
 
 - `entities`、`caption_entities`、投票 `question_entities`、投票 `explanation_entities`、投票选项 `text_entities`、清单 `title_entities`、清单任务 `text_entities`、礼物 `entities`、游戏 `text_entities`，或富文本里 `type` 正好是 `custom_emoji`，并且 `custom_emoji_id` 去掉空白后非空时，事件带 `asCustomEmoji: true`。
-- 空白、布尔值和缺编号不带这个标记。加粗不带。按标识提及不带。手动引用不带。日期时间不带。论坛话题的 `icon_custom_emoji_id` 不带。
+- 空白、布尔值和缺编号不带这个标记。加粗不带。按标识提及不带。自动引用不带。日期时间不带。论坛话题的 `icon_custom_emoji_id` 不带。手动引用后来由 ADR 0574 带上。
 - 编号不进事件，也不进证据。看得见的字和替代文字仍是正文。已有 `text` 或 `caption` 时正文不变，编号不并进去。
 - 检测器在 `@tasb/detector-emoji`，id 是 `custom_emoji`。只在 `message.asCustomEmoji` 为 true 时返回 score 1。证据是 `entity:custom_emoji`。
 - 默认规则关闭。私聊 `/rule <chatId> custom_emoji on` 之后删除这种正文，`off` 回到留下。
@@ -39,6 +39,7 @@
 - 投票描述上的自定义表情后来由 ADR 0571 也带上 `asCustomEmoji`。编号仍不进事件。
 - 后加清单任务上的自定义表情后来由 ADR 0572 也带上 `asCustomEmoji`。原清单、任务编号和完成者名字仍不进事件。
 - 后加和删掉的投票选项上的自定义表情后来由 ADR 0573 也带上 `asCustomEmoji`。原投票和选项编号仍不进事件。选项上的按标识提及仍不带。
+- 手动引用上的自定义表情后来由 ADR 0574 也带上 `asCustomEmoji`。自动引用、原消息和引用位置仍不进事件。引用上的按标识提及和日期时间仍不带。
 - 30 天保留期没有改。
 - 复制到剪贴板的按钮后来由 ADR 0516 另开 `copy_text`。打开自定义表情仍不删除这种按钮。句子仍不进事件。
 - 内联按钮上的自定义表情后来由 ADR 0519 另开 `button_emoji`。打开正文里的自定义表情仍不删除这种按钮。编号仍不进事件。
