@@ -4400,6 +4400,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (field === "giveaway_winners" && isRecord(value.chat)) {
       pushPlainUrls(value.chat.title, urls);
     }
+    if (field === "giveaway_winners" && Array.isArray(value.winners)) {
+      for (const winner of value.winners) {
+        pushVisiblePartyUrls(winner, undefined, urls);
+      }
+    }
   }
   const checklist = message.checklist;
   if (isRecord(checklist)) {
