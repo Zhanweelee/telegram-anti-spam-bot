@@ -38,6 +38,7 @@ function withoutButtonText(event: object): string {
       buttonText: undefined,
       authorSignature: undefined,
       mirrorSignature: undefined,
+      pollOption: undefined,
     },
   });
 }
@@ -10965,11 +10966,50 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(question);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(question));
+    expect(outcome.event.message?.pollOption).toBe(phrase);
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
+  });
+
+  it("keeps the first 1211 characters of poll options and still reads a later hostname", async () => {
+    const tail = "TAIL57";
+    const path = "opt57";
+    const options = Array.from({ length: 12 }, () => ({
+      text: "a".repeat(100),
+      voter_count: 0,
+    }));
+    options.push({
+      text: `${tail} https://bit.ly/${path}`,
+      voter_count: 0,
+    });
+    const outcome = await normalize({
+      update_id: 5666,
+      message: {
+        message_id: 5666,
+        date: 1761955200,
+        chat: { id: -1005666, type: "supergroup" },
+        from: { id: 93 },
+        poll: {
+          question: "今天站会",
+          options,
+          explanation: tail,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.pollOption).toHaveLength(1211);
+    expect(outcome.event.message?.pollOption).not.toContain(tail);
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(outcome.event)).not.toContain(tail);
+    expect(JSON.stringify(outcome.event)).not.toContain(path);
   });
 
   it("keeps a caption when a poll is also present", async () => {
@@ -11146,9 +11186,10 @@ describe("normalizeUpdate", () => {
     }
     expect(poll.event.message?.text).toBe("今天站会");
     expect(poll.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(poll.event.message?.pollOption).toBe(phrase);
     expect(poll.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(poll.event.message?.invites).toEqual(["t.me"]);
-    const pollDump = JSON.stringify(poll.event);
+    const pollDump = withoutButtonText(poll.event);
     expect(pollDump).not.toContain(phrase);
     expect(pollDump).not.toContain(code);
     expect(pollDump).not.toContain("/q52");
@@ -11261,8 +11302,9 @@ describe("normalizeUpdate", () => {
     }
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.pollOption).toBe(phrase);
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(body.event)).not.toContain(phrase);
+    expect(withoutButtonText(body.event)).not.toContain(phrase);
   });
 
   it("keeps hostnames from poll options and descriptions", async () => {
@@ -16687,7 +16729,8 @@ describe("normalizeUpdate", () => {
     }
     expect(poll.event.message?.asGiveaway).toBeUndefined();
     expect(poll.event.message?.text).toBe("今天站会");
-    expect(JSON.stringify(poll.event)).not.toContain(title);
+    expect(poll.event.message?.pollOption).toBe(title);
+    expect(withoutButtonText(poll.event)).not.toContain(title);
   });
 
   it("hashes a caption-less rich photo and leaves the file id out", async () => {

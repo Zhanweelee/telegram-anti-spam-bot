@@ -64,6 +64,8 @@ export const messageSchema = z
     authorSignature: z.string().min(1).max(256).optional(),
     /** Discussion-mirror author signature beside another body. Capped at 256. Absent when it is the body. */
     mirrorSignature: z.string().min(1).max(256).optional(),
+    /** Poll options beside the question. 12 options of 100, plus spaces. Absent when they are the body. */
+    pollOption: z.string().min(1).max(1211).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

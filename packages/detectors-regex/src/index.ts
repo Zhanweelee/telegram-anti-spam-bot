@@ -77,6 +77,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["buttonText", ctx.event.message?.buttonText],
         ["authorSignature", ctx.event.message?.authorSignature],
         ["mirrorSignature", ctx.event.message?.mirrorSignature],
+        ["pollOption", ctx.event.message?.pollOption],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

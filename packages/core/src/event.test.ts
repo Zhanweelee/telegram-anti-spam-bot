@@ -479,6 +479,21 @@ describe("event schema", () => {
       },
     });
     expect(mirrored.message?.mirrorSignature).toBe("加微x");
+    const polled = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        pollOption: "加微x",
+      },
+    });
+    expect(polled.message?.pollOption).toBe("加微x");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -524,6 +539,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           mirrorSignature: "a".repeat(257),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          pollOption: "a".repeat(1212),
         },
       }),
     ).toThrow();

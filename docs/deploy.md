@@ -171,6 +171,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 正文旁边的作者签名，以及讨论组原帖来源上的签名，命中同一组模式时删除。`/rule <chatId> author_signature_regex off` 和 `mirror_signature_regex off` 回到只看关键词和短链。签名自己就是正文时仍要打开 `regex_hint`。见 ADR 0536。
 
+投票选项命中同一组模式时删除。`/rule <chatId> poll_option_regex off` 回到只看关键词和短链。选项自己就是题干时仍要打开 `regex_hint`。见 ADR 0537。
+
 `/rule <chatId> hidden_forward on` 只删这个群的隐藏来源转发。`chat_forward` 删从别的群转发来的消息，`user_forward` 删用户转发。三条默认关闭。频道转发仍由 `channel_forward` 删除。见 ADR 0468。
 
 `/rule <chatId> media_sticker on` 只删这个群的贴纸。`media_animation` 删动图，`media_voice` 删语音，`media_video_note` 删视频留言，`media_dice` 删骰子。五条默认关闭。付费帖仍留下。见 ADR 0469。
