@@ -38343,6 +38343,181 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
   });
 
+  it("keeps only the hostname from the full name drawn for a renamed topic", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "EDIT79224";
+    const drawn = await normalize({
+      update_id: 79224,
+      message: {
+        message_id: 79224,
+        date: 1761955200,
+        chat: {
+          id: -10079224,
+          type: "supergroup",
+          title: "https://is.gd/room79224",
+        },
+        from: {
+          id: 129,
+          first_name: "https://bit.ly/edit79224",
+          last_name: `${phrase} https://tinyurl.com/skip79224 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        forum_topic_edited: {
+          name: "改过",
+          icon_custom_emoji_id: "https://ow.ly/emoji79224",
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("改过");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex("改过"));
+    expect(drawn.event.message?.topicNotice).toBe("edited");
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("edit79224");
+    expect(dumped).not.toContain("skip79224");
+    expect(dumped).not.toContain("emoji79224");
+    expect(dumped).not.toContain("room79224");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("cutt.ly");
+
+    const blank = await normalize({
+      update_id: 79225,
+      message: {
+        message_id: 79225,
+        date: 1761955200,
+        chat: { id: -10079225, type: "supergroup" },
+        from: {
+          id: 129,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79225",
+          username: "cutt.ly",
+        },
+        forum_topic_edited: { name: "改过" },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.topicNotice).toBe("edited");
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79225");
+    expect(JSON.stringify(blank.event)).not.toContain("cutt.ly");
+
+    const spaced = await normalize({
+      update_id: 79226,
+      message: {
+        message_id: 79226,
+        date: 1761955200,
+        chat: { id: -10079226, type: "supergroup" },
+        from: {
+          id: 129,
+          first_name: "Go https://bit.ly/later79226",
+          last_name: "Lee",
+        },
+        forum_topic_edited: { icon_custom_emoji_id: "emoji79226" },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("");
+    expect(spaced.event.message?.topicNotice).toBe("edited");
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79226");
+    expect(JSON.stringify(spaced.event)).not.toContain("emoji79226");
+
+    const created = await normalize({
+      update_id: 79227,
+      message: {
+        message_id: 79227,
+        date: 1761955200,
+        chat: { id: -10079227, type: "supergroup" },
+        from: {
+          id: 129,
+          first_name: "https://bit.ly/made79227",
+          last_name: "https://tinyurl.com/skiplast79227",
+        },
+        forum_topic_created: { name: "新话题" },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.topicNotice).toBe("created");
+    expect(created.event.message?.text).toBe("新话题");
+    expect(created.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(created.event)).not.toContain("skiplast79227");
+    expect(JSON.stringify(created.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(created.event)).not.toContain("made79227");
+
+    const both = await normalize({
+      update_id: 79228,
+      message: {
+        message_id: 79228,
+        date: 1761955200,
+        chat: { id: -10079228, type: "supergroup" },
+        from: {
+          id: 129,
+          first_name: "   ",
+          last_name: "https://bit.ly/both79228",
+        },
+        forum_topic_created: { name: "新话题" },
+        forum_topic_edited: { name: "改过" },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.topicNotice).toBe("created");
+    expect(both.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(both.event)).not.toContain("both79228");
+
+    const quiet = await normalize({
+      update_id: 79229,
+      message: {
+        message_id: 79229,
+        date: 1761955200,
+        chat: {
+          id: -10079229,
+          type: "supergroup",
+          title: "https://ow.ly/room79229",
+        },
+        from: {
+          id: 129,
+          first_name: "https://bit.ly/plain79229",
+          last_name: "https://tinyurl.com/plainlast79229",
+        },
+        text: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.topicNotice).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quiet.event)).not.toContain("plain79229");
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79229");
+    expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
