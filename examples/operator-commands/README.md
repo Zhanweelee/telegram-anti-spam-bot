@@ -38,6 +38,8 @@
 
 投票选项写成「加微x」或「免费领取」时，这条消息会被删掉。选项自己就是题干时仍要打开 `regex_hint`。说明不进事件。
 
+清单任务写成「加微x」或「免费领取」时，这条消息会被删掉。任务自己就是标题时仍要打开 `regex_hint`。完成者不进事件。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

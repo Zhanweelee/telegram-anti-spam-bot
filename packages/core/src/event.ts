@@ -66,6 +66,8 @@ export const messageSchema = z
     mirrorSignature: z.string().min(1).max(256).optional(),
     /** Poll options beside the question. 12 options of 100, plus spaces. Absent when they are the body. */
     pollOption: z.string().min(1).max(1211).optional(),
+    /** Checklist tasks beside the title. 30 tasks of 100, plus spaces. Absent when they are the body. */
+    checklistTask: z.string().min(1).max(3029).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
