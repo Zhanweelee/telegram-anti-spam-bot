@@ -745,6 +745,26 @@ describe("keyword detector", () => {
     });
     expect(roster?.reasons).toEqual(["keyword_match"]);
     expect(JSON.stringify(roster)).not.toContain(label);
+    const shared = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          sharedName: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(shared?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(shared)).not.toContain(label);
   });
 
   it("matches a performer without copying it", async () => {

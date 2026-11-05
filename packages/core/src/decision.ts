@@ -73,6 +73,7 @@ export const textPlaces = [
   "addedText",
   "hiddenName",
   "memberName",
+  "sharedName",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

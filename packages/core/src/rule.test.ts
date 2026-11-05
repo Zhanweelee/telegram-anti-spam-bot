@@ -485,6 +485,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ hiddenName: true }, serviceEvent({ memberName: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ sharedName: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ sharedName: true }, serviceEvent({ memberName: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ sharedName: true }, serviceEvent({ sharedName: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ memberName: true }, serviceEvent({ sharedName: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
