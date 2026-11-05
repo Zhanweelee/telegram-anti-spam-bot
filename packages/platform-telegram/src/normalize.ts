@@ -135,6 +135,7 @@ async function messageEvent(
     return { status: "ignored" };
   }
   const text = messageText(message);
+  const sideTag = besideSenderTag(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -197,6 +198,7 @@ async function messageEvent(
       id: messageId,
       text,
       textSha256: await sha256Hex(text),
+      ...(sideTag.length > 0 ? { senderTag: sideTag } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6592,6 +6594,19 @@ function senderTag(message: Record<string, unknown>): string {
     return message.sender_tag.slice(0, MAX_TEXT);
   }
   return "";
+}
+
+/** 已有别的正文时，成员标签另留最多 16 字。标签自己就是正文时不重复。 */
+function besideSenderTag(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = senderTag(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 16);
 }
 
 function authorSignature(message: Record<string, unknown>): string {

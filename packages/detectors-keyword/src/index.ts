@@ -24,7 +24,11 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
     configSchema: keywordConfigSchema,
     config,
     async detect(ctx, parsed) {
-      const texts = [ctx.event.message?.text, ctx.event.profile?.text].filter(
+      const texts = [
+        ctx.event.message?.text,
+        ctx.event.message?.senderTag,
+        ctx.event.profile?.text,
+      ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,
       );
       if (texts.length === 0) {

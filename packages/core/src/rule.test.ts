@@ -75,6 +75,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ serviceName: true }, serviceEvent({ asChannel: true })),
     ).toBe(false);
+    expect(matchesWhen({ senderTag: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ senderTag: true }, serviceEvent({ notice: "join" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ senderTag: true }, serviceEvent({ senderTag: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ senderTag: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

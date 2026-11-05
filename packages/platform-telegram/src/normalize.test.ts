@@ -19779,10 +19779,15 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.senderTag).toBe(`${phrase} https://`);
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = JSON.stringify(labeled.event);
-    expect(labeledDump).not.toContain(phrase);
+    const withoutTag = JSON.stringify({
+      ...labeled.event,
+      message: { ...labeled.event.message, senderTag: undefined },
+    });
+    expect(withoutTag).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("tag79");
     expect(labeledDump).not.toContain("title79");
@@ -19808,6 +19813,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.senderTag).toBe("https://example.");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
     const ordinaryDump = JSON.stringify(ordinary.event);
     expect(ordinaryDump).not.toContain("ok79");
@@ -19831,6 +19837,7 @@ describe("normalizeUpdate", () => {
     }
     expect(asBody.event.message?.text).toBe(tag);
     expect(asBody.event.message?.textSha256).toBe(await sha256Hex(tag));
+    expect(asBody.event.message?.senderTag).toBeUndefined();
     expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
     const bodyDump = JSON.stringify(asBody.event);
     expect(bodyDump).not.toContain(phrase);
@@ -19853,6 +19860,7 @@ describe("normalizeUpdate", () => {
     }
     expect(both.event.message?.text).toBe(signature);
     expect(both.event.message?.textSha256).toBe(await sha256Hex(signature));
+    expect(both.event.message?.senderTag).toBe("https://bit.ly/b");
     expect(both.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(both.event)).not.toContain("both79");
   });

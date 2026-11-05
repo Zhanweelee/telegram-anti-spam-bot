@@ -5,6 +5,7 @@ import { type Event, eventKindSchema } from "./event.js";
 export type RuleWhen =
   | { readonly eventKind: z.output<typeof eventKindSchema> }
   | { readonly serviceName: true }
+  | { readonly senderTag: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -13,6 +14,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
   z.union([
     z.strictObject({ eventKind: eventKindSchema }),
     z.strictObject({ serviceName: z.literal(true) }),
+    z.strictObject({ senderTag: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -70,6 +72,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("serviceName" in when) {
     return serviceName(event);
   }
+  if ("senderTag" in when) {
+    return senderTag(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -77,6 +82,10 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
     return when.any.some((item) => matchesWhen(item, event));
   }
   return !matchesWhen(when.not, event);
+}
+
+function senderTag(event: Event): boolean {
+  return event.message?.senderTag !== undefined;
 }
 
 function serviceName(event: Event): boolean {

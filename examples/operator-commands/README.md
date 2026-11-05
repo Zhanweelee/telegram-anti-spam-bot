@@ -30,6 +30,8 @@
 
 入群服务消息、视频聊天邀请、换群主和靠近提醒上的「加微x」会被删掉。名字干净时这几行仍留下。
 
+正文旁边的成员标签写成「加微x」或「免费领取」时，这条消息会被删掉。标签自己就是正文时仍要打开 `regex_hint`。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
