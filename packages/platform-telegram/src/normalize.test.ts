@@ -38919,6 +38919,204 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
   });
 
+  it("keeps only the hostname from the full name drawn for a price change", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "PRICE79253";
+    const stars = 880253;
+    const drawn = await normalize({
+      update_id: 79253,
+      message: {
+        message_id: 79253,
+        date: 1761955200,
+        chat: {
+          id: -10079253,
+          type: "supergroup",
+          title: "https://is.gd/room79253",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/price79253",
+          last_name: `${phrase} https://tinyurl.com/skip79253 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        paid_message_price_changed: { paid_message_star_count: stars },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(drawn.event.message?.priceNotice).toBe("paid");
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(String(stars));
+    expect(dumped).not.toContain("price79253");
+    expect(dumped).not.toContain("skip79253");
+    expect(dumped).not.toContain("room79253");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("cutt.ly");
+
+    const blank = await normalize({
+      update_id: 79254,
+      message: {
+        message_id: 79254,
+        date: 1761955200,
+        chat: { id: -10079254, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79254",
+          username: "cutt.ly",
+        },
+        paid_message_price_changed: { paid_message_star_count: 0 },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.priceNotice).toBe("paid");
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79254");
+    expect(JSON.stringify(blank.event)).not.toContain("cutt.ly");
+
+    const spaced = await normalize({
+      update_id: 79255,
+      message: {
+        message_id: 79255,
+        date: 1761955200,
+        chat: { id: -10079255, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Go https://bit.ly/later79255",
+          last_name: "Lee",
+        },
+        direct_message_price_changed: { are_direct_messages_enabled: true },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("");
+    expect(spaced.event.message?.priceNotice).toBe("direct");
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79255");
+
+    const direct = await normalize({
+      update_id: 79256,
+      message: {
+        message_id: 79256,
+        date: 1761955200,
+        chat: { id: -10079256, type: "channel" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/direct79256",
+          last_name: "https://tinyurl.com/skiplast79256",
+        },
+        direct_message_price_changed: {
+          are_direct_messages_enabled: false,
+          direct_message_star_count: 880256,
+        },
+      },
+    });
+    expect(direct.status).toBe("event");
+    if (direct.status !== "event") {
+      return;
+    }
+    expect(direct.event.message?.priceNotice).toBe("direct");
+    expect(direct.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const directDump = JSON.stringify(direct.event);
+    expect(directDump).not.toContain("direct79256");
+    expect(directDump).not.toContain("skiplast79256");
+    expect(directDump).not.toContain("880256");
+
+    const boost = await normalize({
+      update_id: 79257,
+      message: {
+        message_id: 79257,
+        date: 1761955200,
+        chat: { id: -10079257, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/boost79257",
+          last_name: "https://tinyurl.com/skiplast79257",
+        },
+        boost_added: { boost_count: 1 },
+      },
+    });
+    expect(boost.status).toBe("event");
+    if (boost.status !== "event") {
+      return;
+    }
+    expect(boost.event.message?.priceNotice).toBeUndefined();
+    expect(boost.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(boost.event)).not.toContain("skiplast79257");
+    expect(JSON.stringify(boost.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(boost.event)).not.toContain("boost79257");
+
+    const quiet = await normalize({
+      update_id: 79258,
+      message: {
+        message_id: 79258,
+        date: 1761955200,
+        chat: {
+          id: -10079258,
+          type: "supergroup",
+          title: "https://ow.ly/room79258",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/plain79258",
+          last_name: "https://tinyurl.com/plainlast79258",
+        },
+        text: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.priceNotice).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quiet.event)).not.toContain("plain79258");
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79258");
+    expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+
+    const negative = await normalize({
+      update_id: 79259,
+      message: {
+        message_id: 79259,
+        date: 1761955200,
+        chat: { id: -10079259, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/neg79259",
+        },
+        paid_message_price_changed: { paid_message_star_count: -1 },
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.priceNotice).toBeUndefined();
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("neg79259");
+    expect(JSON.stringify(negative.event)).not.toContain("bit.ly");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
