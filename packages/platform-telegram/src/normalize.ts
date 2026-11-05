@@ -5124,8 +5124,9 @@ function pushChecklistSenderUrls(
 /**
  * 新加清单任务的人只留主机名。
  * `tasks` 里至少有一条长度大于 0 的文字时读。空白也算。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 空字符串、空数组和布尔值不读。投票选项不读。
- * 任务文字仍按原来的正文。勾完的人后来按全名。
+ * 任务文字仍按原来的正文。勾完的人按全名。
  * 任务上的完成者仍按原来的主机名。
  * 嵌套原清单不读。用户名不读。
  */
@@ -5136,7 +5137,7 @@ function pushAddedSenderUrls(
   if (!addedChecklist(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
