@@ -43,6 +43,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 入群检测器在 `packages/detectors-join`，`membership !== "join"` 时返回 null，并带 fixtures。`decline` 只处理 `kind: "join_request"`。带安全查询号时调用 `answerChatJoinRequestQuery`，结果是 `decline`；没有查询号时仍调用 `declineChatJoinRequest`。没有命中时，带查询号的申请答复 `queue`，其余仍留给管理员。见 ADR 0116 和 ADR 0360。默认规则 `join_link` 用现有链接检测器看入群昵称。短链或邀请就封禁，普通网址仍只验证。见 ADR 0117。
 
+`regex` 同时看消息正文和 `profile`。证据仍是 `regex:hit`。`join_regex` 默认打开，名字或新标签命中就封禁。申请简介命中就拒绝。`regex_hint` 仍关闭。见 ADR 0532。
+
 `folder` 在 `packages/detectors-folder`。只在 `chat_member` 且 `folderInvite` 为 true 时返回 score 1。证据是 `folder:invite`。邀请链接不进事件。默认规则 `folder_join` 关闭。打开后封禁。见 ADR 0429。
 
 `notice` 在 `packages/detectors-notice`。只在 `message.notice` 是 `join` 或 `leave` 时返回 score 1。证据是 `notice:join` 或 `notice:leave`。名字不进证据。默认规则 `service_notice` 关闭。打开后删除入群和退群提示。见 ADR 0467。

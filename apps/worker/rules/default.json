@@ -563,6 +563,14 @@
       "actions": ["ban"]
     },
     {
+      "id": "join_regex",
+      "enabled": true,
+      "when": { "eventKind": "chat_member" },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["ban"]
+    },
+    {
       "id": "join_link",
       "enabled": true,
       "when": { "eventKind": "chat_member" },
@@ -590,7 +598,7 @@
       "id": "join_request",
       "enabled": true,
       "when": { "eventKind": "join_request" },
-      "detectorIds": ["keyword", "link"],
+      "detectorIds": ["keyword", "link", "regex"],
       "threshold": 1,
       "actions": ["decline"]
     },

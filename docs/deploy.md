@@ -161,6 +161,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/guard <chatId>` 写出这个群有没有绑定地点。没返回写关。见 ADR 0531。
 
+入群名字或新标签命中 `t.me/+` 或「加微x」时封禁。`/rule <chatId> join_regex off` 回到只验证。申请简介命中同一组模式时拒绝。普通消息仍要打开 `regex_hint`。见 ADR 0532。
+
 `/rule <chatId> hidden_forward on` 只删这个群的隐藏来源转发。`chat_forward` 删从别的群转发来的消息，`user_forward` 删用户转发。三条默认关闭。频道转发仍由 `channel_forward` 删除。见 ADR 0468。
 
 `/rule <chatId> media_sticker on` 只删这个群的贴纸。`media_animation` 删动图，`media_voice` 删语音，`media_video_note` 删视频留言，`media_dice` 删骰子。五条默认关闭。付费帖仍留下。见 ADR 0469。

@@ -28,6 +28,18 @@ function messageEvent(text: string): Event {
   });
 }
 
+function profileEvent(text: string): Event {
+  return parseEvent({
+    id: "evt_1",
+    tenantId: "tenant_demo",
+    chatId: "chat_demo",
+    kind: "chat_member",
+    occurredAt: "2026-11-01T00:00:00Z",
+    actor: { id: "user_1", isAdmin: false },
+    profile: { text, textSha256: HASH },
+  });
+}
+
 describe("regex detector", () => {
   const detector = createRegexDetector({
     patterns: [...defaultRegexPatterns],
@@ -61,6 +73,39 @@ describe("regex detector", () => {
       actor: { id: "user_1", isAdmin: false },
     });
     expect(await detector.detect({ event: member, logger, signal })).toBeNull();
+  });
+
+  it("matches a join name without copying it", async () => {
+    const name = "加微x广告";
+    const hit = await detector.detect({
+      event: profileEvent(name),
+      logger,
+      signal,
+    });
+    expect(hit?.reasons).toEqual(["regex_match"]);
+    expect(hit?.evidence).toEqual([{ kind: "feature", summary: "regex:hit" }]);
+    expect(JSON.stringify(hit)).not.toContain(name);
+    expect(
+      await detector.detect({
+        event: profileEvent("今天站会"),
+        logger,
+        signal,
+      }),
+    ).toBeNull();
+    const both = parseEvent({
+      ...messageEvent("今天站会"),
+      profile: { text: name, textSha256: HASH },
+    });
+    const profileHit = await detector.detect({
+      event: both,
+      logger,
+      signal,
+    });
+    expect(profileHit?.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(profileHit)).not.toContain(name);
+    expect(JSON.stringify(profileHit)).not.toContain("今天站会");
   });
 
   it("accepts a short unquantified subset and rejects the rest", () => {
