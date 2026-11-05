@@ -105,6 +105,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["accessName", ctx.event.message?.accessName],
         ["gameFile", ctx.event.message?.gameFile],
         ["audioFile", ctx.event.message?.audioFile],
+        ["paidFile", ctx.event.message?.paidFile],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

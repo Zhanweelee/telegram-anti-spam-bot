@@ -58,6 +58,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         ctx.event.message?.accessName,
         ctx.event.message?.gameFile,
         ctx.event.message?.audioFile,
+        ctx.event.message?.paidFile,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,

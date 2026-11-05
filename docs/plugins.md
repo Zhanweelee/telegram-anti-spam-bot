@@ -99,6 +99,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `audio_file_regex` 默认打开。音频文件名命中同一份正则时删除。这段干净，或自己就是名称时，仍留下。见 ADR 0559。
 
+`paid_file_regex` 默认打开。后面的付费视频文件名命中同一份正则时删除。第一段干净，或自己就是名称时，仍留下。见 ADR 0560。
+
 `folder` 在 `packages/detectors-folder`。只在 `chat_member` 且 `folderInvite` 为 true 时返回 score 1。证据是 `folder:invite`。邀请链接不进事件。默认规则 `folder_join` 关闭。打开后封禁。见 ADR 0429。
 
 `notice` 在 `packages/detectors-notice`。只在 `message.notice` 是 `join` 或 `leave` 时返回 score 1。证据是 `notice:join` 或 `notice:leave`。名字不进证据。默认规则 `service_notice` 关闭。打开后删除入群和退群提示。见 ADR 0467。

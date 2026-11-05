@@ -19684,6 +19684,340 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(namedFile.event)).not.toContain("AUD5859");
   });
 
+  it("deletes a later paid video file name that matches beside another body", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const named = await normalizeUpdate({
+      update: {
+        update_id: 5862,
+        message: {
+          message_id: 5862,
+          date: 1761955200,
+          chat: { id: -1005862, type: "supergroup", title: "机密群名" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          paid_media: {
+            star_count: 930862,
+            paid_media: [
+              {
+                type: "video",
+                video: {
+                  file_id: "VID5862A",
+                  file_unique_id: "VUNIQ5862A",
+                  mime_type: "video/mp4",
+                  duration: 3,
+                  file_name: "今天的课.mp4",
+                },
+              },
+              {
+                type: "video",
+                video: {
+                  file_id: "VID5862B",
+                  file_unique_id: "VUNIQ5862B",
+                  mime_type: "video/mp4",
+                  duration: 4,
+                  file_name: phrase,
+                },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(named.event.message?.mediaName).toBe("今天的课.mp4");
+    expect(named.event.message?.paidFile).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(named.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005862", messageId: "5862" },
+    ]);
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+    expect(namedDump).not.toContain("VID5862A");
+    expect(namedDump).not.toContain("VID5862B");
+    expect(namedDump).not.toContain("video/mp4");
+    expect(namedDump).not.toContain("930862");
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5863,
+        message: {
+          message_id: 5863,
+          date: 1761955200,
+          chat: { id: -1005863, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          paid_media: {
+            star_count: 1,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5863A", file_name: "说明.mp4" },
+              },
+              {
+                type: "video",
+                video: {
+                  file_id: "VID5863B",
+                  file_name: `  ${label}  `,
+                },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.paidFile).toBe(label);
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("paid_file_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patterned.event)).not.toContain("Ada");
+    expect(JSON.stringify(patterned.event)).not.toContain("VID5863B");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5864,
+        message: {
+          message_id: 5864,
+          date: 1761955200,
+          chat: { id: -1005864, type: "supergroup" },
+          from: { id: 93 },
+          paid_media: {
+            star_count: 1,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5864", file_name: label },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.paidFile).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(keptSame.decision.ruleIds).not.toContain("paid_file_regex");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+    expect(JSON.stringify(same.event)).not.toContain("VID5864");
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5865,
+        message: {
+          message_id: 5865,
+          date: 1761955200,
+          chat: { id: -1005865, type: "supergroup" },
+          from: { id: 93 },
+          text: label,
+          paid_media: {
+            star_count: 1,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5865A", file_name: "今天的课.mp4" },
+              },
+              {
+                type: "video",
+                video: { file_id: "VID5865B", file_name: "今天站会.mp4" },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.mediaName).toBe("今天的课.mp4");
+    expect(bodyHit.event.message?.paidFile).toBe("今天站会.mp4");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(keptBody.decision.ruleIds).not.toContain("paid_file_regex");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 5866,
+        message: {
+          message_id: 5866,
+          date: 1761955200,
+          chat: { id: -1005866, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          paid_media: {
+            star_count: 930866,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5866A", file_name: "今天的课.mp4" },
+              },
+              {
+                type: "photo",
+                photo: [{ file_id: phrase, file_unique_id: "PHOTO5866" }],
+              },
+              {
+                type: "video",
+                video: {
+                  file_id: "VID5866B",
+                  mime_type: phrase,
+                  file_name: "   ",
+                },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.paidFile).toBeUndefined();
+    const keptBlank = await screenTelegramEvent(blank.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBlank.decision.action).toBe("allow");
+    expect(JSON.stringify(blank.event)).not.toContain(phrase);
+    expect(JSON.stringify(blank.event)).not.toContain("VID5866B");
+    expect(JSON.stringify(blank.event)).not.toContain("930866");
+
+    const firstHit = await normalizeUpdate({
+      update: {
+        update_id: 5867,
+        message: {
+          message_id: 5867,
+          date: 1761955200,
+          chat: { id: -1005867, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          paid_media: {
+            star_count: 1,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5867A", file_name: phrase },
+              },
+              {
+                type: "video",
+                video: { file_id: "VID5867B", file_name: "今天站会.mp4" },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(firstHit.status).toBe("event");
+    if (firstHit.status !== "event") {
+      return;
+    }
+    expect(firstHit.event.message?.mediaName).toBe(phrase);
+    expect(firstHit.event.message?.paidFile).toBe("今天站会.mp4");
+    const firstResult = await screenTelegramEvent(firstHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(firstResult.decision.action).toBe("delete");
+    expect(firstResult.decision.ruleIds).toContain("spam_keywords");
+    expect(firstResult.decision.ruleIds).not.toContain("paid_file_regex");
+    expect(JSON.stringify(firstResult)).not.toContain(phrase);
+    expect(JSON.stringify(firstHit.event)).not.toContain("VID5867A");
+    expect(JSON.stringify(firstHit.event)).not.toContain("Ada");
+
+    const onlyFirst = await normalizeUpdate({
+      update: {
+        update_id: 5868,
+        message: {
+          message_id: 5868,
+          date: 1761955200,
+          chat: { id: -1005868, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          paid_media: {
+            star_count: 1,
+            paid_media: [
+              {
+                type: "video",
+                video: { file_id: "VID5868", file_name: label },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(onlyFirst.status).toBe("event");
+    if (onlyFirst.status !== "event") {
+      return;
+    }
+    expect(onlyFirst.event.message?.mediaName).toBe(label);
+    expect(onlyFirst.event.message?.paidFile).toBeUndefined();
+    const onlyResult = await screenTelegramEvent(onlyFirst.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(onlyResult.decision.action).toBe("delete");
+    expect(onlyResult.decision.ruleIds).toContain("media_name_regex");
+    expect(onlyResult.decision.ruleIds).not.toContain("paid_file_regex");
+    expect(JSON.stringify(onlyResult)).not.toContain(label);
+    expect(JSON.stringify(onlyFirst.event)).not.toContain("VID5868");
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

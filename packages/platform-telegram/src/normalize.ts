@@ -167,6 +167,7 @@ async function messageEvent(
   const sideAccess = besideAccessName(message, text);
   const sideGameFile = besideGameFile(message, text);
   const sideAudioFile = besideAudioFile(message, text);
+  const sidePaidFile = besidePaidFile(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -267,6 +268,7 @@ async function messageEvent(
       ...(sideAccess.length > 0 ? { accessName: sideAccess } : {}),
       ...(sideGameFile.length > 0 ? { gameFile: sideGameFile } : {}),
       ...(sideAudioFile.length > 0 ? { audioFile: sideAudioFile } : {}),
+      ...(sidePaidFile.length > 0 ? { paidFile: sidePaidFile } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6853,6 +6855,49 @@ function audioFileSource(message: Record<string, unknown>): string {
     return "";
   }
   return audio.file_name;
+}
+
+/** 已有名称或正文时，后面的付费视频文件名另留最多 4096 字。已经选中的那一段不重复。星星、文件编号、MIME、照片和预览不进这个字段。 */
+function besidePaidFile(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const label = mediaLabel(message);
+  const parts: string[] = [];
+  for (const name of paidVideoNames(message)) {
+    const slice = name.slice(0, MAX_TEXT);
+    if (slice.length === 0 || text === slice || label === slice) {
+      continue;
+    }
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+    parts.push(trimmed);
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function paidVideoNames(message: Record<string, unknown>): string[] {
+  const paid = message.paid_media;
+  if (!isRecord(paid) || !Array.isArray(paid.paid_media)) {
+    return [];
+  }
+  const names: string[] = [];
+  for (const item of paid.paid_media) {
+    if (!isRecord(item) || !isRecord(item.video)) {
+      continue;
+    }
+    const name = item.video.file_name;
+    if (typeof name !== "string") {
+      continue;
+    }
+    names.push(name);
+  }
+  return names;
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */
