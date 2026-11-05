@@ -397,7 +397,7 @@ const syntax = [
   "/help",
   "/rules [chatId] [on|off] [skip <count>]",
   "/rule [chatId] <ruleId> [on|off|reset|file|log|report|captcha|decline|delete|warn|mute|ban]",
-  "/whitelist <chatId>",
+  "/whitelist <chatId> [add|remove <actorId>|skip <count>]",
   "/whitelist <chatId> add <actorId>",
   "/whitelist <chatId> remove <actorId>",
   "/logs [chatId]",
@@ -537,7 +537,8 @@ const zh = {
   "command.rule.missing": "rule {id} missing",
   "command.rule.file": "file",
   "command.rule.switch": "switch",
-  "command.whitelist.usage": "用法：/whitelist <chatId> [add|remove <actorId>]",
+  "command.whitelist.usage":
+    "用法：/whitelist <chatId> [add|remove <actorId>|skip <count>]",
   "command.whitelist.body":
     "whitelist {chatId}\nexemptAdmins {exemptAdmins}\nallow {allow}",
   "command.allow.empty": "none",
@@ -982,7 +983,7 @@ const en = {
   "command.rule.file": "file",
   "command.rule.switch": "switch",
   "command.whitelist.usage":
-    "Usage: /whitelist <chatId> [add|remove <actorId>]",
+    "Usage: /whitelist <chatId> [add|remove <actorId>|skip <count>]",
   "command.whitelist.body":
     "allowlist {chatId}\nexemptAdmins {exemptAdmins}\nallow {allow}",
   "command.allow.empty": "none",

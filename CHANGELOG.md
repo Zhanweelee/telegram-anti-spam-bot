@@ -4,6 +4,12 @@
 
 ## Unreleased
 
+### P3-494
+
+- 私聊 `/whitelist` 可以写 `skip <count>`，跳过前面的豁免号再往下列。
+- 不写 `skip` 时仍从第一个 id 开始。见 ADR 0526。
+- 30 天保留期没有改。
+
 ### P3-493
 
 - 私聊 `/chats` 可以写 `skip <count>`，跳过前面的群再往下列。

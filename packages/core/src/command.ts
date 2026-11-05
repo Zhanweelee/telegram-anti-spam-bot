@@ -951,13 +951,22 @@ async function editWhitelist(
   }
   const op = args[1];
   const actorId = args[2];
-  if (
-    args.length > 3 ||
-    (op !== undefined && op !== "add" && op !== "remove")
-  ) {
+  if (args.length > 3) {
     return say(input, "command.whitelist.usage");
   }
-  if (
+  let skip = 0;
+  if (op === "skip") {
+    if (args.length !== 3) {
+      return say(input, "command.invalid");
+    }
+    const count = rulesSkipCount(actorId ?? "");
+    if (count === undefined) {
+      return say(input, "command.invalid");
+    }
+    skip = count;
+  } else if (op !== undefined && op !== "add" && op !== "remove") {
+    return say(input, "command.whitelist.usage");
+  } else if (
     (op === "add" || op === "remove") &&
     (actorId === undefined || !isTargetId(actorId))
   ) {
@@ -971,8 +980,8 @@ async function editWhitelist(
     logger: input.logger,
     fallback: input.fallback ?? defaultPrefilterPolicy,
   });
-  if (op === undefined) {
-    return formatPolicy(input, chatId, current);
+  if (op === undefined || op === "skip") {
+    return formatPolicy(input, chatId, current, skip);
   }
   const nextIds =
     op === "add"
@@ -7293,22 +7302,28 @@ function formatPolicy(
   input: OperatorCommandInput,
   chatId: string,
   policy: PrefilterPolicy,
+  skip = 0,
 ): string {
-  const full = policyBody(input, chatId, policy, policy.allowActorIds);
-  if (policy.allowActorIds.length === 0 || full.length <= EXPORT_REPLY_LIMIT) {
+  const ids = policy.allowActorIds;
+  if (skip > 0 && (ids.length === 0 || skip >= ids.length)) {
+    return say(input, "command.invalid");
+  }
+  const window = ids.slice(skip);
+  const full = policyBody(input, chatId, policy, window);
+  if (window.length === 0 || full.length <= EXPORT_REPLY_LIMIT) {
     return full;
   }
-  let best = policyBody(input, chatId, policy, [], policy.allowActorIds.length);
+  let best = policyBody(input, chatId, policy, [], window.length);
   let low = 0;
-  let high = policy.allowActorIds.length - 1;
+  let high = window.length - 1;
   while (low <= high) {
     const count = Math.floor((low + high) / 2);
     const text = policyBody(
       input,
       chatId,
       policy,
-      policy.allowActorIds.slice(0, count),
-      policy.allowActorIds.length - count,
+      window.slice(0, count),
+      window.length - count,
     );
     if (text.length <= EXPORT_REPLY_LIMIT) {
       best = text;
