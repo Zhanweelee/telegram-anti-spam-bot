@@ -40395,6 +40395,286 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
   });
 
+  it("keeps only the hostname from the full name drawn for joining a community", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "JOIN79325";
+    const drawn = await normalize({
+      update_id: 79325,
+      message: {
+        message_id: 79325,
+        date: 1761955200,
+        chat: {
+          id: -10079325,
+          type: "supergroup",
+          title: "https://is.gd/room79325",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/join79325",
+          last_name: `${phrase} https://tinyurl.com/skip79325 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        community_chat_joined: {
+          community: { id: 88079325, name: "加入的社区" },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(drawn.event.message?.community).toBe("joined");
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("join79325");
+    expect(dumped).not.toContain("skip79325");
+    expect(dumped).not.toContain("room79325");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("88079325");
+    expect(dumped).not.toContain("加入的社区");
+
+    const blank = await normalize({
+      update_id: 79326,
+      message: {
+        message_id: 79326,
+        date: 1761955200,
+        chat: { id: -10079326, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79326",
+          username: "secretuser79326",
+        },
+        community_chat_joined: {
+          community: { id: 88079326, name: "空白社区" },
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("");
+    expect(blank.event.message?.community).toBe("joined");
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79326");
+    expect(JSON.stringify(blank.event)).not.toContain("secretuser79326");
+    expect(JSON.stringify(blank.event)).not.toContain("88079326");
+
+    const spaced = await normalize({
+      update_id: 79327,
+      message: {
+        message_id: 79327,
+        date: 1761955200,
+        chat: { id: -10079327, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Go https://bit.ly/later79327",
+          last_name: "https://tinyurl.com/skiplast79327",
+        },
+        community_chat_joined: {
+          community: { id: 88079327, name: "带空格" },
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("");
+    expect(spaced.event.message?.community).toBe("joined");
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79327");
+    expect(JSON.stringify(spaced.event)).not.toContain("skiplast79327");
+    expect(JSON.stringify(spaced.event)).not.toContain("88079327");
+
+    const named = await normalize({
+      update_id: 79328,
+      message: {
+        message_id: 79328,
+        date: 1761955200,
+        chat: { id: -10079328, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who79328",
+          last_name: "https://tinyurl.com/skiplast79328",
+        },
+        community_chat_joined: {
+          community: { id: 88079328, name: "https://cutt.ly/name79328" },
+        },
+        community_chat_removed: { name: "https://ow.ly/gone79328" },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("");
+    expect(named.event.message?.community).toBe("joined");
+    expect(named.event.message?.hosts).toEqual([
+      "cutt.ly",
+      "bit.ly",
+      "tinyurl.com",
+    ]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("name79328");
+    expect(namedDump).not.toContain("who79328");
+    expect(namedDump).not.toContain("skiplast79328");
+    expect(namedDump).not.toContain("88079328");
+    expect(namedDump).not.toContain("gone79328");
+    expect(namedDump).not.toContain("ow.ly");
+
+    const added = await normalize({
+      update_id: 79329,
+      message: {
+        message_id: 79329,
+        date: 1761955200,
+        chat: { id: -10079329, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/add79329",
+          last_name: "https://tinyurl.com/skiplast79329",
+          username: "secretuser79329",
+        },
+        community_chat_added: {
+          community: { id: 88079329, name: "移入的社区" },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("");
+    expect(added.event.message?.community).toBe("added");
+    expect(added.event.message?.hosts).toEqual(["bit.ly"]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain("add79329");
+    expect(addedDump).not.toContain("skiplast79329");
+    expect(addedDump).not.toContain("tinyurl");
+    expect(addedDump).not.toContain("secretuser79329");
+    expect(addedDump).not.toContain("88079329");
+    expect(addedDump).not.toContain("移入的社区");
+
+    const removed = await normalize({
+      update_id: 79330,
+      message: {
+        message_id: 79330,
+        date: 1761955200,
+        chat: { id: -10079330, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/out79330",
+          last_name: "https://tinyurl.com/skiplast79330",
+        },
+        community_chat_removed: {},
+      },
+    });
+    expect(removed.status).toBe("event");
+    if (removed.status !== "event") {
+      return;
+    }
+    expect(removed.event.message?.text).toBe("");
+    expect(removed.event.message?.community).toBe("removed");
+    expect(removed.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(removed.event)).not.toContain("out79330");
+    expect(JSON.stringify(removed.event)).not.toContain("skiplast79330");
+    expect(JSON.stringify(removed.event)).not.toContain("tinyurl");
+
+    const both = await normalize({
+      update_id: 79331,
+      message: {
+        message_id: 79331,
+        date: 1761955200,
+        chat: { id: -10079331, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/both79331",
+          last_name: "https://tinyurl.com/skiplast79331",
+        },
+        community_chat_added: {
+          community: { id: 88079331, name: "先认移入" },
+        },
+        community_chat_joined: {
+          community: { id: 88079332, name: "后认加入" },
+        },
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.community).toBe("added");
+    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(both.event)).not.toContain("both79331");
+    expect(JSON.stringify(both.event)).not.toContain("skiplast79331");
+    expect(JSON.stringify(both.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(both.event)).not.toContain("88079331");
+    expect(JSON.stringify(both.event)).not.toContain("88079332");
+
+    const quiet = await normalize({
+      update_id: 79333,
+      message: {
+        message_id: 79333,
+        date: 1761955200,
+        chat: { id: -10079333, type: "supergroup" },
+        text: "今天站会",
+        from: {
+          id: 124,
+          first_name: phrase,
+          last_name: "https://tinyurl.com/plainlast79333",
+        },
+        community_chat_joined: {
+          community: { id: 88079333, name: "安静社区" },
+        },
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.text).toBe("今天站会");
+    expect(quiet.event.message?.community).toBe("joined");
+    expect(quiet.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(quiet.event)).not.toContain(phrase);
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79333");
+    expect(JSON.stringify(quiet.event)).not.toContain("88079333");
+    expect(JSON.stringify(quiet.event)).not.toContain("安静社区");
+
+    const empty = await normalize({
+      update_id: 79334,
+      message: {
+        message_id: 79334,
+        date: 1761955200,
+        chat: { id: -10079334, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/empty79334",
+        },
+        community_chat_joined: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.community).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty79334");
+    expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({

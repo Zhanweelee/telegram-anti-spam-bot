@@ -4992,16 +4992,24 @@ function pushBackgroundSenderUrls(
 }
 
 /**
- * 移入、加入或移出社区的人只留主机名。
+ * 加入社区的人画出的全名只留主机名。
+ * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
+ * 移入和移出仍只读名，空白名挡住姓，空格不截断。
  * 移入和加入要有社区对象。移出只要是对象，空对象也读。
- * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名。
+ * 同时出现时先认移入，再认加入，再认移出。
+ * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名，排在前面。
  * 社区编号和移出对象上的其它字段不读。用户名不读。
  */
 function pushCommunitySenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (communityNotice(message) === undefined) {
+  const notice = communityNotice(message);
+  if (notice === undefined) {
+    return;
+  }
+  if (notice === "joined") {
+    pushFormattedUserUrls(message.from, urls);
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
