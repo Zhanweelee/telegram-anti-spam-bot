@@ -349,6 +349,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("richName" in when) {
     return "richName";
   }
+  if ("pollMedia" in when) {
+    return "pollMedia";
+  }
   return undefined;
 }
 
@@ -493,6 +496,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.audioFile,
     event.message?.paidFile,
     event.message?.richName,
+    event.message?.pollMedia,
     event.profile?.text,
   ];
   const texts: string[] = [];

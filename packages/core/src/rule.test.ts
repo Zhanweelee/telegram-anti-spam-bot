@@ -558,6 +558,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ paidFile: true }, serviceEvent({ richName: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ pollMedia: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ pollMedia: true }, serviceEvent({ richName: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ pollMedia: true }, serviceEvent({ pollMedia: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ richName: true }, serviceEvent({ pollMedia: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

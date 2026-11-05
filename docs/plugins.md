@@ -103,6 +103,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `rich_name_regex` 默认打开。富文本里的文件名、音频标题和表演者命中同一份正则时删除。这一截和正文相同时不重复。见 ADR 0561。
 
+`poll_media_regex` 默认打开。投票媒体上的文件名、音频名和场馆名命中同一份正则时删除。这一截和正文相同时不重复。见 ADR 0562。
+
 `folder` 在 `packages/detectors-folder`。只在 `chat_member` 且 `folderInvite` 为 true 时返回 score 1。证据是 `folder:invite`。邀请链接不进事件。默认规则 `folder_join` 关闭。打开后封禁。见 ADR 0429。
 
 `notice` 在 `packages/detectors-notice`。只在 `message.notice` 是 `join` 或 `leave` 时返回 score 1。证据是 `notice:join` 或 `notice:leave`。名字不进证据。默认规则 `service_notice` 关闭。打开后删除入群和退群提示。见 ADR 0467。
