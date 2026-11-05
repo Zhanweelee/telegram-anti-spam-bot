@@ -166,6 +166,7 @@ async function messageEvent(
   const sideManaged = besideManagedName(message, text);
   const sideAccess = besideAccessName(message, text);
   const sideGameFile = besideGameFile(message, text);
+  const sideAudioFile = besideAudioFile(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -265,6 +266,7 @@ async function messageEvent(
       ...(sideManaged.length > 0 ? { managedName: sideManaged } : {}),
       ...(sideAccess.length > 0 ? { accessName: sideAccess } : {}),
       ...(sideGameFile.length > 0 ? { gameFile: sideGameFile } : {}),
+      ...(sideAudioFile.length > 0 ? { audioFile: sideAudioFile } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6827,6 +6829,30 @@ function gameFileSource(message: Record<string, unknown>): string {
     return "";
   }
   return name;
+}
+
+/** 标题已经占住名称时，音频文件名另留最多 4096 字。文件名自己就是名称或正文时不重复。文件编号、MIME 和时长不进这个字段。 */
+function besideAudioFile(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = audioFileSource(message);
+  if (source.length === 0) {
+    return "";
+  }
+  const slice = source.slice(0, MAX_TEXT);
+  if (text === slice || mediaLabel(message) === slice) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+function audioFileSource(message: Record<string, unknown>): string {
+  const audio = message.audio;
+  if (!isRecord(audio) || typeof audio.file_name !== "string") {
+    return "";
+  }
+  return audio.file_name;
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

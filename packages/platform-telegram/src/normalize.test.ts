@@ -65,6 +65,7 @@ function withoutButtonText(event: object): string {
       managedName: undefined,
       accessName: undefined,
       gameFile: undefined,
+      audioFile: undefined,
     },
   });
 }
@@ -11282,8 +11283,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(titled.event.message?.mediaName).toBe("今天的歌");
-    expect(JSON.stringify(titled.event)).not.toContain(tail);
-    expect(JSON.stringify(titled.event)).not.toContain("AUD59ID");
+    expect(titled.event.message?.audioFile).toBe(`${tail}.mp3`);
+    const titledDump = withoutButtonText(titled.event);
+    expect(titledDump).not.toContain(tail);
+    expect(titledDump).not.toContain("AUD59ID");
 
     const performed = await normalize({
       update_id: 5685,
@@ -33006,6 +33009,72 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(tail);
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain("ANIM5852");
+  });
+
+  it("keeps the first 4096 characters of an audio file name", async () => {
+    const tail = "TAIL29";
+    const path = "audio29";
+    const labeled = await normalize({
+      update_id: 5860,
+      message: {
+        message_id: 5860,
+        date: 1761955200,
+        chat: { id: -1005860, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        audio: {
+          file_id: "AUD5860",
+          file_unique_id: "AUNIQ5860",
+          duration: 3,
+          mime_type: "audio/mpeg",
+          title: "今天的歌",
+          file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.mediaName).toBe("今天的歌");
+    expect(labeled.event.message?.audioFile).toHaveLength(4096);
+    expect(labeled.event.message?.audioFile).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("AUD5860");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asName = await normalize({
+      update_id: 5861,
+      message: {
+        message_id: 5861,
+        date: 1761955200,
+        chat: { id: -1005861, type: "supergroup" },
+        from: { id: 93 },
+        audio: {
+          file_id: "AUD5861",
+          file_unique_id: "AUNIQ5861",
+          duration: 3,
+          mime_type: "audio/mpeg",
+          file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.audioFile).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain("AUD5861");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

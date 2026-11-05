@@ -340,6 +340,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("gameFile" in when) {
     return "gameFile";
   }
+  if ("audioFile" in when) {
+    return "audioFile";
+  }
   return undefined;
 }
 
@@ -481,6 +484,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.managedName,
     event.message?.accessName,
     event.message?.gameFile,
+    event.message?.audioFile,
     event.profile?.text,
   ];
   const texts: string[] = [];

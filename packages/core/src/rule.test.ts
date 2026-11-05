@@ -528,6 +528,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ accessName: true }, serviceEvent({ gameFile: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ audioFile: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ audioFile: true }, serviceEvent({ gameFile: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ audioFile: true }, serviceEvent({ audioFile: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ gameFile: true }, serviceEvent({ audioFile: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
