@@ -400,6 +400,16 @@ describe("rules", () => {
         serviceEvent({ quoteText: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ giftText: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ giftText: true }, serviceEvent({ quoteText: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ giftText: true }, serviceEvent({ giftText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ quoteText: true }, serviceEvent({ giftText: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
