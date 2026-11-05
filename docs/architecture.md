@@ -239,6 +239,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 名片没有姓名时，标题上的电话也只留主机名。电话原文不进事件。见 ADR 0614。
 
+名片副标题里原样画出的电话和邮箱也只留主机名。原文不进事件。见 ADR 0615。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。

@@ -5261,7 +5261,8 @@ function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
  * 姓名去掉空白后都是空的，标题就是原始电话。
  * 已有姓名且没有 vCard 时，只在电话会原样画出时才读。
  * 公司名是气泡副标题里最后一条以 ORG 开头的值。
- * 用户编号、邮箱、职务和备注不读。名字和电话不进正文。
+ * 副标题里会原样画出的电话和邮箱也只留主机名。
+ * 用户编号、职务和备注不读。名字和电话不进正文。
  */
 function pushContactUrls(
   message: Record<string, unknown>,
@@ -5279,8 +5280,85 @@ function pushContactUrls(
   pushVisiblePartyUrls(contact, undefined, urls);
   pushPlainUrls(contactPhoneDrawn(contact), urls);
   if (typeof contact.vcard === "string") {
+    for (const value of vcardDrawnContacts(contact.vcard)) {
+      pushPlainUrls(value, urls);
+    }
     pushPlainUrls(vcardCompany(contact.vcard), urls);
   }
+}
+
+/**
+ * 气泡副标题里会原样画出的电话和邮箱。
+ * 最后一张已结束的名片才算。电话含 # 或 * 时原文照画。
+ * 其余电话和全部邮箱先做电话格式化，只有退回原文时才读。
+ * 不解开 quoted-printable。职务、备注和小写属性不读。
+ */
+function vcardDrawnContacts(vcard: string): string[] {
+  const raw = vcard.slice(0, 16384).split(/\r\n|\n|\r/);
+  let open = false;
+  let finished = false;
+  let phones: string[] = [];
+  let emails: string[] = [];
+  let pending: string | undefined;
+  for (const originalLine of raw) {
+    if (originalLine.startsWith("PHOTO")) {
+      continue;
+    }
+    if (originalLine.includes(":")) {
+      if (originalLine.startsWith("BEGIN:VCARD")) {
+        open = true;
+        phones = [];
+        emails = [];
+      } else if (originalLine.startsWith("END:VCARD") && open) {
+        finished = true;
+      }
+    }
+    let line = originalLine;
+    if (pending !== undefined) {
+      line = pending + line;
+      pending = undefined;
+    }
+    if (line.includes("=QUOTED-PRINTABLE") && line.endsWith("=")) {
+      pending = line.slice(0, -1);
+      continue;
+    }
+    if (!open) {
+      continue;
+    }
+    const colon = line.indexOf(":");
+    if (colon < 0) {
+      continue;
+    }
+    const left = line.slice(0, colon);
+    const value = line.slice(colon + 1).trim();
+    if (value.length === 0) {
+      continue;
+    }
+    if (left.startsWith("TEL")) {
+      phones.push(value);
+    } else if (left.startsWith("EMAIL")) {
+      emails.push(value);
+    }
+  }
+  if (!finished) {
+    return [];
+  }
+  const drawn: string[] = [];
+  for (const phone of phones) {
+    if (
+      phone.includes("#") ||
+      phone.includes("*") ||
+      phoneFormatKeepsOriginal(phone)
+    ) {
+      drawn.push(phone);
+    }
+  }
+  for (const email of emails) {
+    if (phoneFormatKeepsOriginal(email)) {
+      drawn.push(email);
+    }
+  }
+  return drawn;
 }
 
 /**

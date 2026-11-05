@@ -15912,6 +15912,345 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(flag)).not.toContain("flag78063");
   });
 
+  it("deletes a short link in a vCard phone drawn raw", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      contact: unknown,
+      extra: Record<string, unknown> = {},
+      paid = false,
+      adminUserIds: string[] = [],
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 83, first_name: "Ada" },
+            text: "你好",
+            contact,
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds,
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    async function quiet(event: Awaited<ReturnType<typeof posted>>) {
+      const runtime = createMemoryRuntimeStore();
+      const cache = createMemoryCache();
+      await runtime.setRuleSwitch(
+        event.tenantId,
+        event.chatId,
+        "shared_contact",
+        false,
+      );
+      return screenTelegramEvent(event, {
+        moderator: createMemoryModerator(),
+        rateWindow: createMemoryRateWindow(),
+        runtime,
+        cache,
+      });
+    }
+
+    function card(lines: string[]): string {
+      return ["BEGIN:VCARD", ...lines, "END:VCARD"].join("\n");
+    }
+
+    const marked = await posted(
+      78064,
+      {
+        phone_number: "https://tinyurl.com/skip78064",
+        first_name: "名片",
+        last_name: "https://ow.ly/skip78064",
+        user_id: 88078064,
+        vcard: card([
+          "NOTE:https://cutt.ly/note78064",
+          "TITLE:https://t.co/title78064",
+          "TEL:https://bit.ly/hash78064#1",
+        ]),
+      },
+      {
+        from: {
+          id: 83,
+          first_name: "Ada",
+          last_name: "https://is.gd/from78064",
+          username: "secretuser78064",
+        },
+        chat: {
+          id: -(1_000_000 + 78064),
+          type: "supergroup",
+          title: "https://rb.gy/room78064",
+        },
+      },
+    );
+    expect(marked.message?.contact).toBe(true);
+    expect(marked.message?.text).toBe("你好");
+    expect(marked.message?.hosts).toEqual(["bit.ly"]);
+    expect(marked.message?.invites).toBeUndefined();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(marked, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.reasons).toContain("contact_shared");
+    expect(removed.decision.ruleIds).toContain("links");
+    expect(removed.decision.ruleIds).toContain("shared_contact");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1078064", messageId: "78064" },
+    ]);
+    const markedDump = JSON.stringify({
+      event: marked,
+      decision: removed.decision,
+    });
+    expect(markedDump).not.toContain("hash78064");
+    expect(markedDump).not.toContain("skip78064");
+    expect(markedDump).not.toContain("note78064");
+    expect(markedDump).not.toContain("title78064");
+    expect(markedDump).not.toContain("88078064");
+    expect(markedDump).not.toContain("from78064");
+    expect(markedDump).not.toContain("secretuser78064");
+    expect(markedDump).not.toContain("room78064");
+    expect(markedDump).not.toContain("tinyurl");
+    expect(markedDump).not.toContain("ow.ly");
+    expect(markedDump).not.toContain("cutt.ly");
+    expect(markedDump).not.toContain("t.co");
+    expect(markedDump).not.toContain("is.gd");
+    expect(markedDump).not.toContain("rb.gy");
+    expect(markedDump).not.toContain("Ada");
+    expect(markedDump).not.toContain("名片");
+    expect(markedDump).not.toContain("机密群名");
+    expect(markedDump).not.toContain("VCARD");
+    const markedQuiet = await quiet(marked);
+    expect(markedQuiet.decision.action).toBe("delete");
+    expect(markedQuiet.decision.ruleIds).toContain("links");
+    expect(markedQuiet.decision.ruleIds).not.toContain("shared_contact");
+
+    const plain = await posted(78065, {
+      first_name: "名片",
+      vcard: card(["TEL:https://bit.ly/plain78065"]),
+    });
+    expect(plain.message?.hosts).toBeUndefined();
+    const plainKept = await quiet(plain);
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plain)).not.toContain("plain78065");
+
+    const mail = await posted(78066, {
+      first_name: "名片",
+      vcard: card([
+        "EMAIL:+https://tinyurl.com/mailpath",
+        "EMAIL:https://bit.ly/mailhash#x",
+      ]),
+    });
+    expect(mail.message?.hosts).toEqual(["tinyurl.com"]);
+    const mailHit = await quiet(mail);
+    expect(mailHit.decision.action).toBe("delete");
+    const mailDump = JSON.stringify({ event: mail, decision: mailHit.decision });
+    expect(mailDump).not.toContain("mailpath");
+    expect(mailDump).not.toContain("mailhash");
+    expect(mailDump).not.toContain("bit.ly");
+
+    const other = await posted(78067, {
+      first_name: "名片",
+      vcard: card([
+        "tel:https://bit.ly/lower78067#1",
+        "item1.TEL:https://tinyurl.com/item78067#1",
+        "EMAIL:user@bit.ly",
+      ]),
+    });
+    expect(other.message?.hosts).toBeUndefined();
+    const otherKept = await quiet(other);
+    expect(otherKept.decision.action).toBe("allow");
+    const otherDump = JSON.stringify(other);
+    expect(otherDump).not.toContain("lower78067");
+    expect(otherDump).not.toContain("item78067");
+    expect(otherDump).not.toContain("bit.ly");
+    expect(otherDump).not.toContain("tinyurl");
+
+    const ordered = await posted(78068, {
+      first_name: "https://tinyurl.com/name78068",
+      vcard: card([
+        "URL:https://bit.ly/url78068",
+        "TEL:https://cutt.ly/tel78068#1",
+        "EMAIL:+https://ow.ly/mailpath",
+        "ORG:https://is.gd/job78068",
+      ]),
+    });
+    expect(ordered.message?.text).toBe("你好");
+    expect(ordered.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "cutt.ly",
+      "ow.ly",
+      "is.gd",
+    ]);
+    const orderedHit = await quiet(ordered);
+    expect(orderedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(orderedHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("url78068");
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("name78068");
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("tel78068");
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("mailpath");
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("job78068");
+
+    const safe = await posted(78069, {
+      first_name: "名片",
+      vcard: card(["TEL:https://example.com/ok78069#1"]),
+    });
+    expect(safe.message?.hosts).toEqual(["example.com"]);
+    const safeKept = await quiet(safe);
+    expect(safeKept.decision.action).toBe("allow");
+    expect(JSON.stringify(safeKept.decision)).not.toContain("ok78069");
+
+    const keyword = await posted(78070, {
+      first_name: "名片",
+      vcard: card([`TEL:${phrase}#1`]),
+    });
+    expect(keyword.message?.text).toBe("你好");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await quiet(keyword);
+    expect(keywordKept.decision.action).toBe("allow");
+    expect(
+      JSON.stringify({ event: keyword, decision: keywordKept.decision }),
+    ).not.toContain(phrase);
+
+    const clean = await posted(78071, {
+      first_name: "名片",
+      vcard: card(["TEL:13800138000"]),
+    });
+    expect(clean.message?.textSha256).toBe(keyword.message?.textSha256);
+    expect(clean.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(clean)).not.toContain("13800138000");
+
+    const invite = await posted(78072, {
+      first_name: "名片",
+      vcard: card(["TEL:https://t.me/+code78072#1"]),
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toEqual(["t.me"]);
+    const inviteHit = await quiet(invite);
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(invite)).not.toContain("code78072");
+
+    const publicName = await posted(78073, {
+      first_name: "名片",
+      vcard: card(["TEL:https://t.me/durov#1"]),
+    });
+    expect(publicName.message?.hosts).toEqual(["t.me"]);
+    expect(publicName.message?.invites).toBeUndefined();
+    const publicKept = await quiet(publicName);
+    expect(publicKept.decision.action).toBe("allow");
+    expect(JSON.stringify(publicName)).not.toContain("durov");
+
+    const address = await posted(78074, {
+      first_name: "名片",
+      vcard: card(["TEL:http://203.0.113.9/ip78074#1"]),
+    });
+    expect(address.message?.hosts).toEqual(["203.0.113.9"]);
+    const addressHit = await quiet(address);
+    expect(addressHit.decision.action).toBe("delete");
+    expect(JSON.stringify(addressHit.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(address)).not.toContain("ip78074");
+
+    const body = await posted(
+      78075,
+      {
+        first_name: "名片",
+        vcard: card(["TEL:https://bit.ly/hash78075#1"]),
+      },
+      { text: "https://cutt.ly/body78075" },
+    );
+    expect(body.message?.hosts).toEqual(["bit.ly"]);
+    const bodyHit = await quiet(body);
+    expect(bodyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bodyHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("body78075");
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("hash78075");
+
+    const paid = await posted(
+      78076,
+      {
+        first_name: "名片",
+        vcard: card(["TEL:https://bit.ly/paid78076#1"]),
+      },
+      {},
+      true,
+    );
+    expect(paid.message?.paid).toBe(true);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid78076");
+
+    const admin = await posted(
+      78077,
+      {
+        first_name: "名片",
+        vcard: card(["TEL:https://bit.ly/hash78077#1"]),
+      },
+      {},
+      false,
+      ["83"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("hash78077");
+
+    const flag = await posted(78078, true, {
+      from: { id: 83, first_name: "https://bit.ly/flag78078" },
+    });
+    expect(flag.message?.contact).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag78078");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
