@@ -165,6 +165,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 入群服务消息、视频聊天邀请、换群主和靠近提醒上的可见名字命中同一组模式时删除。`/rule <chatId> service_name_regex off` 回到只看关键词和短链。名字干净时这几行仍留下。见 ADR 0533。
 
+正文旁边的成员标签命中同一组模式时删除。`/rule <chatId> sender_tag_regex off` 回到只看关键词和短链。标签自己就是正文时仍要打开 `regex_hint`。见 ADR 0534。
+
 `/rule <chatId> hidden_forward on` 只删这个群的隐藏来源转发。`chat_forward` 删从别的群转发来的消息，`user_forward` 删用户转发。三条默认关闭。频道转发仍由 `channel_forward` 删除。见 ADR 0468。
 
 `/rule <chatId> media_sticker on` 只删这个群的贴纸。`media_animation` 删动图，`media_voice` 删语音，`media_video_note` 删视频留言，`media_dice` 删骰子。五条默认关闭。付费帖仍留下。见 ADR 0469。

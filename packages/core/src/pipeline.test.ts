@@ -714,6 +714,62 @@ describe("runPipeline", () => {
     expect(result.hits).toHaveLength(0);
   });
 
+  it("redacts a sender tag copied into evidence", async () => {
+    const tag = "加微x";
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          senderTag: tag,
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "sender_tag_regex",
+            enabled: true,
+            when: { senderTag: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: [tag],
+          evidence: [{ kind: "feature", summary: tag }],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "redacted" },
+    ]);
+    expect(result.decision.ruleIds).toEqual(["sender_tag_regex"]);
+    expect(JSON.stringify(kit.records)).not.toContain(tag);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(tag);
+    expect(JSON.stringify(result)).not.toContain(tag);
+  });
+
   it("picks the most severe action and reports a missing plugin", async () => {
     const kit = harness();
     const result = await runPipeline({

@@ -338,10 +338,14 @@ function eventTexts(event: Event): readonly string[] {
   const texts: string[] = [];
   const message = event.message?.text;
   const profile = event.profile?.text;
+  const tag = event.message?.senderTag;
   if (message && message.length > 0) {
     texts.push(message);
   }
-  if (profile && profile.length > 0 && profile !== message) {
+  if (tag && tag.length > 0 && tag !== message) {
+    texts.push(tag);
+  }
+  if (profile && profile.length > 0 && profile !== message && profile !== tag) {
     texts.push(profile);
   }
   return texts;

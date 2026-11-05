@@ -70,7 +70,11 @@ export function createRegexDetector(config: RegexConfig): Detector {
     configSchema: regexConfigSchema,
     config: parsed,
     async detect(ctx) {
-      const texts = [ctx.event.message?.text, ctx.event.profile?.text].filter(
+      const texts = [
+        ctx.event.message?.text,
+        ctx.event.message?.senderTag,
+        ctx.event.profile?.text,
+      ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,
       );
       if (texts.length === 0) {

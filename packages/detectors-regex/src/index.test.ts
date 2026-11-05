@@ -106,6 +106,24 @@ describe("regex detector", () => {
     ]);
     expect(JSON.stringify(profileHit)).not.toContain(name);
     expect(JSON.stringify(profileHit)).not.toContain("今天站会");
+    const tagged = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        senderTag: name,
+      },
+    });
+    const tagHit = await detector.detect({
+      event: tagged,
+      logger,
+      signal,
+    });
+    expect(tagHit?.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(tagHit)).not.toContain(name);
   });
 
   it("accepts a short unquantified subset and rejects the rest", () => {
