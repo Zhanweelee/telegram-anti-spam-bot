@@ -160,6 +160,7 @@ async function messageEvent(
   const sideTopic = besideTopicName(message, text);
   const sideDecline = besideDeclineComment(message, text);
   const sideAdded = besideAddedText(message, text);
+  const sideHidden = besideHiddenName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -253,6 +254,7 @@ async function messageEvent(
       ...(sideTopic.length > 0 ? { topicName: sideTopic } : {}),
       ...(sideDecline.length > 0 ? { declineComment: sideDecline } : {}),
       ...(sideAdded.length > 0 ? { addedText: sideAdded } : {}),
+      ...(sideHidden.length > 0 ? { hiddenName: sideHidden } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6698,6 +6700,35 @@ function besideAddedText(
     return "";
   }
   return clipped(source, 3029);
+}
+
+/** 已有别的正文时，隐藏转发显示名另留最多 4096 字。先看现代字段，再看旧字段。这段自己就是正文时改看下一种。频道标题、真实用户姓名和外部回复不进这个字段。 */
+function besideHiddenName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const origin = message.forward_origin;
+  if (
+    isRecord(origin) &&
+    origin.type === "hidden_user" &&
+    typeof origin.sender_user_name === "string"
+  ) {
+    const source = origin.sender_user_name;
+    if (source.length > 0 && text !== source.slice(0, MAX_TEXT)) {
+      const raw = clipped(source, MAX_TEXT);
+      if (raw.length > 0) {
+        return raw;
+      }
+    }
+  }
+  if (typeof message.forward_sender_name !== "string") {
+    return "";
+  }
+  const source = message.forward_sender_name;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

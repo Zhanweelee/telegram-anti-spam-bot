@@ -59,6 +59,7 @@ function withoutButtonText(event: object): string {
       topicName: undefined,
       declineComment: undefined,
       addedText: undefined,
+      hiddenName: undefined,
     },
   });
 }
@@ -14020,9 +14021,12 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.forward).toBe("hidden");
+    expect(labeled.event.message?.hiddenName).toBe(
+      `${phrase} https://bit.ly/hide60 https://t.me/+${code}.`,
+    );
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("hide60");
@@ -14051,8 +14055,11 @@ describe("normalizeUpdate", () => {
     }
     expect(legacy.event.message?.text).toBe("今天站会");
     expect(legacy.event.message?.forward).toBe("hidden");
+    expect(legacy.event.message?.hiddenName).toBe(
+      `${phrase} https://example.com/page60`,
+    );
     expect(legacy.event.message?.hosts).toEqual(["example.com"]);
-    const legacyDump = JSON.stringify(legacy.event);
+    const legacyDump = withoutButtonText(legacy.event);
     expect(legacyDump).not.toContain(phrase);
     expect(legacyDump).not.toContain("page60");
     expect(legacyDump).not.toContain("bit.ly");
@@ -14084,6 +14091,7 @@ describe("normalizeUpdate", () => {
     }
     expect(channel.event.message?.text).toBe("今天站会");
     expect(channel.event.message?.forward).toBe("channel");
+    expect(channel.event.message?.hiddenName).toBeUndefined();
     expect(channel.event.message?.hosts).toBeUndefined();
     const channelDump = JSON.stringify(channel.event);
     expect(channelDump).not.toContain("bit.ly");
@@ -14113,6 +14121,7 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.forward).toBe("hidden");
+    expect(body.event.message?.hiddenName).toBeUndefined();
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
@@ -17289,7 +17298,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(hidden.event.message?.forward).toBe("hidden");
-    expect(JSON.stringify(hidden.event)).not.toContain(title);
+    expect(hidden.event.message?.hiddenName).toBe(title);
+    expect(withoutButtonText(hidden.event)).not.toContain(title);
   });
 
   it("uses the supplied clock when the message has no date", async () => {
@@ -32524,6 +32534,73 @@ describe("normalizeUpdate", () => {
     expect(addedDump).not.toContain(taskPath);
     expect(addedDump).not.toContain(nested);
     expect(addedDump).not.toContain("Ada");
+  });
+
+  it("keeps the first 4096 characters of a hidden forward name", async () => {
+    const tail = "TAIL05";
+    const path = "hide05";
+    const external = "外部名字";
+    const labeled = await normalize({
+      update_id: 5805,
+      message: {
+        message_id: 5805,
+        date: 1761955200,
+        chat: { id: -1005805, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        forward_origin: {
+          type: "hidden_user",
+          date: 1761955100,
+          sender_user_name: `${"隐".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+        external_reply: {
+          origin: { type: "hidden_user", sender_user_name: external },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.hiddenName).toHaveLength(4096);
+    expect(labeled.event.message?.hiddenName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(external);
+    expect(labeledDump).not.toContain("Ada");
+
+    const asName = await normalize({
+      update_id: 5806,
+      message: {
+        message_id: 5806,
+        date: 1761955200,
+        chat: { id: -1005806, type: "supergroup" },
+        from: { id: 93 },
+        forward_origin: {
+          type: "hidden_user",
+          date: 1761955100,
+          sender_user_name: `${"隐".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+        external_reply: {
+          origin: { type: "hidden_user", sender_user_name: external },
+        },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.hiddenName).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain(external);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

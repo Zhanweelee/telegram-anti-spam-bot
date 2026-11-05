@@ -825,6 +825,14 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "hidden_name_regex",
+      "enabled": true,
+      "when": { "hiddenName": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

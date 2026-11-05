@@ -263,6 +263,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 已有别的正文时，后加的投票选项最多留 100 字，新加的清单任务拼起来最多留 3029 字。关键词或默认正则命中时删除这条消息。这段自己就是正文时仍要打开 `regex_hint`。选项编号、原消息和完成者不进事件。见 ADR 0552。
 
+已有别的正文时，隐藏转发的显示名最多留 4096 字。关键词或默认正则命中时删除这条消息。这段自己就是正文时仍要打开 `regex_hint`。频道标题、真实用户姓名和外部回复不进事件。见 ADR 0553。
+
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 
 `textSha256` 在这个包里用 Web Crypto 计算。`packages/sdk` 的 `sha256Hex` 依赖 `node:crypto`，Worker 不要 import 它。

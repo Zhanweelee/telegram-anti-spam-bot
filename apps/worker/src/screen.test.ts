@@ -17765,6 +17765,297 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(taskBody.event)).not.toContain(nested);
   });
 
+  it("deletes a hidden forward name that matches beside another body", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const external = "外部名字";
+    const named = await normalizeUpdate({
+      update: {
+        update_id: 5797,
+        message: {
+          message_id: 5797,
+          date: 1761955200,
+          chat: { id: -1005797, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          forward_origin: {
+            type: "hidden_user",
+            date: 1761955100,
+            sender_user_name: phrase,
+          },
+          external_reply: {
+            origin: { type: "hidden_user", sender_user_name: external },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(named.event.message?.forward).toBe("hidden");
+    expect(named.event.message?.hiddenName).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(named.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005797", messageId: "5797" },
+    ]);
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain(external);
+    expect(namedDump).not.toContain("1761955100");
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5798,
+        message: {
+          message_id: 5798,
+          date: 1761955200,
+          chat: { id: -1005798, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forward_sender_name: `  ${label}  `,
+          forward_from: { id: 8, is_bot: false, first_name: "真实姓名" },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.hiddenName).toBe(label);
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("hidden_name_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patterned.event)).not.toContain("真实姓名");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5799,
+        message: {
+          message_id: 5799,
+          date: 1761955200,
+          chat: { id: -1005799, type: "supergroup" },
+          from: { id: 93 },
+          forward_origin: {
+            type: "hidden_user",
+            date: 1761955100,
+            sender_user_name: label,
+          },
+          external_reply: {
+            origin: { type: "hidden_user", sender_user_name: external },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.hiddenName).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+    expect(JSON.stringify(same.event)).not.toContain(external);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5800,
+        message: {
+          message_id: 5800,
+          date: 1761955200,
+          chat: { id: -1005800, type: "supergroup" },
+          from: { id: 93 },
+          text: label,
+          forward_origin: {
+            type: "hidden_user",
+            date: 1,
+            sender_user_name: "今天站会",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.hiddenName).toBe("今天站会");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const later = await normalizeUpdate({
+      update: {
+        update_id: 5801,
+        message: {
+          message_id: 5801,
+          date: 1761955200,
+          chat: { id: -1005801, type: "supergroup" },
+          from: { id: 93 },
+          forward_origin: {
+            type: "hidden_user",
+            date: 1,
+            sender_user_name: "今天站会",
+          },
+          forward_sender_name: phrase,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.text).toBe("今天站会");
+    expect(later.event.message?.hiddenName).toBe(phrase);
+    const laterResult = await screenTelegramEvent(later.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(laterResult.decision.action).toBe("delete");
+    expect(laterResult.decision.ruleIds).toContain("spam_keywords");
+    expect(JSON.stringify(laterResult)).not.toContain(phrase);
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 5802,
+        message: {
+          message_id: 5802,
+          date: 1761955200,
+          chat: { id: -1005802, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forward_origin: {
+            type: "hidden_user",
+            date: 1761955100,
+            sender_user_name: "   ",
+          },
+          forward_sender_name: "   ",
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hiddenName).toBeUndefined();
+    const keptBlank = await screenTelegramEvent(blank.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBlank.decision.action).toBe("allow");
+    expect(JSON.stringify(blank.event)).not.toContain("1761955100");
+
+    const user = await normalizeUpdate({
+      update: {
+        update_id: 5803,
+        message: {
+          message_id: 5803,
+          date: 1761955200,
+          chat: { id: -1005803, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forward_origin: {
+            type: "user",
+            date: 1,
+            sender_user_name: phrase,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.forward).toBe("user");
+    expect(user.event.message?.hiddenName).toBeUndefined();
+    const keptUser = await screenTelegramEvent(user.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptUser.decision.action).toBe("allow");
+    expect(JSON.stringify(user.event)).not.toContain(phrase);
+
+    const channel = await normalizeUpdate({
+      update: {
+        update_id: 5804,
+        message: {
+          message_id: 5804,
+          date: 1761955200,
+          chat: { id: -1005804, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forward_origin: {
+            type: "channel",
+            date: 1,
+            chat: { id: -1001, title: phrase, type: "channel" },
+            author_signature: external,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.forward).toBe("channel");
+    expect(channel.event.message?.hiddenName).toBeUndefined();
+    const removedChannel = await screenTelegramEvent(channel.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(removedChannel.decision.action).toBe("delete");
+    expect(removedChannel.decision.ruleIds).toContain("channel_forward");
+    expect(removedChannel.decision.ruleIds).not.toContain("hidden_name_regex");
+    const channelDump = JSON.stringify(channel.event);
+    expect(channelDump).not.toContain(phrase);
+    expect(channelDump).not.toContain(external);
+    expect(JSON.stringify(removedChannel)).not.toContain(phrase);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,
