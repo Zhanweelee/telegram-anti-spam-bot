@@ -4686,7 +4686,7 @@ function pushVisiblePartyUrls(
 /**
  * 已知用户和群的转发抬头只留主机名。
  * 现代来源优先。隐藏显示名旁边的真实姓名不读。
- * 成员转发的频道标题只留主机名。讨论组原帖、来源签名和外部回复不读。
+ * 成员转发的频道标题和来源签名只留主机名。讨论组原帖、群来源签名和外部回复不读。
  */
 function pushForwardPartyUrls(
   message: Record<string, unknown>,
@@ -4700,6 +4700,7 @@ function pushForwardPartyUrls(
       pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
     } else if (origin.type === "channel") {
       pushManualChannelTitle(message, origin.chat, urls);
+      pushManualChannelSignature(message, origin.author_signature, urls);
     }
     return;
   }
@@ -4719,6 +4720,7 @@ function pushForwardPartyUrls(
   }
   if (chat.type === "channel") {
     pushManualChannelTitle(message, chat, urls);
+    pushManualChannelSignature(message, message.forward_signature, urls);
     return;
   }
   pushVisiblePartyUrls(undefined, chat, urls);
@@ -4726,7 +4728,7 @@ function pushForwardPartyUrls(
 
 /**
  * 成员转发的频道标题只留主机名。
- * 讨论组原帖不读这段标题。用户名和来源签名不读。标题不进正文。
+ * 讨论组原帖不读这段标题。用户名不读。来源签名另留主机名。标题不进正文。
  */
 function pushManualChannelTitle(
   message: Record<string, unknown>,
@@ -4738,6 +4740,23 @@ function pushManualChannelTitle(
   }
   if (typeof chat.title === "string" && chat.title.length > 0) {
     pushPlainUrls(chat.title, urls);
+  }
+}
+
+/**
+ * 成员转发的频道签名只留主机名。
+ * 讨论组原帖不读这段签名。空白也算有签名。用户名不读。签名不进正文。
+ */
+function pushManualChannelSignature(
+  message: Record<string, unknown>,
+  signature: unknown,
+  urls: string[],
+): void {
+  if (message.is_automatic_forward === true) {
+    return;
+  }
+  if (typeof signature === "string" && signature.length > 0) {
+    pushPlainUrls(signature, urls);
   }
 }
 
@@ -8231,7 +8250,7 @@ function authorSignature(message: Record<string, unknown>): string {
   return "";
 }
 
-/** 讨论组原帖上画出的频道作者签名。成员转发和其它来源不读。 */
+/** 讨论组原帖上画出的频道作者签名。成员转发另留主机名。群来源和其它来源不读。 */
 function mirrorAuthorSignature(message: Record<string, unknown>): string {
   if (message.is_automatic_forward !== true) {
     return "";

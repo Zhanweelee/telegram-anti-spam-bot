@@ -5064,7 +5064,7 @@ describe("screenTelegramEvent", () => {
         author_signature: "https://tinyurl.com/sig6010",
       },
     });
-    expect(channel.message?.hosts).toEqual(["bit.ly"]);
+    expect(channel.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(channel.message?.forward).toBe("channel");
     const channelKept = await screenTelegramEvent(channel, {
       moderator: createMemoryModerator(),
@@ -5075,7 +5075,6 @@ describe("screenTelegramEvent", () => {
     expect(channelKept.decision.reasons).toContain("short_link");
     expect(JSON.stringify(channel)).not.toContain("chan6010");
     expect(JSON.stringify(channel)).not.toContain("sig6010");
-    expect(JSON.stringify(channel)).not.toContain("tinyurl");
     expect(JSON.stringify(channel)).not.toContain("chanuser6010");
 
     const external = await posted(6011, {
@@ -13987,7 +13986,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(named.message?.forward).toBe("channel");
     expect(named.message?.text).toBe("你好");
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(named.message?.invites).toBeUndefined();
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
@@ -14012,7 +14011,6 @@ describe("screenTelegramEvent", () => {
     expect(namedDump).not.toContain("name6373");
     expect(namedDump).not.toContain("chanuser6373");
     expect(namedDump).not.toContain("sig6373");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("from6373");
     expect(namedDump).not.toContain("ow.ly");
     expect(namedDump).not.toContain("secretuser6373");
@@ -14072,7 +14070,7 @@ describe("screenTelegramEvent", () => {
         title: phrase,
         username: "https://bit.ly/user6377",
       },
-      author_signature: "https://tinyurl.com/sig6377",
+      author_signature: "编辑",
     });
     expect(keyword.message?.text).toBe("你好");
     expect(keyword.message?.hosts).toBeUndefined();
@@ -14305,6 +14303,483 @@ describe("screenTelegramEvent", () => {
     });
     expect(clean.message?.textSha256).toBe(named.message?.textSha256);
     expect(clean.message?.hosts).toBeUndefined();
+  });
+
+  it("deletes a short link in a forwarded channel signature", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      origin: unknown,
+      extra: Record<string, unknown> = {},
+      paid = false,
+      adminUserIds: string[] = [],
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 83, first_name: "Ada" },
+            text: "你好",
+            ...(origin === undefined ? {} : { forward_origin: origin }),
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds,
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    async function quiet(event: Awaited<ReturnType<typeof posted>>) {
+      const runtime = createMemoryRuntimeStore();
+      const cache = createMemoryCache();
+      await runtime.setRuleSwitch(
+        event.tenantId,
+        event.chatId,
+        "channel_forward",
+        false,
+      );
+      return screenTelegramEvent(event, {
+        moderator: createMemoryModerator(),
+        rateWindow: createMemoryRateWindow(),
+        runtime,
+        cache,
+      });
+    }
+
+    const named = await posted(
+      6391,
+      {
+        type: "channel",
+        date: 1,
+        chat: {
+          id: -100916391,
+          type: "channel",
+          title: "新闻",
+          username: "chanuser6391",
+        },
+        author_signature: "https://bit.ly/name6391",
+      },
+      {
+        from: {
+          id: 83,
+          first_name: "Ada",
+          last_name: "https://ow.ly/from6391",
+          username: "secretuser6391",
+        },
+        chat: {
+          id: -(1_000_000 + 6391),
+          type: "supergroup",
+          title: "https://cutt.ly/room6391",
+        },
+      },
+    );
+    expect(named.message?.forward).toBe("channel");
+    expect(named.message?.text).toBe("你好");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.invites).toBeUndefined();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.reasons).toContain("forward_channel");
+    expect(removed.decision.ruleIds).toContain("links");
+    expect(removed.decision.ruleIds).toContain("channel_forward");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006391", messageId: "6391" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("name6391");
+    expect(namedDump).not.toContain("chanuser6391");
+    expect(namedDump).not.toContain("from6391");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("secretuser6391");
+    expect(namedDump).not.toContain("room6391");
+    expect(namedDump).not.toContain("cutt.ly");
+    expect(namedDump).not.toContain("916391");
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+    expect(namedDump).not.toContain("新闻");
+
+    const emptySignature = await posted(6392, {
+      type: "channel",
+      chat: {
+        id: -100916392,
+        type: "channel",
+        title: "新闻",
+        username: "https://bit.ly/user6392",
+      },
+      author_signature: "",
+    });
+    expect(emptySignature.message?.hosts).toBeUndefined();
+    const emptyKept = await quiet(emptySignature);
+    expect(emptyKept.decision.action).toBe("allow");
+    expect(JSON.stringify(emptySignature)).not.toContain("user6392");
+    expect(JSON.stringify(emptySignature)).not.toContain("bit.ly");
+
+    const blankSignature = await posted(6393, {
+      type: "channel",
+      chat: {
+        id: -100916393,
+        type: "channel",
+        title: "新闻",
+        username: "https://bit.ly/space6393",
+      },
+      author_signature: "   ",
+    });
+    expect(blankSignature.message?.hosts).toBeUndefined();
+    const blankKept = await quiet(blankSignature);
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blankSignature)).not.toContain("space6393");
+
+    const plain = await posted(6394, {
+      type: "channel",
+      chat: { id: -100916394, type: "channel", title: "新闻" },
+      author_signature: "https://example.com/ok6394",
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await quiet(plain);
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6394");
+
+    const keyword = await posted(6395, {
+      type: "channel",
+      chat: {
+        id: -100916395,
+        type: "channel",
+        title: "新闻",
+        username: "https://bit.ly/user6395",
+      },
+      author_signature: phrase,
+    });
+    expect(keyword.message?.text).toBe("你好");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await quiet(keyword);
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6395");
+    expect(keywordDump).not.toContain("bit.ly");
+
+    const bodyFirst = await posted(
+      6396,
+      {
+        type: "channel",
+        chat: { id: -100916396, type: "channel", title: "新闻" },
+        author_signature: "https://bit.ly/name6396",
+      },
+      { text: "https://cutt.ly/body6396" },
+    );
+    expect(bodyFirst.message?.text).toBe("https://cutt.ly/body6396");
+    expect(bodyFirst.message?.hosts).toEqual(["bit.ly"]);
+    const bodyHit = await quiet(bodyFirst);
+    expect(bodyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bodyHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("body6396");
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("name6396");
+
+    const invite = await posted(6397, {
+      type: "channel",
+      chat: { id: -100916397, type: "channel", title: "新闻" },
+      author_signature: "https://t.me/+code6397",
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toEqual(["t.me"]);
+    const inviteHit = await quiet(invite);
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(inviteHit.decision)).not.toContain("code6397");
+
+    const publicName = await posted(6398, {
+      type: "channel",
+      chat: { id: -100916398, type: "channel", title: "新闻" },
+      author_signature: "https://t.me/durov",
+    });
+    expect(publicName.message?.hosts).toEqual(["t.me"]);
+    expect(publicName.message?.invites).toBeUndefined();
+    const publicKept = await quiet(publicName);
+    expect(publicKept.decision.action).toBe("allow");
+    expect(JSON.stringify(publicKept.decision)).not.toContain("durov");
+
+    const ip = await posted(6399, {
+      type: "channel",
+      chat: { id: -100916399, type: "channel", title: "新闻" },
+      author_signature: "http://203.0.113.9/ip6399",
+    });
+    expect(ip.message?.hosts).toEqual(["203.0.113.9"]);
+    const ipHit = await quiet(ip);
+    expect(ipHit.decision.action).toBe("delete");
+    expect(JSON.stringify(ipHit.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(ipHit.decision)).not.toContain("ip6399");
+
+    const ordinary = await posted(6400, undefined, {
+      from: { id: 83, first_name: "https://bit.ly/msg6400" },
+      forward_signature: "https://bit.ly/sig6400",
+    });
+    expect(ordinary.message?.forward).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6400");
+    expect(JSON.stringify(ordinary)).not.toContain("sig6400");
+
+    const flag = await posted(
+      6401,
+      {
+        type: "channel",
+        chat: true,
+        author_signature: "https://bit.ly/flag6401",
+      },
+      {
+        from: { id: 83, first_name: "https://ow.ly/from6401" },
+      },
+    );
+    expect(flag.message?.forward).toBe("channel");
+    expect(flag.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(flag)).not.toContain("flag6401");
+    expect(JSON.stringify(flag)).not.toContain("from6401");
+    expect(JSON.stringify(flag)).not.toContain("ow.ly");
+
+    const mirror = await posted(
+      6402,
+      {
+        type: "channel",
+        chat: {
+          id: -100916402,
+          type: "channel",
+          title: "https://bit.ly/mirror6402",
+        },
+        author_signature: "https://tinyurl.com/auto6402",
+      },
+      {
+        is_automatic_forward: true,
+        sender_chat: {
+          id: -100916402,
+          type: "channel",
+          title: "新闻",
+        },
+      },
+    );
+    expect(mirror.message?.forward).toBeUndefined();
+    expect(mirror.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(mirror.message?.text).toBe("你好");
+    expect(mirror.message?.mirrorSignature).toBe(
+      "https://tinyurl.com/auto6402",
+    );
+    const mirrorKept = await quiet(mirror);
+    expect(mirrorKept.decision.action).toBe("delete");
+    expect(JSON.stringify(mirrorKept.decision.evidence)).toContain(
+      "short_link:tinyurl.com",
+    );
+    const mirrorDump = JSON.stringify({
+      ...mirror,
+      message: { ...mirror.message, mirrorSignature: undefined },
+    });
+    expect(mirrorDump).not.toContain("auto6402");
+    expect(mirrorDump).not.toContain("mirror6402");
+    expect(mirrorDump).not.toContain("bit.ly");
+    expect(mirrorDump).not.toContain("新闻");
+
+    const legacy = await posted(6403, undefined, {
+      forward_origin: undefined,
+      forward_signature: "https://bit.ly/old6403",
+      forward_from_chat: {
+        id: -100916403,
+        type: "channel",
+        title: "新闻",
+        username: "olduser6403",
+      },
+    });
+    expect(legacy.message?.forward).toBe("channel");
+    expect(legacy.message?.hosts).toEqual(["bit.ly"]);
+    const legacyHit = await quiet(legacy);
+    expect(legacyHit.decision.action).toBe("delete");
+    expect(legacyHit.decision.ruleIds).toContain("links");
+    expect(legacyHit.decision.ruleIds).not.toContain("channel_forward");
+    expect(JSON.stringify(legacy)).not.toContain("old6403");
+    expect(JSON.stringify(legacy)).not.toContain("olduser6403");
+
+    const hidden = await posted(6404, undefined, {
+      forward_origin: undefined,
+      forward_sender_name: "今天的名字",
+      forward_signature: "https://bit.ly/hide6404",
+      forward_from_chat: {
+        id: -100916404,
+        type: "channel",
+        title: "新闻",
+      },
+    });
+    expect(hidden.message?.forward).toBe("hidden");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenKept = await quiet(hidden);
+    expect(hiddenKept.decision.action).toBe("allow");
+    expect(JSON.stringify(hidden)).not.toContain("hide6404");
+    expect(JSON.stringify(hidden)).not.toContain("bit.ly");
+
+    const paid = await posted(
+      6405,
+      {
+        type: "channel",
+        chat: { id: -100916405, type: "channel", title: "新闻" },
+        author_signature: "https://bit.ly/paid6405",
+      },
+      {},
+      true,
+    );
+    expect(paid.message?.paid).toBe(true);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6405");
+
+    const admin = await posted(
+      6406,
+      {
+        type: "channel",
+        chat: { id: -100916406, type: "channel", title: "新闻" },
+        author_signature: "https://bit.ly/name6406",
+      },
+      {},
+      false,
+      ["83"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("name6406");
+
+    const external = await posted(6407, undefined, {
+      external_reply: {
+        origin: {
+          type: "channel",
+          chat: { id: -100916407, type: "channel", title: "新闻" },
+          author_signature: "https://bit.ly/ext6407",
+        },
+      },
+    });
+    expect(external.message?.forward).toBeUndefined();
+    expect(external.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(external)).not.toContain("ext6407");
+
+    const group = await posted(6408, {
+      type: "chat",
+      sender_chat: {
+        id: -100916408,
+        type: "supergroup",
+        title: "新闻",
+      },
+      author_signature: "https://bit.ly/chat6408",
+    });
+    expect(group.message?.forward).toBe("chat");
+    expect(group.message?.hosts).toBeUndefined();
+    const groupKept = await quiet(group);
+    expect(groupKept.decision.action).toBe("allow");
+    expect(JSON.stringify(group)).not.toContain("chat6408");
+    expect(JSON.stringify(group)).not.toContain("bit.ly");
+
+    const both = await posted(6409, {
+      type: "channel",
+      chat: {
+        id: -100916409,
+        type: "channel",
+        title: "https://bit.ly/title6409",
+      },
+      author_signature: "https://tinyurl.com/sig6409",
+    });
+    expect(both.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bothHit = await quiet(both);
+    expect(bothHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bothHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(bothHit.decision)).not.toContain("title6409");
+    expect(JSON.stringify(bothHit.decision)).not.toContain("sig6409");
+
+    const fallen = await posted(
+      6410,
+      {
+        type: "channel",
+        chat: { id: -100916410, type: "channel", title: "新闻" },
+        author_signature: "",
+      },
+      { forward_signature: "https://bit.ly/fall6410" },
+    );
+    expect(fallen.message?.hosts).toBeUndefined();
+    const fallenKept = await quiet(fallen);
+    expect(fallenKept.decision.action).toBe("allow");
+    expect(JSON.stringify(fallen)).not.toContain("fall6410");
+    expect(JSON.stringify(fallen)).not.toContain("bit.ly");
+
+    const marked = await posted(
+      6411,
+      {
+        type: "channel",
+        chat: { id: -100916411, type: "channel", title: "新闻" },
+        author_signature: "https://bit.ly/mark6411",
+      },
+      { is_automatic_forward: "true" },
+    );
+    expect(marked.message?.forward).toBe("channel");
+    expect(marked.message?.hosts).toEqual(["bit.ly"]);
+    const markedHit = await quiet(marked);
+    expect(markedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(marked)).not.toContain("mark6411");
+
+    const clean = await posted(6412, {
+      type: "channel",
+      chat: { id: -100916412, type: "channel", title: "新闻" },
+      author_signature: "编辑",
+    });
+    expect(clean.message?.textSha256).toBe(named.message?.textSha256);
+    expect(clean.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(clean)).not.toContain("编辑");
   });
 
   it("keeps other scripts until a chat locks that one", async () => {
