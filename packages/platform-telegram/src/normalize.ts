@@ -4540,6 +4540,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushForumSenderUrls(message, urls);
   pushGiveawaySenderUrls(message, urls);
   pushPhotoSenderUrls(message, urls);
+  pushTitleSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4824,6 +4825,21 @@ function pushPhotoSenderUrls(
   urls: string[],
 ): void {
   if (photoNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 改名的人只留主机名。
+ * 新群名是非空字符串时读。空字符串不读。
+ * 新群名本身仍只留主机名。本群群名不读。用户名不读。
+ */
+function pushTitleSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!renamedChat(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
