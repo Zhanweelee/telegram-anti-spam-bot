@@ -30626,7 +30626,7 @@ describe("normalizeUpdate", () => {
         message_id: 310,
         date: 1761955200,
         chat: { id: -101040, type: "supergroup" },
-        from: { id: 9 },
+        from: { id: 9, first_name: "https://tinyurl.com/from80" },
         text: "今天站会",
         suggested_post_declined: {
           comment: `${phrase} https://bit.ly/cmt80 https://t.me/+${code}.`,
@@ -30646,7 +30646,7 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "tinyurl.com"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.declineComment).toBe(
       `${phrase} https://bit.ly/cmt80 https://t.me/+${code}.`,
@@ -30659,6 +30659,7 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("cap80");
     expect(labeledDump).not.toContain("cutt.ly");
     expect(labeledDump).not.toContain("ow.ly");
+    expect(labeledDump).not.toContain("from80");
 
     const ordinary = await normalize({
       update_id: 5111,
@@ -30666,7 +30667,7 @@ describe("normalizeUpdate", () => {
         message_id: 311,
         date: 1761955200,
         chat: { id: -101041, type: "supergroup" },
-        from: { id: 9 },
+        from: { id: 9, first_name: phrase },
         text: "今天站会",
         suggested_post_declined: {
           comment: "https://example.com/ok80",
@@ -30686,6 +30687,7 @@ describe("normalizeUpdate", () => {
       "https://example.com/ok80",
     );
     const ordinaryDump = withoutButtonText(ordinary.event);
+    expect(ordinaryDump).not.toContain(phrase);
     expect(ordinaryDump).not.toContain("ok80");
     expect(ordinaryDump).not.toContain("onlypost80");
     expect(ordinaryDump).not.toContain("bit.ly");
@@ -30697,7 +30699,7 @@ describe("normalizeUpdate", () => {
         message_id: 312,
         date: 1761955200,
         chat: { id: -101042, type: "supergroup" },
-        from: { id: 9 },
+        from: { id: 9, first_name: "https://tinyurl.com/from80b" },
         suggested_post_declined: {
           comment,
           suggested_post_message: { text: phrase },
@@ -30711,9 +30713,10 @@ describe("normalizeUpdate", () => {
     expect(asBody.event.message?.text).toBe(comment);
     expect(asBody.event.message?.declineComment).toBeUndefined();
     expect(asBody.event.message?.textSha256).toBe(await sha256Hex(comment));
-    expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(asBody.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const bodyDump = JSON.stringify(asBody.event);
     expect(bodyDump).not.toContain(phrase);
+    expect(bodyDump).not.toContain("from80b");
 
     const earlier = await normalize({
       update_id: 5113,

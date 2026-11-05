@@ -209,6 +209,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 送礼的人，名字里的短链交给已有的链接规则。这个人的名字、用户名和短名不进事件。见 ADR 0599。
 
+拒绝建议帖的人，名字里的短链交给已有的链接规则。这个人的名字和用户名不进事件。见 ADR 0600。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。
