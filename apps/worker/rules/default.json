@@ -665,6 +665,14 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "checklist_task_regex",
+      "enabled": true,
+      "when": { "checklistTask": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

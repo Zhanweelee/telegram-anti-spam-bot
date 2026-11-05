@@ -14000,6 +14000,198 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(keptBody)).not.toContain(label);
   });
 
+  it("deletes a checklist whose task text matches a keyword or regex", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const keyworded = await normalizeUpdate({
+      update: {
+        update_id: 5667,
+        message: {
+          message_id: 5667,
+          date: 1761955200,
+          chat: { id: -1005667, type: "supergroup" },
+          from: { id: 94, first_name: "Ada" },
+          checklist: {
+            title: "今天站会",
+            tasks: [
+              {
+                id: 880067,
+                text: phrase,
+                completed_by_user: {
+                  id: 95,
+                  is_bot: false,
+                  first_name: "完成者不进事件",
+                },
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(keyworded.status).toBe("event");
+    if (keyworded.status !== "event") {
+      return;
+    }
+    expect(keyworded.event.message?.text).toBe("今天站会");
+    expect(keyworded.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(keyworded.event.message?.checklistTask).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(keyworded.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005667", messageId: "5667" },
+    ]);
+    const dumped = JSON.stringify({
+      result,
+      logs: logger.entries,
+      event: keyworded.event,
+    });
+    expect(dumped).not.toContain("完成者不进事件");
+    expect(dumped).not.toContain("880067");
+    expect(dumped).not.toContain("Ada");
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5668,
+        message: {
+          message_id: 5668,
+          date: 1761955200,
+          chat: { id: -1005668, type: "supergroup" },
+          from: { id: 94 },
+          checklist: {
+            title: "今天站会",
+            tasks: [
+              { id: 1, text: "打开" },
+              { id: 2, text: label },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.checklistTask).toBe(`打开 ${label}`);
+    const patternLog = createMemoryLogger();
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      logger: patternLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("checklist_task_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patternLog.entries)).not.toContain(label);
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5669,
+        message: {
+          message_id: 5669,
+          date: 1761955200,
+          chat: { id: -1005669, type: "supergroup" },
+          from: { id: 94 },
+          checklist: {
+            title: "今天站会",
+            tasks: [{ id: 1, text: "你好" }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    expect(clean.event.message?.checklistTask).toBe("你好");
+    const kept = await screenTelegramEvent(clean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5670,
+        message: {
+          message_id: 5670,
+          date: 1761955200,
+          chat: { id: -1005670, type: "supergroup" },
+          from: { id: 94 },
+          checklist: {
+            title: label,
+            tasks: [{ id: 1, text: label }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.checklistTask).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5671,
+        message: {
+          message_id: 5671,
+          date: 1761955200,
+          chat: { id: -1005671, type: "supergroup" },
+          from: { id: 94 },
+          checklist: {
+            title: label,
+            tasks: [{ id: 1, text: "你好" }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.checklistTask).toBe("你好");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

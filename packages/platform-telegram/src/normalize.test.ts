@@ -39,6 +39,7 @@ function withoutButtonText(event: object): string {
       authorSignature: undefined,
       mirrorSignature: undefined,
       pollOption: undefined,
+      checklistTask: undefined,
     },
   });
 }
@@ -11144,6 +11145,9 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.checklistTask).toBe(
+      `${phrase} https://cutt.ly/task44`,
+    );
     expect(outcome.event.message?.hosts).toEqual([
       "bit.ly",
       "t.me",
@@ -11155,6 +11159,43 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/task");
+  });
+
+  it("keeps the first 3029 characters of checklist tasks and still reads a later hostname", async () => {
+    const tail = "TAIL58";
+    const path = "task58";
+    const tasks = Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      text: "a".repeat(100),
+    }));
+    tasks.push({
+      id: 31,
+      text: `${tail} https://bit.ly/${path}`,
+    });
+    const outcome = await normalize({
+      update_id: 5672,
+      message: {
+        message_id: 5672,
+        date: 1761955200,
+        chat: { id: -1005672, type: "supergroup" },
+        from: { id: 94 },
+        checklist: {
+          title: "今天站会",
+          tasks,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.checklistTask).toHaveLength(3029);
+    expect(outcome.event.message?.checklistTask).not.toContain(tail);
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(outcome.event)).not.toContain(tail);
+    expect(JSON.stringify(outcome.event)).not.toContain(path);
   });
 
   it("keeps hostnames from question, prize, and checklist titles", async () => {
@@ -11277,8 +11318,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(checklist.event.message?.text).toBe("今天站会");
+    expect(checklist.event.message?.checklistTask).toBe(phrase);
     expect(checklist.event.message?.hosts).toEqual(["is.gd"]);
-    const checklistDump = JSON.stringify(checklist.event);
+    const checklistDump = withoutButtonText(checklist.event);
     expect(checklistDump).not.toContain(phrase);
     expect(checklistDump).not.toContain("/list52");
 

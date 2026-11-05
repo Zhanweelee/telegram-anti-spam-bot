@@ -262,6 +262,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("pollOption" in when) {
     return "pollOption";
   }
+  if ("checklistTask" in when) {
+    return "checklistTask";
+  }
   return undefined;
 }
 
@@ -378,6 +381,7 @@ function eventTexts(event: Event): readonly string[] {
   const signature = event.message?.authorSignature;
   const mirror = event.message?.mirrorSignature;
   const poll = event.message?.pollOption;
+  const tasks = event.message?.checklistTask;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -418,6 +422,18 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(poll);
   }
   if (
+    tasks &&
+    tasks.length > 0 &&
+    tasks !== message &&
+    tasks !== tag &&
+    tasks !== buttons &&
+    tasks !== signature &&
+    tasks !== mirror &&
+    tasks !== poll
+  ) {
+    texts.push(tasks);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -425,7 +441,8 @@ function eventTexts(event: Event): readonly string[] {
     profile !== buttons &&
     profile !== signature &&
     profile !== mirror &&
-    profile !== poll
+    profile !== poll &&
+    profile !== tasks
   ) {
     texts.push(profile);
   }

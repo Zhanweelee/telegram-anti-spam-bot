@@ -173,6 +173,25 @@ describe("rules", () => {
         serviceEvent({ pollOption: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ checklistTask: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { checklistTask: true },
+        serviceEvent({ pollOption: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { checklistTask: true },
+        serviceEvent({ checklistTask: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { pollOption: true },
+        serviceEvent({ checklistTask: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

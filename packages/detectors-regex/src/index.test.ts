@@ -212,6 +212,41 @@ describe("regex detector", () => {
     });
     expect(pollBodyHit?.places).toEqual(["message"]);
     expect(JSON.stringify(pollBodyHit)).not.toContain("你好");
+    const tasked = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        checklistTask: `打开 ${name}`,
+      },
+    });
+    const taskHit = await detector.detect({
+      event: tasked,
+      logger,
+      signal,
+    });
+    expect(taskHit?.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(taskHit?.places).toEqual(["checklistTask"]);
+    expect(JSON.stringify(taskHit)).not.toContain(name);
+    const taskBody = parseEvent({
+      ...messageEvent(name),
+      message: {
+        id: "msg_1",
+        text: name,
+        textSha256: HASH,
+        checklistTask: "你好",
+      },
+    });
+    const taskBodyHit = await detector.detect({
+      event: taskBody,
+      logger,
+      signal,
+    });
+    expect(taskBodyHit?.places).toEqual(["message"]);
+    expect(JSON.stringify(taskBodyHit)).not.toContain("你好");
   });
 
   it("accepts a short unquantified subset and rejects the rest", () => {

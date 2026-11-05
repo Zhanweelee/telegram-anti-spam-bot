@@ -140,6 +140,7 @@ async function messageEvent(
   const sideSignature = besideAuthorSignature(message, text);
   const sideMirror = besideMirrorSignature(message, text);
   const sidePoll = besidePollOption(message, text);
+  const sideTasks = besideChecklistTask(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -207,6 +208,7 @@ async function messageEvent(
       ...(sideSignature.length > 0 ? { authorSignature: sideSignature } : {}),
       ...(sideMirror.length > 0 ? { mirrorSignature: sideMirror } : {}),
       ...(sidePoll.length > 0 ? { pollOption: sidePoll } : {}),
+      ...(sideTasks.length > 0 ? { checklistTask: sideTasks } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6641,6 +6643,41 @@ function besideAuthorSignature(
     return "";
   }
   return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，清单任务另留最多 3029 字。任务自己就是正文时不重复。 */
+function besideChecklistTask(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = checklistTaskText(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 3029);
+}
+
+function checklistTaskText(message: Record<string, unknown>): string {
+  const checklist = message.checklist;
+  if (!isRecord(checklist) || !Array.isArray(checklist.tasks)) {
+    return "";
+  }
+  const parts: string[] = [];
+  for (const task of checklist.tasks) {
+    if (
+      !isRecord(task) ||
+      typeof task.text !== "string" ||
+      task.text.length === 0
+    ) {
+      continue;
+    }
+    parts.push(task.text);
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
 }
 
 /** 已有别的正文时，投票选项另留最多 1211 字。选项自己就是正文时不重复。 */

@@ -31,6 +31,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         ctx.event.message?.authorSignature,
         ctx.event.message?.mirrorSignature,
         ctx.event.message?.pollOption,
+        ctx.event.message?.checklistTask,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,
