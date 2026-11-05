@@ -62,6 +62,7 @@ function withoutButtonText(event: object): string {
       hiddenName: undefined,
       memberName: undefined,
       sharedName: undefined,
+      managedName: undefined,
     },
   });
 }
@@ -29408,7 +29409,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.managedName).toBe(
+      `${visible} https://ow.ly/last289 user289`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name289");
@@ -29448,7 +29452,10 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.managedName).toBe(
+      "https://example.com/ok289",
+    );
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok289");
     expect(ordinaryDump).not.toContain("kept289");
     expect(ordinaryDump).not.toContain(phrase);
@@ -29481,6 +29488,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.managedName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from289b");
@@ -29632,6 +29640,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ranked.event.message?.text).toBe("Bot Ada");
+    expect(ranked.event.message?.managedName).toBeUndefined();
     expect(ranked.event.message?.hosts).toEqual(["bit.ly"]);
     const rankedDump = JSON.stringify(ranked.event);
     expect(rankedDump).not.toContain("rank290");
@@ -32775,6 +32784,76 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain("93026");
     expect(asNameDump).not.toContain("582626");
+  });
+
+  it("keeps the first 4096 characters of a managed bot name", async () => {
+    const tail = "TAIL26";
+    const path = "bot26";
+    const token = "123456:SECRET5834";
+    const labeled = await normalize({
+      update_id: 5834,
+      message: {
+        message_id: 5834,
+        date: 1761955200,
+        chat: { id: -1005834, type: "private", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        managed_bot_created: {
+          bot: {
+            id: 93034,
+            is_bot: true,
+            first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+            token,
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.managedName).toHaveLength(4096);
+    expect(labeled.event.message?.managedName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(token);
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain("93034");
+    expect(labeledDump).not.toContain("SECRET5834");
+
+    const asName = await normalize({
+      update_id: 5835,
+      message: {
+        message_id: 5835,
+        date: 1761955200,
+        chat: { id: -1005835, type: "private" },
+        from: { id: 93 },
+        managed_bot_created: {
+          bot: {
+            id: 93035,
+            is_bot: true,
+            first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+            token: "123456:SECRET5835",
+          },
+        },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.managedName).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain("93035");
+    expect(asNameDump).not.toContain("SECRET5835");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

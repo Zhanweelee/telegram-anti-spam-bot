@@ -849,6 +849,14 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "managed_name_regex",
+      "enabled": true,
+      "when": { "managedName": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

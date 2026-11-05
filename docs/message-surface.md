@@ -179,3 +179,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有别的正文时，入群名单、视频聊天邀请、新群主和靠近提醒的 `first_name`、`last_name`、`username` 去掉空白后用空格拼起来，前 4096 字另留在 `memberName`。先看入群，再看邀请，再看换群主和群主离开，再看靠近的两个人。关键词或默认正则命中时删除。第 4097 字起不进事件。退群的人、发送者姓名、用户编号和距离不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0554。
 
 已有别的正文时，`users_shared.users` 的 `first_name`、`last_name`、`username` 去掉空白后用空格拼起来，前 4096 字另留在 `sharedName`。关键词或默认正则命中时删除。第 4097 字起不进事件。请求编号、用户编号、头像、发送者姓名、聊天标题和 `chat_shared` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0555。
+
+已有别的正文时，`managed_bot_created.bot` 的 `first_name`、`last_name`、`username` 去掉空白后用空格拼起来，前 4096 字另留在 `managedName`。关键词或默认正则命中时删除。第 4097 字起不进事件。bot 编号、令牌、语言代码、创建者姓名、聊天标题和 `write_access_allowed` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0556。
