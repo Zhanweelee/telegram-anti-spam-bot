@@ -27,5 +27,6 @@ bot 的用户名和 id 不是正文，但这轮的证据不需要它们。
 ## 后果
 
 - 不改 `default.json` 的群，inline 消息继续保留。
+- `via_bot` 的显示名仍不读。商业账号代发时画在时间戳旁的全名后来由 ADR 0617 只留主机名。那是 `sender_business_bot`。
 - 打开 `via_inline` 后，自部署会删除。云模式超过当月次数后，还要把 `via` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上这条规则，才会有这个开关。

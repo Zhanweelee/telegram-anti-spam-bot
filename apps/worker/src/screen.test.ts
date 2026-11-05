@@ -16588,6 +16588,378 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(flagged)).not.toContain("flag78096");
   });
 
+  it("deletes a short link in the name drawn for a business bot", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      bot: unknown,
+      extra: Record<string, unknown> = {},
+      paid = false,
+      adminUserIds: string[] = [],
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 83, first_name: "Ada" },
+            text: "你好",
+            ...(bot === undefined ? {} : { sender_business_bot: bot }),
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds,
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    async function judged(event: Awaited<ReturnType<typeof posted>>) {
+      return screenTelegramEvent(event, {
+        moderator: createMemoryModerator(),
+        rateWindow: createMemoryRateWindow(),
+      });
+    }
+
+    const marked = await posted(
+      78098,
+      {
+        id: 880098,
+        is_bot: true,
+        first_name: "  https://bit.ly/bot78098  ",
+        last_name: phrase,
+        username: "cutt.ly",
+      },
+      {
+        from: {
+          id: 83,
+          first_name: "https://tinyurl.com/from78098",
+          username: "t.co",
+        },
+        via_bot: {
+          id: 880980,
+          is_bot: true,
+          first_name: "https://is.gd/via78098",
+          username: "rb.gy",
+        },
+        chat: {
+          id: -(1_000_000 + 78098),
+          type: "supergroup",
+          title: "https://ow.ly/title78098",
+        },
+      },
+    );
+    expect(marked.message?.text).toBe("你好");
+    expect(marked.message?.hosts).toEqual(["bit.ly"]);
+    expect(marked.message?.invites).toBeUndefined();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(marked, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).toContain("links");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1078098", messageId: "78098" },
+    ]);
+    const markedDump = JSON.stringify({
+      event: marked,
+      decision: removed.decision,
+    });
+    expect(markedDump).not.toContain(phrase);
+    expect(markedDump).not.toContain("bot78098");
+    expect(markedDump).not.toContain("from78098");
+    expect(markedDump).not.toContain("via78098");
+    expect(markedDump).not.toContain("title78098");
+    expect(markedDump).not.toContain("880098");
+    expect(markedDump).not.toContain("tinyurl");
+    expect(markedDump).not.toContain("is.gd");
+    expect(markedDump).not.toContain("ow.ly");
+    expect(markedDump).not.toContain("cutt.ly");
+    expect(markedDump).not.toContain("t.co");
+    expect(markedDump).not.toContain("rb.gy");
+
+    const spaced = await posted(78099, {
+      id: 99,
+      is_bot: true,
+      first_name: "Go https://bit.ly/later78099",
+    });
+    expect(spaced.message?.hosts).toEqual(["bit.ly"]);
+    const spacedHit = await judged(spaced);
+    expect(spacedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(spaced)).not.toContain("later78099");
+
+    const safe = await posted(78100, {
+      id: 100,
+      is_bot: true,
+      first_name: "https://example.com/ok78100",
+    });
+    expect(safe.message?.hosts).toEqual(["example.com"]);
+    const safeKept = await judged(safe);
+    expect(safeKept.decision.action).toBe("allow");
+    expect(JSON.stringify(safeKept.decision)).not.toContain("ok78100");
+
+    const keyword = await posted(78101, {
+      id: 101,
+      is_bot: true,
+      first_name: `Ada ${phrase}`,
+    });
+    expect(keyword.message?.text).toBe("你好");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await judged(keyword);
+    expect(keywordKept.decision.action).toBe("allow");
+    expect(
+      JSON.stringify({ event: keyword, decision: keywordKept.decision }),
+    ).not.toContain(phrase);
+
+    const words = await posted(78102, {
+      id: 102,
+      is_bot: true,
+      first_name: phrase,
+    });
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await judged(words);
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(
+      JSON.stringify({ event: words, decision: wordsKept.decision }),
+    ).not.toContain(phrase);
+
+    const clean = await posted(78103, { id: 103, is_bot: true, first_name: "Ada" });
+    expect(clean.message?.textSha256).toBe(keyword.message?.textSha256);
+    expect(clean.message?.hosts).toBeUndefined();
+
+    const invite = await posted(78104, {
+      id: 104,
+      is_bot: true,
+      first_name: "https://t.me/+code78104",
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toEqual(["t.me"]);
+    const inviteHit = await judged(invite);
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(invite)).not.toContain("code78104");
+
+    const publicName = await posted(78105, {
+      id: 105,
+      is_bot: true,
+      first_name: "https://t.me/durov",
+    });
+    expect(publicName.message?.hosts).toEqual(["t.me"]);
+    expect(publicName.message?.invites).toBeUndefined();
+    const publicKept = await judged(publicName);
+    expect(publicKept.decision.action).toBe("allow");
+    expect(JSON.stringify(publicName)).not.toContain("durov");
+
+    const address = await posted(78106, {
+      id: 106,
+      is_bot: true,
+      first_name: "http://203.0.113.9/ip78106",
+    });
+    expect(address.message?.hosts).toEqual(["203.0.113.9"]);
+    const addressHit = await judged(address);
+    expect(addressHit.decision.action).toBe("delete");
+    expect(JSON.stringify(addressHit.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(address)).not.toContain("ip78106");
+
+    const body = await posted(
+      78107,
+      { id: 107, is_bot: true, first_name: "https://bit.ly/bot78107" },
+      { text: "https://cutt.ly/body78107" },
+    );
+    expect(body.message?.text).toBe("https://cutt.ly/body78107");
+    expect(body.message?.hosts).toEqual(["bit.ly"]);
+    const bodyHit = await judged(body);
+    expect(bodyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bodyHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("body78107");
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("bot78107");
+
+    const ordered = await posted(78108, {
+      id: 108,
+      is_bot: true,
+      first_name: "https://bit.ly/first78108",
+      last_name: "https://tinyurl.com/last78108",
+    });
+    expect(ordered.message?.text).toBe("你好");
+    expect(ordered.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const orderedHit = await judged(ordered);
+    expect(orderedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(orderedHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("first78108");
+    expect(JSON.stringify(orderedHit.decision)).not.toContain("last78108");
+
+    const paid = await posted(
+      78109,
+      { id: 109, is_bot: true, first_name: "https://bit.ly/paid78109" },
+      {},
+      true,
+    );
+    expect(paid.message?.paid).toBe(true);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid78109");
+
+    const admin = await posted(
+      78110,
+      { id: 110, is_bot: true, first_name: "https://bit.ly/admin78110" },
+      {},
+      false,
+      ["83"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("admin78110");
+
+    const flagged = await posted(
+      78111,
+      true,
+      { from: { id: 83, first_name: "https://bit.ly/flag78111" } },
+    );
+    expect(flagged.message?.hosts).toBeUndefined();
+    const flaggedKept = await judged(flagged);
+    expect(flaggedKept.decision.action).toBe("allow");
+    expect(JSON.stringify(flagged)).not.toContain("flag78111");
+
+    const inline = await posted(78112, undefined, {
+      via_bot: {
+        id: 112,
+        is_bot: true,
+        first_name: "https://bit.ly/via78112",
+        username: "cutt.ly",
+      },
+    });
+    expect(inline.message?.hosts).toBeUndefined();
+    const inlineKept = await judged(inline);
+    expect(inlineKept.decision.action).toBe("allow");
+    expect(JSON.stringify(inline)).not.toContain("via78112");
+    expect(JSON.stringify(inline)).not.toContain("cutt.ly");
+
+    const speaker = await posted(78113, undefined, {
+      from: { id: 83, first_name: "https://bit.ly/plain78113" },
+    });
+    expect(speaker.message?.hosts).toBeUndefined();
+    const speakerKept = await judged(speaker);
+    expect(speakerKept.decision.action).toBe("allow");
+    expect(JSON.stringify(speaker)).not.toContain("plain78113");
+
+    const handle = await posted(78114, {
+      id: 114,
+      is_bot: true,
+      username: "cutt.ly",
+      first_name: "Ada",
+    });
+    expect(handle.message?.hosts).toBeUndefined();
+    const handleKept = await judged(handle);
+    expect(handleKept.decision.action).toBe("allow");
+    expect(JSON.stringify(handle)).not.toContain("cutt.ly");
+
+    const titled = await posted(
+      78115,
+      { id: 115, is_bot: true, first_name: "Ada" },
+      {
+        chat: {
+          id: -(1_000_000 + 78115),
+          type: "supergroup",
+          title: "https://ow.ly/title78115",
+        },
+      },
+    );
+    expect(titled.message?.hosts).toBeUndefined();
+    const titledKept = await judged(titled);
+    expect(titledKept.decision.action).toBe("allow");
+    expect(JSON.stringify(titled)).not.toContain("title78115");
+    expect(JSON.stringify(titled)).not.toContain("ow.ly");
+
+    const surname = await posted(78116, {
+      id: 116,
+      is_bot: true,
+      first_name: "   ",
+      last_name: "https://bit.ly/last78116",
+      username: "cutt.ly",
+    });
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameHit = await judged(surname);
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(JSON.stringify(surname)).not.toContain("last78116");
+    expect(JSON.stringify(surname)).not.toContain("cutt.ly");
+
+    const empty = await posted(78117, { id: 117, is_bot: true });
+    expect(empty.message?.hosts).toBeUndefined();
+    const emptyKept = await judged(empty);
+    expect(emptyKept.decision.action).toBe("allow");
+
+    const connected = await normalizeUpdate({
+      update: {
+        update_id: 78118,
+        message: {
+          message_id: 78118,
+          date: 1761955200,
+          chat: { id: -(1_000_000 + 78118), type: "supergroup" },
+          from: { id: 83 },
+          text: "你好",
+          business_connection_id: "bc78118",
+          sender_business_bot: {
+            id: 118,
+            is_bot: true,
+            first_name: "https://bit.ly/biz78118",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(connected.status).toBe("ignored");
+    expect(JSON.stringify(connected)).not.toContain("biz78118");
+    expect(JSON.stringify(connected)).not.toContain("bc78118");
+    expect(JSON.stringify(connected)).not.toContain("bit.ly");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
