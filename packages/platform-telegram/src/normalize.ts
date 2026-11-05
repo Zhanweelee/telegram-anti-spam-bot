@@ -4605,6 +4605,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushLeaveSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
+  pushDirectTopicUrls(message, urls);
   return urls;
 }
 
@@ -5107,6 +5108,29 @@ function pushLeaveSenderUrls(
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 频道私信话题上画出的话题用户只留主机名。
+ * 发言人的编号和这个用户相同才读。名的长度大于 0 时不读姓。
+ * 空白也算有名。用户名、话题号和本群群名不读。
+ * 发言人不是这个用户、没有话题、布尔值和空对象不读。
+ * 名字不进正文。
+ */
+function pushDirectTopicUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const topic = message.direct_messages_topic;
+  if (!isRecord(topic) || !isRecord(topic.user)) {
+    return;
+  }
+  const speaker = nestedId(message.from);
+  const owner = nestedId(topic.user);
+  if (speaker === null || speaker !== owner) {
+    return;
+  }
+  pushVisiblePartyUrls(topic.user, undefined, urls);
 }
 
 function pushPlainUrls(value: unknown, urls: string[]): void {
