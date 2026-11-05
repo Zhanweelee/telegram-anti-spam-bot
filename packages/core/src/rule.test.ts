@@ -253,6 +253,25 @@ describe("rules", () => {
         serviceEvent({ venueAddress: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ pollExplanation: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { pollExplanation: true },
+        serviceEvent({ venueAddress: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { pollExplanation: true },
+        serviceEvent({ pollExplanation: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { venueAddress: true },
+        serviceEvent({ pollExplanation: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

@@ -553,11 +553,13 @@ describe("event schema", () => {
         gameText: "加微x",
         invoiceText: "加微信",
         venueAddress: "南京东路",
+        pollExplanation: "点灯可见",
       },
     });
     expect(played.message?.gameText).toBe("加微x");
     expect(played.message?.invoiceText).toBe("加微信");
     expect(played.message?.venueAddress).toBe("南京东路");
+    expect(played.message?.pollExplanation).toBe("点灯可见");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -715,6 +717,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           venueAddress: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          pollExplanation: "a".repeat(201),
         },
       }),
     ).toThrow();

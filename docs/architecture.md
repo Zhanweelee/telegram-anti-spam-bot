@@ -243,6 +243,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 地点地址最多留 4096 字。关键词或默认正则命中时删除这条消息。地址自己就是正文时仍要打开 `regex_hint`。坐标和地点编号不进事件。见 ADR 0542。
 
+测验说明最多留 200 字。关键词或默认正则命中时删除这条消息。说明自己就是正文时仍要打开 `regex_hint`。投票人数和说明媒体不进事件。见 ADR 0543。
+
 流水线抛错时 Worker 仍返回 200。日志代码是 `webhook_screen_failed`，只带 `eventId` 和 `chatId`。`JSON.parse` 和 zod 的异常文本可能含原文，所以这些失败只记固定代码。
 
 `textSha256` 在这个包里用 Web Crypto 计算。`packages/sdk` 的 `sha256Hex` 依赖 `node:crypto`，Worker 不要 import 它。

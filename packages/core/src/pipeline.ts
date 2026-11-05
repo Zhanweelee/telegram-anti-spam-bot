@@ -280,6 +280,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("venueAddress" in when) {
     return "venueAddress";
   }
+  if ("pollExplanation" in when) {
+    return "pollExplanation";
+  }
   return undefined;
 }
 
@@ -402,6 +405,7 @@ function eventTexts(event: Event): readonly string[] {
   const game = event.message?.gameText;
   const invoice = event.message?.invoiceText;
   const venue = event.message?.venueAddress;
+  const explanation = event.message?.pollExplanation;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -529,6 +533,24 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(venue);
   }
   if (
+    explanation &&
+    explanation.length > 0 &&
+    explanation !== message &&
+    explanation !== tag &&
+    explanation !== buttons &&
+    explanation !== signature &&
+    explanation !== mirror &&
+    explanation !== poll &&
+    explanation !== tasks &&
+    explanation !== media &&
+    explanation !== performer &&
+    explanation !== game &&
+    explanation !== invoice &&
+    explanation !== venue
+  ) {
+    texts.push(explanation);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -542,7 +564,8 @@ function eventTexts(event: Event): readonly string[] {
     profile !== performer &&
     profile !== game &&
     profile !== invoice &&
-    profile !== venue
+    profile !== venue &&
+    profile !== explanation
   ) {
     texts.push(profile);
   }

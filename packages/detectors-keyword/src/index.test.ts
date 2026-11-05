@@ -361,7 +361,7 @@ describe("keyword detector", () => {
     expect(JSON.stringify(hit)).not.toContain(label);
   });
 
-  it("matches game, invoice, and venue text without copying it", async () => {
+  it("matches game, invoice, venue, and poll explanation text without copying it", async () => {
     const label = "请免费领取礼品";
     const played = await detector.detect({
       event: parseEvent({
@@ -425,6 +425,26 @@ describe("keyword detector", () => {
     });
     expect(placed?.reasons).toEqual(["keyword_match"]);
     expect(JSON.stringify(placed)).not.toContain(label);
+    const explained = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          pollExplanation: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(explained?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(explained)).not.toContain(label);
   });
 
   it("matches a performer without copying it", async () => {
