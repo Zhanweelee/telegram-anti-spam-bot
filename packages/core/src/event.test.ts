@@ -1933,6 +1933,41 @@ describe("event schema", () => {
     ).toThrow();
   });
 
+  it("accepts a message effect and rejects other marks", () => {
+    const event = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "",
+        textSha256: "ab".repeat(32),
+        asEffect: true,
+      },
+    });
+    expect(event.message?.asEffect).toBe(true);
+    expect(JSON.stringify(event)).not.toContain("fx5982secret");
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "",
+          textSha256: "ab".repeat(32),
+          asEffect: false,
+        },
+      }),
+    ).toThrow();
+  });
+
   it("accepts a pending suggested post and rejects other marks", () => {
     const event = parseEvent({
       id: "evt_1",

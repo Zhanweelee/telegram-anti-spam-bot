@@ -8,6 +8,8 @@ Worker 每次检测先读缓存端口。未命中才读这两个文件，不读 
 
 照片、视频、文件和音频也各有一条默认关闭的规则。私聊 `/rule` 打开 `media_photo` 只删照片，`media_video` 只删视频，`media_document` 只删文件，`media_audio` 只删音频。动图仍是动图，语音仍是语音。付费帖仍留下。见 ADR 0575。
 
+带消息特效的消息也有一条默认关闭的规则。私聊 `/rule` 打开 `message_effect` 后删除。特效编号不进事件。正文仍参与关键词。见 ADR 0576。
+
 私聊 `/rules <chatId> skip <count>` 跳过前面的 `count` 条再往下列。不写 `skip` 时仍从第一条开始。见 ADR 0521。
 
 私聊 `/rules <chatId> on` 只列打开的规则，`off` 只列关闭的规则。不写时仍列出全部。见 ADR 0522。

@@ -48,6 +48,7 @@
     "@tasb/detector-task": "workspace:*",
     "@tasb/detector-topic": "workspace:*",
     "@tasb/detector-decline": "workspace:*",
+    "@tasb/detector-effect": "workspace:*",
     "@tasb/detector-emoji": "workspace:*",
     "@tasb/detector-created": "workspace:*",
     "@tasb/detector-pending": "workspace:*",

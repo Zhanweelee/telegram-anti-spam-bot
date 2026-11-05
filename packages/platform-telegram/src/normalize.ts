@@ -208,6 +208,7 @@ async function messageEvent(
   const asGroupCreated = createdGroup(message);
   const asPostPending = pendingPost(message);
   const asSpoiler = coveredMedia(message);
+  const asEffect = messageEffect(message);
   const richContact = richContactMark(message);
   const asTextMention = textMentionMark(message);
   const asCustomEmoji = customEmojiMark(message);
@@ -324,6 +325,7 @@ async function messageEvent(
       ...(asGroupCreated ? { asGroupCreated: true as const } : {}),
       ...(asPostPending ? { asPostPending: true as const } : {}),
       ...(asSpoiler ? { asSpoiler: true as const } : {}),
+      ...(asEffect ? { asEffect: true as const } : {}),
       ...(richContact.phone ? { asRichPhone: true as const } : {}),
       ...(richContact.card ? { asRichCard: true as const } : {}),
       ...(richContact.email ? { asRichEmail: true as const } : {}),
@@ -383,6 +385,11 @@ function coveredMedia(message: Record<string, unknown>): boolean {
   return (
     message.has_media_spoiler === true || richBlockSpoiler(message.rich_message)
   );
+}
+
+function messageEffect(message: Record<string, unknown>): boolean {
+  const id = message.effect_id;
+  return typeof id === "string" && id.trim().length > 0;
 }
 
 function richBlockSpoiler(value: unknown): boolean {
