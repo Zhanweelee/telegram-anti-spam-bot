@@ -94,6 +94,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `effect_id` 去掉空白后非空时，消息带 `asEffect`。空白、布尔值和缺字段不带这个标记。编号不进事件。正文仍是这条消息自己的文字。嵌套的原消息不读。规则 `message_effect` 默认关闭。见 ADR 0576。
 
+投票选项上 `added_by_user` 的可见名字只留主机名。名的长度大于 0 时不读姓。空白也算有名。没有用户时只读 `added_by_chat.title`。用户名、用户编号、选项编号和添加时间不进事件。名字里的关键词不命中。嵌套的 `poll_message` 不读。见 ADR 0577。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。

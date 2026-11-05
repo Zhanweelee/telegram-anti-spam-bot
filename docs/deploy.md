@@ -301,6 +301,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> message_effect on` 删这个群里带消息特效的消息。默认关闭。特效编号不进证据。正文仍参与关键词。没有特效的消息仍留下。见 ADR 0576。
 
+后加投票选项的人，名字里的短链、邀请或裸 IP 会删掉这条消息。证据只有主机名。名字和用户名不进事件。`example.com` 仍留下。见 ADR 0577。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。
