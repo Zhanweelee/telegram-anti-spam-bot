@@ -26,6 +26,17 @@ async function normalize(
   });
 }
 
+function withoutButtonText(event: object): string {
+  const message = "message" in event ? event.message : undefined;
+  if (!message || typeof message !== "object") {
+    return JSON.stringify(event);
+  }
+  return JSON.stringify({
+    ...event,
+    message: { ...message, buttonText: undefined },
+  });
+}
+
 describe("normalizeUpdate", () => {
   it("hashes with the known sha256 test vector", async () => {
     expect(await sha256Hex("abc")).toBe(
@@ -229,7 +240,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("点这里");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("点这里"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(secret);
     expect(dumped).not.toContain("机密");
     expect(dumped).not.toContain("evil.example");
@@ -275,7 +286,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("点下面");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("evil.example");
@@ -383,7 +394,7 @@ describe("normalizeUpdate", () => {
       "app.example",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/hide");
@@ -456,7 +467,7 @@ describe("normalizeUpdate", () => {
       "t.me",
       "telegram.dog",
     ]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(zwsp);
     expect(dumped).not.toContain(selector);
@@ -533,7 +544,7 @@ describe("normalizeUpdate", () => {
       "telegram.dog",
       "double.t.me",
     ]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(zwsp);
     expect(dumped).not.toContain(selector);
@@ -596,7 +607,7 @@ describe("normalizeUpdate", () => {
       "bit.ly",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(join);
@@ -659,7 +670,7 @@ describe("normalizeUpdate", () => {
       "double.t.me",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(lower);
@@ -731,7 +742,7 @@ describe("normalizeUpdate", () => {
       "telegram.me",
       "double.t.me",
     ]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(join);
@@ -780,7 +791,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("点这里");
     expect(outcome.event.message?.invites).toEqual(["t.me", "telegram.me"]);
     expect(outcome.event.message?.hosts).toEqual(["t.me", "telegram.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(code);
   });
 
@@ -1136,7 +1147,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
     expect(outcome.event.message?.invites).toBeUndefined();
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(path);
     expect(dumped).not.toContain(nonce);
     expect(dumped).not.toContain("PUB112");
@@ -1219,7 +1230,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
     expect(outcome.event.message?.invites).toBeUndefined();
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     expect(dumped).not.toContain("durov");
     expect(dumped).not.toContain("shop");
@@ -1279,7 +1290,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
     expect(outcome.event.message?.invites).toBeUndefined();
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     const call = await normalize({
       update_id: 78041,
@@ -10587,7 +10598,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     expect(dumped).not.toContain(app);
     const sub = await normalize({
@@ -10643,7 +10654,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.hosts).toEqual(["t.me", address]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     expect(dumped).not.toContain("durov");
   });
@@ -10674,7 +10685,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.hosts).toEqual(["s.t.me", address]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     expect(dumped).not.toContain("durov");
   });
@@ -10705,7 +10716,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.hosts).toEqual(["203.0.113.116"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(hidden);
     expect(dumped).not.toContain("durov");
     expect(dumped).not.toContain("appname");
@@ -10736,7 +10747,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.contact).toBe(true);
     expect(outcome.event.message?.text).toBe("");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phone);
     expect(dumped).not.toContain(name);
     expect(dumped).not.toContain("机密姓");
@@ -10766,7 +10777,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.paid).toBe(true);
     expect(outcome.event.message?.text).toBe(phrase);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(stars);
     expect(dumped).not.toContain("机密频道");
     const ordinary = await normalize({
@@ -10839,7 +10850,7 @@ describe("normalizeUpdate", () => {
       "t.co",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phone);
     expect(dumped).not.toContain(name);
     expect(dumped).not.toContain(path);
@@ -10879,7 +10890,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.via).toBe(true);
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(name);
     expect(dumped).not.toContain("999002");
     expect(dumped).not.toContain("机密群名");
@@ -10951,7 +10962,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(question));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
   });
@@ -11002,7 +11013,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(prize);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(prize));
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(title);
     expect(dumped).not.toContain("-1001");
   });
@@ -11032,7 +11043,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(prize);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(prize));
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(name);
     expect(dumped).not.toContain("4242");
   });
@@ -11095,7 +11106,7 @@ describe("normalizeUpdate", () => {
       "evil.example",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/task");
@@ -11321,7 +11332,7 @@ describe("normalizeUpdate", () => {
       "example.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(encoded);
@@ -11351,7 +11362,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -11397,7 +11408,7 @@ describe("normalizeUpdate", () => {
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     expect(outcome.event.message?.media).toBeUndefined();
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("GAME45");
     expect(dumped).not.toContain("/game");
@@ -11431,7 +11442,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
     expect(outcome.event.message?.hosts).toEqual(["tinyurl.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("XTR");
     expect(dumped).not.toContain("/inv45");
@@ -11547,7 +11558,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -11576,7 +11587,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("/preview");
     expect(dumped).not.toContain("prefer_small_media");
@@ -11638,7 +11649,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(placeId);
     expect(dumped).not.toContain("31.2304");
@@ -11661,7 +11672,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("31.2304");
     expect(dumped).not.toContain("121.4737");
   });
@@ -11795,7 +11806,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/addr48");
@@ -11863,7 +11874,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/title50");
@@ -11931,7 +11942,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -11975,7 +11986,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(quoted));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain('"position"');
@@ -12013,7 +12024,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("");
     expect(outcome.event.message?.hosts).toBeUndefined();
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
     expect(dumped).not.toContain("bit.ly");
   });
@@ -12048,7 +12059,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
     expect(dumped).not.toContain("/quoted");
   });
@@ -12367,7 +12378,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.mediaSha256).toBe(
       await sha256Hex("document\ndoc-91"),
     );
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("doc-91");
   });
@@ -12398,7 +12409,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("免费领取");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("免费领取"));
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("加微信");
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("aud-92");
@@ -12425,7 +12436,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("免费领取.mp3");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("请免费领取礼品");
   });
 
@@ -12449,7 +12460,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -12486,7 +12497,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会.pdf");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
     expect(dumped).not.toContain("/quoted");
   });
@@ -12515,7 +12526,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -12543,7 +12554,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("免费领取.mp4");
     expect(outcome.event.message?.media).toBe("animation");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("加微信");
     expect(dumped).not.toContain("an-99");
     expect(dumped).not.toContain("vid-99");
@@ -12621,6 +12632,9 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.buttonText).toBe(
+      `${phrase} https://bit.ly/btn55 https://t.me/+${code}. 跳过`,
+    );
     expect(labeled.event.message?.hosts).toEqual([
       "bit.ly",
       "t.me",
@@ -12628,9 +12642,13 @@ describe("normalizeUpdate", () => {
     ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = JSON.stringify(labeled.event);
-    expect(labeledDump).not.toContain(phrase);
-    expect(labeledDump).not.toContain(code);
-    expect(labeledDump).not.toContain("/btn55");
+    const withoutButtons = JSON.stringify({
+      ...labeled.event,
+      message: { ...labeled.event.message, buttonText: undefined },
+    });
+    expect(withoutButtons).not.toContain(phrase);
+    expect(withoutButtons).not.toContain(code);
+    expect(withoutButtons).not.toContain("/btn55");
     expect(labeledDump).not.toContain("/ok55");
     expect(labeledDump).not.toContain("tinyurl.com");
     expect(labeledDump).not.toContain("is.gd");
@@ -12656,8 +12674,12 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(hidden.event.message?.text).toBe("今天站会");
+    expect(hidden.event.message?.buttonText).toBe(phrase);
     expect(hidden.event.message?.hosts).toBeUndefined();
-    const hiddenDump = JSON.stringify(hidden.event);
+    const hiddenDump = JSON.stringify({
+      ...hidden.event,
+      message: { ...hidden.event.message, buttonText: undefined },
+    });
     expect(hiddenDump).not.toContain(phrase);
     expect(hiddenDump).not.toContain("bit.ly");
     expect(hiddenDump).not.toContain("tinyurl.com");
@@ -12684,7 +12706,30 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.textSha256).toBe(
       await sha256Hex(`${asBody} 今天站会`),
     );
+    expect(body.event.message?.buttonText).toBeUndefined();
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+
+    const padded = `  ${"a".repeat(256)}TAIL55  `;
+    const capped = await normalize({
+      update_id: 2813,
+      message: {
+        message_id: 109,
+        date: 1761955200,
+        chat: { id: -100778, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        reply_markup: {
+          inline_keyboard: [[{ text: padded }]],
+        },
+      },
+    });
+    expect(capped.status).toBe("event");
+    if (capped.status !== "event") {
+      return;
+    }
+    expect(capped.event.message?.text).toBe("今天站会");
+    expect(capped.event.message?.buttonText).toBe("a".repeat(256));
+    expect(JSON.stringify(capped.event)).not.toContain("TAIL55");
   });
 
   it("keeps hostnames from gift messages", async () => {
@@ -13912,7 +13957,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn62");
     expect(dumped).not.toContain("xn--");
   });
@@ -13944,7 +13989,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn63");
   });
 
@@ -13970,7 +14015,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn64");
   });
 
@@ -13996,7 +14041,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn65");
   });
 
@@ -14022,7 +14067,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn66");
   });
 
@@ -14048,7 +14093,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn67");
     expect(dumped).not.toContain("%C2%B7");
   });
@@ -14075,7 +14120,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn68");
   });
 
@@ -14101,7 +14146,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn69");
   });
 
@@ -14127,7 +14172,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts ?? []).not.toContain("bit.ly");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("bit.ly");
     expect(dumped).not.toContain("btn176");
   });
@@ -14158,7 +14203,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.hosts ?? []).not.toContain("bit.ly");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("bit.ly");
     expect(dumped).not.toContain("btn177");
 
@@ -14224,7 +14269,7 @@ describe("normalizeUpdate", () => {
       await sha256Hex("免费领取 callback"),
     );
     expect(outcome.event.message?.hosts).toEqual(["example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
   });
 
@@ -14263,7 +14308,7 @@ describe("normalizeUpdate", () => {
       "evil.example",
       "example.com",
     ]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("/hide");
   });
@@ -14311,7 +14356,7 @@ describe("normalizeUpdate", () => {
       "example.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain(encoded);
@@ -14359,7 +14404,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("点下面");
     expect(outcome.event.message?.hosts).toEqual(["t.me", "bit.ly"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("evil.example");
@@ -14391,7 +14436,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会.pdf");
     expect(outcome.event.message?.hosts).toEqual(["example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
 
@@ -14427,7 +14472,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
     expect(dumped).not.toContain("/quoted");
   });
@@ -14484,7 +14529,7 @@ describe("normalizeUpdate", () => {
     );
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("/path");
@@ -14527,7 +14572,7 @@ describe("normalizeUpdate", () => {
       await sha256Hex("caption-only"),
     );
     expect(outcome.event.message?.hosts).toEqual(["evil.example", "bit.ly"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain("/hide");
     expect(dumped).not.toContain("/only");
@@ -14578,7 +14623,7 @@ describe("normalizeUpdate", () => {
       "tinyurl.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("bit.ly");
@@ -14636,7 +14681,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("名字卡邮电");
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(outcome.event.message?.asRichTextMention).toBe(true);
     expect(outcome.event.message?.asRichMention).toBeUndefined();
     expect(dumped).not.toContain("999001");
@@ -18665,7 +18710,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("点这里"));
     expect(outcome.event.message?.hosts).toEqual(["t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(joinCode);
     expect(dumped).not.toContain(folderCode);
     expect(dumped).not.toContain(signCode);
@@ -18696,7 +18741,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn70");
   });
 
@@ -18723,7 +18768,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn71");
     expect(dumped).not.toContain("%5B");
   });
@@ -18760,7 +18805,7 @@ describe("normalizeUpdate", () => {
       "t.me",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("btn72");
     expect(dumped).not.toContain("enc72");
     expect(dumped).not.toContain(code);
@@ -18821,7 +18866,7 @@ describe("normalizeUpdate", () => {
       "tinyurl.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("PATH73");
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("opt73");
@@ -18940,7 +18985,7 @@ describe("normalizeUpdate", () => {
       "tinyurl.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("anim74");
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("vid74");
@@ -19052,7 +19097,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "ow.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("doc75");
     expect(dumped).not.toContain("song75");
     expect(dumped).not.toContain(code);
@@ -19103,7 +19148,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
-    const dumped = JSON.stringify(outcome.event);
+    const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("lab76");
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("内文说明");
@@ -19698,8 +19743,8 @@ describe("normalizeUpdate", () => {
     }
     expect(label.event.message?.text).toBe("今天站会");
     expect(label.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(label.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(label.event)).not.toContain(path);
+    expect(withoutButtonText(label.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(label.event)).not.toContain(path);
 
     const rich = await normalize({
       update_id: 2165,
@@ -31211,9 +31256,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(label.event.message?.hosts).toEqual(["example.com", "example.org"]);
-    expect(JSON.stringify(label.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(label.event)).not.toContain(path);
-    expect(JSON.stringify(label.event)).not.toContain("ok120");
+    expect(withoutButtonText(label.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(label.event)).not.toContain(path);
+    expect(withoutButtonText(label.event)).not.toContain("ok120");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

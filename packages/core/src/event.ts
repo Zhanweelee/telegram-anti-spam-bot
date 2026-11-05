@@ -58,6 +58,8 @@ export const messageSchema = z
     textSha256: sha256Schema,
     /** Member tag beside another body. Capped at 16. Absent when the tag is the body. */
     senderTag: z.string().min(1).max(16).optional(),
+    /** Inline button labels beside another body. Capped at 256. Absent when the labels are the body. */
+    buttonText: z.string().min(1).max(256).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

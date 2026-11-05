@@ -27,6 +27,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
       const texts = [
         ctx.event.message?.text,
         ctx.event.message?.senderTag,
+        ctx.event.message?.buttonText,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,

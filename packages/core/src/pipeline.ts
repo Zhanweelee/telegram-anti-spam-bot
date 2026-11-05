@@ -339,13 +339,23 @@ function eventTexts(event: Event): readonly string[] {
   const message = event.message?.text;
   const profile = event.profile?.text;
   const tag = event.message?.senderTag;
+  const buttons = event.message?.buttonText;
   if (message && message.length > 0) {
     texts.push(message);
   }
   if (tag && tag.length > 0 && tag !== message) {
     texts.push(tag);
   }
-  if (profile && profile.length > 0 && profile !== message && profile !== tag) {
+  if (buttons && buttons.length > 0 && buttons !== message && buttons !== tag) {
+    texts.push(buttons);
+  }
+  if (
+    profile &&
+    profile.length > 0 &&
+    profile !== message &&
+    profile !== tag &&
+    profile !== buttons
+  ) {
     texts.push(profile);
   }
   return texts;
