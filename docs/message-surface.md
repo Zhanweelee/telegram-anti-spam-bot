@@ -169,3 +169,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有别的正文时，`unique_gift.gift.base_name` 去掉空白后，和没有附言时的型号、符号、背景名字，用空格拼起来，前 4096 字另留在 `giftLabel`。关键词或默认正则命中时删除。第 4097 字起不进事件。有附言时不读型号、符号和背景。短名、编号和发布者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0549。
 
 已有别的正文时，`forum_topic_created.name` 或 `forum_topic_edited.name` 去掉空白后的前 128 字另留在 `topicName`。先看新建，再看改名。关键词或默认正则命中时删除。第 129 字起不进事件。图标颜色和自定义表情不进这个字段。`is_name_implicit` 不隐藏这段名字。这段自己就是正文时不设这个字段。见 ADR 0550。
+
+已有别的正文时，`suggested_post_declined.comment` 去掉空白后的前 128 字另留在 `declineComment`。关键词或默认正则命中时删除。第 129 字起不进事件。嵌套的 `suggested_post_message` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0551。

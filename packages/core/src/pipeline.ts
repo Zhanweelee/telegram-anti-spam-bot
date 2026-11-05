@@ -316,6 +316,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("topicName" in when) {
     return "topicName";
   }
+  if ("declineComment" in when) {
+    return "declineComment";
+  }
   return undefined;
 }
 
@@ -449,6 +452,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.giftText,
     event.message?.giftLabel,
     event.message?.topicName,
+    event.message?.declineComment,
     event.profile?.text,
   ];
   const texts: string[] = [];

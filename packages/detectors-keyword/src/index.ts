@@ -49,6 +49,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         ctx.event.message?.giftText,
         ctx.event.message?.giftLabel,
         ctx.event.message?.topicName,
+        ctx.event.message?.declineComment,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,

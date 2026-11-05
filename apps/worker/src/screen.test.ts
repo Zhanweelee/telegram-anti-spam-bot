@@ -9878,6 +9878,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(idle.message?.asPostDeclined).toBe(true);
     expect(idle.message?.text).toBe(comment);
+    expect(idle.message?.declineComment).toBeUndefined();
     const idleDump = JSON.stringify(idle);
     expect(idleDump).not.toContain(actor);
     expect(idleDump).not.toContain(original);
@@ -17288,6 +17289,180 @@ describe("screenTelegramEvent", () => {
     });
     expect(keptBlank.decision.action).toBe("allow");
     expect(JSON.stringify(blank.event)).not.toContain("9367192");
+  });
+
+  it("deletes a decline comment that matches beside another body", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const nested = "原帖机密";
+    const named = await normalizeUpdate({
+      update: {
+        update_id: 5779,
+        message: {
+          message_id: 5779,
+          date: 1761955200,
+          chat: { id: -1005779, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          suggested_post_declined: {
+            comment: phrase,
+            suggested_post_message: { text: nested },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(named.event.message?.declineComment).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(named.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005779", messageId: "5779" },
+    ]);
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain(nested);
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5780,
+        message: {
+          message_id: 5780,
+          date: 1761955200,
+          chat: { id: -1005780, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          suggested_post_declined: {
+            comment: `  ${label}  `,
+            suggested_post_message: { text: nested },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.declineComment).toBe(label);
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("decline_comment_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patterned.event)).not.toContain(nested);
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5781,
+        message: {
+          message_id: 5781,
+          date: 1761955200,
+          chat: { id: -1005781, type: "supergroup" },
+          from: { id: 93 },
+          suggested_post_declined: {
+            comment: label,
+            suggested_post_message: { text: nested },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.declineComment).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+    expect(JSON.stringify(same.event)).not.toContain(nested);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5782,
+        message: {
+          message_id: 5782,
+          date: 1761955200,
+          chat: { id: -1005782, type: "supergroup" },
+          from: { id: 93 },
+          text: label,
+          suggested_post_declined: { comment: "今天站会" },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.declineComment).toBe("今天站会");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 5783,
+        message: {
+          message_id: 5783,
+          date: 1761955200,
+          chat: { id: -1005783, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          suggested_post_declined: {
+            comment: "   ",
+            suggested_post_message: { text: nested },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.declineComment).toBeUndefined();
+    const keptBlank = await screenTelegramEvent(blank.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBlank.decision.action).toBe("allow");
+    expect(JSON.stringify(blank.event)).not.toContain(nested);
   });
 
   it("deletes a video chat invite whose visible name carries a short link", async () => {
