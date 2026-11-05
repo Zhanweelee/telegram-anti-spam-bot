@@ -155,3 +155,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有别的正文时，`venue.address` 去掉空白后的前 4096 字另留在 `venueAddress`。关键词或默认正则命中时删除。第 4097 字起不进事件。坐标、地点编号和投票媒体里的地址不进这个字段。地址自己就是正文时不设这个字段。见 ADR 0542。
 
 已有别的正文时，`poll.explanation` 去掉空白后的前 200 字另留在 `pollExplanation`。关键词或默认正则命中时删除。第 201 字起不进事件。投票人数、正确选项和说明媒体不进这个字段。说明自己就是正文时不设这个字段。见 ADR 0543。
+
+已有别的正文时，`poll.question` 去掉空白后的前 300 字另留在 `pollQuestion`。`giveaway` 或 `giveaway_winners` 的 `prize_description` 前 255 字另留在 `prizeText`。`checklist.title` 的前 255 字另留在 `checklistTitle`。关键词或默认正则命中时删除。更后面的字不进事件。频道标题、中奖者和完成者不进这些字段。这段自己就是正文时不设这个字段。见 ADR 0544。

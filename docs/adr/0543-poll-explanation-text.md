@@ -42,3 +42,4 @@ Bot API 写明 `poll.explanation` 是 0 到 200 字。
 - 关掉这条规则后，这种说明回到只看关键词和短链。
 - 整份替换规则的群要自己加上这条，才会删除说明上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来由 ADR 0544 加上 `pollQuestion`、`prizeText` 和 `checklistTitle`。题干、奖品说明和清单标题的规则只认自己的字段。

@@ -445,6 +445,66 @@ describe("keyword detector", () => {
     });
     expect(explained?.reasons).toEqual(["keyword_match"]);
     expect(JSON.stringify(explained)).not.toContain(label);
+    const asked = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          pollQuestion: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(asked?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(asked)).not.toContain(label);
+    const prized = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          prizeText: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(prized?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(prized)).not.toContain(label);
+    const titled = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          checklistTitle: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(titled?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(titled)).not.toContain(label);
   });
 
   it("matches a performer without copying it", async () => {

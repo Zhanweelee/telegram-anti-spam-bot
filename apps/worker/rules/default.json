@@ -721,6 +721,30 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "poll_question_regex",
+      "enabled": true,
+      "when": { "pollQuestion": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "prize_text_regex",
+      "enabled": true,
+      "when": { "prizeText": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "checklist_title_regex",
+      "enabled": true,
+      "when": { "checklistTitle": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

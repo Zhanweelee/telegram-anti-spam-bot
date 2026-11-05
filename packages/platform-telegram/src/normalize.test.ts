@@ -46,6 +46,9 @@ function withoutButtonText(event: object): string {
       invoiceText: undefined,
       venueAddress: undefined,
       pollExplanation: undefined,
+      pollQuestion: undefined,
+      prizeText: undefined,
+      checklistTitle: undefined,
     },
   });
 }
@@ -11042,6 +11045,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(
       await sha256Hex("caption-only"),
     );
+    expect(outcome.event.message?.pollQuestion).toBe("免费领取");
   });
 
   it("uses a giveaway prize description when text is missing", async () => {
@@ -11331,6 +11335,9 @@ describe("normalizeUpdate", () => {
     expect(poll.event.message?.text).toBe("今天站会");
     expect(poll.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(poll.event.message?.pollOption).toBe(phrase);
+    expect(poll.event.message?.pollQuestion).toBe(
+      `${phrase} https://bit.ly/q52 https://t.me/+${code}.`,
+    );
     expect(poll.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(poll.event.message?.invites).toEqual(["t.me"]);
     const pollDump = withoutButtonText(poll.event);
@@ -11359,9 +11366,12 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(giveaway.event.message?.text).toBe("今天站会");
+    expect(giveaway.event.message?.prizeText).toBe(
+      `www.tinyurl.com/p52 https://t.me/%2B${code}`,
+    );
     expect(giveaway.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(giveaway.event.message?.invites).toEqual(["t.me"]);
-    const giveawayDump = JSON.stringify(giveaway.event);
+    const giveawayDump = withoutButtonText(giveaway.event);
     expect(giveawayDump).not.toContain(phrase);
     expect(giveawayDump).not.toContain(code);
     expect(giveawayDump).not.toContain("/p52");
@@ -11389,8 +11399,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(winners.event.message?.text).toBe("今天站会");
+    expect(winners.event.message?.prizeText).toBe("https://cutt.ly/win52");
     expect(winners.event.message?.hosts).toEqual(["cutt.ly"]);
-    const winnersDump = JSON.stringify(winners.event);
+    const winnersDump = withoutButtonText(winners.event);
     expect(winnersDump).not.toContain(phrase);
     expect(winnersDump).not.toContain("/win52");
     expect(winnersDump).not.toContain("5252");
@@ -11421,6 +11432,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(checklist.event.message?.text).toBe("今天站会");
+    expect(checklist.event.message?.checklistTitle).toBe(
+      `${phrase} https://is.gd/list52`,
+    );
     expect(checklist.event.message?.checklistTask).toBe(phrase);
     expect(checklist.event.message?.hosts).toEqual(["is.gd"]);
     const checklistDump = withoutButtonText(checklist.event);
@@ -11447,6 +11461,7 @@ describe("normalizeUpdate", () => {
     }
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.pollQuestion).toBeUndefined();
     expect(body.event.message?.pollOption).toBe(phrase);
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
     expect(withoutButtonText(body.event)).not.toContain(phrase);
@@ -16826,7 +16841,8 @@ describe("normalizeUpdate", () => {
     }
     expect(prize.event.message?.asGiveaway).toBe(true);
     expect(prize.event.message?.text).toBe("今天站会");
-    const prizeDump = JSON.stringify(prize.event);
+    expect(prize.event.message?.prizeText).toBe("请免费领取礼品");
+    const prizeDump = withoutButtonText(prize.event);
     expect(prizeDump).not.toContain(title);
     expect(prizeDump).not.toContain("请免费领取礼品");
 
@@ -31718,6 +31734,101 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(path);
     expect(dumped).not.toContain("POLL76ID");
     expect(dumped).not.toContain("UNIQ76");
+  });
+
+  it("keeps the first 300 characters of a question and 255 of a prize or checklist title", async () => {
+    const tail = "TAIL77";
+    const path = "q77";
+    const asked = await normalize({
+      update_id: 5720,
+      message: {
+        message_id: 5720,
+        date: 1761955200,
+        chat: { id: -1005720, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: `${"问".repeat(300)}${tail} https://bit.ly/${path}`,
+          options: [{ text: "甲", voter_count: 3 }],
+          total_voter_count: 3,
+        },
+      },
+    });
+    expect(asked.status).toBe("event");
+    if (asked.status !== "event") {
+      return;
+    }
+    expect(asked.event.message?.text).toBe("今天站会");
+    expect(asked.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(asked.event.message?.pollQuestion).toHaveLength(300);
+    expect(asked.event.message?.pollQuestion).not.toContain(tail);
+    expect(asked.event.message?.hosts).toEqual(["bit.ly"]);
+    const askedDump = JSON.stringify(asked.event);
+    expect(askedDump).not.toContain(tail);
+    expect(askedDump).not.toContain(path);
+    expect(askedDump).not.toContain("Ada");
+
+    const prized = await normalize({
+      update_id: 5721,
+      message: {
+        message_id: 5721,
+        date: 1761955200,
+        chat: { id: -1005721, type: "supergroup" },
+        from: { id: 93 },
+        text: "今天站会",
+        giveaway: {
+          chats: [{ id: -1001, type: "channel", title: "频道名字" }],
+          winners_selection_date: 1762000000,
+          winner_count: 2,
+          prize_description: `${"奖".repeat(255)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(prized.status).toBe("event");
+    if (prized.status !== "event") {
+      return;
+    }
+    expect(prized.event.message?.prizeText).toHaveLength(255);
+    expect(prized.event.message?.prizeText).not.toContain(tail);
+    expect(prized.event.message?.hosts).toEqual(["bit.ly"]);
+    const prizeDump = JSON.stringify(prized.event);
+    expect(prizeDump).not.toContain(tail);
+    expect(prizeDump).not.toContain(path);
+    expect(prizeDump).not.toContain("频道名字");
+    expect(prizeDump).not.toContain("-1001");
+
+    const titled = await normalize({
+      update_id: 5722,
+      message: {
+        message_id: 5722,
+        date: 1761955200,
+        chat: { id: -1005722, type: "supergroup" },
+        from: { id: 93 },
+        text: "今天站会",
+        checklist: {
+          title: `${"单".repeat(255)}${tail} https://bit.ly/${path}`,
+          tasks: [
+            {
+              id: 1,
+              text: "买菜",
+              completed_by_user: { id: 4242, first_name: "完成者" },
+            },
+          ],
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.checklistTitle).toHaveLength(255);
+    expect(titled.event.message?.checklistTitle).not.toContain(tail);
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titleDump = JSON.stringify(titled.event);
+    expect(titleDump).not.toContain(tail);
+    expect(titleDump).not.toContain(path);
+    expect(titleDump).not.toContain("完成者");
+    expect(titleDump).not.toContain("4242");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

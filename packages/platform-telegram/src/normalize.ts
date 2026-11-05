@@ -147,6 +147,9 @@ async function messageEvent(
   const sideInvoice = besideInvoiceText(message, text);
   const sideVenue = besideVenueAddress(message, text);
   const sideExplanation = besidePollExplanation(message, text);
+  const sideQuestion = besidePollQuestion(message, text);
+  const sidePrize = besidePrizeText(message, text);
+  const sideChecklist = besideChecklistTitle(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -223,6 +226,9 @@ async function messageEvent(
       ...(sideExplanation.length > 0
         ? { pollExplanation: sideExplanation }
         : {}),
+      ...(sideQuestion.length > 0 ? { pollQuestion: sideQuestion } : {}),
+      ...(sidePrize.length > 0 ? { prizeText: sidePrize } : {}),
+      ...(sideChecklist.length > 0 ? { checklistTitle: sideChecklist } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6738,6 +6744,62 @@ function pollExplanationCopy(message: Record<string, unknown>): string {
     return "";
   }
   return clipped(poll.explanation, 200);
+}
+
+/** 已有别的正文时，投票题干另留最多 300 字。题干自己就是正文时不重复。 */
+function besidePollQuestion(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const poll = message.poll;
+  if (!isRecord(poll) || typeof poll.question !== "string") {
+    return "";
+  }
+  if (poll.question.length === 0 || text === poll.question.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(poll.question, 300);
+}
+
+/** 已有别的正文时，奖品说明另留最多 255 字。这段自己就是正文时改看下一种。 */
+function besidePrizeText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  for (const field of ["giveaway", "giveaway_winners"]) {
+    const value = message[field];
+    if (!isRecord(value) || typeof value.prize_description !== "string") {
+      continue;
+    }
+    const source = value.prize_description;
+    if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+      continue;
+    }
+    const raw = clipped(source, 255);
+    if (raw.length === 0) {
+      continue;
+    }
+    return raw;
+  }
+  return "";
+}
+
+/** 已有别的正文时，清单标题另留最多 255 字。标题自己就是正文时不重复。 */
+function besideChecklistTitle(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const checklist = message.checklist;
+  if (!isRecord(checklist) || typeof checklist.title !== "string") {
+    return "";
+  }
+  if (
+    checklist.title.length === 0 ||
+    text === checklist.title.slice(0, MAX_TEXT)
+  ) {
+    return "";
+  }
+  return clipped(checklist.title, 255);
 }
 
 function clipped(value: unknown, max: number): string {

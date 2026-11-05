@@ -283,6 +283,15 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("pollExplanation" in when) {
     return "pollExplanation";
   }
+  if ("pollQuestion" in when) {
+    return "pollQuestion";
+  }
+  if ("prizeText" in when) {
+    return "prizeText";
+  }
+  if ("checklistTitle" in when) {
+    return "checklistTitle";
+  }
   return undefined;
 }
 
@@ -406,6 +415,9 @@ function eventTexts(event: Event): readonly string[] {
   const invoice = event.message?.invoiceText;
   const venue = event.message?.venueAddress;
   const explanation = event.message?.pollExplanation;
+  const question = event.message?.pollQuestion;
+  const prize = event.message?.prizeText;
+  const checklist = event.message?.checklistTitle;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -551,6 +563,66 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(explanation);
   }
   if (
+    question &&
+    question.length > 0 &&
+    question !== message &&
+    question !== tag &&
+    question !== buttons &&
+    question !== signature &&
+    question !== mirror &&
+    question !== poll &&
+    question !== tasks &&
+    question !== media &&
+    question !== performer &&
+    question !== game &&
+    question !== invoice &&
+    question !== venue &&
+    question !== explanation
+  ) {
+    texts.push(question);
+  }
+  if (
+    prize &&
+    prize.length > 0 &&
+    prize !== message &&
+    prize !== tag &&
+    prize !== buttons &&
+    prize !== signature &&
+    prize !== mirror &&
+    prize !== poll &&
+    prize !== tasks &&
+    prize !== media &&
+    prize !== performer &&
+    prize !== game &&
+    prize !== invoice &&
+    prize !== venue &&
+    prize !== explanation &&
+    prize !== question
+  ) {
+    texts.push(prize);
+  }
+  if (
+    checklist &&
+    checklist.length > 0 &&
+    checklist !== message &&
+    checklist !== tag &&
+    checklist !== buttons &&
+    checklist !== signature &&
+    checklist !== mirror &&
+    checklist !== poll &&
+    checklist !== tasks &&
+    checklist !== media &&
+    checklist !== performer &&
+    checklist !== game &&
+    checklist !== invoice &&
+    checklist !== venue &&
+    checklist !== explanation &&
+    checklist !== question &&
+    checklist !== prize
+  ) {
+    texts.push(checklist);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -565,7 +637,10 @@ function eventTexts(event: Event): readonly string[] {
     profile !== game &&
     profile !== invoice &&
     profile !== venue &&
-    profile !== explanation
+    profile !== explanation &&
+    profile !== question &&
+    profile !== prize &&
+    profile !== checklist
   ) {
     texts.push(profile);
   }
