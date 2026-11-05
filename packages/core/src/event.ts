@@ -106,6 +106,8 @@ export const messageSchema = z
     declineComment: z.string().min(1).max(128).optional(),
     /** Added poll option or checklist tasks beside another body. An option is capped at 100. Joined tasks are capped at 3029. Absent when that text is the body. */
     addedText: z.string().min(1).max(3029).optional(),
+    /** Hidden forward display name beside another body. Capped at 4096. Absent when it is the body. */
+    hiddenName: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

@@ -465,6 +465,16 @@ describe("rules", () => {
         serviceEvent({ addedText: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ hiddenName: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ hiddenName: true }, serviceEvent({ addedText: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ hiddenName: true }, serviceEvent({ hiddenName: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ addedText: true }, serviceEvent({ hiddenName: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

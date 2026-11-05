@@ -71,6 +71,7 @@ export const textPlaces = [
   "topicName",
   "declineComment",
   "addedText",
+  "hiddenName",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;
