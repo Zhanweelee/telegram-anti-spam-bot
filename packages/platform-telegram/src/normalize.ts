@@ -4539,6 +4539,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushCallSenderUrls(message, urls);
   pushForumSenderUrls(message, urls);
   pushGiveawaySenderUrls(message, urls);
+  pushPhotoSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4808,6 +4809,21 @@ function pushGiveawaySenderUrls(
   urls: string[],
 ): void {
   if (scheduledGiveaway(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 换头像或删头像的人只留主机名。
+ * 新头像至少有一个尺寸对象时读。删头像正好是 true 时读。
+ * 空数组和 false 不读。文件号和尺寸不读。普通图片的发送者不读。
+ */
+function pushPhotoSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (photoNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
