@@ -209,6 +209,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 清单任务和后加任务上的按标识提及也让 `asTextMention` 为 true。投票选项和手动引用仍不带。见 ADR 0567。
 
+投票说明和描述上的按标识提及也让 `asTextMention` 为 true。见 ADR 0568。
+
 `custom_emoji` 在 `packages/detectors-emoji`。只在 `message.asCustomEmoji` 为 true 时返回 score 1。证据是 `entity:custom_emoji`。编号不进证据。看得见的字和替代文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。按标识提及仍由 `text_mention` 决定。见 ADR 0515。
 
 `copy_text` 在 `packages/detectors-copy`。只在 `message.asCopyText` 为 true 时返回 score 1。证据是 `button:copy_text`。复制句子不进证据。看得见的按钮文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。自定义表情仍由 `custom_emoji` 决定。见 ADR 0516。

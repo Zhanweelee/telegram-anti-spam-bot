@@ -189,6 +189,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 清单任务和后加任务上的按标识提及也走这一条。投票选项和手动引用仍不带。用户编号不进事件。见 ADR 0567。
 
+投票说明和描述上的按标识提及也走这一条。用户编号不进事件。见 ADR 0568。
+
 自定义表情可以按群删除。规则 `custom_emoji` 默认关闭。见 ADR 0515。
 
 复制到剪贴板的按钮可以按群删除。规则 `copy_text` 默认关闭。见 ADR 0516。
