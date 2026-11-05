@@ -4576,6 +4576,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPostSenderUrls(message, urls);
   pushChecklistSenderUrls(message, urls);
   pushAddedSenderUrls(message, urls);
+  pushPollSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -5026,6 +5027,23 @@ function pushAddedSenderUrls(
   urls: string[],
 ): void {
   if (!addedChecklist(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 加选项或删选项的人只留主机名。
+ * 选项文字长度大于 0 时读。空白也算。
+ * 同时出现时先认新加。空字符串落到另一种。
+ * 空对象和布尔值不读。选项文字仍按原来的正文。
+ * 嵌套原投票不读。用户名不读。
+ */
+function pushPollSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (changedPoll(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
