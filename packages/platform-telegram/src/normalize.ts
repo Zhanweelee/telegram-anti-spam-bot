@@ -4535,6 +4535,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushAutoDeleteSenderUrls(message, urls);
   pushPriceSenderUrls(message, urls);
   pushPinSenderUrls(message, urls);
+  pushCreatedGroupSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4744,6 +4745,21 @@ function pushPinSenderUrls(
   urls: string[],
 ): void {
   if (!pinnedNotice(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 建群提示上的发送者只留主机名。
+ * 只有普通群的 group_chat_created 正好是 true 时读。
+ * 超级群和频道创建不读。用户名不读。普通消息的发送者不读。
+ */
+function pushCreatedGroupSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!createdGroup(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
