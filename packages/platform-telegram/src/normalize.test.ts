@@ -45,6 +45,7 @@ function withoutButtonText(event: object): string {
       gameText: undefined,
       invoiceText: undefined,
       venueAddress: undefined,
+      pollExplanation: undefined,
     },
   });
 }
@@ -10973,6 +10974,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.text).toBe(question);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(question));
     expect(outcome.event.message?.pollOption).toBe(phrase);
+    expect(outcome.event.message?.pollExplanation).toBe(phrase);
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = withoutButtonText(outcome.event);
@@ -11013,9 +11015,11 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.pollOption).toHaveLength(1211);
     expect(outcome.event.message?.pollOption).not.toContain(tail);
+    expect(outcome.event.message?.pollExplanation).toBe(tail);
     expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(outcome.event)).not.toContain(tail);
-    expect(JSON.stringify(outcome.event)).not.toContain(path);
+    const optionDump = withoutButtonText(outcome.event);
+    expect(optionDump).not.toContain(tail);
+    expect(optionDump).not.toContain(path);
   });
 
   it("keeps a caption when a poll is also present", async () => {
@@ -11520,6 +11524,9 @@ describe("normalizeUpdate", () => {
       "example.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.pollExplanation).toBe(
+      `${phrase} https://t.me/+${code}.`,
+    );
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(code);
@@ -15304,8 +15311,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(explained.event.message?.text).toBe("今天站会");
+    expect(explained.event.message?.pollExplanation).toBe("print(1)");
     expect(explained.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(explained.event)).not.toContain("note97");
+    expect(withoutButtonText(explained.event)).not.toContain("note97");
+    expect(withoutButtonText(explained.event)).not.toContain("print(1)");
 
     const plain = await normalize({
       update_id: 6613,
@@ -19148,8 +19157,10 @@ describe("normalizeUpdate", () => {
       "tinyurl.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.pollExplanation).toBe("说明");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("PATH73");
+    expect(dumped).not.toContain("说明");
     expect(dumped).not.toContain(code);
     expect(dumped).not.toContain("opt73");
     expect(dumped).not.toContain("hidden73");
@@ -31661,6 +31672,52 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain(placeId);
     expect(dumped).not.toContain("31.2304");
     expect(dumped).not.toContain("tinyurl.com");
+  });
+
+  it("keeps the first 200 characters of a poll explanation", async () => {
+    const tail = "TAIL75";
+    const path = "ex75";
+    const posted = await normalize({
+      update_id: 5709,
+      message: {
+        message_id: 5709,
+        date: 1761955200,
+        chat: { id: -1005709, type: "supergroup" },
+        from: { id: 93 },
+        poll: {
+          question: "今天站会",
+          options: [{ text: "甲", voter_count: 7 }],
+          explanation: `${"灯".repeat(200)}${tail} https://bit.ly/${path}`,
+          explanation_media: {
+            photo: [
+              {
+                file_id: "POLL76ID",
+                file_unique_id: "UNIQ76",
+                width: 1,
+                height: 1,
+              },
+            ],
+          },
+          total_voter_count: 8,
+          type: "quiz",
+          correct_option_id: 0,
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.text).toBe("今天站会");
+    expect(posted.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(posted.event.message?.pollExplanation).toHaveLength(200);
+    expect(posted.event.message?.pollExplanation).not.toContain(tail);
+    expect(posted.event.message?.hosts).toEqual(["bit.ly"]);
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(tail);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain("POLL76ID");
+    expect(dumped).not.toContain("UNIQ76");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

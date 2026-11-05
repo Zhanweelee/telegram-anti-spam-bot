@@ -78,6 +78,8 @@ export const messageSchema = z
     invoiceText: z.string().min(1).max(255).optional(),
     /** Venue address beside the title. Capped at 4096. Absent when it is the body. */
     venueAddress: z.string().min(1).max(4096).optional(),
+    /** Quiz explanation beside the question. Capped at 200. Absent when it is the body. */
+    pollExplanation: z.string().min(1).max(200).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

@@ -146,6 +146,7 @@ async function messageEvent(
   const sideGame = besideGameText(message, text);
   const sideInvoice = besideInvoiceText(message, text);
   const sideVenue = besideVenueAddress(message, text);
+  const sideExplanation = besidePollExplanation(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -219,6 +220,9 @@ async function messageEvent(
       ...(sideGame.length > 0 ? { gameText: sideGame } : {}),
       ...(sideInvoice.length > 0 ? { invoiceText: sideInvoice } : {}),
       ...(sideVenue.length > 0 ? { venueAddress: sideVenue } : {}),
+      ...(sideExplanation.length > 0
+        ? { pollExplanation: sideExplanation }
+        : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6714,6 +6718,26 @@ function venueAddressCopy(message: Record<string, unknown>): string {
     return "";
   }
   return clipped(venue.address, 4096);
+}
+
+/** 已有别的正文时，测验说明另留最多 200 字。说明自己就是正文时不重复。 */
+function besidePollExplanation(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = pollExplanationCopy(message);
+  if (raw.length === 0 || text === raw) {
+    return "";
+  }
+  return raw;
+}
+
+function pollExplanationCopy(message: Record<string, unknown>): string {
+  const poll = message.poll;
+  if (!isRecord(poll)) {
+    return "";
+  }
+  return clipped(poll.explanation, 200);
 }
 
 function clipped(value: unknown, max: number): string {
