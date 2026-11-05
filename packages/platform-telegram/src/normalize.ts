@@ -170,6 +170,7 @@ async function messageEvent(
   const sidePaidFile = besidePaidFile(message, text);
   const sideRichName = besideRichName(message, text);
   const sidePollMedia = besidePollMedia(message, text);
+  const sidePollDescription = besidePollDescription(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -273,6 +274,9 @@ async function messageEvent(
       ...(sidePaidFile.length > 0 ? { paidFile: sidePaidFile } : {}),
       ...(sideRichName.length > 0 ? { richName: sideRichName } : {}),
       ...(sidePollMedia.length > 0 ? { pollMedia: sidePollMedia } : {}),
+      ...(sidePollDescription.length > 0
+        ? { pollDescription: sidePollDescription }
+        : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -7065,6 +7069,22 @@ function pushPollName(
     return;
   }
   parts.push(trimmed);
+}
+
+/** 已有别的正文时，投票描述另留最多 1024 字。这段自己就是正文时不重复。投票人数和添加者名字不进这个字段。 */
+function besidePollDescription(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const poll = message.poll;
+  if (!isRecord(poll) || typeof poll.description !== "string") {
+    return "";
+  }
+  const source = poll.description;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, 1024);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

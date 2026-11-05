@@ -81,6 +81,7 @@ export const textPlaces = [
   "paidFile",
   "richName",
   "pollMedia",
+  "pollDescription",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

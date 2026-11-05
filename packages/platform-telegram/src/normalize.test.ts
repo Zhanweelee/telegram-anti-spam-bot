@@ -69,6 +69,7 @@ function withoutButtonText(event: object): string {
       paidFile: undefined,
       richName: undefined,
       pollMedia: undefined,
+      pollDescription: undefined,
     },
   });
 }
@@ -11563,6 +11564,9 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     expect(outcome.event.message?.pollExplanation).toBe(
       `${phrase} https://t.me/+${code}.`,
+    );
+    expect(outcome.event.message?.pollDescription).toBe(
+      `${phrase} https://example.com/desc44`,
     );
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
@@ -33335,6 +33339,67 @@ describe("normalizeUpdate", () => {
     expect(asTextDump).not.toContain(tail);
     expect(asTextDump).not.toContain(path);
     expect(asTextDump).not.toContain("VID5886");
+  });
+
+  it("keeps the first 1024 characters of a poll description", async () => {
+    const tail = "TAIL33";
+    const path = "desc33";
+    const labeled = await normalize({
+      update_id: 5893,
+      message: {
+        message_id: 5893,
+        date: 1761955200,
+        chat: { id: -1005893, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [{ text: "甲", voter_count: 0 }],
+          description: `${"名".repeat(1024)}${tail} https://bit.ly/${path}`,
+          total_voter_count: 930893,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.pollDescription).toHaveLength(1024);
+    expect(labeled.event.message?.pollDescription).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain("930893");
+
+    const asText = await normalize({
+      update_id: 5894,
+      message: {
+        message_id: 5894,
+        date: 1761955200,
+        chat: { id: -1005894, type: "supergroup" },
+        from: { id: 93 },
+        text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        poll: {
+          question: "选一个",
+          options: [{ text: "甲", voter_count: 0 }],
+          description: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(asText.status).toBe("event");
+    if (asText.status !== "event") {
+      return;
+    }
+    expect(asText.event.message?.text).toHaveLength(4096);
+    expect(asText.event.message?.pollDescription).toBeUndefined();
+    expect(asText.event.message?.hosts).toEqual(["bit.ly"]);
+    const asTextDump = JSON.stringify(asText.event);
+    expect(asTextDump).not.toContain(tail);
+    expect(asTextDump).not.toContain(path);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

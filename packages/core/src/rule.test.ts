@@ -568,6 +568,25 @@ describe("rules", () => {
     expect(
       matchesWhen({ richName: true }, serviceEvent({ pollMedia: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ pollDescription: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { pollDescription: true },
+        serviceEvent({ pollMedia: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { pollDescription: true },
+        serviceEvent({ pollDescription: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { pollMedia: true },
+        serviceEvent({ pollDescription: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
