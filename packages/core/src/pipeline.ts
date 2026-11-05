@@ -355,6 +355,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("pollDescription" in when) {
     return "pollDescription";
   }
+  if ("richText" in when) {
+    return "richText";
+  }
   return undefined;
 }
 
@@ -501,6 +504,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.richName,
     event.message?.pollMedia,
     event.message?.pollDescription,
+    event.message?.richText,
     event.profile?.text,
   ];
   const texts: string[] = [];

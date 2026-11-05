@@ -41,6 +41,7 @@ export type RuleWhen =
   | { readonly richName: true }
   | { readonly pollMedia: true }
   | { readonly pollDescription: true }
+  | { readonly richText: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -85,6 +86,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ richName: z.literal(true) }),
     z.strictObject({ pollMedia: z.literal(true) }),
     z.strictObject({ pollDescription: z.literal(true) }),
+    z.strictObject({ richText: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -250,6 +252,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("pollDescription" in when) {
     return pollDescription(event);
   }
+  if ("richText" in when) {
+    return richText(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -333,6 +338,10 @@ function pollMedia(event: Event): boolean {
 
 function pollDescription(event: Event): boolean {
   return event.message?.pollDescription !== undefined;
+}
+
+function richText(event: Event): boolean {
+  return event.message?.richText !== undefined;
 }
 
 function invoiceTitle(event: Event): boolean {

@@ -62,6 +62,7 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         ctx.event.message?.richName,
         ctx.event.message?.pollMedia,
         ctx.event.message?.pollDescription,
+        ctx.event.message?.richText,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,

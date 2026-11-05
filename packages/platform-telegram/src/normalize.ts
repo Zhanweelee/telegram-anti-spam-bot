@@ -171,6 +171,7 @@ async function messageEvent(
   const sideRichName = besideRichName(message, text);
   const sidePollMedia = besidePollMedia(message, text);
   const sidePollDescription = besidePollDescription(message, text);
+  const sideRichText = besideRichText(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -277,6 +278,7 @@ async function messageEvent(
       ...(sidePollDescription.length > 0
         ? { pollDescription: sidePollDescription }
         : {}),
+      ...(sideRichText.length > 0 ? { richText: sideRichText } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6243,18 +6245,19 @@ function richUrls(message: Record<string, unknown>): string[] {
 function readRich(message: Record<string, unknown>): {
   text: string;
   urls: string[];
+  source: string;
 } {
   const rich = message.rich_message;
   if (!isRecord(rich)) {
-    return { text: "", urls: [] };
+    return { text: "", urls: [], source: "" };
   }
   const parts: string[] = [];
   const labels: string[] = [];
   const urls: string[] = [];
   walkBlocks(rich.blocks, parts, labels, urls);
   const body = parts.join(" ");
-  const text = body.length > 0 ? body : labels.join(" ");
-  return { text: text.slice(0, MAX_TEXT), urls };
+  const source = body.length > 0 ? body : labels.join(" ");
+  return { text: source.slice(0, MAX_TEXT), urls, source };
 }
 
 function walkBlocks(
@@ -7085,6 +7088,18 @@ function besidePollDescription(
     return "";
   }
   return clipped(source, 1024);
+}
+
+/** 已有别的正文时，富文本里看得见的字另留最多 4096 字。这段自己就是正文时不重复。公式、语言标签和隐藏标识不进这个字段。 */
+function besideRichText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = readRich(message).source;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, 4096);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

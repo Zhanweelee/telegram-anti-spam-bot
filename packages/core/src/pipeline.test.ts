@@ -1819,6 +1819,11 @@ describe("runPipeline", () => {
         ruleId: "poll_description_regex",
         label: "描述请免费领取礼品",
       },
+      {
+        field: "richText",
+        ruleId: "rich_text_regex",
+        label: "段落请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1903,6 +1908,7 @@ describe("runPipeline", () => {
       { field: "richName", ruleId: "rich_name_regex" },
       { field: "pollMedia", ruleId: "poll_media_regex" },
       { field: "pollDescription", ruleId: "poll_description_regex" },
+      { field: "richText", ruleId: "rich_text_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();
