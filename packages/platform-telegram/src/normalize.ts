@@ -4571,6 +4571,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushInviteSenderUrls(message, urls);
   pushProximitySenderUrls(message, urls);
   pushJoinSenderUrls(message, urls);
+  pushGiftSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4940,6 +4941,22 @@ function pushJoinSenderUrls(
   urls: string[],
 ): void {
   if (serviceNotice(message) !== "join") {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 送礼的人只留主机名。
+ * 普通礼物、独特礼物或升级购买里嵌套的礼物是对象时读。空的嵌套对象也读。
+ * 空的外层对象、布尔值和只有附言的对象不读。
+ * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
+ */
+function pushGiftSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (giftNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

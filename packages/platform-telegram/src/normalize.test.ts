@@ -30305,6 +30305,7 @@ describe("normalizeUpdate", () => {
       "example.com",
       "bit.ly",
       "t.me",
+      "tinyurl.com",
     ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = withoutButtonText(labeled.event);
@@ -30325,7 +30326,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("is.gd");
     expect(labeledDump).not.toContain("rb.gy");
     expect(labeledDump).not.toContain("cutt.ly");
-    expect(labeledDump).not.toContain("tinyurl.com");
 
     const ordinary = await normalize({
       update_id: 79023,
@@ -30392,12 +30392,15 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.giftLabel).toBeUndefined();
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
-    expect(alone.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    expect(alone.event.message?.hosts).toEqual([
+      "bit.ly",
+      "example.com",
+      "tinyurl.com",
+    ]);
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from291b");
     expect(aloneDump).not.toContain("PlushPepe-291");
-    expect(aloneDump).not.toContain("tinyurl.com");
 
     const published = await normalize({
       update_id: 79025,
@@ -30429,14 +30432,13 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(published.event.message?.text).toBe("今天站会");
-    expect(published.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(published.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const publishedDump = JSON.stringify(published.event);
     expect(publishedDump).not.toContain("title291");
     expect(publishedDump).not.toContain("pub291b");
     expect(publishedDump).not.toContain("from291c");
     expect(publishedDump).not.toContain("291002");
     expect(publishedDump).not.toContain("cutt.ly");
-    expect(publishedDump).not.toContain("tinyurl.com");
 
     const upgraded = await normalize({
       update_id: 79026,
