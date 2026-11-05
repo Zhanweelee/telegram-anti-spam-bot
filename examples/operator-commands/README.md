@@ -20,6 +20,8 @@
 
 `/chats -100` 列出这个群记下的人。没有人时下一行是 `none`。不写群号时仍列出群。
 
+`/guard -100` 写出这个群现在的付费发言星星数，以及频道是否接受付费媒体。缺字段写未知。0 写成 0。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

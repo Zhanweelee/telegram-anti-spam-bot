@@ -1332,6 +1332,8 @@ function readChatGuardValue(body: unknown, chatId: string): ChatGuard {
     slowModeSeconds: readGuardCount(record.slow_mode_delay),
     autoDeleteSeconds: readGuardCount(record.message_auto_delete_time),
     boostExemption: readGuardCount(record.unrestrict_boost_count),
+    paidStars: readGuardCount(record.paid_message_star_count),
+    paidMedia: readGuardFlag(record.can_send_paid_media),
     protectedContent: readGuardFlag(record.has_protected_content),
     hiddenMembers: readGuardFlag(record.has_hidden_members),
     visibleHistory: readGuardFlag(record.has_visible_history),

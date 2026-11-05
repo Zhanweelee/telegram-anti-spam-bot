@@ -10834,6 +10834,8 @@ describe("runOperatorCommand", () => {
       slowModeSeconds: 30,
       autoDeleteSeconds: 86400,
       boostExemption: 2,
+      paidStars: 5,
+      paidMedia: "on" as const,
       protectedContent: "on" as const,
       hiddenMembers: "off" as const,
       visibleHistory: "on" as const,
@@ -10850,6 +10852,8 @@ describe("runOperatorCommand", () => {
       slowModeSeconds: null,
       autoDeleteSeconds: null,
       boostExemption: null,
+      paidStars: null,
+      paidMedia: "unknown" as const,
       protectedContent: "unknown" as const,
       hiddenMembers: "unknown" as const,
       visibleHistory: "unknown" as const,
@@ -10889,6 +10893,8 @@ describe("runOperatorCommand", () => {
         "慢速 30",
         "自毁 86400",
         "加速豁免 2",
+        "付费发言 5",
+        "付费媒体 on",
         "防转发 on",
         "隐藏成员 off",
         "可见历史 on",
@@ -10921,6 +10927,8 @@ describe("runOperatorCommand", () => {
         "慢速 未知",
         "自毁 未知",
         "加速豁免 未知",
+        "付费发言 未知",
+        "付费媒体 未知",
         "防转发 未知",
         "隐藏成员 未知",
         "可见历史 未知",
@@ -10954,6 +10962,8 @@ describe("runOperatorCommand", () => {
             slowModeSeconds: 30,
             autoDeleteSeconds: 86400,
             boostExemption: 2,
+            paidStars: 5,
+            paidMedia: "on" as const,
             protectedContent: "on" as const,
             hiddenMembers: "off" as const,
             visibleHistory: "on" as const,
@@ -10976,6 +10986,8 @@ describe("runOperatorCommand", () => {
         "slow mode 30",
         "auto-delete 86400",
         "boost exemption 2",
+        "paid messages 5",
+        "paid media on",
         "protected on",
         "hidden members off",
         "history on",
@@ -10999,6 +11011,8 @@ describe("runOperatorCommand", () => {
             slowModeSeconds: null,
             autoDeleteSeconds: null,
             boostExemption: null,
+            paidStars: 0,
+            paidMedia: "off" as const,
             protectedContent: "unknown" as const,
             hiddenMembers: "unknown" as const,
             visibleHistory: "unknown" as const,
@@ -11021,6 +11035,8 @@ describe("runOperatorCommand", () => {
         "slow mode unknown",
         "auto-delete unknown",
         "boost exemption unknown",
+        "paid messages 0",
+        "paid media off",
         "protected unknown",
         "hidden members unknown",
         "history unknown",
@@ -11109,6 +11125,29 @@ describe("runOperatorCommand", () => {
       ...kit(),
     });
     expect(negative).toMatchObject({ text: "参数无效" });
+    const priced = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, paidStars: -1 };
+        },
+      },
+      ...kit(),
+    });
+    expect(priced).toMatchObject({ text: "参数无效" });
+    const media = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, paidMedia: phrase as "on" };
+        },
+      },
+      ...kit(),
+    });
+    expect(media).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(media)).not.toContain(phrase);
     const fractional = await runOperatorCommand({
       event: event({ text: "/guard -100", direct: true }),
       adminActorIds: ["42"],
@@ -11161,6 +11200,8 @@ describe("runOperatorCommand", () => {
         "慢速 30",
         "自毁 86400",
         "加速豁免 2",
+        "付费发言 5",
+        "付费媒体 on",
         "防转发 on",
         "隐藏成员 off",
         "可见历史 on",

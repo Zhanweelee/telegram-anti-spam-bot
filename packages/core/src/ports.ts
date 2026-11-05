@@ -107,6 +107,8 @@ export interface ChatGuard {
   readonly slowModeSeconds: number | null;
   readonly autoDeleteSeconds: number | null;
   readonly boostExemption: number | null;
+  readonly paidStars: number | null;
+  readonly paidMedia: PermissionState;
   readonly protectedContent: PermissionState;
   readonly hiddenMembers: PermissionState;
   readonly visibleHistory: PermissionState;
