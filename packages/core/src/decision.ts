@@ -78,6 +78,7 @@ export const textPlaces = [
   "accessName",
   "gameFile",
   "audioFile",
+  "paidFile",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

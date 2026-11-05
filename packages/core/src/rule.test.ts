@@ -538,6 +538,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ gameFile: true }, serviceEvent({ audioFile: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ paidFile: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ paidFile: true }, serviceEvent({ audioFile: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ paidFile: true }, serviceEvent({ paidFile: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ audioFile: true }, serviceEvent({ paidFile: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

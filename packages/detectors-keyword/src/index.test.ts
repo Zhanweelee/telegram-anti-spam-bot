@@ -845,6 +845,26 @@ describe("keyword detector", () => {
     });
     expect(audioFile?.reasons).toEqual(["keyword_match"]);
     expect(JSON.stringify(audioFile)).not.toContain(label);
+    const paidFile = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          paidFile: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(paidFile?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(paidFile)).not.toContain(label);
   });
 
   it("matches a performer without copying it", async () => {
