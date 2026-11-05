@@ -7628,10 +7628,9 @@ describe("screenTelegramEvent", () => {
     });
     expect(created.message?.forumNotice).toBeUndefined();
     expect(created.message?.topicNotice).toBe("created");
-    expect(created.message?.hosts).toEqual(["bit.ly"]);
+    expect(created.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const createdDump = JSON.stringify(created);
     expect(createdDump).not.toContain("host6106");
-    expect(createdDump).not.toContain("tinyurl");
   });
 
   it("deletes a short link in a giveaway notice sender name", async () => {
@@ -12282,6 +12281,354 @@ describe("screenTelegramEvent", () => {
     expect(ordinary.message?.pollNotice).toBeUndefined();
     expect(ordinary.message?.hosts).toBeUndefined();
     expect(JSON.stringify(ordinary)).not.toContain("msg6297");
+  });
+
+  it("deletes a short link in a topic sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const topic = "新话题";
+    const emoji = "EMOJI6298";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 129, first_name: "Ada" },
+            forum_topic_created: {
+              name: topic,
+              icon_color: 629800,
+              icon_custom_emoji_id: emoji,
+              is_name_implicit: false,
+            },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(6298, {
+      from: {
+        id: 129,
+        first_name: "https://bit.ly/topic6298",
+        last_name: "https://tinyurl.com/skip6298",
+        username: "secretuser6298",
+      },
+    });
+    expect(named.message?.text).toBe(topic);
+    expect(named.message?.topicNotice).toBe("created");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("topic_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006298", messageId: "6298" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("topic6298");
+    expect(namedDump).not.toContain("skip6298");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("secretuser6298");
+    expect(namedDump).not.toContain(emoji);
+    expect(namedDump).not.toContain("629800");
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const surname = await posted(6299, {
+      from: {
+        id: 129,
+        first_name: "",
+        last_name: "https://bit.ly/last6299",
+        username: "secretuser6299",
+      },
+      forum_topic_created: undefined,
+      forum_topic_edited: {
+        name: "改过",
+        icon_custom_emoji_id: "EMOJI6299",
+      },
+    });
+    expect(surname.message?.text).toBe("改过");
+    expect(surname.message?.topicNotice).toBe("edited");
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameModerator = createMemoryModerator();
+    const surnameHit = await screenTelegramEvent(surname, {
+      moderator: surnameModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(surnameModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006299", messageId: "6299" },
+    ]);
+    const surnameDump = JSON.stringify(surname);
+    expect(surnameDump).not.toContain("last6299");
+    expect(surnameDump).not.toContain("secretuser6299");
+    expect(surnameDump).not.toContain("EMOJI6299");
+
+    const plain = await posted(6300, {
+      from: { id: 129, first_name: "https://example.com/ok6300" },
+      forum_topic_created: { name: "干净", icon_color: 630001 },
+    });
+    expect(plain.message?.text).toBe("干净");
+    expect(plain.message?.topicNotice).toBe("created");
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6300");
+    expect(JSON.stringify(plain)).not.toContain("630001");
+
+    const keyword = await posted(6301, {
+      from: {
+        id: 129,
+        first_name: phrase,
+        username: "https://bit.ly/user6301",
+      },
+      forum_topic_created: { name: "干净" },
+    });
+    expect(keyword.message?.text).toBe("干净");
+    expect(keyword.message?.topicNotice).toBe("created");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6301");
+
+    const paid = await posted(
+      6302,
+      {
+        from: { id: 129, first_name: "https://bit.ly/paid6302" },
+      },
+      true,
+    );
+    expect(paid.message?.text).toBe(topic);
+    expect(paid.message?.topicNotice).toBe("created");
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6302");
+    expect(JSON.stringify(paidHit.decision)).not.toContain(emoji);
+
+    const blankName = await posted(6303, {
+      from: {
+        id: 129,
+        first_name: "   ",
+        last_name: "https://bit.ly/space6303",
+      },
+    });
+    expect(blankName.message?.topicNotice).toBe("created");
+    expect(blankName.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blankName, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blankName)).not.toContain("space6303");
+
+    const empty = await posted(6304, {
+      from: { id: 129, first_name: "https://bit.ly/empty6304" },
+      forum_topic_created: {},
+    });
+    expect(empty.message?.topicNotice).toBeUndefined();
+    expect(empty.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty)).not.toContain("empty6304");
+
+    const blankTopic = await posted(6305, {
+      from: { id: 129, first_name: "https://bit.ly/blank6305" },
+      forum_topic_created: { name: "" },
+    });
+    expect(blankTopic.message?.topicNotice).toBeUndefined();
+    expect(blankTopic.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blankTopic)).not.toContain("blank6305");
+
+    const later = await posted(6306, {
+      from: { id: 129, first_name: "https://bit.ly/later6306" },
+      forum_topic_created: { name: "" },
+      forum_topic_edited: { name: "改过" },
+    });
+    expect(later.message?.text).toBe("改过");
+    expect(later.message?.topicNotice).toBe("edited");
+    expect(later.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(later)).not.toContain("later6306");
+
+    const spaces = await posted(6307, {
+      from: { id: 129, first_name: "https://bit.ly/space6307" },
+      forum_topic_created: { name: "   ", is_name_implicit: true },
+    });
+    expect(spaces.message?.text).toBe("   ");
+    expect(spaces.message?.topicNotice).toBe("created");
+    expect(spaces.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaces)).not.toContain("space6307");
+
+    const both = await posted(6308, {
+      from: { id: 129, first_name: "https://bit.ly/who6308" },
+      forum_topic_created: { name: topic, icon_color: 630801 },
+      forum_topic_edited: { name: "https://tinyurl.com/gone6308" },
+    });
+    expect(both.message?.topicNotice).toBe("created");
+    expect(both.message?.text).toBe(topic);
+    expect(both.message?.topicName).toBe("https://tinyurl.com/gone6308");
+    expect(both.message?.hosts).toEqual(["tinyurl.com", "bit.ly"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(bothHit.decision.reasons).toContain("short_link");
+    expect(bothHit.decision.ruleIds).not.toContain("topic_notice");
+    expect(JSON.stringify(bothHit.decision.evidence)).toContain(
+      "short_link:tinyurl.com",
+    );
+    const bothDump = JSON.stringify({
+      event: both,
+      decision: bothHit.decision,
+    });
+    expect(JSON.stringify(bothHit.decision)).not.toContain("gone6308");
+    expect(bothDump).not.toContain("who6308");
+    expect(bothDump).not.toContain("630801");
+
+    const linked = await posted(6309, {
+      from: {
+        id: 129,
+        first_name: "https://bit.ly/who6309",
+        username: "secretuser6309",
+      },
+      forum_topic_created: {
+        name: "https://cutt.ly/name6309",
+        icon_custom_emoji_id: "https://ow.ly/icon6309",
+      },
+    });
+    expect(linked.message?.topicNotice).toBe("created");
+    expect(linked.message?.text).toBe("https://cutt.ly/name6309");
+    expect(linked.message?.hosts).toEqual(["cutt.ly", "bit.ly"]);
+    const linkedHit = await screenTelegramEvent(linked, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(linkedHit.decision.action).toBe("delete");
+    expect(linkedHit.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(linkedHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    const linkedDump = JSON.stringify({
+      event: linked,
+      decision: linkedHit.decision,
+    });
+    expect(JSON.stringify(linkedHit.decision)).not.toContain("name6309");
+    expect(linkedDump).not.toContain("who6309");
+    expect(linkedDump).not.toContain("secretuser6309");
+    expect(linkedDump).not.toContain("icon6309");
+    expect(linkedDump).not.toContain("ow.ly");
+
+    const iconOnly = await posted(6310, {
+      from: { id: 129, first_name: "https://bit.ly/icon6310" },
+      forum_topic_created: undefined,
+      forum_topic_edited: {
+        icon_custom_emoji_id: "https://ow.ly/emoji6310",
+      },
+    });
+    expect(iconOnly.message?.text).toBe("");
+    expect(iconOnly.message?.topicNotice).toBe("edited");
+    expect(iconOnly.message?.hosts).toEqual(["bit.ly"]);
+    const iconDump = JSON.stringify(iconOnly);
+    expect(iconDump).not.toContain("icon6310");
+    expect(iconDump).not.toContain("emoji6310");
+    expect(iconDump).not.toContain("ow.ly");
+
+    const flag = await posted(6311, {
+      from: { id: 129, first_name: "https://bit.ly/flag6311" },
+      forum_topic_created: true,
+    });
+    expect(flag.message?.topicNotice).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag6311");
+
+    const beside = await posted(6312, {
+      text: "今天站会",
+      chat: {
+        id: -(1_000_000 + 6312),
+        type: "supergroup",
+        title: "https://tinyurl.com/room6312",
+      },
+      from: { id: 129, first_name: "https://bit.ly/only6312" },
+      forum_topic_created: { name: "干净", icon_color: 631201 },
+    });
+    expect(beside.message?.text).toBe("今天站会");
+    expect(beside.message?.topicNotice).toBe("created");
+    expect(beside.message?.topicName).toBe("干净");
+    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    const besideDump = JSON.stringify(beside);
+    expect(besideDump).not.toContain("only6312");
+    expect(besideDump).not.toContain("room6312");
+    expect(besideDump).not.toContain("tinyurl");
+    expect(besideDump).not.toContain("631201");
+
+    const ordinary = await posted(6313, {
+      from: { id: 129, first_name: "https://bit.ly/msg6313" },
+      forum_topic_created: undefined,
+    });
+    expect(ordinary.message?.topicNotice).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6313");
+
+    const blankIcon = await posted(6314, {
+      from: { id: 129, first_name: "https://bit.ly/blank6314" },
+      forum_topic_created: undefined,
+      forum_topic_edited: { icon_custom_emoji_id: "" },
+    });
+    expect(blankIcon.message?.text).toBe("");
+    expect(blankIcon.message?.topicNotice).toBe("edited");
+    expect(blankIcon.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blankIcon)).not.toContain("blank6314");
   });
 
   it("keeps other scripts until a chat locks that one", async () => {
