@@ -119,6 +119,7 @@ export interface ChatGuard {
   readonly visibleHistory: PermissionState;
   readonly maxReactions: number;
   readonly linkedChatId: string | null;
+  readonly locationBound: PermissionState;
 }
 
 export interface JoinBot {

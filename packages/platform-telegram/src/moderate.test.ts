@@ -3251,6 +3251,10 @@ describe("telegram captcha transport", () => {
             has_visible_history: true,
             max_reaction_count: 11,
             linked_chat_id: -100777,
+            location: {
+              location: { latitude: 31.23, longitude: 121.47 },
+              address: phrase,
+            },
             sticker_set_name: phrase,
           },
         }),
@@ -3284,9 +3288,13 @@ describe("telegram captcha transport", () => {
       visibleHistory: "on",
       maxReactions: 11,
       linkedChatId: "-100777",
+      locationBound: "on",
     });
     expect(resolved).not.toHaveProperty("title");
+    expect(resolved).not.toHaveProperty("address");
     expect(JSON.stringify(resolved)).not.toContain(phrase);
+    expect(JSON.stringify(resolved)).not.toContain("31.23");
+    expect(JSON.stringify(resolved)).not.toContain("121.47");
     expect(JSON.stringify(resolved)).not.toContain("giftchat");
     expect(calls.map((call) => call.method)).toEqual([
       `https://api.telegram.org/bot${token}/getChat`,
@@ -3327,6 +3335,7 @@ describe("telegram captcha transport", () => {
       uniqueGifts: "unknown",
       premiumGifts: "unknown",
       channelGifts: "unknown",
+      locationBound: "off",
     });
     called = false;
     await expect(
@@ -3439,6 +3448,33 @@ describe("telegram captcha transport", () => {
                 type: "supergroup",
                 max_reaction_count: 1,
                 accepted_gift_types: { unlimited_gifts: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      })
+        .readChatGuard({ tenantId: "local", chatId: "-100" })
+        .catch((error: unknown) => {
+          expect(error).toEqual(new Error("guard_failed"));
+          expect(String(error)).not.toContain(phrase);
+          throw error;
+        }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                max_reaction_count: 1,
+                location: {
+                  location: { latitude: phrase, longitude: 1 },
+                  address: phrase,
+                },
               },
             }),
             { status: 200 },

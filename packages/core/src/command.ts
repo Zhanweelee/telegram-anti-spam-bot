@@ -4316,7 +4316,8 @@ function isChatGuard(
     isPermissionState(guard.hiddenMembers) &&
     isPermissionState(guard.visibleHistory) &&
     isReactionCount(guard.maxReactions) &&
-    isLinkedChat(guard.linkedChatId)
+    isLinkedChat(guard.linkedChatId) &&
+    isPermissionState(guard.locationBound)
   );
 }
 
@@ -4397,6 +4398,7 @@ function describeChatGuard(
     guard.linkedChatId === null
       ? say(input, "command.guard.linked_unknown")
       : say(input, "command.guard.linked", { id: guard.linkedChatId }),
+    guardFlag(input, "command.guard.location", guard.locationBound),
   ].join("\n");
 }
 

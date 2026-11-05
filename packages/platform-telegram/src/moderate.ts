@@ -1340,6 +1340,7 @@ function readChatGuardValue(body: unknown, chatId: string): ChatGuard {
     visibleHistory: readGuardFlag(record.has_visible_history),
     maxReactions: readGuardRequiredCount(record.max_reaction_count),
     linkedChatId: readLinkedChat(record.linked_chat_id),
+    locationBound: readLocationBound(record.location),
   };
 }
 
@@ -1370,6 +1371,33 @@ function readGiftFlags(value: unknown): {
     premiumGifts: readGuardFlag(record.premium_subscription),
     channelGifts: readGuardFlag(record.gifts_from_channels),
   };
+}
+
+function readLocationBound(value: unknown): PermissionState {
+  if (value === undefined) {
+    return "off";
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("guard_failed");
+  }
+  const record = value as Record<string, unknown>;
+  const point = record.location;
+  if (typeof point !== "object" || point === null || Array.isArray(point)) {
+    throw new Error("guard_failed");
+  }
+  const place = point as Record<string, unknown>;
+  if (
+    !finiteCoordinate(place.latitude) ||
+    !finiteCoordinate(place.longitude) ||
+    typeof record.address !== "string"
+  ) {
+    throw new Error("guard_failed");
+  }
+  return "on";
+}
+
+function finiteCoordinate(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function readGuardFlag(value: unknown): PermissionState {

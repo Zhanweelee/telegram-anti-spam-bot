@@ -4590,6 +4590,10 @@ describe("handleIncomingEvent", () => {
                 has_visible_history: true,
                 max_reaction_count: 11,
                 linked_chat_id: -100777,
+                location: {
+                  location: { latitude: 31.23, longitude: 121.47 },
+                  address: phrase,
+                },
                 sticker_set_name: phrase,
                 permissions: { can_send_messages: true },
               },
@@ -4623,6 +4627,7 @@ describe("handleIncomingEvent", () => {
         "可见历史 on",
         "反应 11",
         "关联 -100777",
+        "地点群 on",
       ].join("\n"),
     ]);
     expect(calls.map((call) => call.method)).toEqual(["getChat"]);
@@ -4633,6 +4638,8 @@ describe("handleIncomingEvent", () => {
     expect(JSON.stringify(kit.reply.sent)).not.toContain(phrase);
     expect(JSON.stringify(kit.reply.sent)).not.toContain(invite);
     expect(JSON.stringify(kit.reply.sent)).not.toContain("giftchat");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("31.23");
+    expect(JSON.stringify(kit.reply.sent)).not.toContain("121.47");
     expect(JSON.stringify(kit.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(kit.logger.entries)).not.toContain(invite);
     expect(JSON.stringify(kit.logger.entries)).not.toContain("giftchat");
@@ -4681,6 +4688,7 @@ describe("handleIncomingEvent", () => {
         "可见历史 未知",
         "反应 0",
         "关联 未知",
+        "地点群 off",
       ].join("\n"),
     ]);
     expect(JSON.stringify(cleared.reply.sent)).not.toContain(phrase);
@@ -4717,6 +4725,7 @@ describe("handleIncomingEvent", () => {
       "付费发言 0\n付费媒体 off\n无限礼物 未知\n限量礼物 未知\n独特礼物 未知\n会员订阅 未知\n频道礼物 未知\n",
     );
     expect(zeroText).toContain("\n反应 1\n");
+    expect(zeroText).toContain("地点群 off");
     expect(JSON.stringify(zero.reply.sent)).not.toContain(phrase);
     const broken = deps();
     await handleIncomingEvent(
@@ -4838,6 +4847,36 @@ describe("handleIncomingEvent", () => {
     ]);
     expect(JSON.stringify(gifted.reply.sent)).not.toContain(phrase);
     expect(JSON.stringify(gifted.logger.entries)).not.toContain(phrase);
+    const placed = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...placed,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                max_reaction_count: 1,
+                location: {
+                  location: { latitude: phrase, longitude: 1 },
+                  address: phrase,
+                },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(placed.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(placed.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(placed.logger.entries)).not.toContain(phrase);
   });
 
   it("reads the join-request bot and drops the display name", async () => {

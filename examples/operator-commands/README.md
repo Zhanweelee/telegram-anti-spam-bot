@@ -24,6 +24,8 @@
 
 `/guard -100` 写出这个群接受无限礼物、限量礼物、独特礼物、会员订阅和频道礼物。缺字段写未知。
 
+`/guard -100` 写出这个群有没有绑定地点。没返回写关。地址和坐标不出现。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
