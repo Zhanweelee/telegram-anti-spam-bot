@@ -24445,8 +24445,42 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(task.event.message?.text).toBe("清单留下");
-    expect(task.event.message?.asTextMention).toBeUndefined();
+    expect(task.event.message?.asTextMention).toBe(true);
     expect(JSON.stringify(task.event)).not.toContain("90244");
+    expect(JSON.stringify(task.event)).not.toContain("务90244");
+
+    const added = await normalize({
+      update_id: 4884,
+      message: {
+        message_id: 924,
+        date: 1761955200,
+        chat: { id: -100499884, type: "supergroup" },
+        from: { id: 123 },
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 2,
+              text: "新任务点名",
+              text_entities: [
+                {
+                  type: "text_mention",
+                  offset: 0,
+                  length: 5,
+                  user: { id: 90246, first_name: "新90246" },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(added.event)).not.toContain("90246");
+    expect(JSON.stringify(added.event)).not.toContain("新90246");
   });
 
   it("marks a rich reference link and leaves the name out", async () => {
