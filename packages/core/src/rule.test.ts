@@ -475,6 +475,16 @@ describe("rules", () => {
     expect(
       matchesWhen({ addedText: true }, serviceEvent({ hiddenName: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ memberName: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ memberName: true }, serviceEvent({ hiddenName: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ memberName: true }, serviceEvent({ memberName: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ hiddenName: true }, serviceEvent({ memberName: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

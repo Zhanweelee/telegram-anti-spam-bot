@@ -605,6 +605,22 @@ describe("regex detector", () => {
     });
     expect(hiddenHit?.places).toEqual(["hiddenName"]);
     expect(JSON.stringify(hiddenHit)).not.toContain(name);
+    const roster = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        memberName: `打开 ${name}`,
+      },
+    });
+    const memberHit = await detector.detect({
+      event: roster,
+      logger,
+      signal,
+    });
+    expect(memberHit?.places).toEqual(["memberName"]);
+    expect(JSON.stringify(memberHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

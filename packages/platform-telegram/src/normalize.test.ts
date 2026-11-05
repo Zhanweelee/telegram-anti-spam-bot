@@ -60,6 +60,7 @@ function withoutButtonText(event: object): string {
       declineComment: undefined,
       addedText: undefined,
       hiddenName: undefined,
+      memberName: undefined,
     },
   });
 }
@@ -30822,7 +30823,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.memberName).toBe(
+      `${visible} https://ow.ly/last85 user85`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name85");
@@ -30855,7 +30859,8 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.memberName).toBe("https://example.com/ok85");
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok85");
     expect(ordinaryDump).not.toContain("kept85");
     expect(ordinaryDump).not.toContain(phrase);
@@ -30887,6 +30892,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
     expect(alone.event.message?.notice).toBe("join");
+    expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from85b");
@@ -30916,6 +30922,7 @@ describe("normalizeUpdate", () => {
     expect(left.event.message?.textSha256).toBe(await sha256Hex(""));
     expect(left.event.message?.hosts).toBeUndefined();
     expect(left.event.message?.notice).toBe("leave");
+    expect(left.event.message?.memberName).toBeUndefined();
     const leftDump = JSON.stringify(left.event);
     expect(leftDump).not.toContain("left85");
     expect(leftDump).not.toContain("gone85");
@@ -30962,7 +30969,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.notice).toBeUndefined();
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.memberName).toBe(
+      `${visible} https://ow.ly/last86 user86`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name86");
@@ -30997,7 +31007,8 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.memberName).toBe("https://example.com/ok86");
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok86");
     expect(ordinaryDump).not.toContain("kept86");
     expect(ordinaryDump).not.toContain(phrase);
@@ -31031,6 +31042,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from86b");
@@ -31171,7 +31183,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.memberName).toBe(
+      `${visible} https://ow.ly/last87 user87`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name87");
@@ -31206,7 +31221,8 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.memberName).toBe("https://example.com/ok87");
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok87");
     expect(ordinaryDump).not.toContain("kept87");
     expect(ordinaryDump).not.toContain(phrase);
@@ -31238,6 +31254,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from87b");
@@ -31261,6 +31278,7 @@ describe("normalizeUpdate", () => {
     expect(departed.event.message?.text).toBe("");
     expect(departed.event.message?.textSha256).toBe(await sha256Hex(""));
     expect(departed.event.message?.hosts).toBeUndefined();
+    expect(departed.event.message?.memberName).toBeUndefined();
     const departedDump = JSON.stringify(departed.event);
     expect(departedDump).not.toContain("gone87");
     expect(departedDump).not.toContain("bit.ly");
@@ -31304,7 +31322,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.memberName).toBe(
+      `${visible} https://ow.ly/last88 user88 Ada`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name88");
@@ -31344,7 +31365,10 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.memberName).toBe(
+      "https://example.com/ok88 Bea",
+    );
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok88");
     expect(ordinaryDump).not.toContain("kept88");
     expect(ordinaryDump).not.toContain(phrase);
@@ -31377,6 +31401,7 @@ describe("normalizeUpdate", () => {
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from88b");
@@ -32601,6 +32626,73 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(tail);
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain(external);
+  });
+
+  it("keeps the first 4096 characters of a member name", async () => {
+    const tail = "TAIL16";
+    const path = "mem16";
+    const left = "离开的人";
+    const labeled = await normalize({
+      update_id: 5816,
+      message: {
+        message_id: 5816,
+        date: 1761955200,
+        chat: { id: -1005816, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        new_chat_members: [
+          {
+            id: 93016,
+            first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+          },
+        ],
+        left_chat_member: { id: 93017, first_name: left },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.memberName).toHaveLength(4096);
+    expect(labeled.event.message?.memberName).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(left);
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain("93016");
+
+    const asName = await normalize({
+      update_id: 5817,
+      message: {
+        message_id: 5817,
+        date: 1761955200,
+        chat: { id: -1005817, type: "supergroup" },
+        from: { id: 93 },
+        new_chat_members: [
+          {
+            id: 93018,
+            first_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+          },
+        ],
+        left_chat_member: { id: 93019, first_name: left },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.memberName).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain(left);
+    expect(asNameDump).not.toContain("93019");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {
