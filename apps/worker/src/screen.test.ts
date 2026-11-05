@@ -12726,6 +12726,7 @@ describe("screenTelegramEvent", () => {
       updateId: number,
       extra: Record<string, unknown>,
       paid = false,
+      adminUserIds: string[] = [],
     ) {
       const chatId = -(1_000_000 + updateId);
       const normalized = await normalizeUpdate({
@@ -12751,7 +12752,7 @@ describe("screenTelegramEvent", () => {
           },
         },
         tenantId: "local",
-        adminUserIds: [],
+        adminUserIds,
         nowIso: "2026-11-01T00:00:00.000Z",
       });
       expect(normalized.status).toBe("event");
@@ -13064,6 +13065,106 @@ describe("screenTelegramEvent", () => {
     expect(blankIcon.message?.topicNotice).toBe("edited");
     expect(blankIcon.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(blankIcon)).not.toContain("blank6314");
+
+    const renamed = await posted(79230, {
+      from: {
+        id: 129,
+        first_name: "https://bit.ly/name79230",
+        last_name: "https://tinyurl.com/namelast79230",
+        username: "secretuser79230",
+      },
+      forum_topic_created: undefined,
+      forum_topic_edited: { name: "改过" },
+    });
+    expect(renamed.message?.text).toBe("改过");
+    expect(renamed.message?.topicNotice).toBe("edited");
+    expect(renamed.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const renamedModerator = createMemoryModerator();
+    const renamedHit = await screenTelegramEvent(renamed, {
+      moderator: renamedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(renamedHit.decision.action).toBe("delete");
+    expect(renamedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079230", messageId: "79230" },
+    ]);
+    expect(JSON.stringify(renamed)).not.toContain("name79230");
+    expect(JSON.stringify(renamed)).not.toContain("namelast79230");
+    expect(JSON.stringify(renamed)).not.toContain("secretuser79230");
+
+    const renamedBlank = await posted(79231, {
+      from: {
+        id: 129,
+        first_name: "   ",
+        last_name: "https://bit.ly/space79231",
+      },
+      forum_topic_created: undefined,
+      forum_topic_edited: { name: "改过" },
+    });
+    expect(renamedBlank.message?.topicNotice).toBe("edited");
+    expect(renamedBlank.message?.hosts).toEqual(["bit.ly"]);
+    const renamedBlankModerator = createMemoryModerator();
+    const renamedBlankHit = await screenTelegramEvent(renamedBlank, {
+      moderator: renamedBlankModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(renamedBlankHit.decision.action).toBe("delete");
+    expect(renamedBlankModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079231", messageId: "79231" },
+    ]);
+    expect(JSON.stringify(renamedBlank)).not.toContain("space79231");
+
+    const body = await posted(79232, {
+      text: "https://ow.ly/body79232",
+      from: {
+        id: 129,
+        first_name: "https://bit.ly/name79232",
+        last_name: "https://tinyurl.com/namelast79232",
+      },
+      forum_topic_created: undefined,
+      forum_topic_edited: { name: "改过" },
+    });
+    expect(body.message?.text).toBe("https://ow.ly/body79232");
+    expect(body.message?.topicNotice).toBe("edited");
+    expect(body.message?.topicName).toBe("改过");
+    expect(body.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bodyHit = await screenTelegramEvent(body, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyHit.decision.action).toBe("delete");
+    const bodyEvidence = JSON.stringify(bodyHit.decision.evidence);
+    expect(bodyEvidence).toContain("short_link:ow.ly");
+    expect(bodyEvidence).not.toContain("short_link:bit.ly");
+    expect(bodyEvidence).not.toContain("short_link:tinyurl.com");
+    expect(JSON.stringify(body)).not.toContain("name79232");
+    expect(JSON.stringify(body)).not.toContain("namelast79232");
+
+    const admin = await posted(
+      79233,
+      {
+        from: {
+          id: 129,
+          first_name: "Ada",
+          last_name: "https://bit.ly/admin79233",
+        },
+        forum_topic_created: undefined,
+        forum_topic_edited: { name: "改过" },
+      },
+      false,
+      ["129"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.topicNotice).toBe("edited");
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("admin79233");
   });
 
   it("deletes a short link in a leave sender name", async () => {

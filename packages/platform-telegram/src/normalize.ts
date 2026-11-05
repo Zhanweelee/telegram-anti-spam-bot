@@ -5156,8 +5156,9 @@ function pushPollSenderUrls(
 
 /**
  * 新建或改名话题的人只留主机名。
- * 新建的名字长度大于 0 时读。空白也算。
- * 否则改名的名字长度大于 0，或图标编号是字符串时读。
+ * 新建的名字长度大于 0 时读。空白也算。新建仍只读名。
+ * 否则改名的名字长度大于 0，或图标编号是字符串时读全名。
+ * 改名时名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 同时出现时先认新建。空的新建名字落到改名。
  * 空对象和布尔值不读。话题名仍按原来的正文。
  * 图标颜色和自定义表情编号不读。用户名不读。
@@ -5166,7 +5167,12 @@ function pushTopicSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (changedTopic(message) === undefined) {
+  const notice = changedTopic(message);
+  if (notice === undefined) {
+    return;
+  }
+  if (notice === "edited") {
+    pushFormattedUserUrls(message.from, urls);
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
