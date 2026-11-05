@@ -37864,6 +37864,185 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
   });
 
+  it("keeps only the hostname from the full name drawn for a leave sender", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "LEAVE79199";
+    const member = "离开的人";
+    const drawn = await normalize({
+      update_id: 79199,
+      message: {
+        message_id: 79199,
+        date: 1761955200,
+        chat: {
+          id: -10079199,
+          type: "supergroup",
+          title: "https://is.gd/room79199",
+        },
+        from: {
+          id: 79199,
+          first_name: "https://bit.ly/kick79199",
+          last_name: `${phrase} https://tinyurl.com/skip79199 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        left_chat_member: {
+          id: 97,
+          first_name: member,
+          last_name: "https://ow.ly/left79199",
+          username: "member79199",
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(drawn.event.message?.notice).toBe("leave");
+    expect(drawn.event.message?.memberName).toBeUndefined();
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain(member);
+    expect(dumped).not.toContain("kick79199");
+    expect(dumped).not.toContain("skip79199");
+    expect(dumped).not.toContain("left79199");
+    expect(dumped).not.toContain("room79199");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("member79199");
+
+    const blank = await normalize({
+      update_id: 79200,
+      message: {
+        message_id: 79200,
+        date: 1761955200,
+        chat: { id: -10079200, type: "supergroup" },
+        from: {
+          id: 79200,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79200",
+          username: "cutt.ly",
+        },
+        left_chat_member: { id: 97, first_name: "另一人" },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.notice).toBe("leave");
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79200");
+    expect(JSON.stringify(blank.event)).not.toContain("cutt.ly");
+    expect(JSON.stringify(blank.event)).not.toContain("另一人");
+
+    const spaced = await normalize({
+      update_id: 79201,
+      message: {
+        message_id: 79201,
+        date: 1761955200,
+        chat: { id: -10079201, type: "supergroup" },
+        from: {
+          id: 79201,
+          first_name: "Go https://bit.ly/later79201",
+          last_name: "Lee",
+        },
+        left_chat_member: { id: 97 },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79201");
+
+    const empty = await normalize({
+      update_id: 79202,
+      message: {
+        message_id: 79202,
+        date: 1761955200,
+        chat: { id: -10079202, type: "supergroup" },
+        from: {
+          id: 79202,
+          first_name: "https://bit.ly/empty79202",
+          last_name: "https://tinyurl.com/emptylast79202",
+        },
+        left_chat_member: {},
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.notice).toBe("leave");
+    expect(empty.event.message?.text).toBe("");
+    expect(empty.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(empty.event)).not.toContain("empty79202");
+    expect(JSON.stringify(empty.event)).not.toContain("emptylast79202");
+
+    const quiet = await normalize({
+      update_id: 79203,
+      message: {
+        message_id: 79203,
+        date: 1761955200,
+        chat: {
+          id: -10079203,
+          type: "supergroup",
+          title: "https://ow.ly/room79203",
+        },
+        from: {
+          id: 79203,
+          first_name: "https://bit.ly/plain79203",
+          last_name: "https://tinyurl.com/plainlast79203",
+        },
+        text: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.notice).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quiet.event)).not.toContain("plain79203");
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79203");
+    expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+
+    const flag = await normalize({
+      update_id: 79204,
+      message: {
+        message_id: 79204,
+        date: 1761955200,
+        chat: { id: -10079204, type: "supergroup" },
+        from: {
+          id: 79204,
+          first_name: "https://bit.ly/flag79204",
+          last_name: "https://tinyurl.com/flaglast79204",
+        },
+        left_chat_member: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.notice).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag79204");
+    expect(JSON.stringify(flag.event)).not.toContain("flaglast79204");
+    expect(JSON.stringify(flag.event)).not.toContain("tinyurl");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
