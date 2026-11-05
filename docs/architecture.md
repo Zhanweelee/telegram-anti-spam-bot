@@ -193,6 +193,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 普通礼物、唯一礼物和升级购买的附言上，按标识提及也走这一条。发布者用户名不进事件。见 ADR 0569。
 
+游戏附加文字上的按标识提及也走这一条。封面和动图文件编号不进事件。见 ADR 0570。
+
 自定义表情可以按群删除。规则 `custom_emoji` 默认关闭。见 ADR 0515。
 
 复制到剪贴板的按钮可以按群删除。规则 `copy_text` 默认关闭。见 ADR 0516。
