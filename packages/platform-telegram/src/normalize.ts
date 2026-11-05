@@ -4568,6 +4568,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushCommunitySenderUrls(message, urls);
   pushOwnerSenderUrls(message, urls);
+  pushInviteSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4890,6 +4891,21 @@ function pushOwnerSenderUrls(
   urls: string[],
 ): void {
   if (changedOwner(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 拉进视频聊天的人只留主机名。
+ * 邀请名单里至少有一个用户对象时读。空数组、空对象和布尔值不读。
+ * 被邀请的名字仍按原来的正文。用户编号不读。用户名不读。
+ */
+function pushInviteSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!videoInvite(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
