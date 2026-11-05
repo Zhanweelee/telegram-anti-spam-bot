@@ -381,6 +381,54 @@ describe("regex detector", () => {
     });
     expect(explanationHit?.places).toEqual(["pollExplanation"]);
     expect(JSON.stringify(explanationHit)).not.toContain(name);
+    const asked = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        pollQuestion: `打开 ${name}`,
+      },
+    });
+    const questionHit = await detector.detect({
+      event: asked,
+      logger,
+      signal,
+    });
+    expect(questionHit?.places).toEqual(["pollQuestion"]);
+    expect(JSON.stringify(questionHit)).not.toContain(name);
+    const prized = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        prizeText: `打开 ${name}`,
+      },
+    });
+    const prizeHit = await detector.detect({
+      event: prized,
+      logger,
+      signal,
+    });
+    expect(prizeHit?.places).toEqual(["prizeText"]);
+    expect(JSON.stringify(prizeHit)).not.toContain(name);
+    const titled = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        checklistTitle: `打开 ${name}`,
+      },
+    });
+    const titleHit = await detector.detect({
+      event: titled,
+      logger,
+      signal,
+    });
+    expect(titleHit?.places).toEqual(["checklistTitle"]);
+    expect(JSON.stringify(titleHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

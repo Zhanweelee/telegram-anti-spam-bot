@@ -80,6 +80,12 @@ export const messageSchema = z
     venueAddress: z.string().min(1).max(4096).optional(),
     /** Quiz explanation beside the question. Capped at 200. Absent when it is the body. */
     pollExplanation: z.string().min(1).max(200).optional(),
+    /** Poll question beside another body. Capped at 300. Absent when it is the body. */
+    pollQuestion: z.string().min(1).max(300).optional(),
+    /** Giveaway prize beside another body. Capped at 255. Absent when it is the body. */
+    prizeText: z.string().min(1).max(255).optional(),
+    /** Checklist title beside another body. Capped at 255. Absent when it is the body. */
+    checklistTitle: z.string().min(1).max(255).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

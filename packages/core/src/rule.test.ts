@@ -272,6 +272,54 @@ describe("rules", () => {
         serviceEvent({ pollExplanation: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ pollQuestion: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { pollQuestion: true },
+        serviceEvent({ pollExplanation: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { pollQuestion: true },
+        serviceEvent({ pollQuestion: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { pollExplanation: true },
+        serviceEvent({ pollQuestion: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(matchesWhen({ prizeText: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ prizeText: true }, serviceEvent({ pollQuestion: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ prizeText: true }, serviceEvent({ prizeText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ pollQuestion: true }, serviceEvent({ prizeText: "加微x" })),
+    ).toBe(false);
+    expect(matchesWhen({ checklistTitle: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { checklistTitle: true },
+        serviceEvent({ prizeText: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { checklistTitle: true },
+        serviceEvent({ checklistTitle: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { prizeText: true },
+        serviceEvent({ checklistTitle: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

@@ -38,6 +38,9 @@ export function createKeywordDetector(config: KeywordConfig): Detector {
         ctx.event.message?.invoiceText,
         ctx.event.message?.venueAddress,
         ctx.event.message?.pollExplanation,
+        ctx.event.message?.pollQuestion,
+        ctx.event.message?.prizeText,
+        ctx.event.message?.checklistTitle,
         ctx.event.profile?.text,
       ].filter(
         (text): text is string => typeof text === "string" && text.length > 0,

@@ -1697,6 +1697,139 @@ describe("runPipeline", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
   });
 
+  it("redacts a displaced title copied into evidence", async () => {
+    const cases = [
+      {
+        field: "pollQuestion",
+        ruleId: "poll_question_regex",
+        label: "题干请免费领取礼品",
+      },
+      {
+        field: "prizeText",
+        ruleId: "prize_text_regex",
+        label: "奖品请免费领取礼品",
+      },
+      {
+        field: "checklistTitle",
+        ruleId: "checklist_title_regex",
+        label: "清单请免费领取礼品",
+      },
+    ] as const;
+    for (const item of cases) {
+      const kit = harness();
+      const result = await runPipeline({
+        event: event({
+          message: {
+            id: "msg_1",
+            text: "今天站会",
+            textSha256: HASH,
+            [item.field]: item.label,
+          },
+        }),
+        rules: parseRuleSet({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: item.ruleId,
+              enabled: true,
+              when: { [item.field]: true },
+              detectorIds: ["regex"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        }),
+        policy: { exemptAdmins: false, allowActorIds: [] },
+        detectors: [
+          detector("regex", async () => ({
+            detectorId: "regex",
+            score: 1,
+            reasons: [item.label],
+            evidence: [{ kind: "feature", summary: item.label }],
+            places: [item.field],
+          })),
+        ],
+        actions: [
+          action("delete", async () => ({
+            actionId: "delete",
+            status: "executed",
+          })),
+        ],
+        storage: kit.storage,
+        moderator: kit.moderator,
+        logger: kit.logger,
+        clock: kit.clock,
+      });
+      expect(result.decision.action).toBe("delete");
+      expect(result.decision.evidence).toEqual([
+        { kind: "feature", summary: "redacted" },
+      ]);
+      expect(result.decision.ruleIds).toEqual([item.ruleId]);
+      expect(JSON.stringify(kit.records)).not.toContain(item.label);
+      expect(JSON.stringify(kit.logger.entries)).not.toContain(item.label);
+      expect(JSON.stringify(result)).not.toContain(item.label);
+    }
+  });
+
+  it("ignores a regex hit that missed the displaced title", async () => {
+    const cases = [
+      { field: "pollQuestion", ruleId: "poll_question_regex" },
+      { field: "prizeText", ruleId: "prize_text_regex" },
+      { field: "checklistTitle", ruleId: "checklist_title_regex" },
+    ] as const;
+    for (const item of cases) {
+      const kit = harness();
+      const result = await runPipeline({
+        event: event({
+          message: {
+            id: "msg_1",
+            text: "加微x",
+            textSha256: HASH,
+            [item.field]: "今天站会",
+          },
+        }),
+        rules: parseRuleSet({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: item.ruleId,
+              enabled: true,
+              when: { [item.field]: true },
+              detectorIds: ["regex"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        }),
+        policy: { exemptAdmins: false, allowActorIds: [] },
+        detectors: [
+          detector("regex", async () => ({
+            detectorId: "regex",
+            score: 1,
+            reasons: ["regex_match"],
+            evidence: [{ kind: "feature", summary: "regex:hit" }],
+            places: ["message"],
+          })),
+        ],
+        actions: [
+          action("delete", async () => ({
+            actionId: "delete",
+            status: "executed",
+          })),
+        ],
+        storage: kit.storage,
+        moderator: kit.moderator,
+        logger: kit.logger,
+        clock: kit.clock,
+      });
+      expect(result.decision.action).toBe("allow");
+      expect(JSON.stringify(result)).not.toContain("加微x");
+      expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
+    }
+  });
+
   it("picks the most severe action and reports a missing plugin", async () => {
     const kit = harness();
     const result = await runPipeline({
