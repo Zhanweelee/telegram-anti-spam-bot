@@ -235,6 +235,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 群来源的签名里的短链交给已有的链接规则。签名和用户名不进事件。见 ADR 0612。
 
+名片上的公司名里的短链交给已有的链接规则。公司名和电话不进事件。见 ADR 0613。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。

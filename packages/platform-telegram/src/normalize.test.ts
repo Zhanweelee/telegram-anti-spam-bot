@@ -10906,6 +10906,190 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("VCARD");
   });
 
+  it("keeps only the hostname from a contact vCard company", async () => {
+    const phone = "13800138119";
+    const name = "名片姓名119";
+    const path = "job119";
+    const older = "old119";
+    const folded = "fold119";
+    const title = "title119";
+    const outcome = await normalize({
+      update_id: 2119,
+      message: {
+        message_id: 119,
+        date: 1761955200,
+        chat: { id: -1008119, type: "supergroup" },
+        from: { id: 119 },
+        text: "你好",
+        contact: {
+          phone_number: phone,
+          first_name: name,
+          vcard: [
+            "BEGIN:VCARD",
+            "FN:名片姓名119",
+            `TEL:${phone}`,
+            `TITLE:https://bit.ly/${title}`,
+            "ORG:https://bit.ly/skip119",
+            "ORG;CHARSET=UTF-8:Acme;https://tinyurl.com/dept119",
+            `ORG:https://bit.ly/${older}`,
+            "ORG;ENCODING=QUOTED-PRINTABLE:https://bit.ly=2Fsecret119",
+            `ORG:https://t.me/+${path}`,
+            "END:VCARD",
+            "ORG:https://cutt.ly/after119",
+            "BEGIN:VCARD",
+            "ORGANIZATION:https://example.com/org119",
+            "ORG:https://t.co/last",
+            " 119",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    expect(outcome.event.message?.text).toBe("你好");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(outcome.event.message?.hosts).toEqual(["t.co"]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = withoutButtonText(outcome.event);
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(older);
+    expect(dumped).not.toContain("secret119");
+    expect(dumped).not.toContain("dept119");
+    expect(dumped).not.toContain("skip119");
+    expect(dumped).not.toContain(title);
+    expect(dumped).not.toContain("after119");
+    expect(dumped).not.toContain("org119");
+    expect(dumped).not.toContain("last119");
+    expect(dumped).not.toContain("Acme");
+    expect(dumped).not.toContain("VCARD");
+    const spaced = await normalize({
+      update_id: 2120,
+      message: {
+        message_id: 120,
+        date: 1761955200,
+        chat: { id: -1008120, type: "supergroup" },
+        from: { id: 120 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "ORG:https://example.com/shown",
+            ` https://bit.ly/${folded}`,
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["example.com"]);
+    expect(withoutButtonText(spaced.event)).not.toContain(folded);
+    const emptyCard = await normalize({
+      update_id: 2121,
+      message: {
+        message_id: 121,
+        date: 1761955200,
+        chat: { id: -1008121, type: "supergroup" },
+        from: { id: 121 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "ORG:https://bit.ly/kept121",
+            "END:VCARD",
+            "BEGIN:VCARD",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(emptyCard.status).toBe("event");
+    if (emptyCard.status !== "event") {
+      return;
+    }
+    expect(emptyCard.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(emptyCard.event)).not.toContain("kept121");
+    const encoded = await normalize({
+      update_id: 2122,
+      message: {
+        message_id: 122,
+        date: 1761955200,
+        chat: { id: -1008122, type: "supergroup" },
+        from: { id: 122 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "ORG;ENCODING=QUOTED-PRINTABLE:https://bit.ly=2Fsecret122",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(encoded.status).toBe("event");
+    if (encoded.status !== "event") {
+      return;
+    }
+    expect(encoded.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(withoutButtonText(encoded.event)).not.toContain("secret122");
+    const parts = await normalize({
+      update_id: 2123,
+      message: {
+        message_id: 123,
+        date: 1761955200,
+        chat: { id: -1008123, type: "supergroup" },
+        from: { id: 123 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "ORG;CHARSET=UTF-8:Acme;https://tinyurl.com/dept123",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(parts.status).toBe("event");
+    if (parts.status !== "event") {
+      return;
+    }
+    expect(parts.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const partsDump = withoutButtonText(parts.event);
+    expect(partsDump).not.toContain("Acme");
+    expect(partsDump).not.toContain("dept123");
+    const prefixed = await normalize({
+      update_id: 2124,
+      message: {
+        message_id: 124,
+        date: 1761955200,
+        chat: { id: -1008124, type: "supergroup" },
+        from: { id: 124 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "ORGANIZATION:https://example.com/org124",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(prefixed.status).toBe("event");
+    if (prefixed.status !== "event") {
+      return;
+    }
+    expect(prefixed.event.message?.hosts).toEqual(["example.com"]);
+    expect(withoutButtonText(prefixed.event)).not.toContain("org124");
+  });
+
   it("keeps an inline bot as a flag and drops its username", async () => {
     const name = "机密代发";
     const outcome = await normalize({
