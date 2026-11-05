@@ -4,6 +4,7 @@ import { type Event, eventKindSchema } from "./event.js";
 
 export type RuleWhen =
   | { readonly eventKind: z.output<typeof eventKindSchema> }
+  | { readonly serviceName: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -11,6 +12,7 @@ export type RuleWhen =
 export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
   z.union([
     z.strictObject({ eventKind: eventKindSchema }),
+    z.strictObject({ serviceName: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -65,6 +67,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("eventKind" in when) {
     return when.eventKind === event.kind;
   }
+  if ("serviceName" in when) {
+    return serviceName(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -72,6 +77,19 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
     return when.any.some((item) => matchesWhen(item, event));
   }
   return !matchesWhen(when.not, event);
+}
+
+function serviceName(event: Event): boolean {
+  const message = event.message;
+  if (!message) {
+    return false;
+  }
+  return (
+    message.notice === "join" ||
+    message.asCallInvite === true ||
+    message.ownerNotice !== undefined ||
+    message.asProximity === true
+  );
 }
 
 export function aggregateScores(

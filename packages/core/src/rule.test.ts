@@ -11,6 +11,25 @@ const event = parseEvent({
   actor: { id: "user_1", isAdmin: false },
 });
 
+function serviceEvent(
+  message: Record<string, unknown>,
+): ReturnType<typeof parseEvent> {
+  return parseEvent({
+    id: "evt_1",
+    tenantId: "tenant_1",
+    chatId: "chat_1",
+    kind: "message",
+    occurredAt: "2026-11-01T00:00:00Z",
+    actor: { id: "user_1", isAdmin: false },
+    message: {
+      id: "1",
+      text: "加微x",
+      textSha256: "a".repeat(64),
+      ...message,
+    },
+  });
+}
+
 describe("rules", () => {
   it("matches combinators", () => {
     expect(matchesWhen(undefined, event)).toBe(true);
@@ -31,6 +50,31 @@ describe("rules", () => {
     ).toBe(true);
     expect(matchesWhen({ any: [{ eventKind: "command" }] }, event)).toBe(false);
     expect(matchesWhen({ not: { eventKind: "command" } }, event)).toBe(true);
+    expect(matchesWhen({ serviceName: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ notice: "join" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ notice: "leave" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ asCallInvite: true })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { serviceName: true },
+        serviceEvent({ ownerNotice: "changed" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ ownerNotice: "left" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ asProximity: true })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ serviceName: true }, serviceEvent({ asChannel: true })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
