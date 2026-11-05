@@ -154,6 +154,7 @@ async function messageEvent(
   const sideInvoiceTitle = besideCardTitle(message, "invoice", 32, text);
   const sideVenueTitle = besideCardTitle(message, "venue", 4096, text);
   const sideWebAppButton = besideWebAppButton(message, text);
+  const sideQuote = besideManualQuote(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -241,6 +242,7 @@ async function messageEvent(
       ...(sideWebAppButton.length > 0
         ? { webAppButtonText: sideWebAppButton }
         : {}),
+      ...(sideQuote.length > 0 ? { quoteText: sideQuote } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6620,6 +6622,26 @@ function pushUserLabels(value: unknown, parts: string[]): void {
       }
     }
   }
+}
+
+/** 已有别的正文时，手动引用另留最多 4096 字。这段自己就是正文时不重复。自动引用和被回复的原消息不进这个字段。 */
+function besideManualQuote(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const quote = message.quote;
+  if (
+    !isRecord(quote) ||
+    quote.is_manual !== true ||
+    typeof quote.text !== "string"
+  ) {
+    return "";
+  }
+  const source = quote.text;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
 }
 
 /** 已有别的正文时，小程序按钮文字另留最多 4096 字。这段自己就是正文时不重复。`data` 不进这个字段。 */
