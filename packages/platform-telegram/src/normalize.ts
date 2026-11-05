@@ -163,6 +163,7 @@ async function messageEvent(
   const sideHidden = besideHiddenName(message, text);
   const sideMember = besideMemberName(message, text);
   const sideShared = besideSharedName(message, text);
+  const sideManaged = besideManagedName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -259,6 +260,7 @@ async function messageEvent(
       ...(sideHidden.length > 0 ? { hiddenName: sideHidden } : {}),
       ...(sideMember.length > 0 ? { memberName: sideMember } : {}),
       ...(sideShared.length > 0 ? { sharedName: sideShared } : {}),
+      ...(sideManaged.length > 0 ? { managedName: sideManaged } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -4452,7 +4454,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(sharedChat.username, urls);
   }
   pushPlainUrls(sharedUserNameSource(message), urls);
-  pushPlainUrls(managedBotNames(message), urls);
+  pushPlainUrls(managedBotNameSource(message), urls);
   pushPlainUrls(writeAccessName(message), urls);
   for (const field of ["community_chat_added", "community_chat_joined"]) {
     const value = message[field];
@@ -6606,6 +6608,10 @@ function sharedUserNameSource(message: Record<string, unknown>): string {
 }
 
 function managedBotNames(message: Record<string, unknown>): string {
+  return managedBotNameSource(message).slice(0, MAX_TEXT);
+}
+
+function managedBotNameSource(message: Record<string, unknown>): string {
   const created = message.managed_bot_created;
   if (!isRecord(created)) {
     return "";
@@ -6615,7 +6621,7 @@ function managedBotNames(message: Record<string, unknown>): string {
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ").slice(0, MAX_TEXT);
+  return parts.join(" ");
 }
 
 /** 用户允许 bot 发消息时带上的小程序名字。来源布尔值不读。 */
@@ -6761,6 +6767,18 @@ function besideSharedName(
   text: string,
 ): string {
   const source = sharedUserNameSource(message);
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+/** 已有别的正文时，新建受管 bot 的可见名字另留最多 4096 字。这段自己就是正文时不重复。bot 编号、令牌、创建者姓名和聊天标题不进这个字段。 */
+function besideManagedName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = managedBotNameSource(message);
   if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
     return "";
   }
