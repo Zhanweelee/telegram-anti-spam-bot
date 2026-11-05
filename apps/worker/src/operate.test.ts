@@ -4578,6 +4578,13 @@ describe("handleIncomingEvent", () => {
                 unrestrict_boost_count: 2,
                 paid_message_star_count: 5,
                 can_send_paid_media: true,
+                accepted_gift_types: {
+                  unlimited_gifts: true,
+                  limited_gifts: false,
+                  unique_gifts: true,
+                  premium_subscription: false,
+                  gifts_from_channels: true,
+                },
                 has_protected_content: true,
                 has_hidden_members: false,
                 has_visible_history: true,
@@ -4606,6 +4613,11 @@ describe("handleIncomingEvent", () => {
         "加速豁免 2",
         "付费发言 5",
         "付费媒体 on",
+        "无限礼物 on",
+        "限量礼物 off",
+        "独特礼物 on",
+        "会员订阅 off",
+        "频道礼物 on",
         "防转发 on",
         "隐藏成员 off",
         "可见历史 on",
@@ -4659,6 +4671,11 @@ describe("handleIncomingEvent", () => {
         "加速豁免 未知",
         "付费发言 未知",
         "付费媒体 未知",
+        "无限礼物 未知",
+        "限量礼物 未知",
+        "独特礼物 未知",
+        "会员订阅 未知",
+        "频道礼物 未知",
         "防转发 未知",
         "隐藏成员 未知",
         "可见历史 未知",
@@ -4696,7 +4713,9 @@ describe("handleIncomingEvent", () => {
     const zeroText = zero.reply.sent.map((message) => message.text).join("\n");
     expect(zeroText).toContain("群 42\n类型 私聊\n");
     expect(zeroText).toContain("慢速 0\n自毁 0\n加速豁免 0\n");
-    expect(zeroText).toContain("付费发言 0\n付费媒体 off\n");
+    expect(zeroText).toContain(
+      "付费发言 0\n付费媒体 off\n无限礼物 未知\n限量礼物 未知\n独特礼物 未知\n会员订阅 未知\n频道礼物 未知\n",
+    );
     expect(zeroText).toContain("\n反应 1\n");
     expect(JSON.stringify(zero.reply.sent)).not.toContain(phrase);
     const broken = deps();
@@ -4792,6 +4811,33 @@ describe("handleIncomingEvent", () => {
     ]);
     expect(JSON.stringify(rejected.logger.entries)).not.toContain(phrase);
     expect(JSON.stringify(rejected.logger.entries)).not.toContain("bot-token");
+    const gifted = deps();
+    await handleIncomingEvent(
+      await incoming({ text: "/guard -100", direct: true }),
+      {
+        ...gifted,
+        botToken: "bot-token",
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                title: phrase,
+                max_reaction_count: 1,
+                accepted_gift_types: { unlimited_gifts: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      },
+    );
+    expect(gifted.reply.sent.map((message) => message.text)).toEqual([
+      "参数无效",
+    ]);
+    expect(JSON.stringify(gifted.reply.sent)).not.toContain(phrase);
+    expect(JSON.stringify(gifted.logger.entries)).not.toContain(phrase);
   });
 
   it("reads the join-request bot and drops the display name", async () => {

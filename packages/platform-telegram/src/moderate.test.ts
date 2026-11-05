@@ -3239,6 +3239,13 @@ describe("telegram captcha transport", () => {
             unrestrict_boost_count: 2,
             paid_message_star_count: 5,
             can_send_paid_media: true,
+            accepted_gift_types: {
+              unlimited_gifts: true,
+              limited_gifts: false,
+              unique_gifts: true,
+              premium_subscription: false,
+              gifts_from_channels: true,
+            },
             has_protected_content: true,
             has_hidden_members: false,
             has_visible_history: true,
@@ -3267,6 +3274,11 @@ describe("telegram captcha transport", () => {
       boostExemption: 2,
       paidStars: 5,
       paidMedia: "on",
+      unlimitedGifts: "on",
+      limitedGifts: "off",
+      uniqueGifts: "on",
+      premiumGifts: "off",
+      channelGifts: "on",
       protectedContent: "on",
       hiddenMembers: "off",
       visibleHistory: "on",
@@ -3310,6 +3322,11 @@ describe("telegram captcha transport", () => {
       autoDeleteSeconds: null,
       linkedChatId: null,
       maxReactions: 0,
+      unlimitedGifts: "unknown",
+      limitedGifts: "unknown",
+      uniqueGifts: "unknown",
+      premiumGifts: "unknown",
+      channelGifts: "unknown",
     });
     called = false;
     await expect(
@@ -3391,6 +3408,48 @@ describe("telegram captcha transport", () => {
             { status: 200 },
           ),
       }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                max_reaction_count: 1,
+                accepted_gift_types: [phrase],
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                max_reaction_count: 1,
+                accepted_gift_types: { unlimited_gifts: phrase },
+              },
+            }),
+            { status: 200 },
+          ),
+      })
+        .readChatGuard({ tenantId: "local", chatId: "-100" })
+        .catch((error: unknown) => {
+          expect(error).toEqual(new Error("guard_failed"));
+          expect(String(error)).not.toContain(phrase);
+          throw error;
+        }),
     ).rejects.toThrow("guard_failed");
   });
 

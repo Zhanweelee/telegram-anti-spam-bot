@@ -4307,6 +4307,11 @@ function isChatGuard(
     isOptionalCount(guard.boostExemption) &&
     isOptionalCount(guard.paidStars) &&
     isPermissionState(guard.paidMedia) &&
+    isPermissionState(guard.unlimitedGifts) &&
+    isPermissionState(guard.limitedGifts) &&
+    isPermissionState(guard.uniqueGifts) &&
+    isPermissionState(guard.premiumGifts) &&
+    isPermissionState(guard.channelGifts) &&
     isPermissionState(guard.protectedContent) &&
     isPermissionState(guard.hiddenMembers) &&
     isPermissionState(guard.visibleHistory) &&
@@ -4380,6 +4385,11 @@ function describeChatGuard(
       "stars",
     ),
     guardFlag(input, "command.guard.paid_media", guard.paidMedia),
+    guardFlag(input, "command.guard.unlimited_gifts", guard.unlimitedGifts),
+    guardFlag(input, "command.guard.limited_gifts", guard.limitedGifts),
+    guardFlag(input, "command.guard.unique_gifts", guard.uniqueGifts),
+    guardFlag(input, "command.guard.premium_gifts", guard.premiumGifts),
+    guardFlag(input, "command.guard.channel_gifts", guard.channelGifts),
     guardFlag(input, "command.guard.protected", guard.protectedContent),
     guardFlag(input, "command.guard.hidden", guard.hiddenMembers),
     guardFlag(input, "command.guard.history", guard.visibleHistory),

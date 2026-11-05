@@ -109,6 +109,11 @@ export interface ChatGuard {
   readonly boostExemption: number | null;
   readonly paidStars: number | null;
   readonly paidMedia: PermissionState;
+  readonly unlimitedGifts: PermissionState;
+  readonly limitedGifts: PermissionState;
+  readonly uniqueGifts: PermissionState;
+  readonly premiumGifts: PermissionState;
+  readonly channelGifts: PermissionState;
   readonly protectedContent: PermissionState;
   readonly hiddenMembers: PermissionState;
   readonly visibleHistory: PermissionState;
