@@ -4468,6 +4468,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(origin.sender_user_name, urls);
   }
   pushPlainUrls(message.forward_sender_name, urls);
+  pushForwardPartyUrls(message, urls);
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
     pushPlainUrls(quote.text, urls);
@@ -4623,6 +4624,40 @@ function pushVisiblePartyUrls(
   }
   if (isRecord(chat)) {
     pushPlainUrls(chat.title, urls);
+  }
+}
+
+/**
+ * 已知用户和群的转发抬头只留主机名。
+ * 现代来源优先。隐藏显示名旁边的真实姓名不读。
+ * 频道标题、来源签名和外部回复不读。
+ */
+function pushForwardPartyUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const origin = message.forward_origin;
+  if (isRecord(origin)) {
+    if (origin.type === "user") {
+      pushVisiblePartyUrls(origin.sender_user, undefined, urls);
+    } else if (origin.type === "chat") {
+      pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
+    }
+    return;
+  }
+  if (
+    typeof message.forward_sender_name === "string" &&
+    message.forward_sender_name.length > 0
+  ) {
+    return;
+  }
+  if (isRecord(message.forward_from)) {
+    pushVisiblePartyUrls(message.forward_from, undefined, urls);
+    return;
+  }
+  const chat = message.forward_from_chat;
+  if (isRecord(chat) && chat.type !== "channel") {
+    pushVisiblePartyUrls(undefined, chat, urls);
   }
 }
 

@@ -98,6 +98,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 清单任务上 `completed_by_user` 的可见名字只留主机名。名的长度大于 0 时不读姓。空白也算有名。没有用户时只读 `completed_by_chat.title`。同一条消息上的新加任务也同样。用户名、用户编号、任务编号和完成时间不进事件。名字里的关键词不命中。嵌套的 `checklist_message` 不读。见 ADR 0578。
 
+`forward_origin.type` 为 `user` 时，`sender_user` 的可见名字只留主机名。`chat` 时只读 `sender_chat.title`。没有现代来源、也没有隐藏显示名时，改读 `forward_from`，再读非频道的 `forward_from_chat.title`。名的长度大于 0 时不读姓。空白也算有名。用户名不进事件。频道标题、来源签名和 `external_reply` 不读。见 ADR 0579。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。

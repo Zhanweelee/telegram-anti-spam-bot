@@ -20261,7 +20261,11 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.senderTag).toBe(`${phrase} https://`);
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "cutt.ly",
+      "bit.ly",
+      "t.me",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = JSON.stringify(labeled.event);
     const withoutTag = JSON.stringify({
@@ -20276,7 +20280,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("fwd79");
     expect(labeledDump).not.toContain("ow.ly");
     expect(labeledDump).not.toContain("tinyurl.com");
-    expect(labeledDump).not.toContain("cutt.ly");
 
     const ordinary = await normalize({
       update_id: 5011,
