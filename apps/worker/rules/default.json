@@ -745,6 +745,30 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "game_title_regex",
+      "enabled": true,
+      "when": { "gameTitle": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "invoice_title_regex",
+      "enabled": true,
+      "when": { "invoiceTitle": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "venue_title_regex",
+      "enabled": true,
+      "when": { "venueTitle": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

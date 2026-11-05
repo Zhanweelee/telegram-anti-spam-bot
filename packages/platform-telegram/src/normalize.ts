@@ -150,6 +150,9 @@ async function messageEvent(
   const sideQuestion = besidePollQuestion(message, text);
   const sidePrize = besidePrizeText(message, text);
   const sideChecklist = besideChecklistTitle(message, text);
+  const sideGameTitle = besideCardTitle(message, "game", 4096, text);
+  const sideInvoiceTitle = besideCardTitle(message, "invoice", 32, text);
+  const sideVenueTitle = besideCardTitle(message, "venue", 4096, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -229,6 +232,11 @@ async function messageEvent(
       ...(sideQuestion.length > 0 ? { pollQuestion: sideQuestion } : {}),
       ...(sidePrize.length > 0 ? { prizeText: sidePrize } : {}),
       ...(sideChecklist.length > 0 ? { checklistTitle: sideChecklist } : {}),
+      ...(sideGameTitle.length > 0 ? { gameTitle: sideGameTitle } : {}),
+      ...(sideInvoiceTitle.length > 0
+        ? { invoiceTitle: sideInvoiceTitle }
+        : {}),
+      ...(sideVenueTitle.length > 0 ? { venueTitle: sideVenueTitle } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6782,6 +6790,23 @@ function besidePrizeText(
     return raw;
   }
   return "";
+}
+
+/** 已有别的正文时，卡片标题另留。这段自己就是正文时不重复。 */
+function besideCardTitle(
+  message: Record<string, unknown>,
+  field: "game" | "invoice" | "venue",
+  max: number,
+  text: string,
+): string {
+  const value = message[field];
+  if (!isRecord(value) || typeof value.title !== "string") {
+    return "";
+  }
+  if (value.title.length === 0 || text === value.title.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(value.title, max);
 }
 
 /** 已有别的正文时，清单标题另留最多 255 字。标题自己就是正文时不重复。 */

@@ -88,6 +88,9 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["pollQuestion", ctx.event.message?.pollQuestion],
         ["prizeText", ctx.event.message?.prizeText],
         ["checklistTitle", ctx.event.message?.checklistTitle],
+        ["gameTitle", ctx.event.message?.gameTitle],
+        ["invoiceTitle", ctx.event.message?.invoiceTitle],
+        ["venueTitle", ctx.event.message?.venueTitle],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

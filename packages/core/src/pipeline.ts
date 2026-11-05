@@ -292,6 +292,15 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("checklistTitle" in when) {
     return "checklistTitle";
   }
+  if ("gameTitle" in when) {
+    return "gameTitle";
+  }
+  if ("invoiceTitle" in when) {
+    return "invoiceTitle";
+  }
+  if ("venueTitle" in when) {
+    return "venueTitle";
+  }
   return undefined;
 }
 
@@ -400,249 +409,33 @@ function failedDetector(
 }
 
 function eventTexts(event: Event): readonly string[] {
+  const candidates = [
+    event.message?.text,
+    event.message?.senderTag,
+    event.message?.buttonText,
+    event.message?.authorSignature,
+    event.message?.mirrorSignature,
+    event.message?.pollOption,
+    event.message?.checklistTask,
+    event.message?.mediaName,
+    event.message?.performer,
+    event.message?.gameText,
+    event.message?.invoiceText,
+    event.message?.venueAddress,
+    event.message?.pollExplanation,
+    event.message?.pollQuestion,
+    event.message?.prizeText,
+    event.message?.checklistTitle,
+    event.message?.gameTitle,
+    event.message?.invoiceTitle,
+    event.message?.venueTitle,
+    event.profile?.text,
+  ];
   const texts: string[] = [];
-  const message = event.message?.text;
-  const profile = event.profile?.text;
-  const tag = event.message?.senderTag;
-  const buttons = event.message?.buttonText;
-  const signature = event.message?.authorSignature;
-  const mirror = event.message?.mirrorSignature;
-  const poll = event.message?.pollOption;
-  const tasks = event.message?.checklistTask;
-  const media = event.message?.mediaName;
-  const performer = event.message?.performer;
-  const game = event.message?.gameText;
-  const invoice = event.message?.invoiceText;
-  const venue = event.message?.venueAddress;
-  const explanation = event.message?.pollExplanation;
-  const question = event.message?.pollQuestion;
-  const prize = event.message?.prizeText;
-  const checklist = event.message?.checklistTitle;
-  if (message && message.length > 0) {
-    texts.push(message);
-  }
-  if (tag && tag.length > 0 && tag !== message) {
-    texts.push(tag);
-  }
-  if (buttons && buttons.length > 0 && buttons !== message && buttons !== tag) {
-    texts.push(buttons);
-  }
-  if (
-    signature &&
-    signature.length > 0 &&
-    signature !== message &&
-    signature !== tag &&
-    signature !== buttons
-  ) {
-    texts.push(signature);
-  }
-  if (
-    mirror &&
-    mirror.length > 0 &&
-    mirror !== message &&
-    mirror !== tag &&
-    mirror !== buttons &&
-    mirror !== signature
-  ) {
-    texts.push(mirror);
-  }
-  if (
-    poll &&
-    poll.length > 0 &&
-    poll !== message &&
-    poll !== tag &&
-    poll !== buttons &&
-    poll !== signature &&
-    poll !== mirror
-  ) {
-    texts.push(poll);
-  }
-  if (
-    tasks &&
-    tasks.length > 0 &&
-    tasks !== message &&
-    tasks !== tag &&
-    tasks !== buttons &&
-    tasks !== signature &&
-    tasks !== mirror &&
-    tasks !== poll
-  ) {
-    texts.push(tasks);
-  }
-  if (
-    media &&
-    media.length > 0 &&
-    media !== message &&
-    media !== tag &&
-    media !== buttons &&
-    media !== signature &&
-    media !== mirror &&
-    media !== poll &&
-    media !== tasks
-  ) {
-    texts.push(media);
-  }
-  if (
-    performer &&
-    performer.length > 0 &&
-    performer !== message &&
-    performer !== tag &&
-    performer !== buttons &&
-    performer !== signature &&
-    performer !== mirror &&
-    performer !== poll &&
-    performer !== tasks &&
-    performer !== media
-  ) {
-    texts.push(performer);
-  }
-  if (
-    game &&
-    game.length > 0 &&
-    game !== message &&
-    game !== tag &&
-    game !== buttons &&
-    game !== signature &&
-    game !== mirror &&
-    game !== poll &&
-    game !== tasks &&
-    game !== media &&
-    game !== performer
-  ) {
-    texts.push(game);
-  }
-  if (
-    invoice &&
-    invoice.length > 0 &&
-    invoice !== message &&
-    invoice !== tag &&
-    invoice !== buttons &&
-    invoice !== signature &&
-    invoice !== mirror &&
-    invoice !== poll &&
-    invoice !== tasks &&
-    invoice !== media &&
-    invoice !== performer &&
-    invoice !== game
-  ) {
-    texts.push(invoice);
-  }
-  if (
-    venue &&
-    venue.length > 0 &&
-    venue !== message &&
-    venue !== tag &&
-    venue !== buttons &&
-    venue !== signature &&
-    venue !== mirror &&
-    venue !== poll &&
-    venue !== tasks &&
-    venue !== media &&
-    venue !== performer &&
-    venue !== game &&
-    venue !== invoice
-  ) {
-    texts.push(venue);
-  }
-  if (
-    explanation &&
-    explanation.length > 0 &&
-    explanation !== message &&
-    explanation !== tag &&
-    explanation !== buttons &&
-    explanation !== signature &&
-    explanation !== mirror &&
-    explanation !== poll &&
-    explanation !== tasks &&
-    explanation !== media &&
-    explanation !== performer &&
-    explanation !== game &&
-    explanation !== invoice &&
-    explanation !== venue
-  ) {
-    texts.push(explanation);
-  }
-  if (
-    question &&
-    question.length > 0 &&
-    question !== message &&
-    question !== tag &&
-    question !== buttons &&
-    question !== signature &&
-    question !== mirror &&
-    question !== poll &&
-    question !== tasks &&
-    question !== media &&
-    question !== performer &&
-    question !== game &&
-    question !== invoice &&
-    question !== venue &&
-    question !== explanation
-  ) {
-    texts.push(question);
-  }
-  if (
-    prize &&
-    prize.length > 0 &&
-    prize !== message &&
-    prize !== tag &&
-    prize !== buttons &&
-    prize !== signature &&
-    prize !== mirror &&
-    prize !== poll &&
-    prize !== tasks &&
-    prize !== media &&
-    prize !== performer &&
-    prize !== game &&
-    prize !== invoice &&
-    prize !== venue &&
-    prize !== explanation &&
-    prize !== question
-  ) {
-    texts.push(prize);
-  }
-  if (
-    checklist &&
-    checklist.length > 0 &&
-    checklist !== message &&
-    checklist !== tag &&
-    checklist !== buttons &&
-    checklist !== signature &&
-    checklist !== mirror &&
-    checklist !== poll &&
-    checklist !== tasks &&
-    checklist !== media &&
-    checklist !== performer &&
-    checklist !== game &&
-    checklist !== invoice &&
-    checklist !== venue &&
-    checklist !== explanation &&
-    checklist !== question &&
-    checklist !== prize
-  ) {
-    texts.push(checklist);
-  }
-  if (
-    profile &&
-    profile.length > 0 &&
-    profile !== message &&
-    profile !== tag &&
-    profile !== buttons &&
-    profile !== signature &&
-    profile !== mirror &&
-    profile !== poll &&
-    profile !== tasks &&
-    profile !== media &&
-    profile !== performer &&
-    profile !== game &&
-    profile !== invoice &&
-    profile !== venue &&
-    profile !== explanation &&
-    profile !== question &&
-    profile !== prize &&
-    profile !== checklist
-  ) {
-    texts.push(profile);
+  for (const value of candidates) {
+    if (value && value.length > 0 && !texts.includes(value)) {
+      texts.push(value);
+    }
   }
   return texts;
 }

@@ -320,6 +320,51 @@ describe("rules", () => {
         serviceEvent({ checklistTitle: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ gameTitle: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { gameTitle: true },
+        serviceEvent({ checklistTitle: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ gameTitle: true }, serviceEvent({ gameTitle: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { checklistTitle: true },
+        serviceEvent({ gameTitle: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(matchesWhen({ invoiceTitle: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ invoiceTitle: true }, serviceEvent({ gameTitle: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { invoiceTitle: true },
+        serviceEvent({ invoiceTitle: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen({ gameTitle: true }, serviceEvent({ invoiceTitle: "加微x" })),
+    ).toBe(false);
+    expect(matchesWhen({ venueTitle: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { venueTitle: true },
+        serviceEvent({ invoiceTitle: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ venueTitle: true }, serviceEvent({ venueTitle: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { invoiceTitle: true },
+        serviceEvent({ venueTitle: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

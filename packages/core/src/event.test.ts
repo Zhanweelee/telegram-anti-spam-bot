@@ -557,6 +557,9 @@ describe("event schema", () => {
         pollQuestion: "选一个",
         prizeText: "奖品说明",
         checklistTitle: "购物清单",
+        gameTitle: "小游戏",
+        invoiceTitle: "商品",
+        venueTitle: "见面地点",
       },
     });
     expect(played.message?.gameText).toBe("加微x");
@@ -566,6 +569,9 @@ describe("event schema", () => {
     expect(played.message?.pollQuestion).toBe("选一个");
     expect(played.message?.prizeText).toBe("奖品说明");
     expect(played.message?.checklistTitle).toBe("购物清单");
+    expect(played.message?.gameTitle).toBe("小游戏");
+    expect(played.message?.invoiceTitle).toBe("商品");
+    expect(played.message?.venueTitle).toBe("见面地点");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -787,6 +793,54 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           checklistTitle: "a".repeat(256),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          gameTitle: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          invoiceTitle: "a".repeat(33),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          venueTitle: "a".repeat(4097),
         },
       }),
     ).toThrow();
