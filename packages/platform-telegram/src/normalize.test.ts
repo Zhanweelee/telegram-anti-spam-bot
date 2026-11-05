@@ -42,6 +42,8 @@ function withoutButtonText(event: object): string {
       checklistTask: undefined,
       mediaName: undefined,
       performer: undefined,
+      gameText: undefined,
+      invoiceText: undefined,
     },
   });
 }
@@ -11586,6 +11588,9 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.gameText).toBe(
+      `${phrase} https://evil.example/hide ${phrase} https://t.me/+GAME45.`,
+    );
     expect(outcome.event.message?.hosts).toEqual([
       "evil.example",
       "t.me",
@@ -11626,6 +11631,9 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.invoiceText).toBe(
+      `${phrase} https://tinyurl.com/inv45`,
+    );
     expect(outcome.event.message?.hosts).toEqual(["tinyurl.com"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
@@ -11663,7 +11671,8 @@ describe("normalizeUpdate", () => {
     expect(game.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(game.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(game.event.message?.invites).toEqual(["t.me"]);
-    const gameDump = JSON.stringify(game.event);
+    expect(game.event.message?.gameText).toBe(`${phrase} ${phrase}`);
+    const gameDump = withoutButtonText(game.event);
     expect(gameDump).not.toContain(phrase);
     expect(gameDump).not.toContain(code);
     expect(gameDump).not.toContain("/title51");
@@ -11694,7 +11703,8 @@ describe("normalizeUpdate", () => {
     expect(invoice.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(invoice.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(invoice.event.message?.invites).toEqual(["t.me"]);
-    const invoiceDump = JSON.stringify(invoice.event);
+    expect(invoice.event.message?.invoiceText).toBe(phrase);
+    const invoiceDump = withoutButtonText(invoice.event);
     expect(invoiceDump).not.toContain(phrase);
     expect(invoiceDump).not.toContain(code);
     expect(invoiceDump).not.toContain("/v51");
@@ -11722,7 +11732,8 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
-    const bodyDump = JSON.stringify(body.event);
+    expect(body.event.message?.gameText).toBe(phrase);
+    const bodyDump = withoutButtonText(body.event);
     expect(bodyDump).not.toContain(phrase);
   });
 
@@ -19484,7 +19495,8 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.gameText).toBe(phrase);
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("anim77");
@@ -19553,7 +19565,8 @@ describe("normalizeUpdate", () => {
     expect(asTitle.event.message?.text).toBe(title);
     expect(asTitle.event.message?.textSha256).toBe(await sha256Hex(title));
     expect(asTitle.event.message?.hosts).toEqual(["bit.ly"]);
-    const titleDump = JSON.stringify(asTitle.event);
+    expect(asTitle.event.message?.gameText).toBe(phrase);
+    const titleDump = withoutButtonText(asTitle.event);
     expect(titleDump).not.toContain("免费领取");
     expect(titleDump).not.toContain("body77");
     expect(titleDump).not.toContain(phrase);
@@ -31527,6 +31540,78 @@ describe("normalizeUpdate", () => {
     expect(withoutButtonText(label.event)).not.toContain("ok120");
   });
 
+  it("keeps the first 4096 characters of a game description and 255 of an invoice", async () => {
+    const tail = "TAIL70";
+    const path = "game70";
+    const played = await normalize({
+      update_id: 5695,
+      message: {
+        message_id: 5695,
+        date: 1761955200,
+        chat: { id: -1005695, type: "supergroup" },
+        from: { id: 96 },
+        game: {
+          title: "今天的游戏",
+          description: `${"说".repeat(4096)}${tail} https://bit.ly/${path}`,
+          text: `${"附".repeat(4096)}${tail}`,
+          photo: [
+            {
+              file_id: "GAME71ID",
+              file_unique_id: "UNIQ71",
+              width: 1,
+              height: 1,
+            },
+          ],
+        },
+      },
+    });
+    expect(played.status).toBe("event");
+    if (played.status !== "event") {
+      return;
+    }
+    expect(played.event.message?.text).toBe("今天的游戏");
+    expect(played.event.message?.textSha256).toBe(
+      await sha256Hex("今天的游戏"),
+    );
+    expect(played.event.message?.gameText).toHaveLength(8193);
+    expect(played.event.message?.gameText).not.toContain(tail);
+    expect(played.event.message?.hosts).toEqual(["bit.ly"]);
+    const playedDump = JSON.stringify(played.event);
+    expect(playedDump).not.toContain(tail);
+    expect(playedDump).not.toContain(path);
+    expect(playedDump).not.toContain("GAME71ID");
+
+    const billed = await normalize({
+      update_id: 5696,
+      message: {
+        message_id: 5696,
+        date: 1761955200,
+        chat: { id: -1005696, type: "supergroup" },
+        from: { id: 96 },
+        invoice: {
+          title: "今天的账单",
+          description: `${"账".repeat(255)}${tail} https://tinyurl.com/${path}`,
+          start_parameter: "START72",
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(billed.status).toBe("event");
+    if (billed.status !== "event") {
+      return;
+    }
+    expect(billed.event.message?.text).toBe("今天的账单");
+    expect(billed.event.message?.invoiceText).toHaveLength(255);
+    expect(billed.event.message?.invoiceText).not.toContain(tail);
+    expect(billed.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const billedDump = JSON.stringify(billed.event);
+    expect(billedDump).not.toContain(tail);
+    expect(billedDump).not.toContain(path);
+    expect(billedDump).not.toContain("START72");
+    expect(billedDump).not.toContain("XTR");
+  });
+
   it("keeps the host Android opens in an empty game description", async () => {
     const path = "span121";
     const slash = "\u2215";
@@ -31551,7 +31636,7 @@ describe("normalizeUpdate", () => {
     }
     expect(shown.event.message?.text).toBe("今天站会");
     expect(shown.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
-    const shownDump = JSON.stringify(shown.event);
+    const shownDump = withoutButtonText(shown.event);
     expect(shownDump).not.toContain(path);
     expect(shownDump).not.toContain("from130");
     expect(shownDump).not.toContain("机密群名");
@@ -31576,7 +31661,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ip.event.message?.hosts).toEqual(["example.com", address]);
-    expect(JSON.stringify(ip.event)).not.toContain(path);
+    expect(withoutButtonText(ip.event)).not.toContain(path);
 
     const desktop = await normalize({
       update_id: 2132,
@@ -31597,7 +31682,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(desktop.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    expect(JSON.stringify(desktop.event)).not.toContain(path);
+    expect(withoutButtonText(desktop.event)).not.toContain(path);
 
     const lower = await normalize({
       update_id: 2133,
@@ -31618,8 +31703,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(lower.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(lower.event)).not.toContain(path);
+    expect(withoutButtonText(lower.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(lower.event)).not.toContain(path);
 
     const covered = await normalize({
       update_id: 2134,
@@ -31642,8 +31727,8 @@ describe("normalizeUpdate", () => {
     }
     expect(covered.event.message?.text).toBe("今天站会");
     expect(covered.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(covered.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(covered.event)).not.toContain(path);
+    expect(withoutButtonText(covered.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(covered.event)).not.toContain(path);
 
     const attached = await normalize({
       update_id: 2135,
@@ -31665,10 +31750,11 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(attached.event.message?.text).toBe("今天站会");
+    expect(attached.event.message?.gameText).toBe(`${hidden} 分数`);
     expect(attached.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(attached.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(attached.event)).not.toContain("分数");
-    expect(JSON.stringify(attached.event)).not.toContain(path);
+    expect(withoutButtonText(attached.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(attached.event)).not.toContain("分数");
+    expect(withoutButtonText(attached.event)).not.toContain(path);
 
     const invoice = await normalize({
       update_id: 2136,
@@ -31691,7 +31777,7 @@ describe("normalizeUpdate", () => {
     }
     expect(invoice.event.message?.text).toBe("今天站会");
     expect(invoice.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
-    expect(JSON.stringify(invoice.event)).not.toContain(path);
+    expect(withoutButtonText(invoice.event)).not.toContain(path);
   });
 
   it("keeps the host Android opens in an invoice description", async () => {
@@ -31720,7 +31806,7 @@ describe("normalizeUpdate", () => {
     }
     expect(shown.event.message?.text).toBe("今天站会");
     expect(shown.event.message?.hosts).toEqual(["example.com", "bit.ly"]);
-    const shownDump = JSON.stringify(shown.event);
+    const shownDump = withoutButtonText(shown.event);
     expect(shownDump).not.toContain(path);
     expect(shownDump).not.toContain("from140");
     expect(shownDump).not.toContain("机密群名");
@@ -31748,7 +31834,7 @@ describe("normalizeUpdate", () => {
     }
     expect(ip.event.message?.text).toBe("今天站会");
     expect(ip.event.message?.hosts).toEqual(["example.com", address]);
-    expect(JSON.stringify(ip.event)).not.toContain(path);
+    expect(withoutButtonText(ip.event)).not.toContain(path);
 
     const desktop = await normalize({
       update_id: 2142,
@@ -31770,7 +31856,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(desktop.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
-    expect(JSON.stringify(desktop.event)).not.toContain(path);
+    expect(withoutButtonText(desktop.event)).not.toContain(path);
 
     const lower = await normalize({
       update_id: 2143,
@@ -31792,8 +31878,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(lower.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(lower.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(lower.event)).not.toContain(path);
+    expect(withoutButtonText(lower.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(lower.event)).not.toContain(path);
 
     const marked = await normalize({
       update_id: 2144,
@@ -31816,8 +31902,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(marked.event.message?.hosts).toEqual(["example.com"]);
-    expect(JSON.stringify(marked.event)).not.toContain("bit.ly");
-    expect(JSON.stringify(marked.event)).not.toContain(path);
+    expect(withoutButtonText(marked.event)).not.toContain("bit.ly");
+    expect(withoutButtonText(marked.event)).not.toContain(path);
   });
 
   it("ignores a message that belongs to another chat with the same id", async () => {

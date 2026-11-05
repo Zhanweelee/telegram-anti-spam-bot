@@ -14578,6 +14578,347 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(keptBody)).not.toContain(label);
   });
 
+  it("deletes a game or invoice description that matches a keyword or regex beside a title", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const keyworded = await normalizeUpdate({
+      update: {
+        update_id: 5686,
+        message: {
+          message_id: 5686,
+          date: 1761955200,
+          chat: { id: -1005686, type: "supergroup" },
+          from: { id: 96, first_name: "Ada" },
+          game: {
+            title: "今天的游戏",
+            description: phrase,
+            text: "普通说明",
+            photo: [
+              {
+                file_id: "GAME70ID",
+                file_unique_id: "UNIQ70",
+                width: 1,
+                height: 1,
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(keyworded.status).toBe("event");
+    if (keyworded.status !== "event") {
+      return;
+    }
+    expect(keyworded.event.message?.text).toBe("今天的游戏");
+    expect(keyworded.event.message?.textSha256).toBe(
+      await sha256Hex("今天的游戏"),
+    );
+    expect(keyworded.event.message?.gameText).toBe(`${phrase} 普通说明`);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(keyworded.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005686", messageId: "5686" },
+    ]);
+    const dumped = JSON.stringify({
+      result,
+      logs: logger.entries,
+      event: keyworded.event,
+    });
+    expect(dumped).not.toContain("GAME70ID");
+    expect(dumped).not.toContain("UNIQ70");
+    expect(dumped).not.toContain("Ada");
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5687,
+        message: {
+          message_id: 5687,
+          date: 1761955200,
+          chat: { id: -1005687, type: "supergroup" },
+          from: { id: 96 },
+          game: {
+            title: "今天的游戏",
+            description: "说明",
+            text: label,
+            photo: [],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.gameText).toBe(`说明 ${label}`);
+    const patternLog = createMemoryLogger();
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      logger: patternLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("game_text_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patternLog.entries)).not.toContain(label);
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5688,
+        message: {
+          message_id: 5688,
+          date: 1761955200,
+          chat: { id: -1005688, type: "supergroup" },
+          from: { id: 96 },
+          game: {
+            title: "今天的游戏",
+            description: "说明",
+            text: "附加",
+            photo: [],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    expect(clean.event.message?.gameText).toBe("说明 附加");
+    const kept = await screenTelegramEvent(clean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5689,
+        message: {
+          message_id: 5689,
+          date: 1761955200,
+          chat: { id: -1005689, type: "supergroup" },
+          from: { id: 96 },
+          game: {
+            title: label,
+            description: label,
+            photo: [],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.gameText).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5690,
+        message: {
+          message_id: 5690,
+          date: 1761955200,
+          chat: { id: -1005690, type: "supergroup" },
+          from: { id: 96 },
+          caption: label,
+          game: {
+            title: "今天的游戏",
+            description: "说明",
+            photo: [],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.gameText).toBe("说明");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const billed = await normalizeUpdate({
+      update: {
+        update_id: 5691,
+        message: {
+          message_id: 5691,
+          date: 1761955200,
+          chat: { id: -1005691, type: "supergroup" },
+          from: { id: 96 },
+          invoice: {
+            title: "今天的账单",
+            description: phrase,
+            start_parameter: "START71",
+            currency: "XTR",
+            total_amount: 1,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(billed.status).toBe("event");
+    if (billed.status !== "event") {
+      return;
+    }
+    expect(billed.event.message?.text).toBe("今天的账单");
+    expect(billed.event.message?.textSha256).toBe(
+      await sha256Hex("今天的账单"),
+    );
+    expect(billed.event.message?.invoiceText).toBe(phrase);
+    const billLog = createMemoryLogger();
+    const billMod = createMemoryModerator();
+    const billResult = await screenTelegramEvent(billed.event, {
+      logger: billLog,
+      moderator: billMod,
+    });
+    expect(billResult.decision.action).toBe("delete");
+    expect(billResult.decision.ruleIds).toContain("spam_keywords");
+    expect(billMod.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005691", messageId: "5691" },
+    ]);
+    const billDump = JSON.stringify({
+      result: billResult,
+      logs: billLog.entries,
+      event: billed.event,
+    });
+    expect(billDump).not.toContain("START71");
+    expect(billDump).not.toContain("XTR");
+    expect(
+      JSON.stringify({ result: billResult, logs: billLog.entries }),
+    ).not.toContain(phrase);
+
+    const billPattern = await normalizeUpdate({
+      update: {
+        update_id: 5692,
+        message: {
+          message_id: 5692,
+          date: 1761955200,
+          chat: { id: -1005692, type: "supergroup" },
+          from: { id: 96 },
+          invoice: {
+            title: "今天的账单",
+            description: label,
+            currency: "XTR",
+            total_amount: 1,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(billPattern.status).toBe("event");
+    if (billPattern.status !== "event") {
+      return;
+    }
+    expect(billPattern.event.message?.invoiceText).toBe(label);
+    const billPatternResult = await screenTelegramEvent(billPattern.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(billPatternResult.decision.action).toBe("delete");
+    expect(billPatternResult.decision.ruleIds).toContain("invoice_text_regex");
+    expect(JSON.stringify(billPatternResult)).not.toContain(label);
+
+    const billClean = await normalizeUpdate({
+      update: {
+        update_id: 5693,
+        message: {
+          message_id: 5693,
+          date: 1761955200,
+          chat: { id: -1005693, type: "supergroup" },
+          from: { id: 96 },
+          invoice: {
+            title: "今天的账单",
+            description: "商品说明",
+            currency: "XTR",
+            total_amount: 1,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(billClean.status).toBe("event");
+    if (billClean.status !== "event") {
+      return;
+    }
+    expect(billClean.event.message?.invoiceText).toBe("商品说明");
+    const keptBill = await screenTelegramEvent(billClean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBill.decision.action).toBe("allow");
+
+    const billSame = await normalizeUpdate({
+      update: {
+        update_id: 5694,
+        message: {
+          message_id: 5694,
+          date: 1761955200,
+          chat: { id: -1005694, type: "supergroup" },
+          from: { id: 96 },
+          invoice: {
+            title: label,
+            description: label,
+            currency: "XTR",
+            total_amount: 1,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(billSame.status).toBe("event");
+    if (billSame.status !== "event") {
+      return;
+    }
+    expect(billSame.event.message?.text).toBe(label);
+    expect(billSame.event.message?.invoiceText).toBeUndefined();
+    const keptBillSame = await screenTelegramEvent(billSame.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBillSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBillSame)).not.toContain(label);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

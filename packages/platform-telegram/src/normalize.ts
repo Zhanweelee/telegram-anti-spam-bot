@@ -143,6 +143,8 @@ async function messageEvent(
   const sideTasks = besideChecklistTask(message, text);
   const sideMedia = besideMediaName(message, text);
   const sidePerformer = besidePerformer(message, text);
+  const sideGame = besideGameText(message, text);
+  const sideInvoice = besideInvoiceText(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -213,6 +215,8 @@ async function messageEvent(
       ...(sideTasks.length > 0 ? { checklistTask: sideTasks } : {}),
       ...(sideMedia.length > 0 ? { mediaName: sideMedia } : {}),
       ...(sidePerformer.length > 0 ? { performer: sidePerformer } : {}),
+      ...(sideGame.length > 0 ? { gameText: sideGame } : {}),
+      ...(sideInvoice.length > 0 ? { invoiceText: sideInvoice } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6647,6 +6651,58 @@ function besideAuthorSignature(
     return "";
   }
   return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，游戏说明和附加文字各自最多 4096 字，中间一个空格。这段文字自己就是正文时不重复。 */
+function besideGameText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = gameCopy(message);
+  if (raw.length === 0 || text === raw) {
+    return "";
+  }
+  return raw;
+}
+
+/** 已有别的正文时，账单说明另留最多 255 字。说明自己就是正文时不重复。 */
+function besideInvoiceText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = invoiceCopy(message);
+  if (raw.length === 0 || text === raw) {
+    return "";
+  }
+  return raw;
+}
+
+function gameCopy(message: Record<string, unknown>): string {
+  const game = message.game;
+  if (!isRecord(game)) {
+    return "";
+  }
+  const parts = [clipped(game.description, 4096), clipped(game.text, 4096)];
+  return parts.filter((part) => part.length > 0).join(" ");
+}
+
+function invoiceCopy(message: Record<string, unknown>): string {
+  const invoice = message.invoice;
+  if (!isRecord(invoice)) {
+    return "";
+  }
+  return clipped(invoice.description, 255);
+}
+
+function clipped(value: unknown, max: number): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
+  return trimmed.slice(0, max);
 }
 
 /** 已有别的正文时，音频表演者另留最多 4096 字。表演者自己就是正文时不重复。 */
