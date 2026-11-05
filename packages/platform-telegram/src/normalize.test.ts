@@ -27582,7 +27582,11 @@ describe("normalizeUpdate", () => {
         message_id: 730,
         date: 1761955200,
         chat: { id: -100499680, type: "supergroup" },
-        from: { id: 104, first_name: actor },
+        from: {
+          id: 104,
+          first_name: "https://tinyurl.com/from104",
+          last_name: actor,
+        },
         forum_topic_created: {
           name: created,
           icon_color: color,
@@ -27597,7 +27601,9 @@ describe("normalizeUpdate", () => {
     }
     expect(made.event.message?.topicNotice).toBe("created");
     expect(made.event.message?.text).toBe(created);
+    expect(made.event.message?.hosts).toEqual(["tinyurl.com"]);
     const dumped = JSON.stringify(made.event);
+    expect(dumped).not.toContain("from104");
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(emoji);
     expect(dumped).not.toContain(String(color));
@@ -27608,7 +27614,7 @@ describe("normalizeUpdate", () => {
         message_id: 731,
         date: 1761955200,
         chat: { id: -100499681, type: "supergroup" },
-        from: { id: 104, first_name: actor },
+        from: { id: 104, first_name: "请免费领取礼品" },
         forum_topic_edited: { name: edited, icon_custom_emoji_id: emoji },
       },
     });
@@ -27618,7 +27624,10 @@ describe("normalizeUpdate", () => {
     }
     expect(renamed.event.message?.topicNotice).toBe("edited");
     expect(renamed.event.message?.text).toBe(edited);
-    expect(JSON.stringify(renamed.event)).not.toContain(emoji);
+    expect(renamed.event.message?.hosts).toBeUndefined();
+    const renamedDump = JSON.stringify(renamed.event);
+    expect(renamedDump).not.toContain("请免费领取礼品");
+    expect(renamedDump).not.toContain(emoji);
 
     const kept = await normalize({
       update_id: 4682,
@@ -27626,7 +27635,7 @@ describe("normalizeUpdate", () => {
         message_id: 732,
         date: 1761955200,
         chat: { id: -100499682, type: "supergroup" },
-        from: { id: 104, first_name: actor },
+        from: { id: 104, first_name: "请免费领取礼品" },
         text: "今天站会",
         forum_topic_created: { name: created, icon_color: color },
       },
@@ -27638,7 +27647,9 @@ describe("normalizeUpdate", () => {
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.topicNotice).toBe("created");
     expect(kept.event.message?.topicName).toBe(created);
+    expect(kept.event.message?.hosts).toBeUndefined();
     expect(withoutButtonText(kept.event)).not.toContain(created);
+    expect(withoutButtonText(kept.event)).not.toContain("请免费领取礼品");
 
     const both = await normalize({
       update_id: 4683,
@@ -27646,7 +27657,7 @@ describe("normalizeUpdate", () => {
         message_id: 733,
         date: 1761955200,
         chat: { id: -100499683, type: "supergroup" },
-        from: { id: 104 },
+        from: { id: 104, first_name: "https://bit.ly/both104" },
         forum_topic_created: { name: created, icon_color: color },
         forum_topic_edited: { name: edited },
       },
@@ -27658,6 +27669,8 @@ describe("normalizeUpdate", () => {
     expect(both.event.message?.topicNotice).toBe("created");
     expect(both.event.message?.text).toBe(created);
     expect(both.event.message?.topicName).toBe(edited);
+    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(both.event)).not.toContain("both104");
 
     const blankCreated = await normalize({
       update_id: 4684,
@@ -27665,7 +27678,7 @@ describe("normalizeUpdate", () => {
         message_id: 734,
         date: 1761955200,
         chat: { id: -100499684, type: "supergroup" },
-        from: { id: 104 },
+        from: { id: 104, first_name: "https://tinyurl.com/fall104" },
         forum_topic_created: { name: "", icon_color: color },
         forum_topic_edited: { name: edited },
       },
@@ -27677,6 +27690,8 @@ describe("normalizeUpdate", () => {
     expect(blankCreated.event.message?.topicNotice).toBe("edited");
     expect(blankCreated.event.message?.text).toBe(edited);
     expect(blankCreated.event.message?.topicName).toBeUndefined();
+    expect(blankCreated.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(blankCreated.event)).not.toContain("fall104");
 
     const iconOnly = await normalize({
       update_id: 4685,
@@ -27684,7 +27699,7 @@ describe("normalizeUpdate", () => {
         message_id: 735,
         date: 1761955200,
         chat: { id: -100499685, type: "supergroup" },
-        from: { id: 104 },
+        from: { id: 104, first_name: "https://bit.ly/icon104" },
         forum_topic_edited: { icon_custom_emoji_id: emoji },
       },
     });
@@ -27694,7 +27709,10 @@ describe("normalizeUpdate", () => {
     }
     expect(iconOnly.event.message?.topicNotice).toBe("edited");
     expect(iconOnly.event.message?.text).toBe("");
-    expect(JSON.stringify(iconOnly.event)).not.toContain(emoji);
+    expect(iconOnly.event.message?.hosts).toEqual(["bit.ly"]);
+    const iconDump = JSON.stringify(iconOnly.event);
+    expect(iconDump).not.toContain("icon104");
+    expect(iconDump).not.toContain(emoji);
 
     const empty = await normalize({
       update_id: 4686,
@@ -27702,7 +27720,7 @@ describe("normalizeUpdate", () => {
         message_id: 736,
         date: 1761955200,
         chat: { id: -100499686, type: "supergroup" },
-        from: { id: 104 },
+        from: { id: 104, first_name: "https://ow.ly/empty104" },
         forum_topic_edited: {},
       },
     });
@@ -27711,6 +27729,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.topicNotice).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty104");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
 
     const flag = await normalize({
       update_id: 4687,
@@ -27718,7 +27739,7 @@ describe("normalizeUpdate", () => {
         message_id: 737,
         date: 1761955200,
         chat: { id: -100499687, type: "supergroup" },
-        from: { id: 104 },
+        from: { id: 104, first_name: "https://bit.ly/flag104" },
         forum_topic_created: true,
         forum_topic_edited: true,
       },
@@ -27728,6 +27749,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(flag.event.message?.topicNotice).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag104");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
   });
 
   it("marks added checklist tasks and keeps the task text", async () => {
