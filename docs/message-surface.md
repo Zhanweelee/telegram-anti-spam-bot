@@ -108,6 +108,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `boost_added.boost_count` 是大于 0 的安全整数时，`from` 的可见名字只留主机名。名的长度大于 0 时不读姓。空白也算有名。用户名和次数不进事件。名字里的关键词不命中。没有真实次数时不读发送者。见 ADR 0583。
 
+`message_auto_delete_time` 是大于等于 0 的安全整数时，`from` 的可见名字只留主机名。0 也读。名的长度大于 0 时不读姓。空白也算有名。用户名和秒数不进事件。名字里的关键词不命中。没有真实秒数时不读发送者。见 ADR 0584。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。
