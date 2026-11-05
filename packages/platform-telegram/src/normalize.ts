@@ -537,7 +537,11 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   const lists: unknown[] = [message.entities, message.caption_entities];
   const poll = message.poll;
   if (isRecord(poll)) {
-    lists.push(poll.question_entities);
+    lists.push(
+      poll.question_entities,
+      poll.explanation_entities,
+      poll.description_entities,
+    );
   }
   const checklist = message.checklist;
   if (isRecord(checklist)) {

@@ -24481,6 +24481,80 @@ describe("normalizeUpdate", () => {
     expect(added.event.message?.asTextMention).toBe(true);
     expect(JSON.stringify(added.event)).not.toContain("90246");
     expect(JSON.stringify(added.event)).not.toContain("新90246");
+
+    const explained = await normalize({
+      update_id: 4885,
+      message: {
+        message_id: 925,
+        date: 1761955200,
+        chat: { id: -100499885, type: "supergroup" },
+        from: { id: 123 },
+        poll: {
+          id: "pollex",
+          question: "投票留下",
+          explanation: "说明点名",
+          explanation_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90247, first_name: "说90247" },
+            },
+          ],
+          options: [{ text: "甲" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "quiz",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(explained.status).toBe("event");
+    if (explained.status !== "event") {
+      return;
+    }
+    expect(explained.event.message?.text).toBe("投票留下");
+    expect(explained.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(explained.event)).not.toContain("90247");
+    expect(JSON.stringify(explained.event)).not.toContain("说90247");
+
+    const described = await normalize({
+      update_id: 4886,
+      message: {
+        message_id: 926,
+        date: 1761955200,
+        chat: { id: -100499886, type: "supergroup" },
+        from: { id: 123 },
+        poll: {
+          id: "polldesc",
+          question: "投票留下",
+          description: "描述点名",
+          description_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90248, first_name: "描90248" },
+            },
+          ],
+          options: [{ text: "甲" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(described.status).toBe("event");
+    if (described.status !== "event") {
+      return;
+    }
+    expect(described.event.message?.text).toBe("投票留下");
+    expect(described.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(described.event)).not.toContain("90248");
+    expect(JSON.stringify(described.event)).not.toContain("描90248");
   });
 
   it("marks a rich reference link and leaves the name out", async () => {
