@@ -4871,7 +4871,7 @@ function pushPinSenderUrls(
 }
 
 /**
- * 建群提示上的发送者只留主机名。
+ * 建群提示上画出的发送者全名只留主机名。
  * 只有普通群的 group_chat_created 正好是 true 时读。
  * 超级群和频道创建不读。用户名不读。普通消息的发送者不读。
  */
@@ -4882,7 +4882,7 @@ function pushCreatedGroupSenderUrls(
   if (!createdGroup(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**

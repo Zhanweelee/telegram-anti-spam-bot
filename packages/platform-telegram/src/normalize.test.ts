@@ -37580,6 +37580,146 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(empty.event)).not.toContain("tinyurl");
   });
 
+  it("keeps only the hostname from the full name drawn for a created group", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "MADE79183";
+    const drawn = await normalize({
+      update_id: 79183,
+      message: {
+        message_id: 79183,
+        date: 1761955200,
+        chat: {
+          id: -10079183,
+          type: "group",
+          title: "https://ow.ly/room79183",
+        },
+        from: {
+          id: 79183,
+          first_name: "https://bit.ly/made79183",
+          last_name: `${phrase} https://tinyurl.com/skip79183 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        group_chat_created: true,
+        supergroup_chat_created: true,
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(drawn.event.message?.asGroupCreated).toBe(true);
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("made79183");
+    expect(dumped).not.toContain("skip79183");
+    expect(dumped).not.toContain("room79183");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("cutt.ly");
+
+    const blank = await normalize({
+      update_id: 79184,
+      message: {
+        message_id: 79184,
+        date: 1761955200,
+        chat: { id: -10079184, type: "group" },
+        from: {
+          id: 79184,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79184",
+          username: "cutt.ly",
+        },
+        group_chat_created: true,
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.asGroupCreated).toBe(true);
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79184");
+    expect(JSON.stringify(blank.event)).not.toContain("cutt.ly");
+
+    const spaced = await normalize({
+      update_id: 79185,
+      message: {
+        message_id: 79185,
+        date: 1761955200,
+        chat: { id: -10079185, type: "group" },
+        from: {
+          id: 79185,
+          first_name: "Go https://bit.ly/later79185",
+          last_name: "Lee",
+        },
+        group_chat_created: true,
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79185");
+
+    const quiet = await normalize({
+      update_id: 79186,
+      message: {
+        message_id: 79186,
+        date: 1761955200,
+        chat: { id: -10079186, type: "group", title: "https://ow.ly/room79186" },
+        from: {
+          id: 79186,
+          first_name: "https://bit.ly/plain79186",
+          last_name: "https://tinyurl.com/plainlast79186",
+        },
+        text: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.asGroupCreated).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quiet.event)).not.toContain("plain79186");
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79186");
+    expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+
+    const flag = await normalize({
+      update_id: 79187,
+      message: {
+        message_id: 79187,
+        date: 1761955200,
+        chat: { id: -10079187, type: "group" },
+        from: {
+          id: 79187,
+          first_name: "https://bit.ly/flag79187",
+          last_name: "https://tinyurl.com/flaglast79187",
+        },
+        group_chat_created: false,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asGroupCreated).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag79187");
+    expect(JSON.stringify(flag.event)).not.toContain("flaglast79187");
+    expect(JSON.stringify(flag.event)).not.toContain("tinyurl");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
