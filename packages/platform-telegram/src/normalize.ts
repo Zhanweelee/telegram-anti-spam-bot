@@ -5039,7 +5039,7 @@ function pushProximitySenderUrls(
 }
 
 /**
- * 拉人进群的人只留主机名。
+ * 拉人进群的人画出的全名只留主机名。
  * 入群名单里至少有一个用户对象时读。空对象也读。
  * 空数组、非用户对象和布尔值不读。退群不读发送者。
  * 加入的人的名字仍按原来的正文。用户编号不读。用户名不读。
@@ -5051,7 +5051,7 @@ function pushJoinSenderUrls(
   if (serviceNotice(message) !== "join") {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
