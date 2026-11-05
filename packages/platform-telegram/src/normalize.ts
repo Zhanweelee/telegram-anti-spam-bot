@@ -4937,9 +4937,11 @@ function pushGiveawaySenderUrls(
 }
 
 /**
- * 换头像或删头像的人只留主机名。
+ * 换头像或删头像的人画出的全名只留主机名。
  * 新头像至少有一个尺寸对象时读。删头像正好是 true 时读。
- * 空数组和 false 不读。文件号和尺寸不读。普通图片的发送者不读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 同时出现时先认换头像。空数组和 false 不读。文件号和尺寸不读。
+ * 普通图片的发送者不读。
  */
 function pushPhotoSenderUrls(
   message: Record<string, unknown>,
@@ -4948,7 +4950,7 @@ function pushPhotoSenderUrls(
   if (photoNotice(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
