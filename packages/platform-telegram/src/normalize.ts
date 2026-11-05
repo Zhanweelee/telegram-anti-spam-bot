@@ -4687,10 +4687,10 @@ function pushVisiblePartyUrls(
 }
 
 /**
- * 已知用户转发抬头画出的全名。名和姓都去掉两端空白。
+ * 客户端用全名画出的用户。名和姓都去掉两端空白。
  * 名为空时只画姓。空格不截断。用户名不读。
  */
-function pushForwardUserUrls(user: unknown, urls: string[]): void {
+function pushFormattedUserUrls(user: unknown, urls: string[]): void {
   if (!isRecord(user)) {
     return;
   }
@@ -4715,7 +4715,7 @@ function pushForwardPartyUrls(
   const origin = message.forward_origin;
   if (isRecord(origin)) {
     if (origin.type === "user") {
-      pushForwardUserUrls(origin.sender_user, urls);
+      pushFormattedUserUrls(origin.sender_user, urls);
     } else if (origin.type === "chat") {
       pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
       pushChatOriginSignature(origin.author_signature, urls);
@@ -4732,7 +4732,7 @@ function pushForwardPartyUrls(
     return;
   }
   if (isRecord(message.forward_from)) {
-    pushForwardUserUrls(message.forward_from, urls);
+    pushFormattedUserUrls(message.forward_from, urls);
     return;
   }
   const chat = message.forward_from_chat;
@@ -4856,7 +4856,7 @@ function pushPriceSenderUrls(
 }
 
 /**
- * 置顶提示上的发送者只留主机名。
+ * 置顶提示上画出的发送者全名只留主机名。
  * 被置顶的原文不是这条服务消息。消息号不是大于 0 的安全整数时不读。
  * 用户名不读。普通消息的发送者不读。
  */
@@ -4867,7 +4867,7 @@ function pushPinSenderUrls(
   if (!pinnedNotice(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
