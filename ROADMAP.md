@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-537 礼物附言上的按标识提及也走 text_mention — done
+
+验收：`gift.entities`、`unique_gift.entities` 和 `gift_upgrade_sent.entities` 里，`type` 正好是 `text_mention` 且 `user.id` 是大于 0 的安全整数时，消息带 `asTextMention`。私聊 `/rule <chatId> text_mention on` 之后删除这种附言，证据是 `entity:text_mention`。规则仍默认关闭，关闭时留下。缺用户、布尔值、字符串编号和 0 不带。发布者用户名、短名、型号、符号和背景不进事件。用户编号、名字和用户名不进事件，也不进证据。附言看得见的字仍留在原来的字段。正文和哈希不变。付费帖仍不删除。`is_private` 仍不隐藏这段附言。不新增规则，不新增命令。菜单仍是 99 条。不改 ADR 0026 的基础检测器名单。30 天保留期不动。
+
 ### P3-536 投票说明和描述上的按标识提及也走 text_mention — done
 
 验收：`poll.explanation_entities` 和 `poll.description_entities` 里，`type` 正好是 `text_mention` 且 `user.id` 是大于 0 的安全整数时，消息带 `asTextMention`。私聊 `/rule <chatId> text_mention on` 之后删除这种说明或描述，证据是 `entity:text_mention`。规则仍默认关闭，关闭时留下。缺用户、布尔值、字符串编号和 0 不带。投票选项和手动引用仍不带。富文本提及仍由 `rich_text_mention` 决定。用户编号、名字和用户名不进事件，也不进证据。说明和描述看得见的字仍留在原来的字段。正文和哈希不变。付费帖仍不删除。不新增规则，不新增命令。菜单仍是 99 条。不改 ADR 0026 的基础检测器名单。30 天保留期不动。
@@ -2380,6 +2384,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-537
+
+- 做了什么：三种礼物附言上的按标识提及也交给已经存在的 `text_mention`。打开后删除，默认仍留下。
+- 学到什么：附言实体可以点一个人，发布者用户名是另一处。`is_private` 没有把附言从关键词里拿掉，标记跟着同一段文字。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-536
 
