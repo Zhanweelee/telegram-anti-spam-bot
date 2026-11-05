@@ -5107,6 +5107,7 @@ function pushPostSenderUrls(
 /**
  * 勾完或取消勾完清单的人只留主机名。
  * 完成或取消完成的任务号全是大于 0 的安全整数时读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 同时出现时先认完成。任务号不是正整数时不读。
  * 空对象、空数组、布尔值和新加的任务不读。嵌套原清单不读。用户名不读。
  */
@@ -5117,14 +5118,15 @@ function pushChecklistSenderUrls(
   if (taskNotice(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
  * 新加清单任务的人只留主机名。
  * `tasks` 里至少有一条长度大于 0 的文字时读。空白也算。
  * 空字符串、空数组和布尔值不读。投票选项不读。
- * 任务文字仍按原来的正文。完成者仍按原来的主机名。
+ * 任务文字仍按原来的正文。勾完的人后来按全名。
+ * 任务上的完成者仍按原来的主机名。
  * 嵌套原清单不读。用户名不读。
  */
 function pushAddedSenderUrls(
