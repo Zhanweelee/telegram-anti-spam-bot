@@ -4547,6 +4547,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(message.author_signature, urls);
   pushPlainUrls(mirrorAuthorSignature(message), urls);
   pushPlainUrls(message.sender_tag, urls);
+  pushPlainUrls(businessBotDrawnName(message), urls);
   const declined = message.suggested_post_declined;
   if (isRecord(declined)) {
     pushPlainUrls(declined.comment, urls);
@@ -8600,6 +8601,24 @@ function giftPublisherNames(message: Record<string, unknown>): string {
       pushTrimmed(chat.username, parts);
     }
   }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/**
+ * 商业账号代发时，时间戳旁画出的 bot 全名。名和姓都去掉两端空白。
+ * 名为空时只画姓。用户名和电话不读。
+ */
+function businessBotDrawnName(message: Record<string, unknown>): string {
+  const bot = message.sender_business_bot;
+  if (!isRecord(bot)) {
+    return "";
+  }
+  const parts: string[] = [];
+  pushTrimmed(bot.first_name, parts);
+  pushTrimmed(bot.last_name, parts);
   if (parts.length === 0) {
     return "";
   }
