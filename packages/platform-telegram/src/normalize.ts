@@ -4578,6 +4578,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushAddedSenderUrls(message, urls);
   pushPollSenderUrls(message, urls);
   pushTopicSenderUrls(message, urls);
+  pushLeaveSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -5063,6 +5064,22 @@ function pushTopicSenderUrls(
   urls: string[],
 ): void {
   if (changedTopic(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 把人移出群的人只留主机名。
+ * `left_chat_member` 是对象时读。空对象也读。
+ * 布尔值不读。离开的人仍按原来的主机名，排在前面。
+ * 入群仍按拉人的人。用户名和用户编号不读。
+ */
+function pushLeaveSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (serviceNotice(message) !== "leave") {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

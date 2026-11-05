@@ -31646,7 +31646,7 @@ describe("normalizeUpdate", () => {
         message_id: 343,
         date: 1761955200,
         chat: { id: -101093, type: "supergroup" },
-        from: { id: 87 },
+        from: { id: 87, first_name: "https://tinyurl.com/from85c" },
         left_chat_member: {
           id: 87004,
           first_name: "https://bit.ly/left85",
@@ -31660,10 +31660,11 @@ describe("normalizeUpdate", () => {
     }
     expect(left.event.message?.text).toBe("");
     expect(left.event.message?.textSha256).toBe(await sha256Hex(""));
-    expect(left.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(left.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(left.event.message?.notice).toBe("leave");
     expect(left.event.message?.memberName).toBeUndefined();
     const leftDump = JSON.stringify(left.event);
+    expect(leftDump).not.toContain("from85c");
     expect(leftDump).not.toContain("left85");
     expect(leftDump).not.toContain("gone85");
     expect(leftDump).not.toContain("87004");
