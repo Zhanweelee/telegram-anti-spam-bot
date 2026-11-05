@@ -11262,6 +11262,204 @@ describe("normalizeUpdate", () => {
     expect(withoutButtonText(surname.event)).not.toContain("last79119");
   });
 
+  it("keeps only the hostname from a vCard phone drawn raw", async () => {
+    const phone = "13800138120";
+    const path = "hash79120";
+    const outcome = await normalize({
+      update_id: 79120,
+      message: {
+        message_id: 79120,
+        date: 1761955200,
+        chat: { id: -100879120, type: "supergroup" },
+        from: { id: 79120 },
+        text: "你好",
+        contact: {
+          phone_number: `https://tinyurl.com/skip${path}`,
+          first_name: "名片",
+          last_name: "https://ow.ly/skip79120",
+          user_id: 88079120,
+          vcard: [
+            "BEGIN:VCARD",
+            "NOTE:https://cutt.ly/note79120",
+            "TITLE:https://t.co/title79120",
+            `TEL:https://bit.ly/${path}#1`,
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    expect(outcome.event.message?.text).toBe("你好");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = withoutButtonText(outcome.event);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(phone);
+    expect(dumped).not.toContain("88079120");
+    expect(dumped).not.toContain("skip79120");
+    expect(dumped).not.toContain("note79120");
+    expect(dumped).not.toContain("title79120");
+    expect(dumped).not.toContain("tinyurl");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("t.co");
+    expect(dumped).not.toContain("VCARD");
+
+    const plain = await normalize({
+      update_id: 79121,
+      message: {
+        message_id: 79121,
+        date: 1761955200,
+        chat: { id: -100879121, type: "supergroup" },
+        from: { id: 79121 },
+        contact: {
+          first_name: "名片",
+          vcard: ["BEGIN:VCARD", "TEL:https://bit.ly/plain79121", "END:VCARD"].join(
+            "\n",
+          ),
+        },
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(plain.event)).not.toContain("plain79121");
+
+    const mail = await normalize({
+      update_id: 79122,
+      message: {
+        message_id: 79122,
+        date: 1761955200,
+        chat: { id: -100879122, type: "supergroup" },
+        from: { id: 79122 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "EMAIL:+https://tinyurl.com/mailpath",
+            "EMAIL:https://bit.ly/mailhash#x",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(mail.status).toBe("event");
+    if (mail.status !== "event") {
+      return;
+    }
+    expect(mail.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const mailDump = withoutButtonText(mail.event);
+    expect(mailDump).not.toContain("mailpath");
+    expect(mailDump).not.toContain("mailhash");
+    expect(mailDump).not.toContain("bit.ly");
+
+    const encoded = await normalize({
+      update_id: 79123,
+      message: {
+        message_id: 79123,
+        date: 1761955200,
+        chat: { id: -100879123, type: "supergroup" },
+        from: { id: 79123 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "TEL;ENCODING=QUOTED-PRINTABLE:=68=74=74=70=73=3A=2F=2F=74=69=6E=79=75=72=6C=2E=63=6F=6D=2F=71=70#1",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(encoded.status).toBe("event");
+    if (encoded.status !== "event") {
+      return;
+    }
+    expect(encoded.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(encoded.event)).not.toContain("tinyurl");
+
+    const joined = await normalize({
+      update_id: 79124,
+      message: {
+        message_id: 79124,
+        date: 1761955200,
+        chat: { id: -100879124, type: "supergroup" },
+        from: { id: 79124 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "TEL;ENCODING=QUOTED-PRINTABLE:https://bit.ly/secret=",
+            "#x",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(withoutButtonText(joined.event)).not.toContain("secret");
+
+    const replaced = await normalize({
+      update_id: 79125,
+      message: {
+        message_id: 79125,
+        date: 1761955200,
+        chat: { id: -100879125, type: "supergroup" },
+        from: { id: 79125 },
+        contact: {
+          first_name: "名片",
+          vcard: [
+            "BEGIN:VCARD",
+            "TEL:https://bit.ly/old79125#1",
+            "END:VCARD",
+            "BEGIN:VCARD",
+            "TEL:*https://tinyurl.com/starpath",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(replaced.status).toBe("event");
+    if (replaced.status !== "event") {
+      return;
+    }
+    expect(replaced.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const replacedDump = withoutButtonText(replaced.event);
+    expect(replacedDump).not.toContain("old79125");
+    expect(replacedDump).not.toContain("starpath");
+    expect(replacedDump).not.toContain("bit.ly");
+
+    const open = await normalize({
+      update_id: 79126,
+      message: {
+        message_id: 79126,
+        date: 1761955200,
+        chat: { id: -100879126, type: "supergroup" },
+        from: { id: 79126 },
+        contact: {
+          first_name: "名片",
+          vcard: ["BEGIN:VCARD", "TEL:https://bit.ly/open79126#1"].join("\n"),
+        },
+      },
+    });
+    expect(open.status).toBe("event");
+    if (open.status !== "event") {
+      return;
+    }
+    expect(open.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(open.event)).not.toContain("open79126");
+  });
+
   it("keeps an inline bot as a flag and drops its username", async () => {
     const name = "机密代发";
     const outcome = await normalize({
