@@ -6728,6 +6728,7 @@ describe("screenTelegramEvent", () => {
       updateId: number,
       extra: Record<string, unknown>,
       paid = false,
+      adminUserIds: string[] = [],
     ) {
       const chatId = -(1_000_000 + updateId);
       const normalized = await normalizeUpdate({
@@ -6755,7 +6756,7 @@ describe("screenTelegramEvent", () => {
           },
         },
         tenantId: "local",
-        adminUserIds: [],
+        adminUserIds,
         nowIso: "2026-11-01T00:00:00.000Z",
       });
       expect(normalized.status).toBe("event");
@@ -6775,7 +6776,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(named.message?.text).toBe("");
     expect(named.message?.asPin).toBe(true);
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
       moderator,
@@ -6796,7 +6797,6 @@ describe("screenTelegramEvent", () => {
     });
     expect(namedDump).not.toContain("pin6069");
     expect(namedDump).not.toContain("skip6069");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("secretuser6069");
     expect(namedDump).not.toContain("nest6069");
     expect(namedDump).not.toContain("inner6069");
@@ -6908,12 +6908,16 @@ describe("screenTelegramEvent", () => {
         last_name: "https://bit.ly/space6074",
       },
     });
-    expect(blank.message?.hosts).toBeUndefined();
-    const blankKept = await screenTelegramEvent(blank, {
-      moderator: createMemoryModerator(),
+    expect(blank.message?.hosts).toEqual(["bit.ly"]);
+    const blankModerator = createMemoryModerator();
+    const blankHit = await screenTelegramEvent(blank, {
+      moderator: blankModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(blankKept.decision.action).toBe("allow");
+    expect(blankHit.decision.action).toBe("delete");
+    expect(blankModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006074", messageId: "6074" },
+    ]);
     expect(JSON.stringify(blank)).not.toContain("space6074");
 
     const empty = await posted(6075, {
@@ -6954,6 +6958,56 @@ describe("screenTelegramEvent", () => {
     expect(besideDump).not.toContain("nest6069");
     expect(besideDump).not.toContain("cutt.ly");
     expect(besideDump).not.toContain(String(pinnedId));
+
+    const spaced = await posted(79181, {
+      from: {
+        id: 124,
+        first_name: "Go https://bit.ly/later79181",
+        last_name: "https://tinyurl.com/laterlast79181",
+        username: "secretuser79181",
+      },
+    });
+    expect(spaced.message?.asPin).toBe(true);
+    expect(spaced.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedModerator = createMemoryModerator();
+    const spacedHit = await screenTelegramEvent(spaced, {
+      moderator: spacedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(spacedHit.decision.action).toBe("delete");
+    expect(spacedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079181", messageId: "79181" },
+    ]);
+    expect(JSON.stringify(spaced)).not.toContain("later79181");
+    expect(JSON.stringify(spaced)).not.toContain("laterlast79181");
+    expect(JSON.stringify(spaced)).not.toContain("secretuser79181");
+    expect(JSON.stringify(spaced)).not.toContain("nest6069");
+    expect(JSON.stringify(spaced)).not.toContain("inner6069");
+
+    const admin = await posted(
+      79182,
+      {
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/admin79182",
+        },
+      },
+      false,
+      ["124"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.asPin).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("admin79182");
+    expect(JSON.stringify(admin)).not.toContain("nest6069");
   });
 
   it("deletes a short link in a created group sender name", async () => {
