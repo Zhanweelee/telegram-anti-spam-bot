@@ -24555,6 +24555,98 @@ describe("normalizeUpdate", () => {
     expect(described.event.message?.asTextMention).toBe(true);
     expect(JSON.stringify(described.event)).not.toContain("90248");
     expect(JSON.stringify(described.event)).not.toContain("描90248");
+
+    const gifted = await normalize({
+      update_id: 4887,
+      message: {
+        message_id: 927,
+        date: 1761955200,
+        chat: { id: -100499887, type: "supergroup" },
+        from: { id: 123 },
+        gift: {
+          gift: { id: "giftfile" },
+          text: "附言点名",
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90249, first_name: "礼90249", username: "gift90249" },
+            },
+          ],
+        },
+      },
+    });
+    expect(gifted.status).toBe("event");
+    if (gifted.status !== "event") {
+      return;
+    }
+    expect(gifted.event.message?.text).toBe("附言点名");
+    expect(gifted.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(gifted.event)).not.toContain("90249");
+    expect(JSON.stringify(gifted.event)).not.toContain("礼90249");
+    expect(JSON.stringify(gifted.event)).not.toContain("gift90249");
+
+    const unique = await normalize({
+      update_id: 4888,
+      message: {
+        message_id: 928,
+        date: 1761955200,
+        chat: { id: -100499888, type: "supergroup" },
+        from: { id: 123 },
+        unique_gift: {
+          gift: { name: "短名留下" },
+          origin: "transfer",
+          text: "独特附言",
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90250, first_name: "独90250" },
+            },
+          ],
+        },
+      },
+    });
+    expect(unique.status).toBe("event");
+    if (unique.status !== "event") {
+      return;
+    }
+    expect(unique.event.message?.text).toBe("独特附言");
+    expect(unique.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(unique.event)).not.toContain("90250");
+    expect(JSON.stringify(unique.event)).not.toContain("独90250");
+
+    const upgraded = await normalize({
+      update_id: 4889,
+      message: {
+        message_id: 929,
+        date: 1761955200,
+        chat: { id: -100499889, type: "supergroup" },
+        from: { id: 123 },
+        gift_upgrade_sent: {
+          gift: { id: "upgradefile" },
+          text: "升级附言",
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90251, first_name: "升90251" },
+            },
+          ],
+        },
+      },
+    });
+    expect(upgraded.status).toBe("event");
+    if (upgraded.status !== "event") {
+      return;
+    }
+    expect(upgraded.event.message?.text).toBe("升级附言");
+    expect(upgraded.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(upgraded.event)).not.toContain("90251");
+    expect(JSON.stringify(upgraded.event)).not.toContain("升90251");
   });
 
   it("marks a rich reference link and leaves the name out", async () => {

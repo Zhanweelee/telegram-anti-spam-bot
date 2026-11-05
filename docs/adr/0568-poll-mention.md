@@ -35,3 +35,4 @@ ADR 0514 在投票题干上认出 `text_mention`。Bot API 写明题干和选项
 - 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `text_mention` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上 `text_mention`，否则 `/rule` 会拒绝。
 - 30 天保留期没有改。
+- 礼物附言上的按标识提及后来由 ADR 0569 也带上 `asTextMention`。发布者用户名仍不进事件。

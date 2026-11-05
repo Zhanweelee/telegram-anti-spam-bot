@@ -552,6 +552,12 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   if (isRecord(addedTasks)) {
     pushTaskMentionLists(addedTasks.tasks, lists);
   }
+  for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
+    const gift = message[field];
+    if (isRecord(gift)) {
+      lists.push(gift.entities);
+    }
+  }
   for (const list of lists) {
     if (!Array.isArray(list)) {
       continue;
