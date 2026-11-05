@@ -641,6 +641,22 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "author_signature_regex",
+      "enabled": true,
+      "when": { "authorSignature": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "mirror_signature_regex",
+      "enabled": true,
+      "when": { "mirrorSignature": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

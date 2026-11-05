@@ -60,6 +60,10 @@ export const messageSchema = z
     senderTag: z.string().min(1).max(16).optional(),
     /** Inline button labels beside another body. Capped at 256. Absent when the labels are the body. */
     buttonText: z.string().min(1).max(256).optional(),
+    /** Author signature beside another body. Capped at 256. Absent when the signature is the body. */
+    authorSignature: z.string().min(1).max(256).optional(),
+    /** Discussion-mirror author signature beside another body. Capped at 256. Absent when it is the body. */
+    mirrorSignature: z.string().min(1).max(256).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

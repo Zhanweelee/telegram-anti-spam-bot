@@ -449,6 +449,36 @@ describe("event schema", () => {
       },
     });
     expect(labeled.message?.buttonText).toBe("加微x");
+    const signed = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        authorSignature: "加微x",
+      },
+    });
+    expect(signed.message?.authorSignature).toBe("加微x");
+    const mirrored = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        mirrorSignature: "加微x",
+      },
+    });
+    expect(mirrored.message?.mirrorSignature).toBe("加微x");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -462,6 +492,38 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           buttonText: "a".repeat(257),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          authorSignature: "a".repeat(257),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          mirrorSignature: "a".repeat(257),
         },
       }),
     ).toThrow();

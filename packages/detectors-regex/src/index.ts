@@ -6,6 +6,7 @@ import {
   foldFullwidthLatin,
   foldInterpuncts,
   foldMatchText,
+  type TextPlace,
 } from "@tasb/core";
 import { z } from "zod";
 
@@ -70,19 +71,25 @@ export function createRegexDetector(config: RegexConfig): Detector {
     configSchema: regexConfigSchema,
     config: parsed,
     async detect(ctx) {
-      const texts = [
-        ctx.event.message?.text,
-        ctx.event.message?.senderTag,
-        ctx.event.message?.buttonText,
-        ctx.event.profile?.text,
-      ].filter(
-        (text): text is string => typeof text === "string" && text.length > 0,
-      );
-      if (texts.length === 0) {
-        return null;
-      }
+      const slots: readonly (readonly [TextPlace, string | undefined])[] = [
+        ["message", ctx.event.message?.text],
+        ["senderTag", ctx.event.message?.senderTag],
+        ["buttonText", ctx.event.message?.buttonText],
+        ["authorSignature", ctx.event.message?.authorSignature],
+        ["mirrorSignature", ctx.event.message?.mirrorSignature],
+        ["profile", ctx.event.profile?.text],
+      ];
+      const places: TextPlace[] = [];
+      let sawText = false;
       for (const expression of compiled) {
-        for (const text of texts) {
+        for (const [place, text] of slots) {
+          if (typeof text !== "string" || text.length === 0) {
+            continue;
+          }
+          sawText = true;
+          if (places.includes(place)) {
+            continue;
+          }
           let matched = false;
           try {
             matched = expression.test(folded(text));
@@ -95,18 +102,21 @@ export function createRegexDetector(config: RegexConfig): Detector {
             });
             return null;
           }
-          if (!matched) {
-            continue;
+          if (matched) {
+            places.push(place);
           }
-          return {
-            detectorId: "regex",
-            score: 1,
-            reasons: ["regex_match"],
-            evidence: [{ kind: "feature" as const, summary: "regex:hit" }],
-          };
         }
       }
-      return null;
+      if (!sawText || places.length === 0) {
+        return null;
+      }
+      return {
+        detectorId: "regex",
+        score: 1,
+        reasons: ["regex_match"],
+        evidence: [{ kind: "feature" as const, summary: "regex:hit" }],
+        places,
+      };
     },
   });
 }

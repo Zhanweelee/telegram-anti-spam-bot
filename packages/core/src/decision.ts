@@ -43,11 +43,24 @@ export interface Decision {
   readonly evidence: readonly Evidence[];
 }
 
+export const textPlaces = [
+  "message",
+  "profile",
+  "senderTag",
+  "buttonText",
+  "authorSignature",
+  "mirrorSignature",
+] as const;
+export const textPlaceSchema = z.enum(textPlaces);
+export type TextPlace = z.output<typeof textPlaceSchema>;
+
 export const detectorHitSchema = z.strictObject({
   detectorId: z.string().min(1),
   score: z.number().min(0).max(1),
   reasons: z.array(z.string().min(1)).min(1),
   evidence: z.array(evidenceSchema),
+  /** Which visible texts matched. Side-field rules only count their own place. */
+  places: z.array(textPlaceSchema).min(1).optional(),
 });
 
 export type DetectorHit = z.output<typeof detectorHitSchema>;
