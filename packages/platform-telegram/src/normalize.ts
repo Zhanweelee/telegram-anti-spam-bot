@@ -136,6 +136,7 @@ async function messageEvent(
   }
   const text = messageText(message);
   const sideTag = besideSenderTag(message, text);
+  const sideButtons = besideButtonText(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -199,6 +200,7 @@ async function messageEvent(
       text,
       textSha256: await sha256Hex(text),
       ...(sideTag.length > 0 ? { senderTag: sideTag } : {}),
+      ...(sideButtons.length > 0 ? { buttonText: sideButtons } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6607,6 +6609,19 @@ function besideSenderTag(
     return "";
   }
   return trimmed.slice(0, 16);
+}
+
+/** 已有别的正文时，内联按钮文字另留最多 256 字。按钮自己就是正文时不重复。 */
+function besideButtonText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = buttonLabel(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 256);
 }
 
 function authorSignature(message: Record<string, unknown>): string {

@@ -32,6 +32,8 @@
 
 正文旁边的成员标签写成「加微x」或「免费领取」时，这条消息会被删掉。标签自己就是正文时仍要打开 `regex_hint`。
 
+正文旁边的按钮写成「加微x」或「免费领取」时，这条消息会被删掉。按钮自己就是正文时仍要打开 `regex_hint`。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```
