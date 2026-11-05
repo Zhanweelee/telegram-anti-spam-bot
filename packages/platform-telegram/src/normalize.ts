@@ -4531,6 +4531,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushBackgroundFilename(message, urls);
   pushPlainUrls(memberNameSource(message), urls);
   pushVisiblePartyUrls(message.left_chat_member, undefined, urls);
+  pushBoostSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4686,6 +4687,20 @@ function pushSenderChatUrls(
     return;
   }
   pushPlainUrls(sender.title, urls);
+}
+
+/**
+ * 真实助推提示上的发送者只留主机名。
+ * 次数不是正整数时不读。用户名不读。普通消息的发送者不读。
+ */
+function pushBoostSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!addedBoost(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
 }
 
 function pushPlainUrls(value: unknown, urls: string[]): void {
