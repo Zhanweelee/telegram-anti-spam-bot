@@ -4573,6 +4573,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushJoinSenderUrls(message, urls);
   pushGiftSenderUrls(message, urls);
   pushDeclineSenderUrls(message, urls);
+  pushPostSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4973,6 +4974,23 @@ function pushDeclineSenderUrls(
   urls: string[],
 ): void {
   if (!declinedPost(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 通过、失败、付款或退款建议帖的人只留主机名。
+ * 通过要有大于等于 0 的发表时间。失败要有价格对象，空对象也读。
+ * 付款只要 `XTR` 或 `TON`。退款只要删帖或退款原因。
+ * 空对象、负数、其它币种、其它原因和布尔值不读。
+ * 同时出现时先认通过。嵌套的原帖不读。用户名不读。
+ */
+function pushPostSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (suggestedPost(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

@@ -28848,7 +28848,11 @@ describe("normalizeUpdate", () => {
         message_id: 630,
         date: 1761955200,
         chat: { id: -100499550, type: "channel" },
-        from: { id: 96, first_name: actor },
+        from: {
+          id: 96,
+          first_name: "https://tinyurl.com/from96",
+          last_name: actor,
+        },
         suggested_post_approved: {
           send_date: sendDate,
           price: { currency: "XTR", amount },
@@ -28867,9 +28871,11 @@ describe("normalizeUpdate", () => {
     }
     expect(approved.event.message?.postNotice).toBe("approved");
     expect(approved.event.message?.text).toBe("");
+    expect(approved.event.message?.hosts).toEqual(["tinyurl.com"]);
     const approvedDump = JSON.stringify(approved.event);
     expect(approvedDump).not.toContain(title);
     expect(approvedDump).not.toContain(actor);
+    expect(approvedDump).not.toContain("from96");
     expect(approvedDump).not.toContain(String(sendDate));
     expect(approvedDump).not.toContain(String(amount));
 
@@ -28879,7 +28885,7 @@ describe("normalizeUpdate", () => {
         message_id: 631,
         date: 1761955200,
         chat: { id: -100499551, type: "channel" },
-        from: { id: 96 },
+        from: { id: 96, first_name: "请免费领取礼品" },
         text: "今天站会",
         suggested_post_approval_failed: {
           price: { currency: "TON", amount: 90193 },
@@ -28893,8 +28899,10 @@ describe("normalizeUpdate", () => {
     }
     expect(failed.event.message?.postNotice).toBe("failed");
     expect(failed.event.message?.text).toBe("今天站会");
+    expect(failed.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(failed.event)).not.toContain("90193");
     expect(JSON.stringify(failed.event)).not.toContain(title);
+    expect(JSON.stringify(failed.event)).not.toContain("请免费领取礼品");
 
     const paid = await normalize({
       update_id: 4572,
@@ -28902,7 +28910,7 @@ describe("normalizeUpdate", () => {
         message_id: 632,
         date: 1761955200,
         chat: { id: -100499552, type: "channel" },
-        from: { id: 96 },
+        from: { id: 96, first_name: "https://tinyurl.com/from96b" },
         suggested_post_paid: {
           currency: "XTR",
           star_amount: { amount: 90194 },
@@ -28915,8 +28923,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(paid.event.message?.postNotice).toBe("paid");
+    expect(paid.event.message?.hosts).toEqual(["tinyurl.com"]);
     expect(JSON.stringify(paid.event)).not.toContain("90194");
     expect(JSON.stringify(paid.event)).not.toContain(title);
+    expect(JSON.stringify(paid.event)).not.toContain("from96b");
 
     const ton = await normalize({
       update_id: 4573,
@@ -29018,7 +29028,7 @@ describe("normalizeUpdate", () => {
         message_id: 638,
         date: 1761955200,
         chat: { id: -100499558, type: "channel" },
-        from: { id: 96 },
+        from: { id: 96, first_name: "https://ow.ly/empty96" },
         suggested_post_approved: {},
       },
     });
@@ -29027,6 +29037,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.postNotice).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty96");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
 
     const negative = await normalize({
       update_id: 4579,
@@ -29050,7 +29063,7 @@ describe("normalizeUpdate", () => {
         message_id: 640,
         date: 1761955200,
         chat: { id: -100499560, type: "channel" },
-        from: { id: 96 },
+        from: { id: 96, first_name: "https://bit.ly/flag96" },
         suggested_post_approved: true,
       },
     });
@@ -29059,6 +29072,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(flag.event.message?.postNotice).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag96");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
 
     const failedEmpty = await normalize({
       update_id: 4581,
