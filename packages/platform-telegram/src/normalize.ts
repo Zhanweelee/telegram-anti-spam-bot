@@ -4534,6 +4534,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushBoostSenderUrls(message, urls);
   pushAutoDeleteSenderUrls(message, urls);
   pushPriceSenderUrls(message, urls);
+  pushPinSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4728,6 +4729,21 @@ function pushPriceSenderUrls(
   urls: string[],
 ): void {
   if (changedPrice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 置顶提示上的发送者只留主机名。
+ * 被置顶的原文不是这条服务消息。消息号不是大于 0 的安全整数时不读。
+ * 用户名不读。普通消息的发送者不读。
+ */
+function pushPinSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!pinnedNotice(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
