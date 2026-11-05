@@ -31139,7 +31139,11 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "tinyurl.com",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = JSON.stringify(labeled.event);
     expect(labeledDump).not.toContain(phrase);
@@ -31149,7 +31153,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("name82");
     expect(labeledDump).not.toContain("82001");
     expect(labeledDump).not.toContain("cutt.ly");
-    expect(labeledDump).not.toContain("tinyurl.com");
 
     const joined = await normalize({
       update_id: 5311,
