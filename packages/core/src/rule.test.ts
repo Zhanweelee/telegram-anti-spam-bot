@@ -218,6 +218,22 @@ describe("rules", () => {
     expect(
       matchesWhen({ mediaName: true }, serviceEvent({ performer: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ gameText: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ gameText: true }, serviceEvent({ gameText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ invoiceText: true }, serviceEvent({ gameText: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { invoiceText: true },
+        serviceEvent({ invoiceText: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen({ gameText: true }, serviceEvent({ invoiceText: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

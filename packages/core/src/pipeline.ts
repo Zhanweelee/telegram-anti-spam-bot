@@ -271,6 +271,12 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("performer" in when) {
     return "performer";
   }
+  if ("gameText" in when) {
+    return "gameText";
+  }
+  if ("invoiceText" in when) {
+    return "invoiceText";
+  }
   return undefined;
 }
 
@@ -390,6 +396,8 @@ function eventTexts(event: Event): readonly string[] {
   const tasks = event.message?.checklistTask;
   const media = event.message?.mediaName;
   const performer = event.message?.performer;
+  const game = event.message?.gameText;
+  const invoice = event.message?.invoiceText;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -469,6 +477,37 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(performer);
   }
   if (
+    game &&
+    game.length > 0 &&
+    game !== message &&
+    game !== tag &&
+    game !== buttons &&
+    game !== signature &&
+    game !== mirror &&
+    game !== poll &&
+    game !== tasks &&
+    game !== media &&
+    game !== performer
+  ) {
+    texts.push(game);
+  }
+  if (
+    invoice &&
+    invoice.length > 0 &&
+    invoice !== message &&
+    invoice !== tag &&
+    invoice !== buttons &&
+    invoice !== signature &&
+    invoice !== mirror &&
+    invoice !== poll &&
+    invoice !== tasks &&
+    invoice !== media &&
+    invoice !== performer &&
+    invoice !== game
+  ) {
+    texts.push(invoice);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -479,7 +518,9 @@ function eventTexts(event: Event): readonly string[] {
     profile !== poll &&
     profile !== tasks &&
     profile !== media &&
-    profile !== performer
+    profile !== performer &&
+    profile !== game &&
+    profile !== invoice
   ) {
     texts.push(profile);
   }

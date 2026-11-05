@@ -361,6 +361,52 @@ describe("keyword detector", () => {
     expect(JSON.stringify(hit)).not.toContain(label);
   });
 
+  it("matches game and invoice text without copying it", async () => {
+    const label = "请免费领取礼品";
+    const played = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          gameText: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(played?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(played)).not.toContain(label);
+    const billed = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          invoiceText: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(billed?.evidence).toEqual([
+      { kind: "keyword", summary: "keyword:免费领取" },
+    ]);
+    expect(JSON.stringify(billed)).not.toContain(label);
+  });
+
   it("matches a performer without copying it", async () => {
     const label = "请免费领取礼品";
     const hit = await detector.detect({

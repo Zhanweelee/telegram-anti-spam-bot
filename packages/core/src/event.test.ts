@@ -539,6 +539,23 @@ describe("event schema", () => {
       },
     });
     expect(performed.message?.performer).toBe("加微x");
+    const played = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        gameText: "加微x",
+        invoiceText: "加微信",
+      },
+    });
+    expect(played.message?.gameText).toBe("加微x");
+    expect(played.message?.invoiceText).toBe("加微信");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -648,6 +665,38 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           performer: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          gameText: "a".repeat(8194),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          invoiceText: "a".repeat(256),
         },
       }),
     ).toThrow();

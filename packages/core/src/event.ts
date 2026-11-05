@@ -72,6 +72,10 @@ export const messageSchema = z
     mediaName: z.string().min(1).max(4096).optional(),
     /** Audio performer beside another body. Capped at 4096. Absent when it is the body. */
     performer: z.string().min(1).max(4096).optional(),
+    /** Game description and brief text beside the title. Each part is 4096, plus one space. */
+    gameText: z.string().min(1).max(8193).optional(),
+    /** Invoice description beside the title. Capped at 255. Absent when it is the body. */
+    invoiceText: z.string().min(1).max(255).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

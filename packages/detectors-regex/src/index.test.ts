@@ -317,6 +317,56 @@ describe("regex detector", () => {
     });
     expect(performerBodyHit?.places).toEqual(["message"]);
     expect(JSON.stringify(performerBodyHit)).not.toContain("你好");
+    const played = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        gameText: `打开 ${name}`,
+      },
+    });
+    const gameHit = await detector.detect({
+      event: played,
+      logger,
+      signal,
+    });
+    expect(gameHit?.places).toEqual(["gameText"]);
+    expect(JSON.stringify(gameHit)).not.toContain(name);
+    const billed = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        invoiceText: `打开 ${name}`,
+      },
+    });
+    const invoiceHit = await detector.detect({
+      event: billed,
+      logger,
+      signal,
+    });
+    expect(invoiceHit?.places).toEqual(["invoiceText"]);
+    expect(JSON.stringify(invoiceHit)).not.toContain(name);
+    const gameBody = parseEvent({
+      ...messageEvent(name),
+      message: {
+        id: "msg_1",
+        text: name,
+        textSha256: HASH,
+        gameText: "说明",
+        invoiceText: "商品说明",
+      },
+    });
+    const gameBodyHit = await detector.detect({
+      event: gameBody,
+      logger,
+      signal,
+    });
+    expect(gameBodyHit?.places).toEqual(["message"]);
+    expect(JSON.stringify(gameBodyHit)).not.toContain("说明");
+    expect(JSON.stringify(gameBodyHit)).not.toContain("商品说明");
   });
 
   it("accepts a short unquantified subset and rejects the rest", () => {

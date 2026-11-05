@@ -1366,6 +1366,121 @@ describe("runPipeline", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
   });
 
+  it("redacts a game description copied into evidence", async () => {
+    const label = "请免费领取礼品";
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          gameText: label,
+          invoiceText: "商品说明",
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "game_text_regex",
+            enabled: true,
+            when: { gameText: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: [label],
+          evidence: [{ kind: "feature", summary: label }],
+          places: ["gameText"],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "redacted" },
+    ]);
+    expect(result.decision.ruleIds).toEqual(["game_text_regex"]);
+    expect(JSON.stringify(kit.records)).not.toContain(label);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(label);
+    expect(JSON.stringify(result)).not.toContain(label);
+  });
+
+  it("ignores a regex hit that missed the game or invoice text", async () => {
+    const kit = harness();
+    const missed = async (when: { gameText: true } | { invoiceText: true }) =>
+      runPipeline({
+        event: event({
+          message: {
+            id: "msg_1",
+            text: "加微x",
+            textSha256: HASH,
+            gameText: "说明",
+            invoiceText: "商品说明",
+          },
+        }),
+        rules: parseRuleSet({
+          version: 1,
+          aggregate: "max",
+          rules: [
+            {
+              id: "side_regex",
+              enabled: true,
+              when,
+              detectorIds: ["regex"],
+              threshold: 1,
+              actions: ["delete"],
+            },
+          ],
+        }),
+        policy: { exemptAdmins: false, allowActorIds: [] },
+        detectors: [
+          detector("regex", async () => ({
+            detectorId: "regex",
+            score: 1,
+            reasons: ["regex_match"],
+            evidence: [{ kind: "feature", summary: "regex:hit" }],
+            places: ["message"],
+          })),
+        ],
+        actions: [
+          action("delete", async () => ({
+            actionId: "delete",
+            status: "executed",
+          })),
+        ],
+        storage: kit.storage,
+        moderator: kit.moderator,
+        logger: kit.logger,
+        clock: kit.clock,
+      });
+    const game = await missed({ gameText: true });
+    const invoice = await missed({ invoiceText: true });
+    expect(game.decision.action).toBe("allow");
+    expect(invoice.decision.action).toBe("allow");
+    expect(JSON.stringify(game)).not.toContain("加微x");
+    expect(JSON.stringify(invoice)).not.toContain("加微x");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
+  });
+
   it("picks the most severe action and reports a missing plugin", async () => {
     const kit = harness();
     const result = await runPipeline({

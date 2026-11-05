@@ -689,6 +689,22 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "game_text_regex",
+      "enabled": true,
+      "when": { "gameText": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
+      "id": "invoice_text_regex",
+      "enabled": true,
+      "when": { "invoiceText": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

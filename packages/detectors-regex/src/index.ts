@@ -81,6 +81,8 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["checklistTask", ctx.event.message?.checklistTask],
         ["mediaName", ctx.event.message?.mediaName],
         ["performer", ctx.event.message?.performer],
+        ["gameText", ctx.event.message?.gameText],
+        ["invoiceText", ctx.event.message?.invoiceText],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];
