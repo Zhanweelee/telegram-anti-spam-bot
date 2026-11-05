@@ -576,6 +576,7 @@ describe("event schema", () => {
         audioFile: "音频文件",
         paidFile: "付费文件",
         richName: "富文本名",
+        pollMedia: "投票媒体",
       },
     });
     expect(played.message?.gameText).toBe("加微x");
@@ -604,6 +605,7 @@ describe("event schema", () => {
     expect(played.message?.audioFile).toBe("音频文件");
     expect(played.message?.paidFile).toBe("付费文件");
     expect(played.message?.richName).toBe("富文本名");
+    expect(played.message?.pollMedia).toBe("投票媒体");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -1129,6 +1131,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           richName: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          pollMedia: "a".repeat(4097),
         },
       }),
     ).toThrow();

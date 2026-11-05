@@ -169,6 +169,7 @@ async function messageEvent(
   const sideAudioFile = besideAudioFile(message, text);
   const sidePaidFile = besidePaidFile(message, text);
   const sideRichName = besideRichName(message, text);
+  const sidePollMedia = besidePollMedia(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -271,6 +272,7 @@ async function messageEvent(
       ...(sideAudioFile.length > 0 ? { audioFile: sideAudioFile } : {}),
       ...(sidePaidFile.length > 0 ? { paidFile: sidePaidFile } : {}),
       ...(sideRichName.length > 0 ? { richName: sideRichName } : {}),
+      ...(sidePollMedia.length > 0 ? { pollMedia: sidePollMedia } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6972,6 +6974,80 @@ function walkRichNameBlocks(
 }
 
 function pushRichName(
+  name: unknown,
+  text: string,
+  label: string,
+  parts: string[],
+): void {
+  if (typeof name !== "string") {
+    return;
+  }
+  const slice = name.slice(0, MAX_TEXT);
+  if (slice.length === 0 || text === slice || label === slice) {
+    return;
+  }
+  const trimmed = name.trim();
+  if (trimmed.length === 0) {
+    return;
+  }
+  parts.push(trimmed);
+}
+
+/** 投票媒体上的文件名、音频名和场馆名另留最多 4096 字。这一截自己就是正文时不重复。照片、贴纸、位置和文件编号不进这个字段。 */
+function besidePollMedia(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const poll = message.poll;
+  if (!isRecord(poll)) {
+    return "";
+  }
+  const parts: string[] = [];
+  const label = mediaLabel(message);
+  pushPollMediaNames(poll.media, text, label, parts);
+  pushPollMediaNames(poll.explanation_media, text, label, parts);
+  if (Array.isArray(poll.options)) {
+    for (const option of poll.options) {
+      if (isRecord(option)) {
+        pushPollMediaNames(option.media, text, label, parts);
+      }
+    }
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function pushPollMediaNames(
+  media: unknown,
+  text: string,
+  label: string,
+  parts: string[],
+): void {
+  if (!isRecord(media)) {
+    return;
+  }
+  for (const field of ["animation", "video", "audio", "document"] as const) {
+    const value = media[field];
+    if (!isRecord(value)) {
+      continue;
+    }
+    if (field === "audio") {
+      pushPollName(value.title, text, label, parts);
+      pushPollName(value.file_name, text, label, parts);
+      pushPollName(value.performer, text, label, parts);
+      continue;
+    }
+    pushPollName(value.file_name, text, label, parts);
+  }
+  if (isRecord(media.venue)) {
+    pushPollName(media.venue.title, text, label, parts);
+    pushPollName(media.venue.address, text, label, parts);
+  }
+}
+
+function pushPollName(
   name: unknown,
   text: string,
   label: string,

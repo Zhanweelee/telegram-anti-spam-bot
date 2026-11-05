@@ -39,6 +39,7 @@ export type RuleWhen =
   | { readonly audioFile: true }
   | { readonly paidFile: true }
   | { readonly richName: true }
+  | { readonly pollMedia: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -81,6 +82,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ audioFile: z.literal(true) }),
     z.strictObject({ paidFile: z.literal(true) }),
     z.strictObject({ richName: z.literal(true) }),
+    z.strictObject({ pollMedia: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -240,6 +242,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("richName" in when) {
     return richName(event);
   }
+  if ("pollMedia" in when) {
+    return pollMedia(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -315,6 +320,10 @@ function paidFile(event: Event): boolean {
 
 function richName(event: Event): boolean {
   return event.message?.richName !== undefined;
+}
+
+function pollMedia(event: Event): boolean {
+  return event.message?.pollMedia !== undefined;
 }
 
 function invoiceTitle(event: Event): boolean {

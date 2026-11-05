@@ -897,6 +897,14 @@
       "detectorIds": ["regex"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "poll_media_regex",
+      "enabled": true,
+      "when": { "pollMedia": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

@@ -191,3 +191,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有名称或正文时，付费视频里更后面的 `file_name` 去掉空白后用空格拼起来，前 4096 字另留在 `paidFile`。关键词或默认正则命中时删除。第 4097 字起不进事件。星星数量、文件编号、MIME、照片、实况照片和预览不进这个字段。第一段仍留在 `mediaName` 或成为正文。见 ADR 0560。
 
 富文本块里的动图、视频和文件 `file_name`，以及音频的 `title`、`file_name`、`performer`，去掉空白后用空格拼起来，前 4096 字另留在 `richName`。列表、引用、拼贴、幻灯片和详情里的块同样读取。关键词或默认正则命中时删除。第 4097 字起不进事件。说明、照片、语音和文件编号不进这个字段。这一截和正文相同时不设这个字段。见 ADR 0561。
+
+`poll.media`、`poll.explanation_media` 和 `poll.options[].media` 上的动图、视频、文件 `file_name`，音频的 `title`、`file_name`、`performer`，以及场馆的 `title`、`address`，去掉空白后用空格拼起来，前 4096 字另留在 `pollMedia`。关键词或默认正则命中时删除。第 4097 字起不进事件。照片、贴纸、位置、地点编号和文件编号不进这个字段。这一截和正文相同时不设这个字段。见 ADR 0562。
