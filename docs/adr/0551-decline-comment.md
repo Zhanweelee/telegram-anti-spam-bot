@@ -44,3 +44,4 @@ ADR 0113 在已有别的正文时，只从 `suggested_post_declined.comment` 抽
 - 关掉 `decline_comment_regex` 后，这种拒绝说明回到只看关键词和短链。别的旁路字段不受影响。`post_declined` 仍默认关闭。
 - 整份替换规则的群要自己加上这条，才会删除拒绝说明上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来由 ADR 0552 加上 `addedText`。后加选项和任务的规则只认自己的字段。

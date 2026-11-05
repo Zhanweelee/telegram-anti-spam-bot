@@ -159,6 +159,7 @@ async function messageEvent(
   const sideGiftLabel = besideGiftLabel(message, text);
   const sideTopic = besideTopicName(message, text);
   const sideDecline = besideDeclineComment(message, text);
+  const sideAdded = besideAddedText(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -251,6 +252,7 @@ async function messageEvent(
       ...(sideGiftLabel.length > 0 ? { giftLabel: sideGiftLabel } : {}),
       ...(sideTopic.length > 0 ? { topicName: sideTopic } : {}),
       ...(sideDecline.length > 0 ? { declineComment: sideDecline } : {}),
+      ...(sideAdded.length > 0 ? { addedText: sideAdded } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6671,6 +6673,33 @@ function besideDeclineComment(
   return clipped(source, 128);
 }
 
+/** 已有别的正文时，后加选项或任务另留。选项最多 100 字，任务拼起来最多 3029 字。先看新选项，再看被删选项，再看新任务。这段自己就是正文时改看下一种。编号、原消息和完成者不进这个字段。 */
+function besideAddedText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  for (const field of ["poll_option_added", "poll_option_deleted"]) {
+    const value = message[field];
+    if (!isRecord(value) || typeof value.option_text !== "string") {
+      continue;
+    }
+    const source = value.option_text;
+    if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+      continue;
+    }
+    const raw = clipped(source, 100);
+    if (raw.length === 0) {
+      continue;
+    }
+    return raw;
+  }
+  const source = addedTaskSource(message);
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, 3029);
+}
+
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */
 function besideGiftLabel(
   message: Record<string, unknown>,
@@ -7129,6 +7158,10 @@ function addedServiceText(message: Record<string, unknown>): string {
       return value.option_text.slice(0, MAX_TEXT);
     }
   }
+  return addedTaskSource(message).slice(0, MAX_TEXT);
+}
+
+function addedTaskSource(message: Record<string, unknown>): string {
   const added = message.checklist_tasks_added;
   if (!isRecord(added) || !Array.isArray(added.tasks)) {
     return "";
@@ -7146,7 +7179,7 @@ function addedServiceText(message: Record<string, unknown>): string {
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ").slice(0, MAX_TEXT);
+  return parts.join(" ");
 }
 
 function declineComment(message: Record<string, unknown>): string {

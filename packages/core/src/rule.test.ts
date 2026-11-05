@@ -449,6 +449,22 @@ describe("rules", () => {
         serviceEvent({ declineComment: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ addedText: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { addedText: true },
+        serviceEvent({ declineComment: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ addedText: true }, serviceEvent({ addedText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { declineComment: true },
+        serviceEvent({ addedText: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
