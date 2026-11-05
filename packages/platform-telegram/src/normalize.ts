@@ -172,6 +172,7 @@ async function messageEvent(
   const sidePollMedia = besidePollMedia(message, text);
   const sidePollDescription = besidePollDescription(message, text);
   const sideRichText = besideRichText(message, text);
+  const sideRichButton = besideRichButton(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -279,6 +280,7 @@ async function messageEvent(
         ? { pollDescription: sidePollDescription }
         : {}),
       ...(sideRichText.length > 0 ? { richText: sideRichText } : {}),
+      ...(sideRichButton.length > 0 ? { richButton: sideRichButton } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6246,18 +6248,25 @@ function readRich(message: Record<string, unknown>): {
   text: string;
   urls: string[];
   source: string;
+  labels: string;
 } {
   const rich = message.rich_message;
   if (!isRecord(rich)) {
-    return { text: "", urls: [], source: "" };
+    return { text: "", urls: [], source: "", labels: "" };
   }
   const parts: string[] = [];
   const labels: string[] = [];
   const urls: string[] = [];
   walkBlocks(rich.blocks, parts, labels, urls);
   const body = parts.join(" ");
-  const source = body.length > 0 ? body : labels.join(" ");
-  return { text: source.slice(0, MAX_TEXT), urls, source };
+  const labelText = labels.join(" ");
+  const source = body.length > 0 ? body : labelText;
+  return {
+    text: source.slice(0, MAX_TEXT),
+    urls,
+    source,
+    labels: labelText,
+  };
 }
 
 function walkBlocks(
@@ -7100,6 +7109,22 @@ function besideRichText(
     return "";
   }
   return clipped(source, 4096);
+}
+
+/** 已有段落时，富文本按钮上看得见的字另留最多 4096 字。按钮自己就是正文或已经留在富文本里时不重复。复制句子和回调数据不进这个字段。 */
+function besideRichButton(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const read = readRich(message);
+  const labels = read.labels;
+  if (labels.length === 0 || read.source === labels) {
+    return "";
+  }
+  if (text === labels.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(labels, 4096);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

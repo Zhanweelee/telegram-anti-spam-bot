@@ -47,3 +47,4 @@ ADR 0076 在没有 `text` 和 `caption` 时，用富文本里看得见的字当�
 - 关掉 `rich_text_regex` 后，这种段落回到只看关键词和短链。`poll_description_regex` 和 `rich_name_regex` 不受影响。
 - 整份替换规则的群要自己加上这条，才会删除富文本段落上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来加上 `richButton`。已有段落时，富文本按钮另留。见 ADR 0565。

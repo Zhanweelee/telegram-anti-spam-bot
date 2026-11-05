@@ -130,6 +130,8 @@ export const messageSchema = z
     pollDescription: z.string().min(1).max(1024).optional(),
     /** Rich message text beside another body. Capped at 4096. Absent when it is the body. */
     richText: z.string().min(1).max(4096).optional(),
+    /** Rich button labels beside a paragraph. Joined and capped at 4096. Absent when they are the body or the rich text. */
+    richButton: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
