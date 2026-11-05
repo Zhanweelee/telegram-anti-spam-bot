@@ -4828,8 +4828,10 @@ function pushBoostSenderUrls(
 }
 
 /**
- * 改自动删除计时的人只留主机名。
- * 秒数不是大于等于 0 的安全整数时不读。用户名不读。普通消息的发送者不读。
+ * 改自动删除计时的人画出的全名只留主机名。
+ * 秒数是大于等于 0 的安全整数时读。0 也读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 秒数不读。用户名不读。普通消息的发送者不读。
  */
 function pushAutoDeleteSenderUrls(
   message: Record<string, unknown>,
@@ -4838,7 +4840,7 @@ function pushAutoDeleteSenderUrls(
   if (!autoDeleteNotice(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
