@@ -86,6 +86,12 @@ export const messageSchema = z
     prizeText: z.string().min(1).max(255).optional(),
     /** Checklist title beside another body. Capped at 255. Absent when it is the body. */
     checklistTitle: z.string().min(1).max(255).optional(),
+    /** Game title beside another body. Capped at 4096. Absent when it is the body. */
+    gameTitle: z.string().min(1).max(4096).optional(),
+    /** Invoice title beside another body. Capped at 32. Absent when it is the body. */
+    invoiceTitle: z.string().min(1).max(32).optional(),
+    /** Venue title beside another body. Capped at 4096. Absent when it is the body. */
+    venueTitle: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

@@ -49,6 +49,9 @@ function withoutButtonText(event: object): string {
       pollQuestion: undefined,
       prizeText: undefined,
       checklistTitle: undefined,
+      gameTitle: undefined,
+      invoiceTitle: undefined,
+      venueTitle: undefined,
     },
   });
 }
@@ -11695,6 +11698,9 @@ describe("normalizeUpdate", () => {
     expect(game.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(game.event.message?.invites).toEqual(["t.me"]);
     expect(game.event.message?.gameText).toBe(`${phrase} ${phrase}`);
+    expect(game.event.message?.gameTitle).toBe(
+      `${phrase} https://bit.ly/title51 https://t.me/+${code}.`,
+    );
     const gameDump = withoutButtonText(game.event);
     expect(gameDump).not.toContain(phrase);
     expect(gameDump).not.toContain(code);
@@ -11727,6 +11733,9 @@ describe("normalizeUpdate", () => {
     expect(invoice.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(invoice.event.message?.invites).toEqual(["t.me"]);
     expect(invoice.event.message?.invoiceText).toBe(phrase);
+    expect(invoice.event.message?.invoiceTitle).toBe(
+      `www.tinyurl.com/v51 https://t.me/%2B${code}`.slice(0, 32),
+    );
     const invoiceDump = withoutButtonText(invoice.event);
     expect(invoiceDump).not.toContain(phrase);
     expect(invoiceDump).not.toContain(code);
@@ -11754,6 +11763,7 @@ describe("normalizeUpdate", () => {
     }
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.gameTitle).toBeUndefined();
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
     expect(body.event.message?.gameText).toBe(phrase);
     const bodyDump = withoutButtonText(body.event);
@@ -11777,6 +11787,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.gameTitle).toBe("免费领取");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
   });
@@ -12025,6 +12036,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.venueTitle).toBe("免费领取");
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = withoutButtonText(outcome.event);
@@ -12096,6 +12108,9 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("今天站会");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(outcome.event.message?.venueTitle).toBe(
+      `${phrase} https://bit.ly/title50 https://t.me/+${code}.`,
+    );
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     const dumped = withoutButtonText(outcome.event);
@@ -12131,6 +12146,9 @@ describe("normalizeUpdate", () => {
     expect(encoded.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(encoded.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(encoded.event.message?.invites).toEqual(["t.me"]);
+    expect(encoded.event.message?.venueTitle).toBe(
+      `www.tinyurl.com/v50 https://t.me/%2B${code}`,
+    );
     expect(encoded.event.message?.venueAddress).toBe(phrase);
     const encodedDump = withoutButtonText(encoded.event);
     expect(encodedDump).not.toContain(phrase);
@@ -12167,6 +12185,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.invoiceTitle).toBeUndefined();
+    expect(outcome.event.message?.venueTitle).toBe("免费领取");
     expect(outcome.event.message?.venueAddress).toBe("路");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
@@ -19295,6 +19315,7 @@ describe("normalizeUpdate", () => {
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
     expect(outcome.event.message?.venueAddress).toBeUndefined();
+    expect(outcome.event.message?.venueTitle).toBeUndefined();
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("anim74");
     expect(dumped).not.toContain(code);
@@ -31829,6 +31850,132 @@ describe("normalizeUpdate", () => {
     expect(titleDump).not.toContain(path);
     expect(titleDump).not.toContain("完成者");
     expect(titleDump).not.toContain("4242");
+  });
+
+  it("keeps the first 4096 characters of a game or venue title and 32 of an invoice title", async () => {
+    const tail = "TAIL78";
+    const path = "card78";
+    const played = await normalize({
+      update_id: 5734,
+      message: {
+        message_id: 5734,
+        date: 1761955200,
+        chat: { id: -1005734, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        game: {
+          title: `${"游".repeat(4096)}${tail} https://bit.ly/${path}`,
+          description: "说明",
+          photo: [
+            {
+              file_id: "GAME78ID",
+              file_unique_id: "UNIQ78",
+              width: 1,
+              height: 1,
+            },
+          ],
+          animation: { file_name: "GAMECLIP" },
+        },
+      },
+    });
+    expect(played.status).toBe("event");
+    if (played.status !== "event") {
+      return;
+    }
+    expect(played.event.message?.text).toBe("今天站会");
+    expect(played.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(played.event.message?.gameTitle).toHaveLength(4096);
+    expect(played.event.message?.gameTitle).not.toContain(tail);
+    expect(played.event.message?.hosts).toEqual(["bit.ly"]);
+    const playedDump = JSON.stringify(played.event);
+    expect(playedDump).not.toContain(tail);
+    expect(playedDump).not.toContain(path);
+    expect(playedDump).not.toContain("GAME78ID");
+    expect(playedDump).not.toContain("UNIQ78");
+    expect(playedDump).not.toContain("GAMECLIP");
+    expect(playedDump).not.toContain("Ada");
+
+    const billed = await normalize({
+      update_id: 5735,
+      message: {
+        message_id: 5735,
+        date: 1761955200,
+        chat: { id: -1005735, type: "supergroup" },
+        from: { id: 93 },
+        text: "今天站会",
+        invoice: {
+          title: `${"账".repeat(32)}${tail} https://bit.ly/${path}`,
+          description: "说明",
+          start_parameter: "MEETPARAM",
+          currency: "XTR",
+          total_amount: 8642,
+        },
+      },
+    });
+    expect(billed.status).toBe("event");
+    if (billed.status !== "event") {
+      return;
+    }
+    expect(billed.event.message?.invoiceTitle).toHaveLength(32);
+    expect(billed.event.message?.invoiceTitle).not.toContain(tail);
+    expect(billed.event.message?.hosts).toEqual(["bit.ly"]);
+    const billDump = JSON.stringify(billed.event);
+    expect(billDump).not.toContain(tail);
+    expect(billDump).not.toContain(path);
+    expect(billDump).not.toContain("MEETPARAM");
+    expect(billDump).not.toContain("XTR");
+    expect(billDump).not.toContain("8642");
+
+    const named = await normalize({
+      update_id: 5736,
+      message: {
+        message_id: 5736,
+        date: 1761955200,
+        chat: { id: -1005736, type: "supergroup" },
+        from: { id: 93 },
+        text: "今天站会",
+        venue: {
+          location: { latitude: 31.2304, longitude: 121.4737 },
+          title: `${"馆".repeat(4096)}${tail} https://bit.ly/${path}`,
+          address: "南京东路",
+          google_place_id: "PLACE78",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.venueTitle).toHaveLength(4096);
+    expect(named.event.message?.venueTitle).not.toContain(tail);
+    expect(named.event.message?.hosts).toEqual(["bit.ly"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(tail);
+    expect(namedDump).not.toContain(path);
+    expect(namedDump).not.toContain("31.2304");
+    expect(namedDump).not.toContain("PLACE78");
+
+    const asBody = await normalize({
+      update_id: 5737,
+      message: {
+        message_id: 5737,
+        date: 1761955200,
+        chat: { id: -1005737, type: "supergroup" },
+        from: { id: 93 },
+        game: {
+          title: `${"游".repeat(4096)}${tail}`,
+          description: "说明",
+          photo: [],
+        },
+      },
+    });
+    expect(asBody.status).toBe("event");
+    if (asBody.status !== "event") {
+      return;
+    }
+    expect(asBody.event.message?.text).toHaveLength(4096);
+    expect(asBody.event.message?.gameTitle).toBeUndefined();
+    expect(JSON.stringify(asBody.event)).not.toContain(tail);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

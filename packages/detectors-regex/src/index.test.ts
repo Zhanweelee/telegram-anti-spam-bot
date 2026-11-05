@@ -429,6 +429,54 @@ describe("regex detector", () => {
     });
     expect(titleHit?.places).toEqual(["checklistTitle"]);
     expect(JSON.stringify(titleHit)).not.toContain(name);
+    const askedTitle = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        gameTitle: `打开 ${name}`,
+      },
+    });
+    const gameTitleHit = await detector.detect({
+      event: askedTitle,
+      logger,
+      signal,
+    });
+    expect(gameTitleHit?.places).toEqual(["gameTitle"]);
+    expect(JSON.stringify(gameTitleHit)).not.toContain(name);
+    const billedTitle = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        invoiceTitle: `打开 ${name}`,
+      },
+    });
+    const invoiceTitleHit = await detector.detect({
+      event: billedTitle,
+      logger,
+      signal,
+    });
+    expect(invoiceTitleHit?.places).toEqual(["invoiceTitle"]);
+    expect(JSON.stringify(invoiceTitleHit)).not.toContain(name);
+    const namedTitle = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        venueTitle: `打开 ${name}`,
+      },
+    });
+    const venueTitleHit = await detector.detect({
+      event: namedTitle,
+      logger,
+      signal,
+    });
+    expect(venueTitleHit?.places).toEqual(["venueTitle"]);
+    expect(JSON.stringify(venueTitleHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

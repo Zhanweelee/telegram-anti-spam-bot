@@ -1714,6 +1714,21 @@ describe("runPipeline", () => {
         ruleId: "checklist_title_regex",
         label: "清单请免费领取礼品",
       },
+      {
+        field: "gameTitle",
+        ruleId: "game_title_regex",
+        label: "游戏请免费领取礼品",
+      },
+      {
+        field: "invoiceTitle",
+        ruleId: "invoice_title_regex",
+        label: "账单请免费领取礼品",
+      },
+      {
+        field: "venueTitle",
+        ruleId: "venue_title_regex",
+        label: "场馆请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1777,6 +1792,9 @@ describe("runPipeline", () => {
       { field: "pollQuestion", ruleId: "poll_question_regex" },
       { field: "prizeText", ruleId: "prize_text_regex" },
       { field: "checklistTitle", ruleId: "checklist_title_regex" },
+      { field: "gameTitle", ruleId: "game_title_regex" },
+      { field: "invoiceTitle", ruleId: "invoice_title_regex" },
+      { field: "venueTitle", ruleId: "venue_title_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();

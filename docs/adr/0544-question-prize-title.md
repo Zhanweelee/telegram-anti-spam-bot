@@ -45,3 +45,4 @@ Bot API 写明 `poll.question` 是 1 到 300 字，`prize_description` 是 0 到
 - 关掉其中一条后，这一段回到只看关键词和短链。另外两段不受影响。
 - 整份替换规则的群要自己加上这三条，才会删除这些字段上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来由 ADR 0545 加上 `gameTitle`、`invoiceTitle` 和 `venueTitle`。游戏、账单和场馆标题的规则只认自己的字段。
