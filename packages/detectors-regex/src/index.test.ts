@@ -509,6 +509,22 @@ describe("regex detector", () => {
     });
     expect(quoteHit?.places).toEqual(["quoteText"]);
     expect(JSON.stringify(quoteHit)).not.toContain(name);
+    const gifted = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        giftText: `打开 ${name}`,
+      },
+    });
+    const giftHit = await detector.detect({
+      event: gifted,
+      logger,
+      signal,
+    });
+    expect(giftHit?.places).toEqual(["giftText"]);
+    expect(JSON.stringify(giftHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

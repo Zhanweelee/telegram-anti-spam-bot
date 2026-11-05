@@ -54,6 +54,7 @@ function withoutButtonText(event: object): string {
       venueTitle: undefined,
       webAppButtonText: undefined,
       quoteText: undefined,
+      giftText: undefined,
     },
   });
 }
@@ -13040,13 +13041,16 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.giftText).toBe(
+      `${phrase} https://bit.ly/gift56 https://t.me/+${code}.`,
+    );
     expect(labeled.event.message?.hosts).toEqual([
       "bit.ly",
       "t.me",
       "example.com",
     ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("gift56");
@@ -13088,9 +13092,10 @@ describe("normalizeUpdate", () => {
     expect(upgraded.event.message?.textSha256).toBe(
       await sha256Hex("今天站会"),
     );
+    expect(upgraded.event.message?.giftText).toBe(phrase);
     expect(upgraded.event.message?.hosts).toEqual(["t.me"]);
     expect(upgraded.event.message?.invites).toEqual(["t.me"]);
-    const upgradedDump = JSON.stringify(upgraded.event);
+    const upgradedDump = withoutButtonText(upgraded.event);
     expect(upgradedDump).not.toContain(phrase);
     expect(upgradedDump).not.toContain(code);
     expect(upgradedDump).not.toContain("NFT56");
@@ -13114,8 +13119,11 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.giftText).toBe(
+      `${phrase} https://example.com/page56`,
+    );
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain(phrase);
     expect(ordinaryDump).not.toContain("page56");
 
@@ -13135,6 +13143,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.giftText).toBeUndefined();
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
   });
@@ -20926,7 +20935,8 @@ describe("normalizeUpdate", () => {
     }
     expect(alongside.event.message?.gift).toBe("card");
     expect(alongside.event.message?.text).toBe("今天站会");
-    expect(JSON.stringify(alongside.event)).not.toContain(title);
+    expect(alongside.event.message?.giftText).toBe(title);
+    expect(withoutButtonText(alongside.event)).not.toContain(title);
 
     const unique = await normalize({
       update_id: 4492,
@@ -29618,13 +29628,14 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.giftText).toBe("https://example.com/note291");
     expect(labeled.event.message?.hosts).toEqual([
       "example.com",
       "bit.ly",
       "t.me",
     ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("name291");
@@ -32119,6 +32130,66 @@ describe("normalizeUpdate", () => {
     expect(asQuote.event.message?.text).toHaveLength(4096);
     expect(asQuote.event.message?.quoteText).toBeUndefined();
     expect(JSON.stringify(asQuote.event)).not.toContain(tail);
+  });
+
+  it("keeps the first 128 characters of gift text", async () => {
+    const tail = "TAIL81";
+    const path = "gift81";
+    const labeled = await normalize({
+      update_id: 5759,
+      message: {
+        message_id: 5759,
+        date: 1761955200,
+        chat: { id: -1005759, type: "private" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        gift: {
+          gift: {
+            id: "GIFTID",
+            star_count: 8642,
+            sticker: { file_id: "GIFTFILE", file_unique_id: "GIFTUNIQ" },
+          },
+          text: `${"礼".repeat(128)}${tail} https://bit.ly/${path}`,
+          is_private: true,
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.giftText).toHaveLength(128);
+    expect(labeled.event.message?.giftText).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("GIFTFILE");
+    expect(labeledDump).not.toContain("8642");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asGift = await normalize({
+      update_id: 5760,
+      message: {
+        message_id: 5760,
+        date: 1761955200,
+        chat: { id: -1005760, type: "private" },
+        from: { id: 93 },
+        gift: {
+          text: `${"礼".repeat(4096)}${tail}`,
+          is_private: true,
+        },
+      },
+    });
+    expect(asGift.status).toBe("event");
+    if (asGift.status !== "event") {
+      return;
+    }
+    expect(asGift.event.message?.text).toHaveLength(4096);
+    expect(asGift.event.message?.giftText).toBeUndefined();
+    expect(JSON.stringify(asGift.event)).not.toContain(tail);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

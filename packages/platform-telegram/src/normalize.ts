@@ -155,6 +155,7 @@ async function messageEvent(
   const sideVenueTitle = besideCardTitle(message, "venue", 4096, text);
   const sideWebAppButton = besideWebAppButton(message, text);
   const sideQuote = besideManualQuote(message, text);
+  const sideGift = besideGiftText(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -243,6 +244,7 @@ async function messageEvent(
         ? { webAppButtonText: sideWebAppButton }
         : {}),
       ...(sideQuote.length > 0 ? { quoteText: sideQuote } : {}),
+      ...(sideGift.length > 0 ? { giftText: sideGift } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6622,6 +6624,29 @@ function pushUserLabels(value: unknown, parts: string[]): void {
       }
     }
   }
+}
+
+/** 已有别的正文时，礼物附言另留最多 128 字。这段自己就是正文时改看下一种。贴纸、星星和收藏名不进这个字段。 */
+function besideGiftText(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
+    const value = message[field];
+    if (!isRecord(value) || typeof value.text !== "string") {
+      continue;
+    }
+    const source = value.text;
+    if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+      continue;
+    }
+    const raw = clipped(source, 128);
+    if (raw.length === 0) {
+      continue;
+    }
+    return raw;
+  }
+  return "";
 }
 
 /** 已有别的正文时，手动引用另留最多 4096 字。这段自己就是正文时不重复。自动引用和被回复的原消息不进这个字段。 */
