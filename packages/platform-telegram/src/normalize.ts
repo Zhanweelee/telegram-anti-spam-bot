@@ -5232,9 +5232,10 @@ function pushLeaveSenderUrls(
 }
 
 /**
- * 频道私信话题上画出的话题用户只留主机名。
- * 发言人的编号和这个用户相同才读。名的长度大于 0 时不读姓。
- * 空白也算有名。用户名、话题号和本群群名不读。
+ * 频道私信话题标题上画出的话题用户只留主机名。
+ * 发言人的编号和这个用户相同才读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 用户名、话题号和本群群名不读。
  * 发言人不是这个用户、没有话题、布尔值和空对象不读。
  * 名字不进正文。
  */
@@ -5251,7 +5252,7 @@ function pushDirectTopicUrls(
   if (speaker === null || speaker !== owner) {
     return;
   }
-  pushVisiblePartyUrls(topic.user, undefined, urls);
+  pushFormattedUserUrls(topic.user, urls);
 }
 
 function pushPlainUrls(value: unknown, urls: string[]): void {

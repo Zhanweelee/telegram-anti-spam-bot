@@ -14721,7 +14721,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(named.kind).toBe("message");
     expect(named.message?.text).toBe("你好");
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(named.message?.invites).toBeUndefined();
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
@@ -14743,7 +14743,6 @@ describe("screenTelegramEvent", () => {
     });
     expect(namedDump).not.toContain("name6340");
     expect(namedDump).not.toContain("skip6340");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("from6340");
     expect(namedDump).not.toContain("ow.ly");
     expect(namedDump).not.toContain("secretuser6340");
@@ -14829,12 +14828,16 @@ describe("screenTelegramEvent", () => {
         },
       },
     });
-    expect(blankName.message?.hosts).toBeUndefined();
-    const blankKept = await screenTelegramEvent(blankName, {
-      moderator: createMemoryModerator(),
+    expect(blankName.message?.hosts).toEqual(["bit.ly"]);
+    const blankModerator = createMemoryModerator();
+    const blankHit = await screenTelegramEvent(blankName, {
+      moderator: blankModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(blankKept.decision.action).toBe("allow");
+    expect(blankHit.decision.action).toBe("delete");
+    expect(blankModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006344", messageId: "6344" },
+    ]);
     expect(JSON.stringify(blankName)).not.toContain("space6344");
 
     const body = await posted(6345, {
@@ -15029,6 +15032,107 @@ describe("screenTelegramEvent", () => {
     expect(topicNumber.message?.hosts).toBeUndefined();
     expect(JSON.stringify(topicNumber)).not.toContain("id6357");
     expect(JSON.stringify(topicNumber)).not.toContain("干净");
+
+    const spaced = await posted(79349, {
+      direct_messages_topic: {
+        topic_id: 88079349,
+        user: {
+          id: 83,
+          first_name: "Go https://bit.ly/later79349",
+          last_name: "https://tinyurl.com/skiplast79349",
+        },
+      },
+    });
+    expect(spaced.message?.text).toBe("你好");
+    expect(spaced.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedModerator = createMemoryModerator();
+    const spacedHit = await screenTelegramEvent(spaced, {
+      moderator: spacedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(spacedHit.decision.action).toBe("delete");
+    expect(spacedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079349", messageId: "79349" },
+    ]);
+    const spacedDump = JSON.stringify(spaced);
+    expect(spacedDump).not.toContain("later79349");
+    expect(spacedDump).not.toContain("skiplast79349");
+    expect(spacedDump).not.toContain("88079349");
+
+    const bodyName = await posted(79350, {
+      text: "https://ow.ly/body79350",
+      direct_messages_topic: {
+        topic_id: 88079350,
+        user: {
+          id: 83,
+          first_name: "https://bit.ly/name79350",
+          last_name: "https://tinyurl.com/skip79350",
+        },
+      },
+    });
+    expect(bodyName.message?.text).toBe("https://ow.ly/body79350");
+    expect(bodyName.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bodyNameHit = await screenTelegramEvent(bodyName, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyNameHit.decision.action).toBe("delete");
+    const bodyEvidence = JSON.stringify(bodyNameHit.decision.evidence);
+    expect(bodyEvidence).toContain("short_link:ow.ly");
+    expect(bodyEvidence).not.toContain("short_link:bit.ly");
+    expect(bodyEvidence).not.toContain("short_link:tinyurl.com");
+    expect(JSON.stringify(bodyNameHit.decision)).not.toContain("body79350");
+    expect(JSON.stringify(bodyName)).not.toContain("name79350");
+    expect(JSON.stringify(bodyName)).not.toContain("skip79350");
+
+    const adminFull = await posted(
+      79351,
+      {
+        direct_messages_topic: {
+          topic_id: 88079351,
+          user: {
+            id: 83,
+            first_name: "https://bit.ly/name79351",
+            last_name: "https://tinyurl.com/skiplast79351",
+          },
+        },
+      },
+      false,
+      ["83"],
+    );
+    expect(adminFull.actor.isAdmin).toBe(true);
+    expect(adminFull.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const adminFullModerator = createMemoryModerator();
+    const adminFullHit = await screenTelegramEvent(adminFull, {
+      moderator: adminFullModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminFullHit.outcome).toBe("exempt");
+    expect(adminFullModerator.deleted).toEqual([]);
+    expect(JSON.stringify(adminFull)).not.toContain("name79351");
+    expect(JSON.stringify(adminFull)).not.toContain("skiplast79351");
+
+    const otherFull = await posted(79352, {
+      from: { id: 84, first_name: "管理员" },
+      direct_messages_topic: {
+        topic_id: 88079352,
+        user: {
+          id: 83,
+          first_name: "干净",
+          last_name: "https://tinyurl.com/other79352",
+        },
+      },
+    });
+    expect(otherFull.actor.id).toBe("84");
+    expect(otherFull.message?.hosts).toBeUndefined();
+    const otherFullKept = await screenTelegramEvent(otherFull, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(otherFullKept.decision.action).toBe("allow");
+    expect(JSON.stringify(otherFull)).not.toContain("other79352");
+    expect(JSON.stringify(otherFull)).not.toContain("tinyurl");
+    expect(JSON.stringify(otherFull)).not.toContain("88079352");
   });
 
   it("deletes a short link in a shared contact name", async () => {
