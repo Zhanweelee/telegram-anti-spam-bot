@@ -28599,7 +28599,11 @@ describe("normalizeUpdate", () => {
         message_id: 650,
         date: 1761955200,
         chat: { id: -100499570, type: "supergroup" },
-        from: { id: 97, first_name: actor },
+        from: {
+          id: 97,
+          first_name: "https://tinyurl.com/from97",
+          last_name: actor,
+        },
         checklist_tasks_done: {
           marked_as_done_task_ids: [doneId],
           checklist_message: {
@@ -28617,9 +28621,11 @@ describe("normalizeUpdate", () => {
     }
     expect(done.event.message?.checklistNotice).toBe("done");
     expect(done.event.message?.text).toBe("");
+    expect(done.event.message?.hosts).toEqual(["tinyurl.com"]);
     const doneDump = JSON.stringify(done.event);
     expect(doneDump).not.toContain(title);
     expect(doneDump).not.toContain(actor);
+    expect(doneDump).not.toContain("from97");
     expect(doneDump).not.toContain(String(doneId));
 
     const undone = await normalize({
@@ -28628,7 +28634,7 @@ describe("normalizeUpdate", () => {
         message_id: 651,
         date: 1761955200,
         chat: { id: -100499571, type: "supergroup" },
-        from: { id: 97 },
+        from: { id: 97, first_name: "请免费领取礼品" },
         checklist_tasks_done: {
           marked_as_not_done_task_ids: [undoneId],
           checklist_message: { text: title },
@@ -28640,8 +28646,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(undone.event.message?.checklistNotice).toBe("undone");
+    expect(undone.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(undone.event)).not.toContain(String(undoneId));
     expect(JSON.stringify(undone.event)).not.toContain(title);
+    expect(JSON.stringify(undone.event)).not.toContain("请免费领取礼品");
 
     const both = await normalize({
       update_id: 4592,
@@ -28705,7 +28713,7 @@ describe("normalizeUpdate", () => {
         message_id: 655,
         date: 1761955200,
         chat: { id: -100499575, type: "supergroup" },
-        from: { id: 97 },
+        from: { id: 97, first_name: "https://bit.ly/add97" },
         checklist_tasks_added: {
           tasks: [{ id: doneId, text: "新加的事项" }],
           checklist_message: { text: title },
@@ -28718,8 +28726,11 @@ describe("normalizeUpdate", () => {
     }
     expect(added.event.message?.checklistNotice).toBeUndefined();
     expect(added.event.message?.text).toBe("新加的事项");
+    expect(added.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(added.event)).not.toContain(title);
     expect(JSON.stringify(added.event)).not.toContain(String(doneId));
+    expect(JSON.stringify(added.event)).not.toContain("add97");
+    expect(JSON.stringify(added.event)).not.toContain("bit.ly");
 
     const empty = await normalize({
       update_id: 4596,
@@ -28727,7 +28738,7 @@ describe("normalizeUpdate", () => {
         message_id: 656,
         date: 1761955200,
         chat: { id: -100499576, type: "supergroup" },
-        from: { id: 97 },
+        from: { id: 97, first_name: "https://ow.ly/empty97" },
         checklist_tasks_done: {},
       },
     });
@@ -28736,6 +28747,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.checklistNotice).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty97");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
 
     const flag = await normalize({
       update_id: 4597,
@@ -28743,7 +28757,7 @@ describe("normalizeUpdate", () => {
         message_id: 657,
         date: 1761955200,
         chat: { id: -100499577, type: "supergroup" },
-        from: { id: 97 },
+        from: { id: 97, first_name: "https://bit.ly/flag97" },
         checklist_tasks_done: true,
       },
     });
@@ -28752,6 +28766,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(flag.event.message?.checklistNotice).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag97");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
 
     const fractional = await normalize({
       update_id: 4598,

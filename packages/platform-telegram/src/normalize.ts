@@ -4574,6 +4574,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushGiftSenderUrls(message, urls);
   pushDeclineSenderUrls(message, urls);
   pushPostSenderUrls(message, urls);
+  pushChecklistSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4991,6 +4992,22 @@ function pushPostSenderUrls(
   urls: string[],
 ): void {
   if (suggestedPost(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 勾完或取消勾完清单的人只留主机名。
+ * 完成或取消完成的任务号全是大于 0 的安全整数时读。
+ * 同时出现时先认完成。任务号不是正整数时不读。
+ * 空对象、空数组、布尔值和新加的任务不读。嵌套原清单不读。用户名不读。
+ */
+function pushChecklistSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (taskNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

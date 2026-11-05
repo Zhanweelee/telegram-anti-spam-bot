@@ -11253,6 +11253,337 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(otherReason)).not.toContain("why6249");
   });
 
+  it("deletes a short link in a checklist sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const nested = "原清单机密";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 126, first_name: "Ada" },
+            checklist_tasks_done: {
+              marked_as_done_task_ids: [625000],
+              checklist_message: { text: nested },
+            },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(6250, {
+      from: {
+        id: 126,
+        first_name: "https://bit.ly/done6250",
+        last_name: "https://tinyurl.com/skip6250",
+        username: "secretuser6250",
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.checklistNotice).toBe("done");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("checklist_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006250", messageId: "6250" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("done6250");
+    expect(namedDump).not.toContain("skip6250");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("secretuser6250");
+    expect(namedDump).not.toContain(nested);
+    expect(namedDump).not.toContain("625000");
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const surname = await posted(6251, {
+      from: {
+        id: 126,
+        first_name: "",
+        last_name: "https://bit.ly/last6251",
+        username: "secretuser6251",
+      },
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [-1],
+        marked_as_not_done_task_ids: [625101],
+        checklist_message: { text: "https://tinyurl.com/nest6251" },
+      },
+    });
+    expect(surname.message?.text).toBe("");
+    expect(surname.message?.checklistNotice).toBe("undone");
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameModerator = createMemoryModerator();
+    const surnameHit = await screenTelegramEvent(surname, {
+      moderator: surnameModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(surnameModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006251", messageId: "6251" },
+    ]);
+    const surnameDump = JSON.stringify({
+      event: surname,
+      decision: surnameHit.decision,
+    });
+    expect(surnameDump).not.toContain("last6251");
+    expect(surnameDump).not.toContain("secretuser6251");
+    expect(surnameDump).not.toContain("nest6251");
+    expect(surnameDump).not.toContain("tinyurl");
+    expect(surnameDump).not.toContain("625101");
+
+    const plain = await posted(6252, {
+      from: { id: 126, first_name: "https://example.com/ok6252" },
+      checklist_tasks_done: { marked_as_done_task_ids: [625201] },
+    });
+    expect(plain.message?.text).toBe("");
+    expect(plain.message?.checklistNotice).toBe("done");
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6252");
+    expect(JSON.stringify(plain)).not.toContain("625201");
+
+    const keyword = await posted(6253, {
+      from: {
+        id: 126,
+        first_name: phrase,
+        username: "https://bit.ly/user6253",
+      },
+      checklist_tasks_done: { marked_as_not_done_task_ids: [625301] },
+    });
+    expect(keyword.message?.text).toBe("");
+    expect(keyword.message?.checklistNotice).toBe("undone");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6253");
+    expect(keywordDump).not.toContain("625301");
+
+    const paid = await posted(
+      6254,
+      {
+        from: { id: 126, first_name: "https://bit.ly/paid6254" },
+      },
+      true,
+    );
+    expect(paid.message?.text).toBe("");
+    expect(paid.message?.checklistNotice).toBe("done");
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6254");
+    expect(JSON.stringify(paidHit.decision)).not.toContain(nested);
+
+    const blank = await posted(6255, {
+      from: {
+        id: 126,
+        first_name: "   ",
+        last_name: "https://bit.ly/space6255",
+      },
+    });
+    expect(blank.message?.checklistNotice).toBe("done");
+    expect(blank.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blank, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blank)).not.toContain("space6255");
+
+    const empty = await posted(6256, {
+      from: { id: 126, first_name: "https://bit.ly/empty6256" },
+      checklist_tasks_done: {},
+    });
+    expect(empty.message?.checklistNotice).toBeUndefined();
+    expect(empty.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty)).not.toContain("empty6256");
+
+    const emptyIds = await posted(6257, {
+      from: { id: 126, first_name: "https://bit.ly/ids6257" },
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [],
+        marked_as_not_done_task_ids: [],
+      },
+    });
+    expect(emptyIds.message?.checklistNotice).toBeUndefined();
+    expect(emptyIds.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(emptyIds)).not.toContain("ids6257");
+
+    const flag = await posted(6258, {
+      from: { id: 126, first_name: "https://bit.ly/flag6258" },
+      checklist_tasks_done: true,
+    });
+    expect(flag.message?.checklistNotice).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag6258");
+
+    const zero = await posted(6259, {
+      from: { id: 126, first_name: "https://bit.ly/zero6259" },
+      checklist_tasks_done: { marked_as_done_task_ids: [0] },
+    });
+    expect(zero.message?.checklistNotice).toBeUndefined();
+    expect(zero.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(zero)).not.toContain("zero6259");
+
+    const negative = await posted(6260, {
+      from: { id: 126, first_name: "https://bit.ly/neg6260" },
+      checklist_tasks_done: { marked_as_not_done_task_ids: [-3] },
+    });
+    expect(negative.message?.checklistNotice).toBeUndefined();
+    expect(negative.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative)).not.toContain("neg6260");
+
+    const fractional = await posted(6261, {
+      from: { id: 126, first_name: "https://bit.ly/frac6261" },
+      checklist_tasks_done: { marked_as_done_task_ids: [1.5] },
+    });
+    expect(fractional.message?.checklistNotice).toBeUndefined();
+    expect(fractional.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fractional)).not.toContain("frac6261");
+
+    const textId = await posted(6262, {
+      from: { id: 126, first_name: "https://bit.ly/text6262" },
+      checklist_tasks_done: { marked_as_done_task_ids: ["625000"] },
+    });
+    expect(textId.message?.checklistNotice).toBeUndefined();
+    expect(textId.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(textId)).not.toContain("text6262");
+
+    const beside = await posted(6263, {
+      text: "今天站会",
+      chat: {
+        id: -(1_000_000 + 6263),
+        type: "supergroup",
+        title: "https://tinyurl.com/room6263",
+      },
+      from: { id: 126, first_name: "https://bit.ly/only6263" },
+    });
+    expect(beside.message?.text).toBe("今天站会");
+    expect(beside.message?.checklistNotice).toBe("done");
+    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    const besideDump = JSON.stringify(beside);
+    expect(besideDump).not.toContain("only6263");
+    expect(besideDump).not.toContain("room6263");
+    expect(besideDump).not.toContain("tinyurl");
+    expect(besideDump).not.toContain(nested);
+
+    const ordinary = await posted(6264, {
+      from: { id: 126, first_name: "https://bit.ly/msg6264" },
+      checklist_tasks_done: undefined,
+    });
+    expect(ordinary.message?.checklistNotice).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6264");
+
+    const both = await posted(6265, {
+      from: {
+        id: 126,
+        first_name: "https://bit.ly/who6265",
+        username: "secretuser6265",
+      },
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [626501],
+        marked_as_not_done_task_ids: [626502],
+        checklist_message: { text: "https://ow.ly/back6265" },
+      },
+    });
+    expect(both.message?.checklistNotice).toBe("done");
+    expect(both.message?.text).toBe("");
+    expect(both.message?.hosts).toEqual(["bit.ly"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(bothHit.decision.reasons).toContain("short_link");
+    expect(bothHit.decision.ruleIds).not.toContain("checklist_notice");
+    const bothDump = JSON.stringify({
+      event: both,
+      decision: bothHit.decision,
+    });
+    expect(bothDump).toContain("short_link:bit.ly");
+    expect(bothDump).not.toContain("who6265");
+    expect(bothDump).not.toContain("secretuser6265");
+    expect(bothDump).not.toContain("back6265");
+    expect(bothDump).not.toContain("ow.ly");
+    expect(bothDump).not.toContain("626501");
+    expect(bothDump).not.toContain("626502");
+
+    const added = await posted(6266, {
+      from: { id: 126, first_name: "https://bit.ly/add6266" },
+      checklist_tasks_done: undefined,
+      checklist_tasks_added: {
+        tasks: [{ id: 626601, text: "新加的事项" }],
+        checklist_message: { text: "https://tinyurl.com/list6266" },
+      },
+    });
+    expect(added.message?.checklistNotice).toBeUndefined();
+    expect(added.message?.asChecklistAdded).toBe(true);
+    expect(added.message?.text).toBe("新加的事项");
+    expect(added.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(added)).not.toContain("add6266");
+    expect(JSON.stringify(added)).not.toContain("list6266");
+    expect(JSON.stringify(added)).not.toContain("tinyurl");
+    expect(JSON.stringify(added)).not.toContain("626601");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
