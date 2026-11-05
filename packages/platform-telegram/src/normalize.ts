@@ -4556,7 +4556,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(message.new_chat_title, urls);
   pushBackgroundFilename(message, urls);
   pushPlainUrls(memberNameSource(message), urls);
-  pushVisiblePartyUrls(message.left_chat_member, undefined, urls);
+  pushLeftMemberUrls(message.left_chat_member, urls);
   pushBoostSenderUrls(message, urls);
   pushAutoDeleteSenderUrls(message, urls);
   pushPriceSenderUrls(message, urls);
@@ -5168,6 +5168,16 @@ function pushTopicSenderUrls(
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 离开的人画出的全名只留主机名。
+ * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
+ * 用户名和用户编号不读。布尔值不读。
+ * 操作的人另读，排在后面。
+ */
+function pushLeftMemberUrls(member: unknown, urls: string[]): void {
+  pushFormattedUserUrls(member, urls);
 }
 
 /**
