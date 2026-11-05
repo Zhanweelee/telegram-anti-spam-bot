@@ -134,6 +134,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `checklist_tasks_added.tasks` 的 `text_entities` 里，同样的 `custom_emoji` 也带 `asCustomEmoji`。编号、任务编号和完成者名字不进事件。嵌套的原清单不读。见 ADR 0572。
 
+`poll_option_added.option_text_entities` 和 `poll_option_deleted.option_text_entities` 里，同样的 `custom_emoji` 也带 `asCustomEmoji`。编号和选项编号不进事件。嵌套的原投票不读。选项上的 `text_mention` 仍不带 `asTextMention`。见 ADR 0573。
+
 内联键盘或富文本按钮的 `copy_text.text` 去掉空白后非空时，消息带 `asCopyText`。空白、布尔值、缺句子、只有网址的按钮、回调数据和回复键盘不带这个标记。复制句子不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `copy_text` 默认关闭。见 ADR 0516。
 
 内联键盘或富文本按钮的 `switch_inline_query`、`switch_inline_query_current_chat` 或 `switch_inline_query_chosen_chat.query` 去掉空白后非空时，消息带 `asSwitchQuery`。空白、空字符串、布尔值、缺查询、只有网址的按钮、回调数据、挑选范围和回复键盘不带这个标记。查询不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `switch_query` 默认关闭。见 ADR 0517。

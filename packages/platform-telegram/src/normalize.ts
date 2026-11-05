@@ -608,6 +608,12 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
       }
     }
   }
+  for (const field of ["poll_option_added", "poll_option_deleted"]) {
+    const value = message[field];
+    if (isRecord(value)) {
+      lists.push(value.option_text_entities);
+    }
+  }
   const checklist = message.checklist;
   if (isRecord(checklist)) {
     lists.push(checklist.title_entities);

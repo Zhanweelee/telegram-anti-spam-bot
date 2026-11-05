@@ -201,6 +201,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 后加清单任务上的自定义表情也走这一条。原清单和完成者名字不进事件。见 ADR 0572。
 
+后加和删掉的投票选项上的自定义表情也走这一条。选项编号不进事件。见 ADR 0573。
+
 复制到剪贴板的按钮可以按群删除。规则 `copy_text` 默认关闭。见 ADR 0516。
 
 按下后把查询插进输入框的按钮可以按群删除。规则 `switch_query` 默认关闭。见 ADR 0517。

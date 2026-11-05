@@ -23864,6 +23864,119 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(added.event)).not.toContain("完90254");
     expect(JSON.stringify(added.event)).not.toContain("88090254");
 
+    const addedOption = await normalize({
+      update_id: 4913,
+      message: {
+        message_id: 953,
+        date: 1761955200,
+        chat: { id: -100499913, type: "supergroup" },
+        from: { id: 124 },
+        poll_option_added: {
+          option_persistent_id: "opt90256",
+          option_text: "新选项表情",
+          option_text_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90256",
+            },
+          ],
+          poll_message: {
+            poll: {
+              question: "原投票留下",
+              options: [
+                {
+                  text: "旧选项表情",
+                  text_entities: [
+                    {
+                      type: "custom_emoji",
+                      offset: 0,
+                      length: 2,
+                      custom_emoji_id: "emoji90258",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(addedOption.status).toBe("event");
+    if (addedOption.status !== "event") {
+      return;
+    }
+    expect(addedOption.event.message?.text).toBe("新选项表情");
+    expect(addedOption.event.message?.asCustomEmoji).toBe(true);
+    expect(addedOption.event.message?.asTextMention).toBeUndefined();
+    const optionDump = JSON.stringify(addedOption.event);
+    expect(optionDump).not.toContain("emoji90256");
+    expect(optionDump).not.toContain("90256");
+    expect(optionDump).not.toContain("opt90256");
+    expect(optionDump).not.toContain("emoji90258");
+    expect(optionDump).not.toContain("原投票留下");
+
+    const removedOption = await normalize({
+      update_id: 4914,
+      message: {
+        message_id: 954,
+        date: 1761955200,
+        chat: { id: -100499914, type: "supergroup" },
+        from: { id: 124 },
+        poll_option_deleted: {
+          option_persistent_id: "opt90257",
+          option_text: "删选项表情",
+          option_text_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90257",
+            },
+          ],
+        },
+      },
+    });
+    expect(removedOption.status).toBe("event");
+    if (removedOption.status !== "event") {
+      return;
+    }
+    expect(removedOption.event.message?.text).toBe("删选项表情");
+    expect(removedOption.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(removedOption.event)).not.toContain("emoji90257");
+    expect(JSON.stringify(removedOption.event)).not.toContain("opt90257");
+
+    const named = await normalize({
+      update_id: 4915,
+      message: {
+        message_id: 955,
+        date: 1761955200,
+        chat: { id: -100499915, type: "supergroup" },
+        from: { id: 124 },
+        poll_option_added: {
+          option_text: "选项点名留下",
+          option_text_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90259, first_name: "选90259" },
+            },
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("选项点名留下");
+    expect(named.event.message?.asCustomEmoji).toBeUndefined();
+    expect(named.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(named.event)).not.toContain("90259");
+    expect(JSON.stringify(named.event)).not.toContain("选90259");
+
     const quoted = await normalize({
       update_id: 4902,
       message: {
