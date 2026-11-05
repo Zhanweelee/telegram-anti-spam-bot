@@ -4572,6 +4572,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushProximitySenderUrls(message, urls);
   pushJoinSenderUrls(message, urls);
   pushGiftSenderUrls(message, urls);
+  pushDeclineSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4957,6 +4958,21 @@ function pushGiftSenderUrls(
   urls: string[],
 ): void {
   if (giftNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 拒绝建议帖的人只留主机名。
+ * `suggested_post_declined` 是对象时读。空对象也读。
+ * 布尔值不读。说明仍按原来的正文。嵌套的原帖不读。用户名不读。
+ */
+function pushDeclineSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!declinedPost(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
