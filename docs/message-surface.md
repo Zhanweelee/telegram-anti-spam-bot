@@ -185,3 +185,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有别的正文时，`write_access_allowed.web_app_name` 去掉空白后的前 4096 字另留在 `accessName`。关键词或默认正则命中时删除。第 4097 字起不进事件。`from_request`、`from_attachment_menu`、发送者姓名和聊天标题不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0557。
 
 已有别的正文时，`game.animation.file_name` 去掉空白后的前 4096 字另留在 `gameFile`。关键词或默认正则命中时删除。第 4097 字起不进事件。封面、文件编号、MIME、宽高和时长不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0558。
+
+已有标题时，`audio.file_name` 去掉空白后的前 4096 字另留在 `audioFile`。关键词或默认正则命中时删除。第 4097 字起不进事件。文件编号、MIME 和时长不进这个字段。没有标题时，文件名仍留在 `mediaName`。这段自己就是名称或正文时不设这个字段。见 ADR 0559。

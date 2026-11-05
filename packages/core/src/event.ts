@@ -118,6 +118,8 @@ export const messageSchema = z
     accessName: z.string().min(1).max(4096).optional(),
     /** Game animation file name beside another body. Capped at 4096. Absent when it is the body. */
     gameFile: z.string().min(1).max(4096).optional(),
+    /** Audio file name beside a title or another body. Capped at 4096. Absent when it is the name or the body. */
+    audioFile: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

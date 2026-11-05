@@ -1794,6 +1794,11 @@ describe("runPipeline", () => {
         ruleId: "game_file_regex",
         label: "动图请免费领取礼品",
       },
+      {
+        field: "audioFile",
+        ruleId: "audio_file_regex",
+        label: "音频请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1873,6 +1878,7 @@ describe("runPipeline", () => {
       { field: "managedName", ruleId: "managed_name_regex" },
       { field: "accessName", ruleId: "access_name_regex" },
       { field: "gameFile", ruleId: "game_file_regex" },
+      { field: "audioFile", ruleId: "audio_file_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();
