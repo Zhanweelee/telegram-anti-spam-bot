@@ -35158,8 +35158,8 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(chat.event.message?.forward).toBe("chat");
-    expect(chat.event.message?.hosts).toBeUndefined();
-    expect(JSON.stringify(chat.event)).not.toContain("tinyurl.com");
+    expect(chat.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(chat.event)).not.toContain("chat93");
     expect(JSON.stringify(chat.event)).not.toContain(title);
 
     for (const mark of [false, 1, phrase]) {

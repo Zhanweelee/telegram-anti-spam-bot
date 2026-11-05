@@ -5030,7 +5030,7 @@ describe("screenTelegramEvent", () => {
         author_signature: "https://tinyurl.com/sig6009",
       },
     });
-    expect(chat.message?.hosts).toEqual(["bit.ly"]);
+    expect(chat.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(chat.message?.forward).toBe("chat");
     const chatModerator = createMemoryModerator();
     const chatHit = await screenTelegramEvent(chat, {
@@ -5048,7 +5048,6 @@ describe("screenTelegramEvent", () => {
     expect(chatDump).not.toContain("chat6009");
     expect(chatDump).not.toContain("chatuser6009");
     expect(chatDump).not.toContain("sig6009");
-    expect(chatDump).not.toContain("tinyurl");
     expect(chatDump).not.toContain("916009");
 
     const channel = await posted(6010, {
@@ -14718,11 +14717,10 @@ describe("screenTelegramEvent", () => {
       author_signature: "https://bit.ly/chat6408",
     });
     expect(group.message?.forward).toBe("chat");
-    expect(group.message?.hosts).toBeUndefined();
+    expect(group.message?.hosts).toEqual(["bit.ly"]);
     const groupKept = await quiet(group);
-    expect(groupKept.decision.action).toBe("allow");
+    expect(groupKept.decision.action).toBe("delete");
     expect(JSON.stringify(group)).not.toContain("chat6408");
-    expect(JSON.stringify(group)).not.toContain("bit.ly");
 
     const both = await posted(6409, {
       type: "channel",
@@ -14775,6 +14773,451 @@ describe("screenTelegramEvent", () => {
     const clean = await posted(6412, {
       type: "channel",
       chat: { id: -100916412, type: "channel", title: "新闻" },
+      author_signature: "编辑",
+    });
+    expect(clean.message?.textSha256).toBe(named.message?.textSha256);
+    expect(clean.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(clean)).not.toContain("编辑");
+  });
+
+  it("deletes a short link in a forwarded group signature", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      origin: unknown,
+      extra: Record<string, unknown> = {},
+      paid = false,
+      adminUserIds: string[] = [],
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 83, first_name: "Ada" },
+            text: "你好",
+            ...(origin === undefined ? {} : { forward_origin: origin }),
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds,
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(
+      6413,
+      {
+        type: "chat",
+        date: 1,
+        sender_chat: {
+          id: -100916413,
+          type: "supergroup",
+          title: "新闻",
+          username: "chatuser6413",
+        },
+        author_signature: "https://bit.ly/name6413",
+      },
+      {
+        from: {
+          id: 83,
+          first_name: "Ada",
+          last_name: "https://ow.ly/from6413",
+          username: "secretuser6413",
+        },
+        chat: {
+          id: -(1_000_000 + 6413),
+          type: "supergroup",
+          title: "https://cutt.ly/room6413",
+        },
+      },
+    );
+    expect(named.message?.forward).toBe("chat");
+    expect(named.message?.text).toBe("你好");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.invites).toBeUndefined();
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).toContain("links");
+    expect(removed.decision.ruleIds).not.toContain("chat_forward");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006413", messageId: "6413" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("name6413");
+    expect(namedDump).not.toContain("chatuser6413");
+    expect(namedDump).not.toContain("from6413");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("secretuser6413");
+    expect(namedDump).not.toContain("room6413");
+    expect(namedDump).not.toContain("cutt.ly");
+    expect(namedDump).not.toContain("916413");
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+    expect(namedDump).not.toContain("新闻");
+
+    const emptySignature = await posted(6414, {
+      type: "chat",
+      sender_chat: {
+        id: -100916414,
+        type: "supergroup",
+        title: "新闻",
+        username: "https://bit.ly/user6414",
+      },
+      author_signature: "",
+    });
+    expect(emptySignature.message?.hosts).toBeUndefined();
+    const emptyKept = await screenTelegramEvent(emptySignature, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(emptyKept.decision.action).toBe("allow");
+    expect(JSON.stringify(emptySignature)).not.toContain("user6414");
+    expect(JSON.stringify(emptySignature)).not.toContain("bit.ly");
+
+    const blankSignature = await posted(6415, {
+      type: "chat",
+      sender_chat: {
+        id: -100916415,
+        type: "supergroup",
+        title: "新闻",
+        username: "https://bit.ly/space6415",
+      },
+      author_signature: "   ",
+    });
+    expect(blankSignature.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blankSignature, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blankSignature)).not.toContain("space6415");
+
+    const plain = await posted(6416, {
+      type: "chat",
+      sender_chat: { id: -100916416, type: "supergroup", title: "新闻" },
+      author_signature: "https://example.com/ok6416",
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6416");
+
+    const keyword = await posted(6417, {
+      type: "chat",
+      sender_chat: {
+        id: -100916417,
+        type: "supergroup",
+        title: "新闻",
+        username: "https://bit.ly/user6417",
+      },
+      author_signature: phrase,
+    });
+    expect(keyword.message?.text).toBe("你好");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6417");
+    expect(keywordDump).not.toContain("bit.ly");
+
+    const bodyFirst = await posted(
+      6418,
+      {
+        type: "chat",
+        sender_chat: { id: -100916418, type: "supergroup", title: "新闻" },
+        author_signature: "https://bit.ly/name6418",
+      },
+      { text: "https://cutt.ly/body6418" },
+    );
+    expect(bodyFirst.message?.text).toBe("https://cutt.ly/body6418");
+    expect(bodyFirst.message?.hosts).toEqual(["bit.ly"]);
+    const bodyHit = await screenTelegramEvent(bodyFirst, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bodyHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("body6418");
+    expect(JSON.stringify(bodyHit.decision)).not.toContain("name6418");
+
+    const invite = await posted(6419, {
+      type: "chat",
+      sender_chat: { id: -100916419, type: "supergroup", title: "新闻" },
+      author_signature: "https://t.me/+code6419",
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toEqual(["t.me"]);
+    const inviteHit = await screenTelegramEvent(invite, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(inviteHit.decision)).not.toContain("code6419");
+
+    const publicName = await posted(6420, {
+      type: "chat",
+      sender_chat: { id: -100916420, type: "supergroup", title: "新闻" },
+      author_signature: "https://t.me/durov",
+    });
+    expect(publicName.message?.hosts).toEqual(["t.me"]);
+    expect(publicName.message?.invites).toBeUndefined();
+    const publicKept = await screenTelegramEvent(publicName, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(publicKept.decision.action).toBe("allow");
+    expect(JSON.stringify(publicKept.decision)).not.toContain("durov");
+
+    const ip = await posted(6421, {
+      type: "chat",
+      sender_chat: { id: -100916421, type: "supergroup", title: "新闻" },
+      author_signature: "http://203.0.113.9/ip6421",
+    });
+    expect(ip.message?.hosts).toEqual(["203.0.113.9"]);
+    const ipHit = await screenTelegramEvent(ip, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(ipHit.decision.action).toBe("delete");
+    expect(JSON.stringify(ipHit.decision.evidence)).toContain(
+      "ip_host:203.0.113.9",
+    );
+    expect(JSON.stringify(ipHit.decision)).not.toContain("ip6421");
+
+    const ordinary = await posted(6422, undefined, {
+      from: { id: 83, first_name: "https://bit.ly/msg6422" },
+      forward_signature: "https://bit.ly/sig6422",
+    });
+    expect(ordinary.message?.forward).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6422");
+    expect(JSON.stringify(ordinary)).not.toContain("sig6422");
+
+    const flag = await posted(
+      6423,
+      {
+        type: "chat",
+        sender_chat: true,
+        author_signature: "https://bit.ly/flag6423",
+      },
+      { from: { id: 83, first_name: "https://ow.ly/from6423" } },
+    );
+    expect(flag.message?.forward).toBe("chat");
+    expect(flag.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(flag)).not.toContain("flag6423");
+    expect(JSON.stringify(flag)).not.toContain("from6423");
+    expect(JSON.stringify(flag)).not.toContain("ow.ly");
+
+    const legacy = await posted(6424, undefined, {
+      forward_origin: undefined,
+      forward_signature: "https://bit.ly/old6424",
+      forward_from_chat: {
+        id: -100916424,
+        type: "supergroup",
+        title: "新闻",
+        username: "olduser6424",
+      },
+    });
+    expect(legacy.message?.forward).toBe("chat");
+    expect(legacy.message?.hosts).toEqual(["bit.ly"]);
+    const legacyHit = await screenTelegramEvent(legacy, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(legacyHit.decision.action).toBe("delete");
+    expect(legacyHit.decision.ruleIds).toContain("links");
+    expect(legacyHit.decision.ruleIds).not.toContain("chat_forward");
+    expect(JSON.stringify(legacy)).not.toContain("old6424");
+    expect(JSON.stringify(legacy)).not.toContain("olduser6424");
+
+    const hidden = await posted(6425, undefined, {
+      forward_origin: undefined,
+      forward_sender_name: "今天的名字",
+      forward_signature: "https://bit.ly/hide6425",
+      forward_from_chat: {
+        id: -100916425,
+        type: "supergroup",
+        title: "新闻",
+      },
+    });
+    expect(hidden.message?.forward).toBe("hidden");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenKept = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenKept.decision.action).toBe("allow");
+    expect(JSON.stringify(hidden)).not.toContain("hide6425");
+    expect(JSON.stringify(hidden)).not.toContain("bit.ly");
+
+    const paid = await posted(
+      6426,
+      {
+        type: "chat",
+        sender_chat: { id: -100916426, type: "supergroup", title: "新闻" },
+        author_signature: "https://bit.ly/paid6426",
+      },
+      {},
+      true,
+    );
+    expect(paid.message?.paid).toBe(true);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6426");
+
+    const admin = await posted(
+      6427,
+      {
+        type: "chat",
+        sender_chat: { id: -100916427, type: "supergroup", title: "新闻" },
+        author_signature: "https://bit.ly/name6427",
+      },
+      {},
+      false,
+      ["83"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("name6427");
+
+    const external = await posted(6428, undefined, {
+      external_reply: {
+        origin: {
+          type: "chat",
+          sender_chat: { id: -100916428, type: "supergroup", title: "新闻" },
+          author_signature: "https://bit.ly/ext6428",
+        },
+      },
+    });
+    expect(external.message?.forward).toBeUndefined();
+    expect(external.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(external)).not.toContain("ext6428");
+
+    const userOrigin = await posted(6429, {
+      type: "user",
+      sender_user: { id: 916429, first_name: "新闻" },
+      author_signature: "https://bit.ly/user6429",
+    });
+    expect(userOrigin.message?.forward).toBe("user");
+    expect(userOrigin.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(userOrigin)).not.toContain("user6429");
+    expect(JSON.stringify(userOrigin)).not.toContain("bit.ly");
+
+    const both = await posted(6430, {
+      type: "chat",
+      sender_chat: {
+        id: -100916430,
+        type: "supergroup",
+        title: "https://bit.ly/title6430",
+      },
+      author_signature: "https://tinyurl.com/sig6430",
+    });
+    expect(both.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bothHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(bothHit.decision)).not.toContain("title6430");
+    expect(JSON.stringify(bothHit.decision)).not.toContain("sig6430");
+
+    const fallen = await posted(
+      6431,
+      {
+        type: "chat",
+        sender_chat: { id: -100916431, type: "supergroup", title: "新闻" },
+        author_signature: "",
+      },
+      { forward_signature: "https://bit.ly/fall6431" },
+    );
+    expect(fallen.message?.hosts).toBeUndefined();
+    const fallenKept = await screenTelegramEvent(fallen, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(fallenKept.decision.action).toBe("allow");
+    expect(JSON.stringify(fallen)).not.toContain("fall6431");
+    expect(JSON.stringify(fallen)).not.toContain("bit.ly");
+
+    const marked = await posted(
+      6432,
+      {
+        type: "chat",
+        sender_chat: { id: -100916432, type: "supergroup", title: "新闻" },
+        author_signature: "https://bit.ly/mark6432",
+      },
+      { is_automatic_forward: true },
+    );
+    expect(marked.message?.forward).toBe("chat");
+    expect(marked.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(marked)).not.toContain("mark6432");
+
+    const clean = await posted(6433, {
+      type: "chat",
+      sender_chat: { id: -100916433, type: "supergroup", title: "新闻" },
       author_signature: "编辑",
     });
     expect(clean.message?.textSha256).toBe(named.message?.textSha256);

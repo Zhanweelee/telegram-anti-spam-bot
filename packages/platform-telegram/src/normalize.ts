@@ -4686,7 +4686,7 @@ function pushVisiblePartyUrls(
 /**
  * 已知用户和群的转发抬头只留主机名。
  * 现代来源优先。隐藏显示名旁边的真实姓名不读。
- * 成员转发的频道标题和来源签名只留主机名。讨论组原帖、群来源签名和外部回复不读。
+ * 成员转发的频道标题和来源签名只留主机名。群来源签名只留主机名。外部回复不读。
  */
 function pushForwardPartyUrls(
   message: Record<string, unknown>,
@@ -4698,6 +4698,7 @@ function pushForwardPartyUrls(
       pushVisiblePartyUrls(origin.sender_user, undefined, urls);
     } else if (origin.type === "chat") {
       pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
+      pushChatOriginSignature(origin.author_signature, urls);
     } else if (origin.type === "channel") {
       pushManualChannelTitle(message, origin.chat, urls);
       pushManualChannelSignature(message, origin.author_signature, urls);
@@ -4724,6 +4725,7 @@ function pushForwardPartyUrls(
     return;
   }
   pushVisiblePartyUrls(undefined, chat, urls);
+  pushChatOriginSignature(message.forward_signature, urls);
 }
 
 /**
@@ -4755,6 +4757,16 @@ function pushManualChannelSignature(
   if (message.is_automatic_forward === true) {
     return;
   }
+  if (typeof signature === "string" && signature.length > 0) {
+    pushPlainUrls(signature, urls);
+  }
+}
+
+/**
+ * 群来源上画出的匿名管理员签名只留主机名。
+ * 空白也算有签名。用户名和群标题在旁边另读。签名不进正文。
+ */
+function pushChatOriginSignature(signature: unknown, urls: string[]): void {
   if (typeof signature === "string" && signature.length > 0) {
     pushPlainUrls(signature, urls);
   }
@@ -8250,7 +8262,7 @@ function authorSignature(message: Record<string, unknown>): string {
   return "";
 }
 
-/** 讨论组原帖上画出的频道作者签名。成员转发另留主机名。群来源和其它来源不读。 */
+/** 讨论组原帖上画出的频道作者签名。成员转发和群来源另留主机名。其它来源不读。 */
 function mirrorAuthorSignature(message: Record<string, unknown>): string {
   if (message.is_automatic_forward !== true) {
     return "";
