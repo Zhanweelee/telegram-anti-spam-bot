@@ -171,3 +171,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 已有别的正文时，`forum_topic_created.name` 或 `forum_topic_edited.name` 去掉空白后的前 128 字另留在 `topicName`。先看新建，再看改名。关键词或默认正则命中时删除。第 129 字起不进事件。图标颜色和自定义表情不进这个字段。`is_name_implicit` 不隐藏这段名字。这段自己就是正文时不设这个字段。见 ADR 0550。
 
 已有别的正文时，`suggested_post_declined.comment` 去掉空白后的前 128 字另留在 `declineComment`。关键词或默认正则命中时删除。第 129 字起不进事件。嵌套的 `suggested_post_message` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0551。
+
+已有别的正文时，`poll_option_added.option_text` 或 `poll_option_deleted.option_text` 去掉空白后的前 100 字另留在 `addedText`。没有选项时，`checklist_tasks_added` 里的任务文字用空格拼起来，前 3029 字另留在同一个字段。先看新选项，再看被删选项，再看新任务。关键词或默认正则命中时删除。更后面的字不进事件。选项编号、原投票、原清单和完成者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0552。

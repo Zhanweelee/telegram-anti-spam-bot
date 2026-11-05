@@ -1759,6 +1759,11 @@ describe("runPipeline", () => {
         ruleId: "decline_comment_regex",
         label: "拒绝请免费领取礼品",
       },
+      {
+        field: "addedText",
+        ruleId: "added_text_regex",
+        label: "后加请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1831,6 +1836,7 @@ describe("runPipeline", () => {
       { field: "giftLabel", ruleId: "gift_label_regex" },
       { field: "topicName", ruleId: "topic_name_regex" },
       { field: "declineComment", ruleId: "decline_comment_regex" },
+      { field: "addedText", ruleId: "added_text_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();

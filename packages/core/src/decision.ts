@@ -70,6 +70,7 @@ export const textPlaces = [
   "giftLabel",
   "topicName",
   "declineComment",
+  "addedText",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

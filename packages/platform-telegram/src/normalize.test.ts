@@ -58,6 +58,7 @@ function withoutButtonText(event: object): string {
       giftLabel: undefined,
       topicName: undefined,
       declineComment: undefined,
+      addedText: undefined,
     },
   });
 }
@@ -13305,7 +13306,10 @@ describe("normalizeUpdate", () => {
       "example.com",
     ]);
     expect(added.event.message?.invites).toEqual(["t.me"]);
-    const addedDump = JSON.stringify(added.event);
+    expect(added.event.message?.addedText).toBe(
+      `${phrase} https://bit.ly/opt58 https://t.me/+${code}.`,
+    );
+    const addedDump = withoutButtonText(added.event);
     expect(addedDump).not.toContain(phrase);
     expect(addedDump).not.toContain(code);
     expect(addedDump).not.toContain("opt58");
@@ -13344,7 +13348,8 @@ describe("normalizeUpdate", () => {
     expect(removed.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(removed.event.message?.hosts).toEqual(["t.me"]);
     expect(removed.event.message?.invites).toEqual(["t.me"]);
-    const removedDump = JSON.stringify(removed.event);
+    expect(removed.event.message?.addedText).toBe(phrase);
+    const removedDump = withoutButtonText(removed.event);
     expect(removedDump).not.toContain(phrase);
     expect(removedDump).not.toContain(code);
     expect(removedDump).not.toContain("bit.ly");
@@ -13386,7 +13391,10 @@ describe("normalizeUpdate", () => {
     }
     expect(tasks.event.message?.text).toBe("今天站会");
     expect(tasks.event.message?.hosts).toEqual(["example.com"]);
-    const tasksDump = JSON.stringify(tasks.event);
+    expect(tasks.event.message?.addedText).toBe(
+      `${phrase} https://example.com/page58`,
+    );
+    const tasksDump = withoutButtonText(tasks.event);
     expect(tasksDump).not.toContain(phrase);
     expect(tasksDump).not.toContain("page58");
     expect(tasksDump).not.toContain("bit.ly");
@@ -13415,6 +13423,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(body.event.message?.text).toBe(`${asBody} 今天站会`);
+    expect(body.event.message?.addedText).toBeUndefined();
     expect(body.event.message?.textSha256).toBe(
       await sha256Hex(`${asBody} 今天站会`),
     );
@@ -27145,6 +27154,7 @@ describe("normalizeUpdate", () => {
     }
     expect(added.event.message?.asChecklistAdded).toBe(true);
     expect(added.event.message?.text).toBe(`${first} ${second}`);
+    expect(added.event.message?.addedText).toBeUndefined();
     const dumped = JSON.stringify(added.event);
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(completer);
@@ -27171,7 +27181,8 @@ describe("normalizeUpdate", () => {
     }
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.asChecklistAdded).toBe(true);
-    expect(JSON.stringify(kept.event)).not.toContain(first);
+    expect(kept.event.message?.addedText).toBe(first);
+    expect(withoutButtonText(kept.event)).not.toContain(first);
 
     const skippedBlank = await normalize({
       update_id: 4672,
@@ -27194,6 +27205,7 @@ describe("normalizeUpdate", () => {
     }
     expect(skippedBlank.event.message?.asChecklistAdded).toBe(true);
     expect(skippedBlank.event.message?.text).toBe(second);
+    expect(skippedBlank.event.message?.addedText).toBeUndefined();
     expect(JSON.stringify(skippedBlank.event)).not.toContain(String(secondId));
 
     const empty = await normalize({
@@ -27276,6 +27288,7 @@ describe("normalizeUpdate", () => {
     }
     expect(created.event.message?.pollNotice).toBe("added");
     expect(created.event.message?.text).toBe(added);
+    expect(created.event.message?.addedText).toBeUndefined();
     const dumped = JSON.stringify(created.event);
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(optionId);
@@ -27300,6 +27313,7 @@ describe("normalizeUpdate", () => {
     }
     expect(deleted.event.message?.pollNotice).toBe("deleted");
     expect(deleted.event.message?.text).toBe(removed);
+    expect(deleted.event.message?.addedText).toBeUndefined();
     expect(JSON.stringify(deleted.event)).not.toContain(optionId);
 
     const kept = await normalize({
@@ -27322,7 +27336,8 @@ describe("normalizeUpdate", () => {
     }
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.pollNotice).toBe("added");
-    expect(JSON.stringify(kept.event)).not.toContain(added);
+    expect(kept.event.message?.addedText).toBe(added);
+    expect(withoutButtonText(kept.event)).not.toContain(added);
 
     const both = await normalize({
       update_id: 4663,
@@ -27341,6 +27356,8 @@ describe("normalizeUpdate", () => {
     }
     expect(both.event.message?.pollNotice).toBe("added");
     expect(both.event.message?.text).toBe(added);
+    expect(both.event.message?.addedText).toBe(removed);
+    expect(withoutButtonText(both.event)).not.toContain(removed);
 
     const blankAdded = await normalize({
       update_id: 4664,
@@ -27359,6 +27376,7 @@ describe("normalizeUpdate", () => {
     }
     expect(blankAdded.event.message?.pollNotice).toBe("deleted");
     expect(blankAdded.event.message?.text).toBe(removed);
+    expect(blankAdded.event.message?.addedText).toBeUndefined();
 
     const empty = await normalize({
       update_id: 4665,
@@ -32405,6 +32423,107 @@ describe("normalizeUpdate", () => {
     expect(asCommentDump).not.toContain(tail);
     expect(asCommentDump).not.toContain(path);
     expect(asCommentDump).not.toContain(nested);
+  });
+
+  it("keeps the first 100 characters of an added option and 3029 of added tasks", async () => {
+    const tail = "TAIL94";
+    const path = "opt94";
+    const nested = "原投票机密";
+    const labeled = await normalize({
+      update_id: 5794,
+      message: {
+        message_id: 5794,
+        date: 1761955200,
+        chat: { id: -1005794, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        poll_option_added: {
+          option_persistent_id: "PID94",
+          option_text: `${"选".repeat(100)}${tail} https://bit.ly/${path}`,
+          poll_message: { text: nested },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.addedText).toHaveLength(100);
+    expect(labeled.event.message?.addedText).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("PID94");
+    expect(labeledDump).not.toContain(nested);
+    expect(labeledDump).not.toContain("Ada");
+
+    const asOption = await normalize({
+      update_id: 5795,
+      message: {
+        message_id: 5795,
+        date: 1761955200,
+        chat: { id: -1005795, type: "supergroup" },
+        from: { id: 93 },
+        poll_option_added: {
+          option_persistent_id: "PID95",
+          option_text: `${"选".repeat(4096)}${tail} https://bit.ly/${path}`,
+          poll_message: { text: nested },
+        },
+      },
+    });
+    expect(asOption.status).toBe("event");
+    if (asOption.status !== "event") {
+      return;
+    }
+    expect(asOption.event.message?.text).toHaveLength(4096);
+    expect(asOption.event.message?.addedText).toBeUndefined();
+    expect(asOption.event.message?.hosts).toEqual(["bit.ly"]);
+    const asOptionDump = JSON.stringify(asOption.event);
+    expect(asOptionDump).not.toContain(tail);
+    expect(asOptionDump).not.toContain(path);
+    expect(asOptionDump).not.toContain("PID95");
+    expect(asOptionDump).not.toContain(nested);
+
+    const taskTail = "TAIL96";
+    const taskPath = "task96";
+    const tasks = Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      text: "事".repeat(100),
+    }));
+    tasks.push({
+      id: 31,
+      text: `${taskTail} https://bit.ly/${taskPath}`,
+    });
+    const added = await normalize({
+      update_id: 5796,
+      message: {
+        message_id: 5796,
+        date: 1761955200,
+        chat: { id: -1005796, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        checklist_tasks_added: {
+          tasks,
+          checklist_message: { checklist: { title: nested } },
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("今天站会");
+    expect(added.event.message?.addedText).toHaveLength(3029);
+    expect(added.event.message?.addedText).not.toContain(taskTail);
+    expect(added.event.message?.hosts).toEqual(["bit.ly"]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain(taskTail);
+    expect(addedDump).not.toContain(taskPath);
+    expect(addedDump).not.toContain(nested);
+    expect(addedDump).not.toContain("Ada");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

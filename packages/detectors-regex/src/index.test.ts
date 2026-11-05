@@ -573,6 +573,22 @@ describe("regex detector", () => {
     });
     expect(commentHit?.places).toEqual(["declineComment"]);
     expect(JSON.stringify(commentHit)).not.toContain(name);
+    const appended = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        addedText: `打开 ${name}`,
+      },
+    });
+    const addedHit = await detector.detect({
+      event: appended,
+      logger,
+      signal,
+    });
+    expect(addedHit?.places).toEqual(["addedText"]);
+    expect(JSON.stringify(addedHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {
