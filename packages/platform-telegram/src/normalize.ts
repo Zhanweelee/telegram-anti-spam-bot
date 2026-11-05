@@ -4530,6 +4530,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(message.new_chat_title, urls);
   pushBackgroundFilename(message, urls);
   pushPlainUrls(memberNameSource(message), urls);
+  pushVisiblePartyUrls(message.left_chat_member, undefined, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);

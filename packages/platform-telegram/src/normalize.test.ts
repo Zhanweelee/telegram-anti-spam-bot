@@ -31546,13 +31546,12 @@ describe("normalizeUpdate", () => {
     }
     expect(left.event.message?.text).toBe("");
     expect(left.event.message?.textSha256).toBe(await sha256Hex(""));
-    expect(left.event.message?.hosts).toBeUndefined();
+    expect(left.event.message?.hosts).toEqual(["bit.ly"]);
     expect(left.event.message?.notice).toBe("leave");
     expect(left.event.message?.memberName).toBeUndefined();
     const leftDump = JSON.stringify(left.event);
     expect(leftDump).not.toContain("left85");
     expect(leftDump).not.toContain("gone85");
-    expect(leftDump).not.toContain("bit.ly");
     expect(leftDump).not.toContain("87004");
   });
 

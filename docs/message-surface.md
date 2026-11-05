@@ -104,6 +104,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `sender_chat` 的编号和本群不同时，标题只留主机名。用户名不读。编号相同的本群身份不读。转发来源上的频道标题仍不读。嵌套的原消息不读。见 ADR 0581。
 
+`left_chat_member` 的可见名字只留主机名。名的长度大于 0 时不读姓。空白也算有名。用户名和用户编号不进事件。名字里的关键词不命中。发送者姓名和本群群名不读。见 ADR 0582。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。
