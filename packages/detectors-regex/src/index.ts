@@ -52,6 +52,14 @@ export const regexConfigSchema = z.strictObject({
 
 export type RegexConfig = z.input<typeof regexConfigSchema>;
 
+function folded(text: string): string {
+  return foldInterpuncts(
+    foldEncodedMiddleDot(
+      foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(text))),
+    ),
+  );
+}
+
 export function createRegexDetector(config: RegexConfig): Detector {
   const parsed = regexConfigSchema.parse(config);
   const compiled = parsed.patterns.map((source) => new RegExp(source, "u"));
@@ -62,38 +70,36 @@ export function createRegexDetector(config: RegexConfig): Detector {
     configSchema: regexConfigSchema,
     config: parsed,
     async detect(ctx) {
-      const text = ctx.event.message?.text;
-      if (text === undefined) {
+      const texts = [ctx.event.message?.text, ctx.event.profile?.text].filter(
+        (text): text is string => typeof text === "string" && text.length > 0,
+      );
+      if (texts.length === 0) {
         return null;
       }
       for (const expression of compiled) {
-        let matched = false;
-        try {
-          matched = expression.test(
-            foldInterpuncts(
-              foldEncodedMiddleDot(
-                foldMatchText(foldFullwidthLatin(foldCyrillicLookalikes(text))),
-              ),
-            ),
-          );
-        } catch {
-          ctx.logger.warn("regex_failed", {
+        for (const text of texts) {
+          let matched = false;
+          try {
+            matched = expression.test(folded(text));
+          } catch {
+            ctx.logger.warn("regex_failed", {
+              detectorId: "regex",
+              eventId: ctx.event.id,
+              chatId: ctx.event.chatId,
+              tenantId: ctx.event.tenantId,
+            });
+            return null;
+          }
+          if (!matched) {
+            continue;
+          }
+          return {
             detectorId: "regex",
-            eventId: ctx.event.id,
-            chatId: ctx.event.chatId,
-            tenantId: ctx.event.tenantId,
-          });
-          return null;
+            score: 1,
+            reasons: ["regex_match"],
+            evidence: [{ kind: "feature" as const, summary: "regex:hit" }],
+          };
         }
-        if (!matched) {
-          continue;
-        }
-        return {
-          detectorId: "regex",
-          score: 1,
-          reasons: ["regex_match"],
-          evidence: [{ kind: "feature" as const, summary: "regex:hit" }],
-        };
       }
       return null;
     },

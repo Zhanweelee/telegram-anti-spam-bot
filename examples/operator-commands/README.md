@@ -26,6 +26,8 @@
 
 `/guard -100` 写出这个群有没有绑定地点。没返回写关。地址和坐标不出现。
 
+入群名字写成「加微x」或 `t.me/+` 时会被封禁。申请简介同样会被拒绝。普通消息仍要打开 `regex_hint`。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

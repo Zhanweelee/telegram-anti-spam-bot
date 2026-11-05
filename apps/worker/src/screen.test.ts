@@ -839,6 +839,113 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(audit)).not.toContain(name);
   });
 
+  it("bans a join whose visible name matches a regex", async () => {
+    const name = "加微x广告";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 5601,
+        chat_member: {
+          chat: { id: -1005601, type: "supergroup", title: "机密群名" },
+          from: { id: 1 },
+          date: 1761955200,
+          old_chat_member: { user: { id: 78 }, status: "left" },
+          new_chat_member: {
+            user: { id: 78, first_name: name, language_code: "机密群名" },
+            status: "member",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const captchaStore = createMemoryCaptchaStore();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+      captchaStore,
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(result.decision.action).toBe("ban");
+    expect(result.decision.reasons).toContain("regex_match");
+    expect(result.decision.ruleIds).toContain("join_regex");
+    expect(result.decision.ruleIds).not.toContain("join_name");
+    expect(result.decision.evidence).toContainEqual({
+      kind: "feature",
+      summary: "regex:hit",
+    });
+    expect(moderator.banned).toEqual([
+      { tenantId: "local", chatId: "-1005601", actorId: "78" },
+    ]);
+    expect(moderator.restricted).toEqual([]);
+    expect(await captchaStore.get("local", "-1005601", "78")).toBeNull();
+    const logged = JSON.stringify(logger.entries);
+    expect(logged).not.toContain(name);
+    expect(logged).not.toContain("机密群名");
+    expect(JSON.stringify(result.decision)).not.toContain(name);
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-1005601",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(outcome.event.profile?.textSha256);
+    expect(JSON.stringify(audit)).not.toContain(name);
+
+    const tag = "加微X";
+    const edited = await normalizeUpdate({
+      update: {
+        update_id: 5602,
+        chat_member: {
+          chat: { id: -1005602, type: "supergroup", title: "机密群名" },
+          from: { id: 79, first_name: "广告员" },
+          date: 1761955200,
+          old_chat_member: {
+            user: { id: 79, first_name: "广告员" },
+            status: "member",
+            tag: "旧标签",
+          },
+          new_chat_member: {
+            user: { id: 79, first_name: "广告员" },
+            status: "member",
+            tag,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    const tagLog = createMemoryLogger();
+    const tagModerator = createMemoryModerator();
+    const tagResult = await screenTelegramEvent(edited.event, {
+      logger: tagLog,
+      moderator: tagModerator,
+      captchaStore: createMemoryCaptchaStore(),
+      createNonce: () => "0123456789abcdef",
+    });
+    expect(tagResult.decision.action).toBe("ban");
+    expect(tagResult.decision.ruleIds).toContain("join_regex");
+    expect(tagResult.decision.evidence).toContainEqual({
+      kind: "feature",
+      summary: "regex:hit",
+    });
+    expect(tagModerator.banned).toEqual([
+      { tenantId: "local", chatId: "-1005602", actorId: "79" },
+    ]);
+    expect(JSON.stringify(tagLog.entries)).not.toContain(tag);
+    expect(JSON.stringify(tagResult.decision)).not.toContain(tag);
+  });
+
   it("bans a member who changes a tag to a keyword", async () => {
     const name = "广告员";
     const tag = "请免费领取礼品";
@@ -1101,6 +1208,53 @@ describe("screenTelegramEvent", () => {
     });
     expect(cleanResult.decision.action).toBe("allow");
     expect(cleanModerator.declined).toEqual([]);
+  });
+
+  it("declines a join request whose bio matches a regex", async () => {
+    const bio = "加微x看看";
+    const outcome = await normalizeUpdate({
+      update: {
+        update_id: 5603,
+        chat_join_request: {
+          chat: { id: -1005603, type: "supergroup", title: "机密群名" },
+          from: { id: 83, first_name: "Ada" },
+          date: 1761955200,
+          bio,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(outcome.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("decline");
+    expect(result.decision.ruleIds).toContain("join_request");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(moderator.declined).toEqual([
+      { tenantId: "local", chatId: "-1005603", actorId: "83" },
+    ]);
+    expect(moderator.banned).toEqual([]);
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(bio);
+    expect(dumped).not.toContain("机密群名");
+    const audit = await workerStorage.listAudits({
+      tenantId: "local",
+      chatId: "-1005603",
+      limit: 5,
+    });
+    expect(audit[0]?.textSha256).toBe(outcome.event.profile?.textSha256);
+    expect(JSON.stringify(audit)).not.toContain(bio);
   });
 
   it("answers a guarded join request and queues a clean one", async () => {
