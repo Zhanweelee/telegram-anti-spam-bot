@@ -10935,6 +10935,324 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(flag)).not.toContain("flag6234");
   });
 
+  it("deletes a short link in a post notice sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const nested = "原帖机密";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "channel",
+              title: "机密群名",
+            },
+            from: { id: 125, first_name: "Ada" },
+            suggested_post_approved: {
+              send_date: 623500,
+              suggested_post_message: { text: nested },
+            },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(6235, {
+      from: {
+        id: 125,
+        first_name: "https://bit.ly/apr6235",
+        last_name: "https://tinyurl.com/skip6235",
+        username: "secretuser6235",
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.postNotice).toBe("approved");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("post_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006235", messageId: "6235" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("apr6235");
+    expect(namedDump).not.toContain("skip6235");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("secretuser6235");
+    expect(namedDump).not.toContain(nested);
+    expect(namedDump).not.toContain("623500");
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const surname = await posted(6236, {
+      from: {
+        id: 125,
+        first_name: "",
+        last_name: "https://bit.ly/last6236",
+        username: "secretuser6236",
+      },
+      suggested_post_approved: undefined,
+      suggested_post_approval_failed: {
+        price: { currency: "XTR", amount: 624601 },
+        suggested_post_message: { text: "https://tinyurl.com/nest6236" },
+      },
+      suggested_post_paid: {
+        currency: "XTR",
+        suggested_post_message: { text: "https://ow.ly/paid6236" },
+      },
+    });
+    expect(surname.message?.text).toBe("");
+    expect(surname.message?.postNotice).toBe("failed");
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameModerator = createMemoryModerator();
+    const surnameHit = await screenTelegramEvent(surname, {
+      moderator: surnameModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(surnameModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006236", messageId: "6236" },
+    ]);
+    const surnameDump = JSON.stringify({
+      event: surname,
+      decision: surnameHit.decision,
+    });
+    expect(surnameDump).not.toContain("last6236");
+    expect(surnameDump).not.toContain("secretuser6236");
+    expect(surnameDump).not.toContain("nest6236");
+    expect(surnameDump).not.toContain("paid6236");
+    expect(surnameDump).not.toContain("tinyurl");
+    expect(surnameDump).not.toContain("ow.ly");
+    expect(surnameDump).not.toContain("624601");
+
+    const plain = await posted(6237, {
+      from: { id: 125, first_name: "https://example.com/ok6237" },
+      suggested_post_approved: undefined,
+      suggested_post_paid: { currency: "TON", amount: 623701 },
+    });
+    expect(plain.message?.text).toBe("");
+    expect(plain.message?.postNotice).toBe("paid");
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6237");
+    expect(JSON.stringify(plain)).not.toContain("623701");
+
+    const keyword = await posted(6238, {
+      from: {
+        id: 125,
+        first_name: phrase,
+        username: "https://bit.ly/user6238",
+      },
+      suggested_post_approved: undefined,
+      suggested_post_refunded: { reason: "post_deleted" },
+    });
+    expect(keyword.message?.text).toBe("");
+    expect(keyword.message?.postNotice).toBe("refunded");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6238");
+    expect(keywordDump).not.toContain("post_deleted");
+
+    const paid = await posted(
+      6239,
+      {
+        from: { id: 125, first_name: "https://bit.ly/paid6239" },
+      },
+      true,
+    );
+    expect(paid.message?.text).toBe("");
+    expect(paid.message?.postNotice).toBe("approved");
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6239");
+    expect(JSON.stringify(paidHit.decision)).not.toContain(nested);
+
+    const blank = await posted(6240, {
+      from: {
+        id: 125,
+        first_name: "   ",
+        last_name: "https://bit.ly/space6240",
+      },
+    });
+    expect(blank.message?.postNotice).toBe("approved");
+    expect(blank.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blank, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blank)).not.toContain("space6240");
+
+    const empty = await posted(6241, {
+      from: { id: 125, first_name: "https://bit.ly/empty6241" },
+      suggested_post_approved: {},
+    });
+    expect(empty.message?.postNotice).toBeUndefined();
+    expect(empty.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty)).not.toContain("empty6241");
+
+    const emptyPrice = await posted(6242, {
+      from: { id: 125, first_name: "https://bit.ly/price6242" },
+      suggested_post_approved: undefined,
+      suggested_post_approval_failed: { price: {} },
+    });
+    expect(emptyPrice.message?.postNotice).toBe("failed");
+    expect(emptyPrice.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(emptyPrice)).not.toContain("price6242");
+
+    const beside = await posted(6243, {
+      text: "今天站会",
+      chat: {
+        id: -(1_000_000 + 6243),
+        type: "channel",
+        title: "https://tinyurl.com/room6243",
+      },
+      from: { id: 125, first_name: "https://bit.ly/only6243" },
+    });
+    expect(beside.message?.text).toBe("今天站会");
+    expect(beside.message?.postNotice).toBe("approved");
+    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    const besideDump = JSON.stringify(beside);
+    expect(besideDump).not.toContain("only6243");
+    expect(besideDump).not.toContain("room6243");
+    expect(besideDump).not.toContain("tinyurl");
+    expect(besideDump).not.toContain(nested);
+
+    const ordinary = await posted(6244, {
+      from: { id: 125, first_name: "https://bit.ly/msg6244" },
+      suggested_post_approved: undefined,
+    });
+    expect(ordinary.message?.postNotice).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6244");
+
+    const both = await posted(6245, {
+      from: {
+        id: 125,
+        first_name: "https://bit.ly/who6245",
+        username: "secretuser6245",
+      },
+      suggested_post_approved: {
+        send_date: 0,
+        suggested_post_message: { text: "https://tinyurl.com/nest6245" },
+      },
+      suggested_post_refunded: {
+        reason: "payment_refunded",
+        suggested_post_message: { text: "https://ow.ly/back6245" },
+      },
+    });
+    expect(both.message?.postNotice).toBe("approved");
+    expect(both.message?.text).toBe("");
+    expect(both.message?.hosts).toEqual(["bit.ly"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(bothHit.decision.reasons).toContain("short_link");
+    expect(bothHit.decision.ruleIds).not.toContain("post_notice");
+    const bothDump = JSON.stringify({
+      event: both,
+      decision: bothHit.decision,
+    });
+    expect(bothDump).toContain("short_link:bit.ly");
+    expect(bothDump).not.toContain("who6245");
+    expect(bothDump).not.toContain("secretuser6245");
+    expect(bothDump).not.toContain("nest6245");
+    expect(bothDump).not.toContain("back6245");
+    expect(bothDump).not.toContain("ow.ly");
+    expect(bothDump).not.toContain("tinyurl");
+    expect(bothDump).not.toContain("payment_refunded");
+
+    const flag = await posted(6246, {
+      from: { id: 125, first_name: "https://bit.ly/flag6246" },
+      suggested_post_approved: true,
+    });
+    expect(flag.message?.postNotice).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag6246");
+
+    const negative = await posted(6247, {
+      from: { id: 125, first_name: "https://bit.ly/neg6247" },
+      suggested_post_approved: { send_date: -1 },
+    });
+    expect(negative.message?.postNotice).toBeUndefined();
+    expect(negative.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative)).not.toContain("neg6247");
+
+    const otherCurrency = await posted(6248, {
+      from: { id: 125, first_name: "https://bit.ly/usd6248" },
+      suggested_post_approved: undefined,
+      suggested_post_paid: { currency: "USD" },
+    });
+    expect(otherCurrency.message?.postNotice).toBeUndefined();
+    expect(otherCurrency.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(otherCurrency)).not.toContain("usd6248");
+
+    const otherReason = await posted(6249, {
+      from: { id: 125, first_name: "https://bit.ly/why6249" },
+      suggested_post_approved: undefined,
+      suggested_post_refunded: { reason: "other" },
+    });
+    expect(otherReason.message?.postNotice).toBeUndefined();
+    expect(otherReason.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(otherReason)).not.toContain("why6249");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
