@@ -9998,6 +9998,333 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(empty)).not.toContain("empty6194");
   });
 
+  it("deletes a short link in a join sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const memberName = "新来的人";
+    const memberId = 8806195;
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            new_chat_members: [
+              { id: memberId, is_bot: false, first_name: memberName },
+            ],
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(6195, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/join6195",
+        last_name: "https://tinyurl.com/skip6195",
+        username: "secretuser6195",
+      },
+    });
+    expect(named.message?.text).toBe(memberName);
+    expect(named.message?.notice).toBe("join");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("service_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006195", messageId: "6195" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("join6195");
+    expect(namedDump).not.toContain("skip6195");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("secretuser6195");
+    expect(namedDump).not.toContain(String(memberId));
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const surname = await posted(6196, {
+      from: {
+        id: 124,
+        first_name: "",
+        last_name: "https://bit.ly/last6196",
+        username: "secretuser6196",
+      },
+      new_chat_members: [
+        { id: 8806196, is_bot: false, first_name: "另一位" },
+      ],
+    });
+    expect(surname.message?.text).toBe("另一位");
+    expect(surname.message?.notice).toBe("join");
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameModerator = createMemoryModerator();
+    const surnameHit = await screenTelegramEvent(surname, {
+      moderator: surnameModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(surnameModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006196", messageId: "6196" },
+    ]);
+    const surnameDump = JSON.stringify(surname);
+    expect(surnameDump).not.toContain("last6196");
+    expect(surnameDump).not.toContain("secretuser6196");
+    expect(surnameDump).not.toContain("8806196");
+
+    const plain = await posted(6197, {
+      from: {
+        id: 124,
+        first_name: "https://example.com/ok6197",
+      },
+      new_chat_members: [
+        { id: memberId, is_bot: false, first_name: "干净" },
+      ],
+    });
+    expect(plain.message?.text).toBe("干净");
+    expect(plain.message?.notice).toBe("join");
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6197");
+
+    const keyword = await posted(6198, {
+      from: {
+        id: 124,
+        first_name: phrase,
+        username: "https://bit.ly/user6198",
+      },
+      new_chat_members: [
+        { id: memberId, is_bot: false, first_name: "干净" },
+      ],
+    });
+    expect(keyword.message?.text).toBe("干净");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6198");
+    expect(keywordDump).not.toContain(String(memberId));
+
+    const paid = await posted(
+      6199,
+      {
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/paid6199",
+        },
+      },
+      true,
+    );
+    expect(paid.message?.text).toBe(memberName);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6199");
+    expect(JSON.stringify(paidHit.decision)).not.toContain(String(memberId));
+
+    const blank = await posted(6200, {
+      from: {
+        id: 124,
+        first_name: "   ",
+        last_name: "https://bit.ly/space6200",
+      },
+    });
+    expect(blank.message?.text).toBe(memberName);
+    expect(blank.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blank, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blank)).not.toContain("space6200");
+
+    const emptyList = await posted(6201, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/empty6201",
+      },
+      new_chat_members: [],
+    });
+    expect(emptyList.message?.notice).toBeUndefined();
+    expect(emptyList.message?.text).toBe("");
+    expect(emptyList.message?.hosts).toBeUndefined();
+    const emptyKept = await screenTelegramEvent(emptyList, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(emptyKept.decision.action).toBe("allow");
+    expect(JSON.stringify(emptyList)).not.toContain("empty6201");
+
+    const beside = await posted(6202, {
+      text: "今天站会",
+      chat: {
+        id: -(1_000_000 + 6202),
+        type: "supergroup",
+        title: "https://tinyurl.com/room6202",
+      },
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/only6202",
+      },
+    });
+    expect(beside.message?.text).toBe("今天站会");
+    expect(beside.message?.notice).toBe("join");
+    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    const besideDump = JSON.stringify(beside);
+    expect(besideDump).not.toContain("only6202");
+    expect(besideDump).not.toContain("room6202");
+    expect(besideDump).not.toContain("tinyurl");
+    expect(besideDump).not.toContain(String(memberId));
+
+    const ordinary = await posted(6203, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/msg6203",
+      },
+      new_chat_members: undefined,
+    });
+    expect(ordinary.message?.notice).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6203");
+
+    const both = await posted(6204, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/who6204",
+        username: "secretuser6204",
+      },
+      new_chat_members: [
+        {
+          id: 8806204,
+          is_bot: false,
+          first_name: "https://cutt.ly/name6204",
+          note: "https://ow.ly/gone6204",
+        },
+      ],
+    });
+    expect(both.message?.notice).toBe("join");
+    expect(both.message?.text).toBe("https://cutt.ly/name6204");
+    expect(both.message?.hosts).toEqual(["cutt.ly", "bit.ly"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(bothHit.decision.reasons).toContain("short_link");
+    expect(bothHit.decision.ruleIds).not.toContain("service_notice");
+    const bothDump = JSON.stringify({
+      event: both,
+      decision: bothHit.decision,
+    });
+    expect(bothDump).toContain("short_link:cutt.ly");
+    expect(bothDump).not.toContain("who6204");
+    expect(bothDump).not.toContain("secretuser6204");
+    expect(bothDump).not.toContain("8806204");
+    expect(bothDump).not.toContain("gone6204");
+    expect(bothDump).not.toContain("ow.ly");
+
+    const left = await posted(6205, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/left6205",
+      },
+      new_chat_members: undefined,
+      left_chat_member: { id: 8806205, first_name: "离开的人" },
+    });
+    expect(left.message?.notice).toBe("leave");
+    expect(left.message?.text).toBe("");
+    expect(left.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(left)).not.toContain("left6205");
+    expect(JSON.stringify(left)).not.toContain("8806205");
+
+    const flag = await posted(6206, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/flag6206",
+      },
+      new_chat_members: true,
+    });
+    expect(flag.message?.notice).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag6206");
+
+    const blankMember = await posted(6207, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/blank6207",
+      },
+      new_chat_members: [{}],
+    });
+    expect(blankMember.message?.notice).toBe("join");
+    expect(blankMember.message?.text).toBe("");
+    expect(blankMember.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blankMember)).not.toContain("blank6207");
+
+    const strangers = await posted(6208, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/stranger6208",
+      },
+      new_chat_members: ["x", 1, null],
+    });
+    expect(strangers.message?.notice).toBeUndefined();
+    expect(strangers.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(strangers)).not.toContain("stranger6208");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
@@ -20598,8 +20925,16 @@ describe("screenTelegramEvent", () => {
     const ordinary = await screenMembers(5512, -100598, [
       { id: 87, first_name: "https://example.com/ok85" },
     ]);
-    expect(ordinary.result.decision.action).toBe("allow");
-    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(ordinary.result.decision.action).toBe("delete");
+    expect(ordinary.result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(ordinary.result.decision.evidence)).toContain(
+      "short_link:tinyurl.com",
+    );
+    expect(ordinary.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100598", messageId: "5512" },
+    ]);
+    expect(JSON.stringify(ordinary.result.decision)).not.toContain("from85");
+    expect(JSON.stringify(ordinary.result.decision)).not.toContain("ok85");
 
     const invited = await screenMembers(5513, -100599, [
       { id: 87, first_name: "https://t.me/+CODE85" },
