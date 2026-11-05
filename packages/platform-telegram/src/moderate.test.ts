@@ -3237,6 +3237,8 @@ describe("telegram captcha transport", () => {
             slow_mode_delay: 30,
             message_auto_delete_time: 86400,
             unrestrict_boost_count: 2,
+            paid_message_star_count: 5,
+            can_send_paid_media: true,
             has_protected_content: true,
             has_hidden_members: false,
             has_visible_history: true,
@@ -3263,6 +3265,8 @@ describe("telegram captcha transport", () => {
       slowModeSeconds: 30,
       autoDeleteSeconds: 86400,
       boostExemption: 2,
+      paidStars: 5,
+      paidMedia: "on",
       protectedContent: "on",
       hiddenMembers: "off",
       visibleHistory: "on",
@@ -3345,6 +3349,43 @@ describe("telegram captcha transport", () => {
                 type: phrase,
                 max_reaction_count: 1.5,
                 slow_mode_delay: -1,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "supergroup",
+                max_reaction_count: 1,
+                paid_message_star_count: -1,
+              },
+            }),
+            { status: 200 },
+          ),
+      }).readChatGuard({ tenantId: "local", chatId: "-100" }),
+    ).rejects.toThrow("guard_failed");
+    await expect(
+      createTelegramModerator({
+        token,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              ok: true,
+              result: {
+                id: -100,
+                type: "channel",
+                max_reaction_count: 1,
+                paid_message_star_count: 0,
+                can_send_paid_media: phrase,
               },
             }),
             { status: 200 },

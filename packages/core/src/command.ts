@@ -4305,6 +4305,8 @@ function isChatGuard(
     isOptionalCount(guard.slowModeSeconds) &&
     isOptionalCount(guard.autoDeleteSeconds) &&
     isOptionalCount(guard.boostExemption) &&
+    isOptionalCount(guard.paidStars) &&
+    isPermissionState(guard.paidMedia) &&
     isPermissionState(guard.protectedContent) &&
     isPermissionState(guard.hiddenMembers) &&
     isPermissionState(guard.visibleHistory) &&
@@ -4370,6 +4372,14 @@ function describeChatGuard(
       "command.guard.boost_unknown",
       "count",
     ),
+    guardCount(
+      input,
+      guard.paidStars,
+      "command.guard.paid",
+      "command.guard.paid_unknown",
+      "stars",
+    ),
+    guardFlag(input, "command.guard.paid_media", guard.paidMedia),
     guardFlag(input, "command.guard.protected", guard.protectedContent),
     guardFlag(input, "command.guard.hidden", guard.hiddenMembers),
     guardFlag(input, "command.guard.history", guard.visibleHistory),
