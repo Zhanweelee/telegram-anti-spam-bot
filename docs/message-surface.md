@@ -126,6 +126,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `gift`、`unique_gift` 和 `gift_upgrade_sent` 的 `entities` 里，同样的 `text_mention` 也带 `asTextMention`。用户编号、名字和发布者用户名不进事件。见 ADR 0569。
 
+`game.text_entities` 里，同样的 `text_mention` 也带 `asTextMention`。用户编号和名字不进事件。封面和动图文件编号不进事件。见 ADR 0570。
+
 `entities`、`caption_entities`、投票题干、投票说明、投票选项、清单标题、清单任务、礼物、游戏说明或富文本里，`type` 为 `custom_emoji` 且 `custom_emoji_id` 去掉空白后非空时，消息带 `asCustomEmoji`。空白、布尔值和缺编号不带这个标记。加粗、按标识提及、手动引用和日期时间不带。论坛话题图标编号不带。编号不进事件。看得见的字和替代文字仍是正文。已有正文时正文不变。规则 `custom_emoji` 默认关闭。见 ADR 0515。
 
 内联键盘或富文本按钮的 `copy_text.text` 去掉空白后非空时，消息带 `asCopyText`。空白、布尔值、缺句子、只有网址的按钮、回调数据和回复键盘不带这个标记。复制句子不进事件。看得见的按钮文字仍是正文。已有正文时正文不变。规则 `copy_text` 默认关闭。见 ADR 0516。

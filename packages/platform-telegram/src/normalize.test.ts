@@ -24647,6 +24647,48 @@ describe("normalizeUpdate", () => {
     expect(upgraded.event.message?.asTextMention).toBe(true);
     expect(JSON.stringify(upgraded.event)).not.toContain("90251");
     expect(JSON.stringify(upgraded.event)).not.toContain("升90251");
+
+    const game = await normalize({
+      update_id: 4890,
+      message: {
+        message_id: 930,
+        date: 1761955200,
+        chat: { id: -100499890, type: "supergroup" },
+        from: { id: 123 },
+        game: {
+          title: "游戏留下",
+          description: "说明留下",
+          text: "附加点名",
+          text_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 4,
+              user: { id: 90252, first_name: "游90252", username: "game90252" },
+            },
+          ],
+          photo: [
+            {
+              file_id: "covergame",
+              file_unique_id: "coveruniq",
+              width: 1,
+              height: 1,
+            },
+          ],
+        },
+      },
+    });
+    expect(game.status).toBe("event");
+    if (game.status !== "event") {
+      return;
+    }
+    expect(game.event.message?.text).toBe("游戏留下");
+    expect(game.event.message?.gameText).toBe("说明留下 附加点名");
+    expect(game.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(game.event)).not.toContain("90252");
+    expect(JSON.stringify(game.event)).not.toContain("游90252");
+    expect(JSON.stringify(game.event)).not.toContain("game90252");
+    expect(JSON.stringify(game.event)).not.toContain("covergame");
   });
 
   it("marks a rich reference link and leaves the name out", async () => {

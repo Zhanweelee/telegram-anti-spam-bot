@@ -8188,6 +8188,175 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("短名留下");
   });
 
+  it("deletes a game text mention when that chat asks", async () => {
+    const userId = "8805950";
+    const firstName = "名8805950";
+    const username = "game5950";
+    function mention(text: string, id = 8805950) {
+      return [
+        {
+          type: "text_mention",
+          offset: 0,
+          length: text.length,
+          user: { id, first_name: firstName, username },
+        },
+      ];
+    }
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      kind: "game" | "zero";
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: { id: input.chatId, type: "supergroup", title: "机密群名" },
+            from: { id: 123, first_name: "Ada" },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            game: {
+              title: "游戏留下",
+              description: "说明留下",
+              text: "附加点名",
+              text_entities: mention(
+                "附加点名",
+                input.kind === "zero" ? 0 : 8805950,
+              ),
+              photo: [
+                {
+                  file_id: "covergame",
+                  file_unique_id: "coveruniq",
+                  width: 1,
+                  height: 1,
+                },
+              ],
+              animation: {
+                file_id: "animgame",
+                file_unique_id: "animuniq",
+                width: 2,
+                height: 2,
+                duration: 3,
+              },
+            },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "text_mention",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["text_mention"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 5950,
+      chatId: -1005950,
+      kind: "game",
+    });
+    expect(idle.message?.text).toBe("游戏留下");
+    expect(idle.message?.gameText).toBe("说明留下 附加点名");
+    expect(idle.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(idle)).not.toContain(userId);
+    expect(JSON.stringify(idle)).not.toContain(firstName);
+    expect(JSON.stringify(idle)).not.toContain(username);
+    expect(JSON.stringify(idle)).not.toContain("covergame");
+    expect(JSON.stringify(idle)).not.toContain("animgame");
+    const logger = createMemoryLogger();
+    const allowed = await screenTelegramEvent(idle, {
+      logger,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(
+      await posted({ updateId: 5951, chatId: -1005951, kind: "game" }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator,
+        logger,
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("text_mention");
+    expect(removed.decision.ruleIds).toContain("text_mention");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "entity:text_mention" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005951", messageId: "5951" },
+    ]);
+    const zero = await posted({
+      updateId: 5952,
+      chatId: -1005952,
+      kind: "zero",
+    });
+    expect(zero.message?.asTextMention).toBeUndefined();
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 5953,
+        chatId: -1005953,
+        kind: "game",
+        paid: true,
+      }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      skipped: skipped.decision,
+      logs: logger.entries,
+    });
+    expect(dumped).not.toContain(userId);
+    expect(dumped).not.toContain(firstName);
+    expect(dumped).not.toContain(username);
+    expect(dumped).not.toContain("Ada");
+    expect(dumped).not.toContain("机密群名");
+    expect(dumped).not.toContain("covergame");
+    expect(dumped).not.toContain("animgame");
+  });
+
   it("keeps a rich reference link until that chat asks", async () => {
     const referenceName = "cite90235";
     const actor = "发引用链接的人";

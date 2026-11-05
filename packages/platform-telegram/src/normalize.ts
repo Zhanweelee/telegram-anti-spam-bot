@@ -558,6 +558,10 @@ function textMentionMark(message: Record<string, unknown>): boolean {
       lists.push(gift.entities);
     }
   }
+  const game = message.game;
+  if (isRecord(game)) {
+    lists.push(game.text_entities);
+  }
   for (const list of lists) {
     if (!Array.isArray(list)) {
       continue;
