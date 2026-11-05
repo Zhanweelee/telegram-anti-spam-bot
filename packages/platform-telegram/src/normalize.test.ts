@@ -64,6 +64,7 @@ function withoutButtonText(event: object): string {
       sharedName: undefined,
       managedName: undefined,
       accessName: undefined,
+      gameFile: undefined,
     },
   });
 }
@@ -19610,6 +19611,9 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.gameText).toBe(phrase);
+    expect(labeled.event.message?.gameFile).toBe(
+      `https://bit.ly/anim77 https://t.me/+${code}.`,
+    );
     const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
@@ -19646,7 +19650,8 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.gameFile).toBe("https://example.com/ok77");
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok77");
     expect(ordinaryDump).not.toContain("is.gd");
     expect(ordinaryDump).not.toContain("mime77b");
@@ -19680,6 +19685,7 @@ describe("normalizeUpdate", () => {
     expect(asTitle.event.message?.textSha256).toBe(await sha256Hex(title));
     expect(asTitle.event.message?.hosts).toEqual(["bit.ly"]);
     expect(asTitle.event.message?.gameText).toBe(phrase);
+    expect(asTitle.event.message?.gameFile).toBe(named);
     const titleDump = withoutButtonText(asTitle.event);
     expect(titleDump).not.toContain("免费领取");
     expect(titleDump).not.toContain("body77");
@@ -32020,8 +32026,9 @@ describe("normalizeUpdate", () => {
     expect(played.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(played.event.message?.gameTitle).toHaveLength(4096);
     expect(played.event.message?.gameTitle).not.toContain(tail);
+    expect(played.event.message?.gameFile).toBe("GAMECLIP");
     expect(played.event.message?.hosts).toEqual(["bit.ly"]);
-    const playedDump = JSON.stringify(played.event);
+    const playedDump = withoutButtonText(played.event);
     expect(playedDump).not.toContain(tail);
     expect(playedDump).not.toContain(path);
     expect(playedDump).not.toContain("GAME78ID");
@@ -32920,6 +32927,85 @@ describe("normalizeUpdate", () => {
     expect(asNameDump).not.toContain(tail);
     expect(asNameDump).not.toContain(path);
     expect(asNameDump).not.toContain("SECRET5844");
+  });
+
+  it("keeps the first 4096 characters of a game animation file name", async () => {
+    const tail = "TAIL28";
+    const path = "game28";
+    const labeled = await normalize({
+      update_id: 5851,
+      message: {
+        message_id: 5851,
+        date: 1761955200,
+        chat: { id: -1005851, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        game: {
+          title: "说明",
+          photo: [
+            {
+              file_id: "COVER5851",
+              file_unique_id: "UNIQ5851",
+              width: 1,
+              height: 1,
+            },
+          ],
+          animation: {
+            file_id: "ANIM5851",
+            file_unique_id: "AUNIQ5851",
+            mime_type: "image/gif",
+            file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+          },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.gameFile).toHaveLength(4096);
+    expect(labeled.event.message?.gameFile).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("COVER5851");
+    expect(labeledDump).not.toContain("ANIM5851");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asName = await normalize({
+      update_id: 5852,
+      message: {
+        message_id: 5852,
+        date: 1761955200,
+        chat: { id: -1005852, type: "supergroup" },
+        from: { id: 93 },
+        text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        game: {
+          title: "说明",
+          photo: [],
+          animation: {
+            file_id: "ANIM5852",
+            file_unique_id: "AUNIQ5852",
+            mime_type: "image/gif",
+            file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+          },
+        },
+      },
+    });
+    expect(asName.status).toBe("event");
+    if (asName.status !== "event") {
+      return;
+    }
+    expect(asName.event.message?.text).toHaveLength(4096);
+    expect(asName.event.message?.gameFile).toBeUndefined();
+    expect(asName.event.message?.hosts).toEqual(["bit.ly"]);
+    const asNameDump = JSON.stringify(asName.event);
+    expect(asNameDump).not.toContain(tail);
+    expect(asNameDump).not.toContain(path);
+    expect(asNameDump).not.toContain("ANIM5852");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

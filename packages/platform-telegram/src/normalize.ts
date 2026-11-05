@@ -165,6 +165,7 @@ async function messageEvent(
   const sideShared = besideSharedName(message, text);
   const sideManaged = besideManagedName(message, text);
   const sideAccess = besideAccessName(message, text);
+  const sideGameFile = besideGameFile(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -263,6 +264,7 @@ async function messageEvent(
       ...(sideShared.length > 0 ? { sharedName: sideShared } : {}),
       ...(sideManaged.length > 0 ? { managedName: sideManaged } : {}),
       ...(sideAccess.length > 0 ? { accessName: sideAccess } : {}),
+      ...(sideGameFile.length > 0 ? { gameFile: sideGameFile } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6801,6 +6803,30 @@ function besideAccessName(
     return "";
   }
   return clipped(source, MAX_TEXT);
+}
+
+/** 已有别的正文时，游戏动图文件名另留最多 4096 字。这段自己就是正文时不重复。封面、文件编号和 MIME 不进这个字段。 */
+function besideGameFile(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const source = gameFileSource(message);
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
+}
+
+function gameFileSource(message: Record<string, unknown>): string {
+  const game = message.game;
+  if (!isRecord(game) || !isRecord(game.animation)) {
+    return "";
+  }
+  const name = game.animation.file_name;
+  if (typeof name !== "string") {
+    return "";
+  }
+  return name;
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

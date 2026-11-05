@@ -337,6 +337,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("accessName" in when) {
     return "accessName";
   }
+  if ("gameFile" in when) {
+    return "gameFile";
+  }
   return undefined;
 }
 
@@ -477,6 +480,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.sharedName,
     event.message?.managedName,
     event.message?.accessName,
+    event.message?.gameFile,
     event.profile?.text,
   ];
   const texts: string[] = [];
