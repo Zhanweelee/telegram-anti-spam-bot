@@ -477,6 +477,22 @@ describe("regex detector", () => {
     });
     expect(venueTitleHit?.places).toEqual(["venueTitle"]);
     expect(JSON.stringify(venueTitleHit)).not.toContain(name);
+    const opened = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        webAppButtonText: `打开 ${name}`,
+      },
+    });
+    const webAppHit = await detector.detect({
+      event: opened,
+      logger,
+      signal,
+    });
+    expect(webAppHit?.places).toEqual(["webAppButtonText"]);
+    expect(JSON.stringify(webAppHit)).not.toContain(name);
     const gameBody = parseEvent({
       ...messageEvent(name),
       message: {

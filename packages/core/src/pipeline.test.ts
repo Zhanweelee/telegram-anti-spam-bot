@@ -1729,6 +1729,11 @@ describe("runPipeline", () => {
         ruleId: "venue_title_regex",
         label: "场馆请免费领取礼品",
       },
+      {
+        field: "webAppButtonText",
+        ruleId: "web_app_button_regex",
+        label: "按钮请免费领取礼品",
+      },
     ] as const;
     for (const item of cases) {
       const kit = harness();
@@ -1795,6 +1800,7 @@ describe("runPipeline", () => {
       { field: "gameTitle", ruleId: "game_title_regex" },
       { field: "invoiceTitle", ruleId: "invoice_title_regex" },
       { field: "venueTitle", ruleId: "venue_title_regex" },
+      { field: "webAppButtonText", ruleId: "web_app_button_regex" },
     ] as const;
     for (const item of cases) {
       const kit = harness();

@@ -153,6 +153,7 @@ async function messageEvent(
   const sideGameTitle = besideCardTitle(message, "game", 4096, text);
   const sideInvoiceTitle = besideCardTitle(message, "invoice", 32, text);
   const sideVenueTitle = besideCardTitle(message, "venue", 4096, text);
+  const sideWebAppButton = besideWebAppButton(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -237,6 +238,9 @@ async function messageEvent(
         ? { invoiceTitle: sideInvoiceTitle }
         : {}),
       ...(sideVenueTitle.length > 0 ? { venueTitle: sideVenueTitle } : {}),
+      ...(sideWebAppButton.length > 0
+        ? { webAppButtonText: sideWebAppButton }
+        : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6616,6 +6620,22 @@ function pushUserLabels(value: unknown, parts: string[]): void {
       }
     }
   }
+}
+
+/** 已有别的正文时，小程序按钮文字另留最多 4096 字。这段自己就是正文时不重复。`data` 不进这个字段。 */
+function besideWebAppButton(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const webApp = message.web_app_data;
+  if (!isRecord(webApp) || typeof webApp.button_text !== "string") {
+    return "";
+  }
+  const source = webApp.button_text;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, MAX_TEXT);
 }
 
 /** 小程序回传的按钮文字看得见。`data` 只留主机名，不进正文。 */

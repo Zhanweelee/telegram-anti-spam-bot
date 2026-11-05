@@ -92,6 +92,8 @@ export const messageSchema = z
     invoiceTitle: z.string().min(1).max(32).optional(),
     /** Venue title beside another body. Capped at 4096. Absent when it is the body. */
     venueTitle: z.string().min(1).max(4096).optional(),
+    /** Web App button label beside another body. Capped at 4096. Absent when it is the body. */
+    webAppButtonText: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
