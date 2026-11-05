@@ -4474,6 +4474,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   pushPlainUrls(message.forward_sender_name, urls);
   pushForwardPartyUrls(message, urls);
+  pushSenderChatUrls(message, urls);
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
     pushPlainUrls(quote.text, urls);
@@ -4664,6 +4665,26 @@ function pushForwardPartyUrls(
   if (isRecord(chat) && chat.type !== "channel") {
     pushVisiblePartyUrls(undefined, chat, urls);
   }
+}
+
+/**
+ * 别的聊天代发时，标题只留主机名。
+ * 编号和本群相同的身份不读。用户名不读。转发来源上的频道标题不读。
+ */
+function pushSenderChatUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const sender = message.sender_chat;
+  if (!isRecord(sender)) {
+    return;
+  }
+  const chatId = nestedId(message.chat);
+  const senderId = nestedId(sender);
+  if (chatId === null || senderId === null || chatId === senderId) {
+    return;
+  }
+  pushPlainUrls(sender.title, urls);
 }
 
 function pushPlainUrls(value: unknown, urls: string[]): void {
