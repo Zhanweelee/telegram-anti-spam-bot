@@ -301,6 +301,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("venueTitle" in when) {
     return "venueTitle";
   }
+  if ("webAppButtonText" in when) {
+    return "webAppButtonText";
+  }
   return undefined;
 }
 
@@ -429,6 +432,7 @@ function eventTexts(event: Event): readonly string[] {
     event.message?.gameTitle,
     event.message?.invoiceTitle,
     event.message?.venueTitle,
+    event.message?.webAppButtonText,
     event.profile?.text,
   ];
   const texts: string[] = [];

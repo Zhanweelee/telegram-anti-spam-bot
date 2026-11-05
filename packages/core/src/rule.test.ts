@@ -365,6 +365,25 @@ describe("rules", () => {
         serviceEvent({ venueTitle: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ webAppButtonText: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { webAppButtonText: true },
+        serviceEvent({ venueTitle: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { webAppButtonText: true },
+        serviceEvent({ webAppButtonText: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { venueTitle: true },
+        serviceEvent({ webAppButtonText: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {
