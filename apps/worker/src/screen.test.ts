@@ -13092,6 +13092,168 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(left.result)).not.toContain("left85");
   });
 
+  it("deletes a service name that matches the default regex", async () => {
+    const name = "加微x广告";
+    const joined = await normalizeUpdate({
+      update: {
+        update_id: 5621,
+        message: {
+          message_id: 5621,
+          date: 1761955200,
+          chat: { id: -1005621, type: "supergroup", title: "机密群名" },
+          from: { id: 87, first_name: "Ada" },
+          new_chat_members: [{ id: 87021, first_name: name }],
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.notice).toBe("join");
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(joined.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("regex_match");
+    expect(result.decision.ruleIds).toContain("service_name_regex");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005621", messageId: "5621" },
+    ]);
+    const dumped = JSON.stringify({ result, logs: logger.entries });
+    expect(dumped).not.toContain(name);
+    expect(dumped).not.toContain("机密群名");
+
+    const plain = await normalizeUpdate({
+      update: {
+        update_id: 5622,
+        message: {
+          message_id: 5622,
+          date: 1761955200,
+          chat: { id: -1005622, type: "supergroup" },
+          from: { id: 87, first_name: "Ada" },
+          text: name,
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    const kept = await screenTelegramEvent(plain.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain(name);
+
+    const invited = await normalizeUpdate({
+      update: {
+        update_id: 5623,
+        message: {
+          message_id: 5623,
+          date: 1761955200,
+          chat: { id: -1005623, type: "supergroup", title: "机密群名" },
+          from: { id: 88, first_name: "Ada" },
+          video_chat_participants_invited: {
+            users: [{ id: 88023, first_name: name }],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(invited.status).toBe("event");
+    if (invited.status !== "event") {
+      return;
+    }
+    const inviteModerator = createMemoryModerator();
+    const inviteResult = await screenTelegramEvent(invited.event, {
+      logger: createMemoryLogger(),
+      moderator: inviteModerator,
+    });
+    expect(inviteResult.decision.action).toBe("delete");
+    expect(inviteResult.decision.ruleIds).toContain("service_name_regex");
+    expect(inviteResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(inviteResult)).not.toContain(name);
+
+    const owner = await normalizeUpdate({
+      update: {
+        update_id: 5624,
+        message: {
+          message_id: 5624,
+          date: 1761955200,
+          chat: { id: -1005624, type: "supergroup", title: "机密群名" },
+          from: { id: 89, first_name: "Ada" },
+          chat_owner_changed: {
+            new_owner: { id: 89024, first_name: "加微X" },
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(owner.status).toBe("event");
+    if (owner.status !== "event") {
+      return;
+    }
+    const ownerResult = await screenTelegramEvent(owner.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(ownerResult.decision.action).toBe("delete");
+    expect(ownerResult.decision.ruleIds).toContain("service_name_regex");
+    expect(JSON.stringify(ownerResult)).not.toContain("加微X");
+
+    const near = await normalizeUpdate({
+      update: {
+        update_id: 5625,
+        message: {
+          message_id: 5625,
+          date: 1761955200,
+          chat: { id: -1005625, type: "supergroup", title: "机密群名" },
+          from: { id: 90, first_name: "Ada" },
+          proximity_alert_triggered: {
+            traveler: { id: 90, first_name: "Ada" },
+            watcher: { id: 91, first_name: name },
+            distance: 12,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(near.status).toBe("event");
+    if (near.status !== "event") {
+      return;
+    }
+    const nearResult = await screenTelegramEvent(near.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(nearResult.decision.action).toBe("delete");
+    expect(nearResult.decision.ruleIds).toContain("service_name_regex");
+    expect(JSON.stringify(nearResult)).not.toContain(name);
+    expect(JSON.stringify(nearResult)).not.toContain("12");
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

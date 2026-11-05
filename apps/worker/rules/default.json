@@ -617,6 +617,14 @@
       "detectorIds": ["notice"],
       "threshold": 1,
       "actions": ["delete"]
+    },
+    {
+      "id": "service_name_regex",
+      "enabled": true,
+      "when": { "serviceName": true },
+      "detectorIds": ["regex"],
+      "threshold": 1,
+      "actions": ["delete"]
     }
   ]
 }

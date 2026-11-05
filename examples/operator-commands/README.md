@@ -28,6 +28,8 @@
 
 入群名字写成「加微x」或 `t.me/+` 时会被封禁。申请简介同样会被拒绝。普通消息仍要打开 `regex_hint`。
 
+入群服务消息、视频聊天邀请、换群主和靠近提醒上的「加微x」会被删掉。名字干净时这几行仍留下。
+
 ```sh
 pnpm --filter @tasb/example-operator-commands test
 ```

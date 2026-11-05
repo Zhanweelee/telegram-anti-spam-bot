@@ -30,6 +30,7 @@
 ## 后果
 
 - 规则关闭时，靠近提醒留下。名字干净时关键词仍看不见这行，除非名字里本身有关键词或短链。
+- 名字里的默认正则后来由 ADR 0533 删除这行。关掉 `proximity_notice` 不会关掉它。
 - 打开 `proximity_notice` 后，这个群里的靠近提醒会删除。纯坐标仍只看 `bare_location`。付费帖仍留下。
 - 自部署没有额度，打开后就会删除。云模式超过当月次数后，还要把 `proximity_notice` 写进 `QUOTA_BASIC`，否则超额时这条规则会停。
 - `chats.json` 整份替换的群要自己加上 `proximity_notice`，否则 `/rule` 会拒绝。
