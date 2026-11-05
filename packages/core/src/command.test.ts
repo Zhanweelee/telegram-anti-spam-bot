@@ -629,6 +629,155 @@ describe("runOperatorCommand", () => {
     expect(englishIds).toEqual(ids.slice(0, englishIds.length));
   });
 
+  it("continues a long allowlist after skip", async () => {
+    const deps = kit();
+    const ids = Array.from({ length: 200 }, (_, index) =>
+      String(10n ** 19n + BigInt(index)),
+    );
+    await deps.policyStore.put("local", "-100", {
+      exemptAdmins: true,
+      allowActorIds: ids,
+    });
+    const first = await runOperatorCommand({
+      event: event({ text: "/whitelist -100", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(first.status).toBe("reply");
+    if (first.status !== "reply") {
+      return;
+    }
+    expect(first.text.length).toBeLessThanOrEqual(3500);
+    expect(first.text.startsWith("whitelist -100\nexemptAdmins true\n")).toBe(
+      true,
+    );
+    const lines = first.text.split("\n");
+    const listed = lines[2]?.slice("allow ".length).split(",") ?? [];
+    const omitted = Number(/^还有 (\d+) 个$/.exec(lines[3] ?? "")?.[1]);
+    expect(omitted).toBeGreaterThan(0);
+    expect(listed.length + omitted).toBe(200);
+    expect(listed).toEqual(ids.slice(0, listed.length));
+    expect(listed.every((id) => id.length === 20)).toBe(true);
+    expect(first.text).not.toContain(ids[199]);
+    const same = await runOperatorCommand({
+      event: event({ text: "/whitelist -100 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(same).toEqual(first);
+    const kept = listed.length;
+    const tail = await runOperatorCommand({
+      event: event({ text: `/whitelist -100 skip ${kept}`, direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(tail.status).toBe("reply");
+    if (tail.status !== "reply") {
+      return;
+    }
+    expect(tail.text.length).toBeLessThanOrEqual(3500);
+    expect(tail.text.startsWith("whitelist -100\nexemptAdmins true\n")).toBe(
+      true,
+    );
+    const tailLines = tail.text.split("\n");
+    const tailIds = tailLines[2]?.slice("allow ".length).split(",") ?? [];
+    expect(tailIds.every((id) => id.length === 20)).toBe(true);
+    expect(tailIds[0]).toBe(ids[kept]);
+    expect(tail.text).toContain(ids[199]);
+    const last = await runOperatorCommand({
+      event: event({ text: "/whitelist -100 skip 199", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(last).toMatchObject({
+      text: `whitelist -100\nexemptAdmins true\nallow ${ids[199]}`,
+    });
+    const english = await runOperatorCommand({
+      event: event({ text: "/whitelist -100 skip 199", direct: true }),
+      adminActorIds: ["42"],
+      locale: "en",
+      ...deps,
+    });
+    expect(english).toMatchObject({
+      text: `allowlist -100\nexemptAdmins true\nallow ${ids[199]}`,
+    });
+    const past = await runOperatorCommand({
+      event: event({ text: "/whitelist -100 skip 200", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(past).toMatchObject({ text: "参数无效" });
+    const empty = await runOperatorCommand({
+      event: event({ text: "/whitelist -200 skip 0", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(empty).toMatchObject({
+      text: "whitelist -200\nexemptAdmins true\nallow none",
+    });
+    const emptySkip = await runOperatorCommand({
+      event: event({ text: "/whitelist -200 skip 1", direct: true }),
+      adminActorIds: ["42"],
+      ...deps,
+    });
+    expect(emptySkip).toMatchObject({ text: "参数无效" });
+    const badLog = kit();
+    const bad = await runOperatorCommand({
+      ...badLog,
+      event: event({ text: "/whitelist -100 skip 01", direct: true }),
+      adminActorIds: ["42"],
+      policyStore: {
+        ...badLog.policyStore,
+        async get() {
+          throw new Error(phrase);
+        },
+      },
+    });
+    expect(bad).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(bad)).not.toContain(phrase);
+    const missing = await runOperatorCommand({
+      ...badLog,
+      event: event({ text: "/whitelist -100 skip", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(missing).toMatchObject({ text: "参数无效" });
+    const phraseSkip = await runOperatorCommand({
+      ...badLog,
+      event: event({ text: `/whitelist -100 skip ${phrase}`, direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(phraseSkip).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(phraseSkip)).not.toContain(phrase);
+    expect(JSON.stringify(badLog.logger.entries)).not.toContain(phrase);
+    const extra = await runOperatorCommand({
+      ...deps,
+      event: event({ text: "/whitelist -100 skip 1 extra", direct: true }),
+      adminActorIds: ["42"],
+    });
+    expect(extra).toMatchObject({
+      text: "用法：/whitelist <chatId> [add|remove <actorId>|skip <count>]",
+    });
+    expect(deps.policyStore.puts).toBe(1);
+    const denied = await runOperatorCommand({
+      ...deps,
+      event: event({
+        text: "/whitelist -200 skip 1",
+        direct: true,
+        actorId: "7",
+      }),
+      adminActorIds: ["42"],
+      chats: directory(["-100"]),
+      policyStore: {
+        ...deps.policyStore,
+        async get() {
+          throw new Error("called");
+        },
+      },
+    });
+    expect(denied).toMatchObject({ text: "没有权限" });
+    expect(JSON.stringify(denied)).not.toContain("called");
+  });
+
   it("rejects a non-numeric actor id without writing", async () => {
     const deps = kit();
     const result = await runOperatorCommand({
@@ -1470,7 +1619,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(whitelistUsage).toMatchObject({
-      text: "用法：/whitelist <chatId> [add|remove <actorId>]",
+      text: "用法：/whitelist <chatId> [add|remove <actorId>|skip <count>]",
     });
     const badWhitelist = await runOperatorCommand({
       event: event({ text: "/whitelist -100 nope", direct: true }),
@@ -1478,7 +1627,7 @@ describe("runOperatorCommand", () => {
       ...deps,
     });
     expect(badWhitelist).toMatchObject({
-      text: "用法：/whitelist <chatId> [add|remove <actorId>]",
+      text: "用法：/whitelist <chatId> [add|remove <actorId>|skip <count>]",
     });
     expect(whitelistUsage.status).toBe("reply");
     const shown = await runOperatorCommand({
@@ -7845,7 +7994,7 @@ describe("runOperatorCommand", () => {
     expect(menu[0]).toEqual({ command: "help", description: "/help" });
     expect(menu.find((item) => item.command === "whitelist")).toEqual({
       command: "whitelist",
-      description: "/whitelist <chatId>",
+      description: "/whitelist <chatId> [add|remove <actorId>|skip <count>]",
     });
     expect(menu.find((item) => item.command === "botrights")).toEqual({
       command: "botrights",
