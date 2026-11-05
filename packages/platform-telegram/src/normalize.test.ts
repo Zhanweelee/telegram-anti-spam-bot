@@ -24052,6 +24052,44 @@ describe("normalizeUpdate", () => {
     expect(game.event.message?.asCustomEmoji).toBe(true);
     expect(JSON.stringify(game.event)).not.toContain("90246");
 
+    const described = await normalize({
+      update_id: 4911,
+      message: {
+        message_id: 951,
+        date: 1761955200,
+        chat: { id: -100499911, type: "supergroup" },
+        from: { id: 124 },
+        poll: {
+          id: "polldescemoji",
+          question: "投票留下",
+          description: "描述表情",
+          description_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji90253",
+            },
+          ],
+          options: [{ text: "甲" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(described.status).toBe("event");
+    if (described.status !== "event") {
+      return;
+    }
+    expect(described.event.message?.text).toBe("投票留下");
+    expect(described.event.message?.pollDescription).toBe("描述表情");
+    expect(described.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(described.event)).not.toContain("emoji90253");
+    expect(JSON.stringify(described.event)).not.toContain("90253");
+
     const topic = await normalize({
       update_id: 4910,
       message: {

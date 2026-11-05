@@ -197,6 +197,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 自定义表情可以按群删除。规则 `custom_emoji` 默认关闭。见 ADR 0515。
 
+投票描述上的自定义表情也走这一条。编号不进事件。见 ADR 0571。
+
 复制到剪贴板的按钮可以按群删除。规则 `copy_text` 默认关闭。见 ADR 0516。
 
 按下后把查询插进输入框的按钮可以按群删除。规则 `switch_query` 默认关闭。见 ADR 0517。
