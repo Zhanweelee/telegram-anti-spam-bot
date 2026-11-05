@@ -31814,7 +31814,12 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "ow.ly",
+      "tinyurl.com",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.memberName).toBe(
       `${visible} https://ow.ly/last87 user87`,
@@ -31829,7 +31834,6 @@ describe("normalizeUpdate", () => {
     expect(labeledDump).not.toContain("grp87");
     expect(labeledDump).not.toContain("89001");
     expect(labeledDump).not.toContain("cutt.ly");
-    expect(labeledDump).not.toContain("tinyurl.com");
 
     const ordinary = await normalize({
       update_id: 5711,
@@ -31886,13 +31890,12 @@ describe("normalizeUpdate", () => {
     }
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
-    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(alone.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
     expect(aloneDump).not.toContain("from87b");
     expect(aloneDump).not.toContain("89002");
-    expect(aloneDump).not.toContain("tinyurl.com");
 
     const departed = await normalize({
       update_id: 5713,
@@ -31910,11 +31913,10 @@ describe("normalizeUpdate", () => {
     }
     expect(departed.event.message?.text).toBe("");
     expect(departed.event.message?.textSha256).toBe(await sha256Hex(""));
-    expect(departed.event.message?.hosts).toBeUndefined();
+    expect(departed.event.message?.hosts).toEqual(["bit.ly"]);
     expect(departed.event.message?.memberName).toBeUndefined();
     const departedDump = JSON.stringify(departed.event);
     expect(departedDump).not.toContain("gone87");
-    expect(departedDump).not.toContain("bit.ly");
   });
 
   it("keeps a proximity alert name and drops the distance", async () => {

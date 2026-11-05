@@ -9020,6 +9020,296 @@ describe("screenTelegramEvent", () => {
     expect(bothDump).not.toContain("ow.ly");
   });
 
+  it("deletes a short link in an owner notice sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const nextName = "新群主";
+    const nextId = 8806157;
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            chat_owner_changed: {
+              new_owner: { id: nextId, is_bot: false, first_name: nextName },
+            },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(6157, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/own6157",
+        last_name: "https://tinyurl.com/skip6157",
+        username: "secretuser6157",
+      },
+    });
+    expect(named.message?.text).toBe(nextName);
+    expect(named.message?.ownerNotice).toBe("changed");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("owner_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006157", messageId: "6157" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("own6157");
+    expect(namedDump).not.toContain("skip6157");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("secretuser6157");
+    expect(namedDump).not.toContain(String(nextId));
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const surname = await posted(6158, {
+      from: {
+        id: 124,
+        first_name: "",
+        last_name: "https://bit.ly/last6158",
+        username: "secretuser6158",
+      },
+      chat_owner_changed: undefined,
+      chat_owner_left: {
+        new_owner: { id: 8806158, is_bot: false, first_name: "下一位" },
+      },
+    });
+    expect(surname.message?.text).toBe("下一位");
+    expect(surname.message?.ownerNotice).toBe("left");
+    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    const surnameModerator = createMemoryModerator();
+    const surnameHit = await screenTelegramEvent(surname, {
+      moderator: surnameModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(surnameHit.decision.action).toBe("delete");
+    expect(surnameModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006158", messageId: "6158" },
+    ]);
+    const surnameDump = JSON.stringify(surname);
+    expect(surnameDump).not.toContain("last6158");
+    expect(surnameDump).not.toContain("secretuser6158");
+    expect(surnameDump).not.toContain("8806158");
+
+    const plain = await posted(6159, {
+      from: {
+        id: 124,
+        first_name: "https://example.com/ok6159",
+      },
+      chat_owner_changed: undefined,
+      chat_owner_left: {},
+    });
+    expect(plain.message?.text).toBe("");
+    expect(plain.message?.ownerNotice).toBe("left");
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plainKept.decision)).not.toContain("ok6159");
+
+    const keyword = await posted(6160, {
+      from: {
+        id: 124,
+        first_name: phrase,
+        username: "https://bit.ly/user6160",
+      },
+      chat_owner_changed: {
+        new_owner: { id: nextId, is_bot: false, first_name: "干净" },
+      },
+    });
+    expect(keyword.message?.text).toBe("干净");
+    expect(keyword.message?.ownerNotice).toBe("changed");
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    const keywordDump = JSON.stringify({
+      event: keyword,
+      decision: keywordKept.decision,
+    });
+    expect(keywordDump).not.toContain(phrase);
+    expect(keywordDump).not.toContain("user6160");
+    expect(keywordDump).not.toContain(String(nextId));
+
+    const paid = await posted(
+      6161,
+      {
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/paid6161",
+        },
+      },
+      true,
+    );
+    expect(paid.message?.text).toBe(nextName);
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.decision.reasons).toContain("short_link");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid6161");
+    expect(JSON.stringify(paidHit.decision)).not.toContain(String(nextId));
+
+    const blank = await posted(6162, {
+      from: {
+        id: 124,
+        first_name: "   ",
+        last_name: "https://bit.ly/space6162",
+      },
+    });
+    expect(blank.message?.text).toBe(nextName);
+    expect(blank.message?.hosts).toBeUndefined();
+    const blankKept = await screenTelegramEvent(blank, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(blankKept.decision.action).toBe("allow");
+    expect(JSON.stringify(blank)).not.toContain("space6162");
+
+    const empty = await posted(6163, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/empty6163",
+      },
+      chat_owner_changed: {},
+    });
+    expect(empty.message?.ownerNotice).toBeUndefined();
+    expect(empty.message?.text).toBe("");
+    expect(empty.message?.hosts).toBeUndefined();
+    const emptyKept = await screenTelegramEvent(empty, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(emptyKept.decision.action).toBe("allow");
+    expect(JSON.stringify(empty)).not.toContain("empty6163");
+
+    const beside = await posted(6164, {
+      text: "今天站会",
+      chat: {
+        id: -(1_000_000 + 6164),
+        type: "supergroup",
+        title: "https://tinyurl.com/room6164",
+      },
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/only6164",
+      },
+    });
+    expect(beside.message?.text).toBe("今天站会");
+    expect(beside.message?.ownerNotice).toBe("changed");
+    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    const besideDump = JSON.stringify(beside);
+    expect(besideDump).not.toContain("only6164");
+    expect(besideDump).not.toContain("room6164");
+    expect(besideDump).not.toContain("tinyurl");
+    expect(besideDump).not.toContain(String(nextId));
+
+    const ordinary = await posted(6165, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/msg6165",
+      },
+      chat_owner_changed: undefined,
+    });
+    expect(ordinary.message?.ownerNotice).toBeUndefined();
+    expect(ordinary.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(ordinary)).not.toContain("msg6165");
+
+    const both = await posted(6166, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/who6166",
+        username: "secretuser6166",
+      },
+      chat_owner_changed: {
+        new_owner: {
+          id: 8806166,
+          is_bot: false,
+          first_name: "https://cutt.ly/name6166",
+        },
+      },
+      chat_owner_left: { note: "https://ow.ly/gone6166" },
+    });
+    expect(both.message?.ownerNotice).toBe("changed");
+    expect(both.message?.text).toBe("https://cutt.ly/name6166");
+    expect(both.message?.hosts).toEqual(["cutt.ly", "bit.ly"]);
+    const bothHit = await screenTelegramEvent(both, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bothHit.decision.action).toBe("delete");
+    expect(bothHit.decision.reasons).toContain("short_link");
+    const bothDump = JSON.stringify({
+      event: both,
+      decision: bothHit.decision,
+    });
+    expect(bothDump).toContain("short_link:cutt.ly");
+    expect(bothDump).not.toContain("who6166");
+    expect(bothDump).not.toContain("secretuser6166");
+    expect(bothDump).not.toContain("8806166");
+    expect(bothDump).not.toContain("gone6166");
+    expect(bothDump).not.toContain("ow.ly");
+
+    const flag = await posted(6167, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/flag6167",
+      },
+      chat_owner_changed: true,
+    });
+    expect(flag.message?.ownerNotice).toBeUndefined();
+    expect(flag.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag)).not.toContain("flag6167");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";
@@ -28331,8 +28621,16 @@ describe("screenTelegramEvent", () => {
       { id: 89, first_name: "https://example.com/ok87" },
       "chat_owner_changed",
     );
-    expect(ordinary.result.decision.action).toBe("allow");
-    expect(ordinary.moderator.deleted).toEqual([]);
+    expect(ordinary.result.decision.action).toBe("delete");
+    expect(ordinary.result.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(ordinary.result.decision.evidence)).toContain(
+      "short_link:tinyurl.com",
+    );
+    expect(ordinary.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100622", messageId: "5712" },
+    ]);
+    expect(JSON.stringify(ordinary.result.decision)).not.toContain("from87");
+    expect(JSON.stringify(ordinary.result.decision)).not.toContain("ok87");
 
     const departed = await screenOwner(
       5713,
@@ -28340,7 +28638,11 @@ describe("screenTelegramEvent", () => {
       undefined,
       "chat_owner_left",
     );
-    expect(departed.result.decision.action).toBe("allow");
+    expect(departed.result.decision.action).toBe("delete");
+    expect(departed.result.decision.reasons).toContain("short_link");
+    expect(departed.moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-100623", messageId: "5713" },
+    ]);
     expect(JSON.stringify(departed.result)).not.toContain("from87");
     expect(JSON.stringify(departed.logger.entries)).not.toContain("机密群名");
   });

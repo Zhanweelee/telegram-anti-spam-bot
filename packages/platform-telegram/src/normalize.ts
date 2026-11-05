@@ -4567,6 +4567,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
   }
   pushCommunitySenderUrls(message, urls);
+  pushOwnerSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4873,6 +4874,22 @@ function pushCommunitySenderUrls(
   urls: string[],
 ): void {
   if (communityNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 交群或离开的人只留主机名。
+ * 换人要有新群主对象。离开只要是对象，空对象也读。
+ * 空的换人对象、布尔值不读。新群主的名字仍按原来的正文。
+ * 用户编号不读。用户名不读。
+ */
+function pushOwnerSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (changedOwner(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
