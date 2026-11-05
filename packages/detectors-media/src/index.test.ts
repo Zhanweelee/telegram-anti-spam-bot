@@ -70,6 +70,10 @@ describe("media detector", () => {
       "voice",
       "video_note",
       "dice",
+      "photo",
+      "video",
+      "document",
+      "audio",
     ];
     for (const kind of kinds) {
       const hit = await createMediaDetector(kind).detect({

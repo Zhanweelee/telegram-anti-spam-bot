@@ -7,6 +7,10 @@ export const lockableMedia = [
   "voice",
   "video_note",
   "dice",
+  "photo",
+  "video",
+  "document",
+  "audio",
 ] as const satisfies readonly MediaKind[];
 
 export type LockableMedia = (typeof lockableMedia)[number];
