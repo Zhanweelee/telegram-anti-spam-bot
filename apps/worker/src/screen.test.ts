@@ -14919,6 +14919,236 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(keptBillSame)).not.toContain(label);
   });
 
+  it("deletes a venue address that matches a keyword or regex beside a title", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const placeId = "PLACE73";
+    const keyworded = await normalizeUpdate({
+      update: {
+        update_id: 5697,
+        message: {
+          message_id: 5697,
+          date: 1761955200,
+          chat: { id: -1005697, type: "supergroup" },
+          from: { id: 96, first_name: "Ada" },
+          venue: {
+            location: { latitude: 31.2304, longitude: 121.4737 },
+            title: "今天的地点",
+            address: phrase,
+            google_place_id: placeId,
+            foursquare_id: placeId,
+            foursquare_type: "https://tinyurl.com/type73",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(keyworded.status).toBe("event");
+    if (keyworded.status !== "event") {
+      return;
+    }
+    expect(keyworded.event.message?.text).toBe("今天的地点");
+    expect(keyworded.event.message?.textSha256).toBe(
+      await sha256Hex("今天的地点"),
+    );
+    expect(keyworded.event.message?.venueAddress).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(keyworded.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005697", messageId: "5697" },
+    ]);
+    const dumped = JSON.stringify({
+      result,
+      logs: logger.entries,
+      event: keyworded.event,
+    });
+    expect(dumped).not.toContain(placeId);
+    expect(dumped).not.toContain("31.2304");
+    expect(dumped).not.toContain("121.4737");
+    expect(dumped).not.toContain("tinyurl.com");
+    expect(dumped).not.toContain("Ada");
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5698,
+        message: {
+          message_id: 5698,
+          date: 1761955200,
+          chat: { id: -1005698, type: "supergroup" },
+          from: { id: 96 },
+          venue: {
+            location: { latitude: 1, longitude: 2 },
+            title: "今天的地点",
+            address: label,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.venueAddress).toBe(label);
+    const patternLog = createMemoryLogger();
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      logger: patternLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("venue_address_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patternLog.entries)).not.toContain(label);
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5699,
+        message: {
+          message_id: 5699,
+          date: 1761955200,
+          chat: { id: -1005699, type: "supergroup" },
+          from: { id: 96 },
+          venue: {
+            location: { latitude: 1, longitude: 2 },
+            title: "今天的地点",
+            address: "南京东路 1 号",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    expect(clean.event.message?.venueAddress).toBe("南京东路 1 号");
+    const kept = await screenTelegramEvent(clean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5700,
+        message: {
+          message_id: 5700,
+          date: 1761955200,
+          chat: { id: -1005700, type: "supergroup" },
+          from: { id: 96 },
+          venue: {
+            location: { latitude: 1, longitude: 2 },
+            title: label,
+            address: label,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.venueAddress).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5701,
+        message: {
+          message_id: 5701,
+          date: 1761955200,
+          chat: { id: -1005701, type: "supergroup" },
+          from: { id: 96 },
+          caption: label,
+          venue: {
+            location: { latitude: 1, longitude: 2 },
+            title: "今天的地点",
+            address: "南京东路",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.venueAddress).toBe("南京东路");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      logger: createMemoryLogger(),
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const untitled = await normalizeUpdate({
+      update: {
+        update_id: 5702,
+        message: {
+          message_id: 5702,
+          date: 1761955200,
+          chat: { id: -1005702, type: "supergroup" },
+          from: { id: 96 },
+          venue: {
+            location: { latitude: 31.2304, longitude: 121.4737 },
+            title: "",
+            address: phrase,
+            google_place_id: placeId,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(untitled.status).toBe("event");
+    if (untitled.status !== "event") {
+      return;
+    }
+    expect(untitled.event.message?.text).toBe("");
+    expect(untitled.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(untitled.event.message?.venueAddress).toBe(phrase);
+    const untitledLog = createMemoryLogger();
+    const untitledResult = await screenTelegramEvent(untitled.event, {
+      logger: untitledLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(untitledResult.decision.action).toBe("delete");
+    expect(untitledResult.decision.ruleIds).toContain("spam_keywords");
+    expect(JSON.stringify(untitledLog.entries)).not.toContain(phrase);
+    expect(JSON.stringify(untitled.event)).not.toContain(placeId);
+    expect(JSON.stringify(untitled.event)).not.toContain("31.2304");
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

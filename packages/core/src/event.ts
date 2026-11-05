@@ -76,6 +76,8 @@ export const messageSchema = z
     gameText: z.string().min(1).max(8193).optional(),
     /** Invoice description beside the title. Capped at 255. Absent when it is the body. */
     invoiceText: z.string().min(1).max(255).optional(),
+    /** Venue address beside the title. Capped at 4096. Absent when it is the body. */
+    venueAddress: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

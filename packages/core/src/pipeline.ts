@@ -277,6 +277,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("invoiceText" in when) {
     return "invoiceText";
   }
+  if ("venueAddress" in when) {
+    return "venueAddress";
+  }
   return undefined;
 }
 
@@ -398,6 +401,7 @@ function eventTexts(event: Event): readonly string[] {
   const performer = event.message?.performer;
   const game = event.message?.gameText;
   const invoice = event.message?.invoiceText;
+  const venue = event.message?.venueAddress;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -508,6 +512,23 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(invoice);
   }
   if (
+    venue &&
+    venue.length > 0 &&
+    venue !== message &&
+    venue !== tag &&
+    venue !== buttons &&
+    venue !== signature &&
+    venue !== mirror &&
+    venue !== poll &&
+    venue !== tasks &&
+    venue !== media &&
+    venue !== performer &&
+    venue !== game &&
+    venue !== invoice
+  ) {
+    texts.push(venue);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -520,7 +541,8 @@ function eventTexts(event: Event): readonly string[] {
     profile !== media &&
     profile !== performer &&
     profile !== game &&
-    profile !== invoice
+    profile !== invoice &&
+    profile !== venue
   ) {
     texts.push(profile);
   }
