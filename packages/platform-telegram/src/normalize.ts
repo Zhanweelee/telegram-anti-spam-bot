@@ -5018,9 +5018,10 @@ function pushOwnerSenderUrls(
 }
 
 /**
- * 拉进视频聊天的人只留主机名。
+ * 拉进视频聊天的人画出的全名只留主机名。
  * 邀请名单里至少有一个用户对象时读。空数组、空对象和布尔值不读。
- * 被邀请的名字仍按原来的正文。用户编号不读。用户名不读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 被邀请的名字仍按原来的正文，排在前面。用户编号不读。用户名不读。
  */
 function pushInviteSenderUrls(
   message: Record<string, unknown>,
@@ -5029,7 +5030,7 @@ function pushInviteSenderUrls(
   if (!videoInvite(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**

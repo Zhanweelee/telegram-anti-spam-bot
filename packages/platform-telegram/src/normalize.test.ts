@@ -39939,6 +39939,235 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
   });
 
+  it("keeps only the hostname from the full name drawn for a video chat invite", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "INV79303";
+    const invitedName = "被邀请的人";
+    const invitedId = 88079303;
+    const drawn = await normalize({
+      update_id: 79303,
+      message: {
+        message_id: 79303,
+        date: 1761955200,
+        chat: {
+          id: -10079303,
+          type: "supergroup",
+          title: "https://is.gd/room79303",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/invite79303",
+          last_name: `${phrase} https://tinyurl.com/skip79303 https://t.me/+${code}.`,
+          username: "cutt.ly",
+        },
+        video_chat_participants_invited: {
+          users: [{ id: invitedId, is_bot: false, first_name: invitedName }],
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe(invitedName);
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(invitedName));
+    expect(drawn.event.message?.asCallInvite).toBe(true);
+    expect(drawn.event.message?.call).toBeUndefined();
+    expect(drawn.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "t.me",
+    ]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("invite79303");
+    expect(dumped).not.toContain("skip79303");
+    expect(dumped).not.toContain("room79303");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain(String(invitedId));
+
+    const blank = await normalize({
+      update_id: 79304,
+      message: {
+        message_id: 79304,
+        date: 1761955200,
+        chat: { id: -10079304, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79304",
+          username: "cutt.ly",
+        },
+        video_chat_participants_invited: {
+          users: [{ id: 88079304, is_bot: false, first_name: "空白被邀请" }],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe("空白被邀请");
+    expect(blank.event.message?.asCallInvite).toBe(true);
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79304");
+    expect(JSON.stringify(blank.event)).not.toContain("cutt.ly");
+    expect(JSON.stringify(blank.event)).not.toContain("88079304");
+
+    const spaced = await normalize({
+      update_id: 79305,
+      message: {
+        message_id: 79305,
+        date: 1761955200,
+        chat: { id: -10079305, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Go https://bit.ly/later79305",
+          last_name: "Lee",
+        },
+        video_chat_participants_invited: {
+          users: [{ id: 88079305, is_bot: false, first_name: "带空格" }],
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("带空格");
+    expect(spaced.event.message?.asCallInvite).toBe(true);
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79305");
+    expect(JSON.stringify(spaced.event)).not.toContain("88079305");
+
+    const named = await normalize({
+      update_id: 79306,
+      message: {
+        message_id: 79306,
+        date: 1761955200,
+        chat: { id: -10079306, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who79306",
+          last_name: "https://tinyurl.com/skiplast79306",
+        },
+        video_chat_participants_invited: {
+          users: [
+            {
+              id: 88079306,
+              is_bot: false,
+              first_name: "https://cutt.ly/name79306",
+            },
+          ],
+          note: "https://ow.ly/gone79306",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("https://cutt.ly/name79306");
+    expect(named.event.message?.asCallInvite).toBe(true);
+    expect(named.event.message?.hosts).toEqual([
+      "cutt.ly",
+      "bit.ly",
+      "tinyurl.com",
+    ]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("who79306");
+    expect(namedDump).not.toContain("skiplast79306");
+    expect(namedDump).not.toContain("88079306");
+    expect(namedDump).not.toContain("gone79306");
+    expect(namedDump).not.toContain("ow.ly");
+
+    const near = await normalize({
+      update_id: 79307,
+      message: {
+        message_id: 79307,
+        date: 1761955200,
+        chat: { id: -10079307, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/near79307",
+          last_name: "https://tinyurl.com/skiplast79307",
+        },
+        proximity_alert_triggered: {
+          traveler: { id: 88079307, first_name: "触发79307" },
+          watcher: { id: 89, first_name: "旁观" },
+          distance: 12,
+        },
+      },
+    });
+    expect(near.status).toBe("event");
+    if (near.status !== "event") {
+      return;
+    }
+    expect(near.event.message?.text).toBe("触发79307 旁观");
+    expect(near.event.message?.asCallInvite).toBeUndefined();
+    expect(near.event.message?.asProximity).toBe(true);
+    expect(near.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(near.event)).not.toContain("skiplast79307");
+    expect(JSON.stringify(near.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(near.event)).not.toContain("near79307");
+    expect(JSON.stringify(near.event)).not.toContain("88079307");
+
+    const quiet = await normalize({
+      update_id: 79308,
+      message: {
+        message_id: 79308,
+        date: 1761955200,
+        chat: {
+          id: -10079308,
+          type: "supergroup",
+          title: "https://ow.ly/room79308",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/plain79308",
+          last_name: "https://tinyurl.com/plainlast79308",
+        },
+        text: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.asCallInvite).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quiet.event)).not.toContain("plain79308");
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79308");
+    expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+
+    const empty = await normalize({
+      update_id: 79309,
+      message: {
+        message_id: 79309,
+        date: 1761955200,
+        chat: { id: -10079309, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/empty79309",
+        },
+        video_chat_participants_invited: { users: [] },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asCallInvite).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty79309");
+    expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({

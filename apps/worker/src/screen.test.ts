@@ -10056,6 +10056,7 @@ describe("screenTelegramEvent", () => {
       updateId: number,
       extra: Record<string, unknown>,
       paid = false,
+      adminUserIds: string[] = [],
     ) {
       const chatId = -(1_000_000 + updateId);
       const normalized = await normalizeUpdate({
@@ -10080,7 +10081,7 @@ describe("screenTelegramEvent", () => {
           },
         },
         tenantId: "local",
-        adminUserIds: [],
+        adminUserIds,
         nowIso: "2026-11-01T00:00:00.000Z",
       });
       expect(normalized.status).toBe("event");
@@ -10101,7 +10102,7 @@ describe("screenTelegramEvent", () => {
     expect(named.message?.text).toBe(invitedName);
     expect(named.message?.asCallInvite).toBe(true);
     expect(named.message?.call).toBeUndefined();
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
       moderator,
@@ -10122,7 +10123,6 @@ describe("screenTelegramEvent", () => {
     });
     expect(namedDump).not.toContain("inv6168");
     expect(namedDump).not.toContain("skip6168");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("secretuser6168");
     expect(namedDump).not.toContain(String(invitedId));
     expect(namedDump).not.toContain("Ada");
@@ -10236,12 +10236,16 @@ describe("screenTelegramEvent", () => {
       },
     });
     expect(blank.message?.text).toBe(invitedName);
-    expect(blank.message?.hosts).toBeUndefined();
-    const blankKept = await screenTelegramEvent(blank, {
-      moderator: createMemoryModerator(),
+    expect(blank.message?.hosts).toEqual(["bit.ly"]);
+    const blankModerator = createMemoryModerator();
+    const blankHit = await screenTelegramEvent(blank, {
+      moderator: blankModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(blankKept.decision.action).toBe("allow");
+    expect(blankHit.decision.action).toBe("delete");
+    expect(blankModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006173", messageId: "6173" },
+    ]);
     expect(JSON.stringify(blank)).not.toContain("space6173");
 
     const empty = await posted(6174, {
@@ -10341,6 +10345,78 @@ describe("screenTelegramEvent", () => {
     expect(flag.message?.asCallInvite).toBeUndefined();
     expect(flag.message?.hosts).toBeUndefined();
     expect(JSON.stringify(flag)).not.toContain("flag6178");
+
+    const spaced = await posted(79310, {
+      from: {
+        id: 124,
+        first_name: "Go https://bit.ly/later79310",
+        last_name: "https://tinyurl.com/skiplast79310",
+        username: "secretuser79310",
+      },
+    });
+    expect(spaced.message?.text).toBe(invitedName);
+    expect(spaced.message?.asCallInvite).toBe(true);
+    expect(spaced.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedModerator = createMemoryModerator();
+    const spacedHit = await screenTelegramEvent(spaced, {
+      moderator: spacedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(spacedHit.decision.action).toBe("delete");
+    expect(spacedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079310", messageId: "79310" },
+    ]);
+    expect(JSON.stringify(spaced)).not.toContain("later79310");
+    expect(JSON.stringify(spaced)).not.toContain("skiplast79310");
+    expect(JSON.stringify(spaced)).not.toContain("secretuser79310");
+    expect(JSON.stringify(spaced)).not.toContain(String(invitedId));
+
+    const body = await posted(79311, {
+      text: "https://ow.ly/body79311",
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/invite79311",
+        last_name: "https://tinyurl.com/skip79311",
+      },
+    });
+    expect(body.message?.text).toBe("https://ow.ly/body79311");
+    expect(body.message?.asCallInvite).toBe(true);
+    expect(body.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bodyHit = await screenTelegramEvent(body, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyHit.decision.action).toBe("delete");
+    const bodyEvidence = JSON.stringify(bodyHit.decision.evidence);
+    expect(bodyEvidence).toContain("short_link:ow.ly");
+    expect(bodyEvidence).not.toContain("short_link:bit.ly");
+    expect(bodyEvidence).not.toContain("short_link:tinyurl.com");
+    expect(JSON.stringify(body)).not.toContain("invite79311");
+    expect(JSON.stringify(body)).not.toContain("skip79311");
+
+    const admin = await posted(
+      79312,
+      {
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/admin79312",
+        },
+      },
+      false,
+      ["124"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.asCallInvite).toBe(true);
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("admin79312");
   });
 
   it("deletes a short link in a proximity sender name", async () => {
