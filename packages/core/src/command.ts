@@ -7941,6 +7941,33 @@ async function showChats(
   if (!directory) {
     return say(input, "command.chats.disabled");
   }
+  if (parsed.kind === "operators") {
+    const refused = refuseChat(input, parsed.chatId);
+    if (refused) {
+      return refused;
+    }
+    try {
+      const actors = await directory.operators(
+        input.event.tenantId,
+        parsed.chatId,
+      );
+      const listed =
+        actors.length === 0
+          ? say(input, "command.chats.empty")
+          : actors.join("\n");
+      return say(input, "command.chats.operators", {
+        chatId: parsed.chatId,
+        actors: listed,
+      });
+    } catch {
+      input.logger.warn("operator_rejected", {
+        eventId: input.event.id,
+        chatId: input.event.chatId,
+        command: "chats",
+      });
+      return say(input, "command.invalid");
+    }
+  }
   const scope = scopeOf(input);
   try {
     const ids = scope.all
@@ -7972,11 +7999,19 @@ async function showChats(
 
 function parseChatsArgs(
   args: readonly string[],
-): "usage" | "invalid" | { readonly skip: number } {
+):
+  | "usage"
+  | "invalid"
+  | { readonly kind: "list"; readonly skip: number }
+  | { readonly kind: "operators"; readonly chatId: string } {
   if (args.length === 0) {
-    return { skip: 0 };
+    return { kind: "list", skip: 0 };
   }
-  if (args[0] !== "skip") {
+  const first = args[0];
+  if (first !== undefined && isTargetId(first)) {
+    return args.length === 1 ? { kind: "operators", chatId: first } : "usage";
+  }
+  if (first !== "skip") {
     return "usage";
   }
   const countToken = args[1];
@@ -7987,7 +8022,7 @@ function parseChatsArgs(
   if (count === undefined || args.length !== 2) {
     return count === undefined && args.length === 2 ? "invalid" : "usage";
   }
-  return { skip: count };
+  return { kind: "list", skip: count };
 }
 
 function fitChatLines(

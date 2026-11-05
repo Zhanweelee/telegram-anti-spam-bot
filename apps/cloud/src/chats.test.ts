@@ -13,6 +13,7 @@ describe("createMemoryChatDirectory", () => {
       }),
     ).toBe("ok");
     expect(await directory.chatsFor("local", "7")).toEqual(["-100"]);
+    expect(await directory.operators("local", "-100")).toEqual(["7"]);
     expect(await directory.list("local")).toEqual(["-100"]);
     expect(await directory.chatsFor("other", "7")).toEqual([]);
     await directory.noteMember({
@@ -22,6 +23,10 @@ describe("createMemoryChatDirectory", () => {
       admin: true,
     });
     expect(await directory.chatsFor("local", "8")).toEqual(["-100"]);
+    expect(await directory.operators("local", "-100")).toEqual(["7", "8"]);
+    const copied = await directory.operators("local", "-100");
+    (copied as string[]).push("9");
+    expect(await directory.operators("local", "-100")).toEqual(["7", "8"]);
     await directory.noteMember({
       tenantId: "local",
       chatId: "-100",
@@ -29,6 +34,9 @@ describe("createMemoryChatDirectory", () => {
       admin: false,
     });
     expect(await directory.chatsFor("local", "8")).toEqual([]);
+    expect(await directory.operators("local", "-100")).toEqual(["7"]);
+    expect(await directory.operators("local", "-200")).toEqual([]);
+    expect(await directory.operators("local", "room")).toEqual([]);
     expect(await directory.list("local")).toEqual(["-100"]);
     await directory.noteBot({
       tenantId: "local",
@@ -37,6 +45,7 @@ describe("createMemoryChatDirectory", () => {
       state: "gone",
     });
     expect(await directory.list("local")).toEqual([]);
+    expect(await directory.operators("local", "-100")).toEqual([]);
     expect(await directory.chatsFor("local", "7")).toEqual([]);
   });
 

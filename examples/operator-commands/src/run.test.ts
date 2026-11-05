@@ -101,6 +101,7 @@ describe("operator command example", () => {
     expect(help).toContain("\n/verifyfor <chatId> [seconds|reset]");
     expect(help).toContain("\n/verifyfail <chatId> [stay|kick|ban|reset]");
     expect(help).toContain("\n/admins <chatId> [skip <count>]");
+    expect(help).toContain("\n/chats [chatId|skip <count>]");
     expect(help).toContain(
       "\n/whitelist <chatId> [add|remove <actorId>|skip <count>]",
     );
@@ -645,6 +646,9 @@ describe("operator command example", () => {
         },
         async chatsFor() {
           return ["-100"];
+        },
+        async operators() {
+          return [];
         },
         async list() {
           return ["-100"];
