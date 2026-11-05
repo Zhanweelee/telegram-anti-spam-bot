@@ -76,6 +76,7 @@ export const textPlaces = [
   "sharedName",
   "managedName",
   "accessName",
+  "gameFile",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

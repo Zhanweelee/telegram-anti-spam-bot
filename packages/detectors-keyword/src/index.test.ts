@@ -805,6 +805,26 @@ describe("keyword detector", () => {
     });
     expect(access?.reasons).toEqual(["keyword_match"]);
     expect(JSON.stringify(access)).not.toContain(label);
+    const gameFile = await detector.detect({
+      event: parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_demo",
+        chatId: "chat_demo",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          gameFile: label,
+        },
+      }),
+      logger,
+      signal,
+    });
+    expect(gameFile?.reasons).toEqual(["keyword_match"]);
+    expect(JSON.stringify(gameFile)).not.toContain(label);
   });
 
   it("matches a performer without copying it", async () => {

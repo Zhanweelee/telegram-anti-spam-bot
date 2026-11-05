@@ -116,6 +116,8 @@ export const messageSchema = z
     managedName: z.string().min(1).max(4096).optional(),
     /** Write-access web app name beside another body. Capped at 4096. Absent when it is the body. */
     accessName: z.string().min(1).max(4096).optional(),
+    /** Game animation file name beside another body. Capped at 4096. Absent when it is the body. */
+    gameFile: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
