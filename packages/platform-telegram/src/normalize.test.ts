@@ -44,6 +44,7 @@ function withoutButtonText(event: object): string {
       performer: undefined,
       gameText: undefined,
       invoiceText: undefined,
+      venueAddress: undefined,
     },
   });
 }
@@ -11845,6 +11846,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe(title);
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex(title));
+    expect(outcome.event.message?.venueAddress).toBe(phrase);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
     expect(dumped).not.toContain(placeId);
@@ -11930,7 +11932,8 @@ describe("normalizeUpdate", () => {
     }
     expect(named.event.message?.asLocation).toBeUndefined();
     expect(named.event.message?.text).toBe("场馆名字");
-    const namedDump = JSON.stringify(named.event);
+    expect(named.event.message?.venueAddress).toBe("南京东路");
+    const namedDump = withoutButtonText(named.event);
     expect(namedDump).not.toContain(String(latitude));
     expect(namedDump).not.toContain("南京东路");
 
@@ -12033,7 +12036,10 @@ describe("normalizeUpdate", () => {
     expect(encoded.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(encoded.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(encoded.event.message?.invites).toEqual(["t.me"]);
-    const encodedDump = JSON.stringify(encoded.event);
+    expect(encoded.event.message?.venueAddress).toBe(
+      `${phrase} www.tinyurl.com/v48 https://t.me/%2B${code}`,
+    );
+    const encodedDump = withoutButtonText(encoded.event);
     expect(encodedDump).not.toContain(phrase);
     expect(encodedDump).not.toContain(code);
     expect(encodedDump).not.toContain("/v48");
@@ -12103,7 +12109,8 @@ describe("normalizeUpdate", () => {
     expect(encoded.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(encoded.event.message?.hosts).toEqual(["www.tinyurl.com", "t.me"]);
     expect(encoded.event.message?.invites).toEqual(["t.me"]);
-    const encodedDump = JSON.stringify(encoded.event);
+    expect(encoded.event.message?.venueAddress).toBe(phrase);
+    const encodedDump = withoutButtonText(encoded.event);
     expect(encodedDump).not.toContain(phrase);
     expect(encodedDump).not.toContain(code);
     expect(encodedDump).not.toContain("/v50");
@@ -12138,8 +12145,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.venueAddress).toBe("路");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("路");
   });
 
   it("uses a manual quote when earlier text is missing", async () => {
@@ -12731,8 +12740,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("今天站会");
+    expect(outcome.event.message?.venueAddress).toBe("路");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
+    expect(dumped).not.toContain("路");
   });
 
   it("uses an animation file name before a video file name", async () => {
@@ -19256,6 +19267,7 @@ describe("normalizeUpdate", () => {
       "tinyurl.com",
     ]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.venueAddress).toBeUndefined();
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("anim74");
     expect(dumped).not.toContain(code);
@@ -31610,6 +31622,45 @@ describe("normalizeUpdate", () => {
     expect(billedDump).not.toContain(path);
     expect(billedDump).not.toContain("START72");
     expect(billedDump).not.toContain("XTR");
+  });
+
+  it("keeps the first 4096 characters of a venue address", async () => {
+    const tail = "TAIL73";
+    const path = "addr73";
+    const placeId = "PLACE74";
+    const posted = await normalize({
+      update_id: 5703,
+      message: {
+        message_id: 5703,
+        date: 1761955200,
+        chat: { id: -1005703, type: "supergroup" },
+        from: { id: 96 },
+        venue: {
+          location: { latitude: 31.2304, longitude: 121.4737 },
+          title: "今天的地点",
+          address: `${"街".repeat(4096)}${tail} https://bit.ly/${path}`,
+          google_place_id: placeId,
+          foursquare_type: "https://tinyurl.com/type74",
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.text).toBe("今天的地点");
+    expect(posted.event.message?.textSha256).toBe(
+      await sha256Hex("今天的地点"),
+    );
+    expect(posted.event.message?.venueAddress).toHaveLength(4096);
+    expect(posted.event.message?.venueAddress).not.toContain(tail);
+    expect(posted.event.message?.hosts).toEqual(["bit.ly"]);
+    const dumped = JSON.stringify(posted.event);
+    expect(dumped).not.toContain(tail);
+    expect(dumped).not.toContain(path);
+    expect(dumped).not.toContain(placeId);
+    expect(dumped).not.toContain("31.2304");
+    expect(dumped).not.toContain("tinyurl.com");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

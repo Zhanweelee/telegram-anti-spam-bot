@@ -1481,6 +1481,114 @@ describe("runPipeline", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
   });
 
+  it("redacts a venue address copied into evidence", async () => {
+    const label = "南京东路请免费领取礼品";
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          venueAddress: label,
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "venue_address_regex",
+            enabled: true,
+            when: { venueAddress: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: [label],
+          evidence: [{ kind: "feature", summary: label }],
+          places: ["venueAddress"],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "redacted" },
+    ]);
+    expect(result.decision.ruleIds).toEqual(["venue_address_regex"]);
+    expect(JSON.stringify(kit.records)).not.toContain(label);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(label);
+    expect(JSON.stringify(result)).not.toContain(label);
+  });
+
+  it("ignores a regex hit that missed the venue address", async () => {
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "加微x",
+          textSha256: HASH,
+          venueAddress: "南京东路",
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "venue_address_regex",
+            enabled: true,
+            when: { venueAddress: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: ["regex_match"],
+          evidence: [{ kind: "feature", summary: "regex:hit" }],
+          places: ["message"],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("allow");
+    expect(JSON.stringify(result)).not.toContain("加微x");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
+  });
+
   it("picks the most severe action and reports a missing plugin", async () => {
     const kit = harness();
     const result = await runPipeline({

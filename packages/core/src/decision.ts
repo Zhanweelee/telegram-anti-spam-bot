@@ -56,6 +56,7 @@ export const textPlaces = [
   "performer",
   "gameText",
   "invoiceText",
+  "venueAddress",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

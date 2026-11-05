@@ -15,6 +15,7 @@ export type RuleWhen =
   | { readonly performer: true }
   | { readonly gameText: true }
   | { readonly invoiceText: true }
+  | { readonly venueAddress: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -33,6 +34,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ performer: z.literal(true) }),
     z.strictObject({ gameText: z.literal(true) }),
     z.strictObject({ invoiceText: z.literal(true) }),
+    z.strictObject({ venueAddress: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -120,6 +122,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("invoiceText" in when) {
     return invoiceText(event);
   }
+  if ("venueAddress" in when) {
+    return venueAddress(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -127,6 +132,10 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
     return when.any.some((item) => matchesWhen(item, event));
   }
   return !matchesWhen(when.not, event);
+}
+
+function venueAddress(event: Event): boolean {
+  return event.message?.venueAddress !== undefined;
 }
 
 function invoiceText(event: Event): boolean {

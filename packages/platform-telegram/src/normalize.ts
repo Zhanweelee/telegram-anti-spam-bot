@@ -145,6 +145,7 @@ async function messageEvent(
   const sidePerformer = besidePerformer(message, text);
   const sideGame = besideGameText(message, text);
   const sideInvoice = besideInvoiceText(message, text);
+  const sideVenue = besideVenueAddress(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -217,6 +218,7 @@ async function messageEvent(
       ...(sidePerformer.length > 0 ? { performer: sidePerformer } : {}),
       ...(sideGame.length > 0 ? { gameText: sideGame } : {}),
       ...(sideInvoice.length > 0 ? { invoiceText: sideInvoice } : {}),
+      ...(sideVenue.length > 0 ? { venueAddress: sideVenue } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6692,6 +6694,26 @@ function invoiceCopy(message: Record<string, unknown>): string {
     return "";
   }
   return clipped(invoice.description, 255);
+}
+
+/** 已有别的正文时，地点地址另留最多 4096 字。地址自己就是正文时不重复。 */
+function besideVenueAddress(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = venueAddressCopy(message);
+  if (raw.length === 0 || text === raw) {
+    return "";
+  }
+  return raw;
+}
+
+function venueAddressCopy(message: Record<string, unknown>): string {
+  const venue = message.venue;
+  if (!isRecord(venue)) {
+    return "";
+  }
+  return clipped(venue.address, 4096);
 }
 
 function clipped(value: unknown, max: number): string {
