@@ -4548,6 +4548,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(mirrorAuthorSignature(message), urls);
   pushPlainUrls(message.sender_tag, urls);
   pushPlainUrls(businessBotDrawnName(message), urls);
+  pushPaymentDrawnUrls(message, urls);
   const declined = message.suggested_post_declined;
   if (isRecord(declined)) {
     pushPlainUrls(declined.comment, urls);
@@ -8605,6 +8606,29 @@ function giftPublisherNames(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/**
+ * 付款成功这行画出的名字和账单标题。
+ * 私聊对方的名在前，名为空才用姓。账单标题来自被回复的账单。
+ * 载荷、订单和退款不读。
+ */
+function pushPaymentDrawnUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!isRecord(message.successful_payment)) {
+    return;
+  }
+  const chat = message.chat;
+  if (isRecord(chat) && chat.type === "private") {
+    pushVisiblePartyUrls(chat, undefined, urls);
+  }
+  const reply = message.reply_to_message;
+  if (!isRecord(reply) || !isRecord(reply.invoice)) {
+    return;
+  }
+  pushPlainUrls(reply.invoice.title, urls);
 }
 
 /**

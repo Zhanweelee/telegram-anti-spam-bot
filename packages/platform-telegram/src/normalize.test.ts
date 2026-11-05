@@ -36645,6 +36645,393 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(connected)).not.toContain("bit.ly");
   });
 
+  it("keeps only the hostname from the name drawn for a paid transfer", async () => {
+    const phrase = "请免费领取礼品";
+    const drawn = await normalize({
+      update_id: 79148,
+      message: {
+        message_id: 79148,
+        date: 1761955200,
+        chat: {
+          id: 879148,
+          type: "private",
+          first_name: "https://bit.ly/payer79148",
+          last_name: phrase,
+          username: "cutt.ly",
+          title: "https://ow.ly/room79148",
+        },
+        from: {
+          id: 79148,
+          first_name: "https://tinyurl.com/from79148",
+          username: "t.co",
+        },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 5,
+          invoice_payload: "https://rb.gy/pay79148",
+          telegram_payment_charge_id: "chg79148",
+          provider_payment_charge_id: "prv79148",
+          order_info: {
+            name: "https://is.gd/order79148",
+            phone_number: "https://ow.ly/phone79148",
+            email: "ada@example.com",
+          },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("你好");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain("payer79148");
+    expect(dumped).not.toContain("from79148");
+    expect(dumped).not.toContain("pay79148");
+    expect(dumped).not.toContain("order79148");
+    expect(dumped).not.toContain("phone79148");
+    expect(dumped).not.toContain("room79148");
+    expect(dumped).not.toContain("chg79148");
+    expect(dumped).not.toContain("prv79148");
+    expect(dumped).not.toContain("tinyurl");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("rb.gy");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("t.co");
+
+    const blank = await normalize({
+      update_id: 79149,
+      message: {
+        message_id: 79149,
+        date: 1761955200,
+        chat: {
+          id: 879149,
+          type: "private",
+          first_name: " ",
+          last_name: "https://bit.ly/blank79149",
+        },
+        from: { id: 79149 },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank79149");
+
+    const surname = await normalize({
+      update_id: 79150,
+      message: {
+        message_id: 79150,
+        date: 1761955200,
+        chat: {
+          id: 879150,
+          type: "private",
+          first_name: "",
+          last_name: "https://bit.ly/last79150",
+          username: "cutt.ly",
+        },
+        from: { id: 79150 },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+      },
+    });
+    expect(surname.status).toBe("event");
+    if (surname.status !== "event") {
+      return;
+    }
+    expect(surname.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(surname.event)).not.toContain("last79150");
+    expect(JSON.stringify(surname.event)).not.toContain("cutt.ly");
+
+    const spaced = await normalize({
+      update_id: 79151,
+      message: {
+        message_id: 79151,
+        date: 1761955200,
+        chat: {
+          id: 879151,
+          type: "private",
+          first_name: "Go https://bit.ly/later79151",
+        },
+        from: { id: 79151 },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79151");
+
+    const titled = await normalize({
+      update_id: 79152,
+      message: {
+        message_id: 79152,
+        date: 1761955200,
+        chat: {
+          id: 879152,
+          type: "private",
+          first_name: "https://bit.ly/payer79152",
+        },
+        from: { id: 79152 },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955100,
+          chat: { id: 879152, type: "private" },
+          from: { id: 1, first_name: "https://rb.gy/who79152" },
+          text: "https://ow.ly/reply79152",
+          invoice: {
+            title: "https://tinyurl.com/title79152",
+            description: "https://is.gd/desc79152",
+          },
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("你好");
+    expect(titled.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(titled.event)).not.toContain("payer79152");
+    expect(JSON.stringify(titled.event)).not.toContain("title79152");
+    expect(JSON.stringify(titled.event)).not.toContain("desc79152");
+    expect(JSON.stringify(titled.event)).not.toContain("reply79152");
+    expect(JSON.stringify(titled.event)).not.toContain("who79152");
+    expect(JSON.stringify(titled.event)).not.toContain("is.gd");
+    expect(JSON.stringify(titled.event)).not.toContain("ow.ly");
+    expect(JSON.stringify(titled.event)).not.toContain("rb.gy");
+
+    const grouped = await normalize({
+      update_id: 79153,
+      message: {
+        message_id: 79153,
+        date: 1761955200,
+        chat: {
+          id: -100879153,
+          type: "supergroup",
+          title: "https://ow.ly/room79153",
+          first_name: "https://tinyurl.com/group79153",
+        },
+        from: { id: 79153, first_name: "https://is.gd/from79153" },
+        text: "你好",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+        reply_to_message: {
+          message_id: 2,
+          invoice: { title: "https://bit.ly/title79153" },
+        },
+      },
+    });
+    expect(grouped.status).toBe("event");
+    if (grouped.status !== "event") {
+      return;
+    }
+    expect(grouped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(grouped.event)).not.toContain("title79153");
+    expect(JSON.stringify(grouped.event)).not.toContain("room79153");
+    expect(JSON.stringify(grouped.event)).not.toContain("group79153");
+    expect(JSON.stringify(grouped.event)).not.toContain("from79153");
+    expect(JSON.stringify(grouped.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(grouped.event)).not.toContain("ow.ly");
+    expect(JSON.stringify(grouped.event)).not.toContain("is.gd");
+
+    const speaker = await normalize({
+      update_id: 79154,
+      message: {
+        message_id: 79154,
+        date: 1761955200,
+        chat: {
+          id: 879154,
+          type: "private",
+          first_name: "https://bit.ly/plain79154",
+        },
+        from: { id: 79154 },
+        text: "你好",
+      },
+    });
+    expect(speaker.status).toBe("event");
+    if (speaker.status !== "event") {
+      return;
+    }
+    expect(speaker.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(speaker.event)).not.toContain("plain79154");
+
+    const flagged = await normalize({
+      update_id: 79155,
+      message: {
+        message_id: 79155,
+        date: 1761955200,
+        chat: {
+          id: 879155,
+          type: "private",
+          first_name: "https://bit.ly/flag79155",
+        },
+        from: { id: 79155 },
+        text: "你好",
+        successful_payment: true,
+      },
+    });
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("flag79155");
+
+    const refunded = await normalize({
+      update_id: 79156,
+      message: {
+        message_id: 79156,
+        date: 1761955200,
+        chat: {
+          id: 879156,
+          type: "private",
+          first_name: "https://bit.ly/back79156",
+        },
+        from: { id: 79156 },
+        text: "你好",
+        refunded_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "https://tinyurl.com/backload79156",
+          telegram_payment_charge_id: "c",
+        },
+      },
+    });
+    expect(refunded.status).toBe("event");
+    if (refunded.status !== "event") {
+      return;
+    }
+    expect(refunded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(refunded.event)).not.toContain("back79156");
+    expect(JSON.stringify(refunded.event)).not.toContain("backload79156");
+    expect(JSON.stringify(refunded.event)).not.toContain("tinyurl");
+
+    const body = await normalize({
+      update_id: 79157,
+      message: {
+        message_id: 79157,
+        date: 1761955200,
+        chat: {
+          id: 879157,
+          type: "private",
+          first_name: "https://bit.ly/payer79157",
+        },
+        from: { id: 79157 },
+        text: "https://cutt.ly/body79157",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe("https://cutt.ly/body79157");
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(body.event)).not.toContain("payer79157");
+
+    const edited = await normalize({
+      update_id: 79158,
+      edited_message: {
+        message_id: 79158,
+        date: 1761955200,
+        edit_date: 1761955300,
+        chat: {
+          id: 879158,
+          type: "private",
+          first_name: "https://bit.ly/edit79158",
+        },
+        from: { id: 79158 },
+        text: "今天站会",
+        successful_payment: {
+          currency: "XTR",
+          total_amount: 1,
+          invoice_payload: "p",
+          telegram_payment_charge_id: "c",
+          provider_payment_charge_id: "d",
+        },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.edited).toBe(true);
+    expect(edited.event.message?.text).toBe("今天站会");
+    expect(edited.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(edited.event)).not.toContain("edit79158");
+
+    const quoted = await normalize({
+      update_id: 79159,
+      message: {
+        message_id: 79159,
+        date: 1761955200,
+        chat: { id: 879159, type: "private", first_name: "Ada" },
+        from: { id: 79159 },
+        text: "你好",
+        reply_to_message: {
+          message_id: 3,
+          invoice: { title: "https://bit.ly/title79159" },
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quoted.event)).not.toContain("title79159");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
