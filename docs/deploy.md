@@ -327,6 +327,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 关话题的人，名字里的短链、邀请或裸 IP 会删掉这条提示。重开、隐藏和重新显示同样。证据只有主机名。名字、用户名和话题名不进事件。`example.com` 仍留下。见 ADR 0589。
 
+创建抽奖的人，名字里的短链、邀请或裸 IP 会删掉这条提示。私下结束同样。证据只有主机名。名字、用户名和星星数量不进事件。`example.com` 仍留下。见 ADR 0590。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。
