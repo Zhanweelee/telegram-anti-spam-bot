@@ -4532,6 +4532,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(memberNameSource(message), urls);
   pushVisiblePartyUrls(message.left_chat_member, undefined, urls);
   pushBoostSenderUrls(message, urls);
+  pushAutoDeleteSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4698,6 +4699,20 @@ function pushBoostSenderUrls(
   urls: string[],
 ): void {
   if (!addedBoost(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 改自动删除计时的人只留主机名。
+ * 秒数不是大于等于 0 的安全整数时不读。用户名不读。普通消息的发送者不读。
+ */
+function pushAutoDeleteSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!autoDeleteNotice(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
