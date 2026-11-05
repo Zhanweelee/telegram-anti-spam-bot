@@ -4541,6 +4541,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushGiveawaySenderUrls(message, urls);
   pushPhotoSenderUrls(message, urls);
   pushTitleSenderUrls(message, urls);
+  pushBackgroundSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4840,6 +4841,21 @@ function pushTitleSenderUrls(
   urls: string[],
 ): void {
   if (!renamedChat(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 换背景的人只留主机名。
+ * 壁纸、图案、纯色和内置主题都读。空对象和其它类型不读。
+ * 文件名仍只在壁纸和图案上留主机名。文件号和主题名不读。用户名不读。
+ */
+function pushBackgroundSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (backgroundNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
