@@ -158,6 +158,7 @@ async function messageEvent(
   const sideGift = besideGiftText(message, text);
   const sideGiftLabel = besideGiftLabel(message, text);
   const sideTopic = besideTopicName(message, text);
+  const sideDecline = besideDeclineComment(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -249,6 +250,7 @@ async function messageEvent(
       ...(sideGift.length > 0 ? { giftText: sideGift } : {}),
       ...(sideGiftLabel.length > 0 ? { giftLabel: sideGiftLabel } : {}),
       ...(sideTopic.length > 0 ? { topicName: sideTopic } : {}),
+      ...(sideDecline.length > 0 ? { declineComment: sideDecline } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6651,6 +6653,22 @@ function besideTopicName(
     return raw;
   }
   return "";
+}
+
+/** 已有别的正文时，拒绝说明另留最多 128 字。这段自己就是正文时不重复。嵌套原帖不进这个字段。 */
+function besideDeclineComment(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const declined = message.suggested_post_declined;
+  if (!isRecord(declined) || typeof declined.comment !== "string") {
+    return "";
+  }
+  const source = declined.comment;
+  if (source.length === 0 || text === source.slice(0, MAX_TEXT)) {
+    return "";
+  }
+  return clipped(source, 128);
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

@@ -430,6 +430,25 @@ describe("rules", () => {
     expect(
       matchesWhen({ giftLabel: true }, serviceEvent({ topicName: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ declineComment: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { declineComment: true },
+        serviceEvent({ topicName: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { declineComment: true },
+        serviceEvent({ declineComment: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { topicName: true },
+        serviceEvent({ declineComment: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

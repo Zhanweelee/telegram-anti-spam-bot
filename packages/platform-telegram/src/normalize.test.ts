@@ -57,6 +57,7 @@ function withoutButtonText(event: object): string {
       giftText: undefined,
       giftLabel: undefined,
       topicName: undefined,
+      declineComment: undefined,
     },
   });
 }
@@ -26869,6 +26870,7 @@ describe("normalizeUpdate", () => {
     }
     expect(declined.event.message?.asPostDeclined).toBe(true);
     expect(declined.event.message?.text).toBe(comment);
+    expect(declined.event.message?.declineComment).toBeUndefined();
     const dumped = JSON.stringify(declined.event);
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(original);
@@ -26890,7 +26892,8 @@ describe("normalizeUpdate", () => {
     }
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.asPostDeclined).toBe(true);
-    expect(JSON.stringify(kept.event)).not.toContain(comment);
+    expect(kept.event.message?.declineComment).toBe(comment);
+    expect(withoutButtonText(kept.event)).not.toContain(comment);
 
     const blank = await normalize({
       update_id: 4692,
@@ -28373,6 +28376,7 @@ describe("normalizeUpdate", () => {
     }
     expect(declined.event.message?.postNotice).toBeUndefined();
     expect(declined.event.message?.text).toBe("今天站会");
+    expect(declined.event.message?.declineComment).toBeUndefined();
     expect(JSON.stringify(declined.event)).not.toContain(title);
 
     const empty = await normalize({
@@ -29987,7 +29991,10 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.declineComment).toBe(
+      `${phrase} https://bit.ly/cmt80 https://t.me/+${code}.`,
+    );
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("cmt80");
@@ -30018,7 +30025,10 @@ describe("normalizeUpdate", () => {
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    expect(ordinary.event.message?.declineComment).toBe(
+      "https://example.com/ok80",
+    );
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok80");
     expect(ordinaryDump).not.toContain("onlypost80");
     expect(ordinaryDump).not.toContain("bit.ly");
@@ -30042,6 +30052,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(asBody.event.message?.text).toBe(comment);
+    expect(asBody.event.message?.declineComment).toBeUndefined();
     expect(asBody.event.message?.textSha256).toBe(await sha256Hex(comment));
     expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
     const bodyDump = JSON.stringify(asBody.event);
@@ -30067,6 +30078,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(earlier.event.message?.text).toBe("今天站会");
+    expect(earlier.event.message?.declineComment).toBeUndefined();
     expect(earlier.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(earlier.event.message?.authorSignature).toBe(
       "https://tinyurl.com/sig80",
@@ -32334,6 +32346,65 @@ describe("normalizeUpdate", () => {
     expect(asTopicDump).not.toContain(tail);
     expect(asTopicDump).not.toContain(path);
     expect(asTopicDump).not.toContain("TOPICEMOJI");
+  });
+
+  it("keeps the first 128 characters of a decline comment", async () => {
+    const tail = "TAIL84";
+    const path = "cmt84";
+    const nested = "原帖机密";
+    const labeled = await normalize({
+      update_id: 5784,
+      message: {
+        message_id: 5784,
+        date: 1761955200,
+        chat: { id: -1005784, type: "supergroup" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        suggested_post_declined: {
+          comment: `${"拒".repeat(128)}${tail} https://bit.ly/${path}`,
+          suggested_post_message: { text: nested },
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.declineComment).toHaveLength(128);
+    expect(labeled.event.message?.declineComment).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain(nested);
+    expect(labeledDump).not.toContain("Ada");
+
+    const asComment = await normalize({
+      update_id: 5785,
+      message: {
+        message_id: 5785,
+        date: 1761955200,
+        chat: { id: -1005785, type: "supergroup" },
+        from: { id: 93 },
+        suggested_post_declined: {
+          comment: `${"拒".repeat(4096)}${tail} https://bit.ly/${path}`,
+          suggested_post_message: { text: nested },
+        },
+      },
+    });
+    expect(asComment.status).toBe("event");
+    if (asComment.status !== "event") {
+      return;
+    }
+    expect(asComment.event.message?.text).toHaveLength(4096);
+    expect(asComment.event.message?.declineComment).toBeUndefined();
+    expect(asComment.event.message?.hosts).toEqual(["bit.ly"]);
+    const asCommentDump = JSON.stringify(asComment.event);
+    expect(asCommentDump).not.toContain(tail);
+    expect(asCommentDump).not.toContain(path);
+    expect(asCommentDump).not.toContain(nested);
   });
 
   it("keeps the host Android opens in an empty game description", async () => {
