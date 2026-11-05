@@ -9521,6 +9521,7 @@ describe("screenTelegramEvent", () => {
       updateId: number,
       extra: Record<string, unknown>,
       paid = false,
+      adminUserIds: string[] = [],
     ) {
       const chatId = -(1_000_000 + updateId);
       const normalized = await normalizeUpdate({
@@ -9543,7 +9544,7 @@ describe("screenTelegramEvent", () => {
           },
         },
         tenantId: "local",
-        adminUserIds: [],
+        adminUserIds,
         nowIso: "2026-11-01T00:00:00.000Z",
       });
       expect(normalized.status).toBe("event");
@@ -9784,6 +9785,119 @@ describe("screenTelegramEvent", () => {
     expect(bothDump).not.toContain("8806156");
     expect(bothDump).not.toContain("gone6156");
     expect(bothDump).not.toContain("ow.ly");
+
+    const spaced = await posted(79335, {
+      from: {
+        id: 124,
+        first_name: "Go https://bit.ly/later79335",
+        last_name: "https://tinyurl.com/skiplast79335",
+        username: "secretuser79335",
+      },
+      community_chat_added: undefined,
+      community_chat_joined: {
+        community: { id: 88079335, name: "加入的社区" },
+      },
+    });
+    expect(spaced.message?.text).toBe("");
+    expect(spaced.message?.community).toBe("joined");
+    expect(spaced.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedModerator = createMemoryModerator();
+    const spacedHit = await screenTelegramEvent(spaced, {
+      moderator: spacedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(spacedHit.decision.action).toBe("delete");
+    expect(spacedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079335", messageId: "79335" },
+    ]);
+    expect(JSON.stringify(spaced)).not.toContain("later79335");
+    expect(JSON.stringify(spaced)).not.toContain("skiplast79335");
+    expect(JSON.stringify(spaced)).not.toContain("secretuser79335");
+    expect(JSON.stringify(spaced)).not.toContain("88079335");
+    expect(JSON.stringify(spaced)).not.toContain("加入的社区");
+
+    const body = await posted(79336, {
+      text: "https://ow.ly/body79336",
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/join79336",
+        last_name: "https://tinyurl.com/skip79336",
+      },
+      community_chat_added: undefined,
+      community_chat_joined: {
+        community: { id: 88079336, name: "正文社区" },
+      },
+    });
+    expect(body.message?.text).toBe("https://ow.ly/body79336");
+    expect(body.message?.community).toBe("joined");
+    expect(body.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bodyHit = await screenTelegramEvent(body, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyHit.decision.action).toBe("delete");
+    const bodyEvidence = JSON.stringify(bodyHit.decision.evidence);
+    expect(bodyEvidence).toContain("short_link:ow.ly");
+    expect(bodyEvidence).not.toContain("short_link:bit.ly");
+    expect(bodyEvidence).not.toContain("short_link:tinyurl.com");
+    expect(JSON.stringify(body)).not.toContain("join79336");
+    expect(JSON.stringify(body)).not.toContain("skip79336");
+    expect(JSON.stringify(body)).not.toContain("88079336");
+
+    const admin = await posted(
+      79337,
+      {
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "https://bit.ly/admin79337",
+        },
+        community_chat_added: undefined,
+        community_chat_joined: {
+          community: { id: 88079337, name: "管理员社区" },
+        },
+      },
+      false,
+      ["124"],
+    );
+    expect(admin.actor.isAdmin).toBe(true);
+    expect(admin.message?.community).toBe("joined");
+    expect(admin.message?.hosts).toEqual(["bit.ly"]);
+    const adminModerator = createMemoryModerator();
+    const adminHit = await screenTelegramEvent(admin, {
+      moderator: adminModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(adminHit.outcome).toBe("exempt");
+    expect(adminModerator.deleted).toEqual([]);
+    expect(JSON.stringify(admin)).not.toContain("admin79337");
+    expect(JSON.stringify(admin)).not.toContain("88079337");
+
+    const kept = await posted(79338, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/add79338",
+        last_name: "https://tinyurl.com/skiplast79338",
+        username: "secretuser79338",
+      },
+    });
+    expect(kept.message?.text).toBe("");
+    expect(kept.message?.community).toBe("added");
+    expect(kept.message?.hosts).toEqual(["bit.ly"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("delete");
+    const keptDump = JSON.stringify({
+      event: kept,
+      decision: keptHit.decision,
+    });
+    expect(keptDump).not.toContain("add79338");
+    expect(keptDump).not.toContain("skiplast79338");
+    expect(keptDump).not.toContain("tinyurl");
+    expect(keptDump).not.toContain("secretuser79338");
+    expect(keptDump).not.toContain(communityName);
   });
 
   it("deletes a short link in an owner notice sender name", async () => {
