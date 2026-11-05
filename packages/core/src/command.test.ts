@@ -10846,6 +10846,7 @@ describe("runOperatorCommand", () => {
       visibleHistory: "on" as const,
       maxReactions: 11,
       linkedChatId: "-100777",
+      locationBound: "on" as const,
     };
     const empty = {
       type: "group" as const,
@@ -10869,6 +10870,7 @@ describe("runOperatorCommand", () => {
       visibleHistory: "unknown" as const,
       maxReactions: 0,
       linkedChatId: null,
+      locationBound: "off" as const,
     };
     const snapshots = [full, empty, full];
     const remember = {
@@ -10915,6 +10917,7 @@ describe("runOperatorCommand", () => {
         "可见历史 on",
         "反应 11",
         "关联 -100777",
+        "地点群 on",
       ].join("\n"),
     });
     expect(seen[0]).toEqual({
@@ -10954,6 +10957,7 @@ describe("runOperatorCommand", () => {
         "可见历史 未知",
         "反应 0",
         "关联 未知",
+        "地点群 off",
       ].join("\n"),
     });
     expect(seen).toHaveLength(2);
@@ -10994,6 +10998,7 @@ describe("runOperatorCommand", () => {
             visibleHistory: "on" as const,
             maxReactions: 11,
             linkedChatId: "-100777",
+            locationBound: "on" as const,
           };
         },
       },
@@ -11023,6 +11028,7 @@ describe("runOperatorCommand", () => {
         "history on",
         "reactions 11",
         "linked -100777",
+        "location chat on",
       ].join("\n"),
     });
     const englishEmpty = await runOperatorCommand({
@@ -11053,6 +11059,7 @@ describe("runOperatorCommand", () => {
             visibleHistory: "unknown" as const,
             maxReactions: 1,
             linkedChatId: null,
+            locationBound: "off" as const,
           };
         },
       },
@@ -11082,6 +11089,7 @@ describe("runOperatorCommand", () => {
         "history unknown",
         "reactions 1",
         "linked unknown",
+        "location chat off",
       ].join("\n"),
     });
     const skipped = await runOperatorCommand({
@@ -11200,6 +11208,18 @@ describe("runOperatorCommand", () => {
     });
     expect(gifts).toMatchObject({ text: "参数无效" });
     expect(JSON.stringify(gifts)).not.toContain(phrase);
+    const place = await runOperatorCommand({
+      event: event({ text: "/guard -100", direct: true }),
+      adminActorIds: ["42"],
+      moderator: {
+        async readChatGuard() {
+          return { ...full, locationBound: phrase as "on" };
+        },
+      },
+      ...kit(),
+    });
+    expect(place).toMatchObject({ text: "参数无效" });
+    expect(JSON.stringify(place)).not.toContain(phrase);
     const fractional = await runOperatorCommand({
       event: event({ text: "/guard -100", direct: true }),
       adminActorIds: ["42"],
@@ -11264,6 +11284,7 @@ describe("runOperatorCommand", () => {
         "可见历史 on",
         "反应 11",
         "关联 -100777",
+        "地点群 on",
       ].join("\n"),
     });
     expect(seen).toHaveLength(3);
