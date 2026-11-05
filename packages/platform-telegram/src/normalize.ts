@@ -142,6 +142,7 @@ async function messageEvent(
   const sidePoll = besidePollOption(message, text);
   const sideTasks = besideChecklistTask(message, text);
   const sideMedia = besideMediaName(message, text);
+  const sidePerformer = besidePerformer(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -211,6 +212,7 @@ async function messageEvent(
       ...(sidePoll.length > 0 ? { pollOption: sidePoll } : {}),
       ...(sideTasks.length > 0 ? { checklistTask: sideTasks } : {}),
       ...(sideMedia.length > 0 ? { mediaName: sideMedia } : {}),
+      ...(sidePerformer.length > 0 ? { performer: sidePerformer } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6645,6 +6647,19 @@ function besideAuthorSignature(
     return "";
   }
   return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，音频表演者另留最多 4096 字。表演者自己就是正文时不重复。 */
+function besidePerformer(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = performerName(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, MAX_TEXT);
 }
 
 /** 已有别的正文时，文件名或音频标题另留最多 4096 字。这段名称自己就是正文时不重复。 */

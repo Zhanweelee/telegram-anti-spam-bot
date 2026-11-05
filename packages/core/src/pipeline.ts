@@ -268,6 +268,9 @@ function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
   if ("mediaName" in when) {
     return "mediaName";
   }
+  if ("performer" in when) {
+    return "performer";
+  }
   return undefined;
 }
 
@@ -386,6 +389,7 @@ function eventTexts(event: Event): readonly string[] {
   const poll = event.message?.pollOption;
   const tasks = event.message?.checklistTask;
   const media = event.message?.mediaName;
+  const performer = event.message?.performer;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -451,6 +455,20 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(media);
   }
   if (
+    performer &&
+    performer.length > 0 &&
+    performer !== message &&
+    performer !== tag &&
+    performer !== buttons &&
+    performer !== signature &&
+    performer !== mirror &&
+    performer !== poll &&
+    performer !== tasks &&
+    performer !== media
+  ) {
+    texts.push(performer);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
@@ -460,7 +478,8 @@ function eventTexts(event: Event): readonly string[] {
     profile !== mirror &&
     profile !== poll &&
     profile !== tasks &&
-    profile !== media
+    profile !== media &&
+    profile !== performer
   ) {
     texts.push(profile);
   }

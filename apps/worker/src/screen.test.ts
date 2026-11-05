@@ -14380,6 +14380,204 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(keptBody)).not.toContain(label);
   });
 
+  it("deletes an audio performer that matches a keyword or regex beside a title", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const keyworded = await normalizeUpdate({
+      update: {
+        update_id: 5680,
+        message: {
+          message_id: 5680,
+          date: 1761955200,
+          chat: { id: -1005680, type: "supergroup" },
+          from: { id: 96, first_name: "Ada" },
+          caption: "今天站会",
+          audio: {
+            file_id: "AUD64ID",
+            file_unique_id: "UNIQ64",
+            duration: 3,
+            title: "今天的歌",
+            performer: phrase,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(keyworded.status).toBe("event");
+    if (keyworded.status !== "event") {
+      return;
+    }
+    expect(keyworded.event.message?.text).toBe("今天站会");
+    expect(keyworded.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(keyworded.event.message?.mediaName).toBe("今天的歌");
+    expect(keyworded.event.message?.performer).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(keyworded.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005680", messageId: "5680" },
+    ]);
+    const dumped = JSON.stringify({
+      result,
+      logs: logger.entries,
+      event: keyworded.event,
+    });
+    expect(dumped).not.toContain("AUD64ID");
+    expect(dumped).not.toContain("UNIQ64");
+    expect(dumped).not.toContain("Ada");
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5681,
+        message: {
+          message_id: 5681,
+          date: 1761955200,
+          chat: { id: -1005681, type: "supergroup" },
+          from: { id: 96 },
+          caption: "今天站会",
+          audio: {
+            file_id: "AUD65ID",
+            file_unique_id: "UNIQ65",
+            duration: 3,
+            title: "今天的歌",
+            performer: label,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.performer).toBe(label);
+    const patternLog = createMemoryLogger();
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      logger: patternLog,
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("performer_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patternLog.entries)).not.toContain(label);
+
+    const clean = await normalizeUpdate({
+      update: {
+        update_id: 5682,
+        message: {
+          message_id: 5682,
+          date: 1761955200,
+          chat: { id: -1005682, type: "supergroup" },
+          from: { id: 96 },
+          caption: "今天站会",
+          audio: {
+            file_id: "AUD66ID",
+            file_unique_id: "UNIQ66",
+            duration: 3,
+            title: "今天的歌",
+            performer: "歌手",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(clean.status).toBe("event");
+    if (clean.status !== "event") {
+      return;
+    }
+    expect(clean.event.message?.performer).toBe("歌手");
+    const kept = await screenTelegramEvent(clean.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(kept.decision.action).toBe("allow");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5683,
+        message: {
+          message_id: 5683,
+          date: 1761955200,
+          chat: { id: -1005683, type: "supergroup" },
+          from: { id: 96 },
+          audio: {
+            file_id: "AUD67ID",
+            file_unique_id: "UNIQ67",
+            duration: 3,
+            performer: label,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.performer).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5684,
+        message: {
+          message_id: 5684,
+          date: 1761955200,
+          chat: { id: -1005684, type: "supergroup" },
+          from: { id: 96 },
+          caption: label,
+          audio: {
+            file_id: "AUD68ID",
+            file_unique_id: "UNIQ68",
+            duration: 3,
+            title: "今天的歌",
+            performer: "歌手",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.performer).toBe("歌手");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

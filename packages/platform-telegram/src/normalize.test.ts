@@ -41,6 +41,7 @@ function withoutButtonText(event: object): string {
       pollOption: undefined,
       checklistTask: undefined,
       mediaName: undefined,
+      performer: undefined,
     },
   });
 }
@@ -11256,6 +11257,41 @@ describe("normalizeUpdate", () => {
     expect(titled.event.message?.mediaName).toBe("今天的歌");
     expect(JSON.stringify(titled.event)).not.toContain(tail);
     expect(JSON.stringify(titled.event)).not.toContain("AUD59ID");
+
+    const performed = await normalize({
+      update_id: 5685,
+      message: {
+        message_id: 5685,
+        date: 1761955200,
+        chat: { id: -1005685, type: "supergroup" },
+        from: { id: 96 },
+        caption: "今天站会",
+        audio: {
+          file_id: "AUD69ID",
+          file_unique_id: "UNIQ69",
+          duration: 3,
+          title: "今天的歌",
+          performer: `${"唱".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(performed.status).toBe("event");
+    if (performed.status !== "event") {
+      return;
+    }
+    expect(performed.event.message?.text).toBe("今天站会");
+    expect(performed.event.message?.textSha256).toBe(
+      await sha256Hex("今天站会"),
+    );
+    expect(performed.event.message?.mediaName).toBe("今天的歌");
+    expect(performed.event.message?.performer).toHaveLength(4096);
+    expect(performed.event.message?.performer).not.toContain(tail);
+    expect(performed.event.message?.hosts).toEqual(["bit.ly"]);
+    const performerDump = JSON.stringify(performed.event);
+    expect(performerDump).not.toContain(tail);
+    expect(performerDump).not.toContain(path);
+    expect(performerDump).not.toContain("AUD69ID");
+    expect(performerDump).not.toContain("UNIQ69");
   });
 
   it("keeps hostnames from question, prize, and checklist titles", async () => {
@@ -12397,6 +12433,7 @@ describe("normalizeUpdate", () => {
     ]);
     expect(audio.event.message?.invites).toEqual(["t.me"]);
     expect(audio.event.message?.mediaName).toBe("www.tinyurl.com/a53");
+    expect(audio.event.message?.performer).toBe("https://is.gd/perf53");
     const audioDump = withoutButtonText(audio.event);
     expect(audioDump).not.toContain(code);
     expect(audioDump).not.toContain("/a53");
@@ -12563,6 +12600,8 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("免费领取");
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("免费领取"));
+    expect(outcome.event.message?.mediaName).toBeUndefined();
+    expect(outcome.event.message?.performer).toBe(phrase);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("加微信");
     expect(dumped).not.toContain(phrase);
@@ -12590,6 +12629,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("免费领取.mp3");
+    expect(outcome.event.message?.performer).toBe("请免费领取礼品");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("请免费领取礼品");
   });
@@ -14001,7 +14041,8 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeled.event.message?.performer).toContain(phrase);
+    const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("perf61");
@@ -14032,6 +14073,7 @@ describe("normalizeUpdate", () => {
     expect(ordinary.event.message?.text).toBe("今天站会");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
     expect(ordinary.event.message?.mediaName).toBe("会议录音");
+    expect(ordinary.event.message?.performer).toContain(phrase);
     const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain(phrase);
     expect(ordinaryDump).not.toContain("page61");
@@ -14090,6 +14132,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(body.event.message?.text).toBe(asBody);
+    expect(body.event.message?.performer).toBeUndefined();
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(body.event)).not.toContain("aud-163");

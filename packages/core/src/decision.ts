@@ -53,6 +53,7 @@ export const textPlaces = [
   "pollOption",
   "checklistTask",
   "mediaName",
+  "performer",
 ] as const;
 export const textPlaceSchema = z.enum(textPlaces);
 export type TextPlace = z.output<typeof textPlaceSchema>;

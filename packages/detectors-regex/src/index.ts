@@ -80,6 +80,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["pollOption", ctx.event.message?.pollOption],
         ["checklistTask", ctx.event.message?.checklistTask],
         ["mediaName", ctx.event.message?.mediaName],
+        ["performer", ctx.event.message?.performer],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];

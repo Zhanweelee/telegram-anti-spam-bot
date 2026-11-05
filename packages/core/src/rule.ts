@@ -12,6 +12,7 @@ export type RuleWhen =
   | { readonly pollOption: true }
   | { readonly checklistTask: true }
   | { readonly mediaName: true }
+  | { readonly performer: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -27,6 +28,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ pollOption: z.literal(true) }),
     z.strictObject({ checklistTask: z.literal(true) }),
     z.strictObject({ mediaName: z.literal(true) }),
+    z.strictObject({ performer: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -105,6 +107,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("mediaName" in when) {
     return mediaName(event);
   }
+  if ("performer" in when) {
+    return performer(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -112,6 +117,10 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
     return when.any.some((item) => matchesWhen(item, event));
   }
   return !matchesWhen(when.not, event);
+}
+
+function performer(event: Event): boolean {
+  return event.message?.performer !== undefined;
 }
 
 function mediaName(event: Event): boolean {
