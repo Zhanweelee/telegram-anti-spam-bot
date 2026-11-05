@@ -4686,7 +4686,7 @@ function pushVisiblePartyUrls(
 /**
  * 已知用户和群的转发抬头只留主机名。
  * 现代来源优先。隐藏显示名旁边的真实姓名不读。
- * 频道标题、来源签名和外部回复不读。
+ * 成员转发的频道标题只留主机名。讨论组原帖、来源签名和外部回复不读。
  */
 function pushForwardPartyUrls(
   message: Record<string, unknown>,
@@ -4698,6 +4698,8 @@ function pushForwardPartyUrls(
       pushVisiblePartyUrls(origin.sender_user, undefined, urls);
     } else if (origin.type === "chat") {
       pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
+    } else if (origin.type === "channel") {
+      pushManualChannelTitle(message, origin.chat, urls);
     }
     return;
   }
@@ -4712,14 +4714,37 @@ function pushForwardPartyUrls(
     return;
   }
   const chat = message.forward_from_chat;
-  if (isRecord(chat) && chat.type !== "channel") {
-    pushVisiblePartyUrls(undefined, chat, urls);
+  if (!isRecord(chat)) {
+    return;
+  }
+  if (chat.type === "channel") {
+    pushManualChannelTitle(message, chat, urls);
+    return;
+  }
+  pushVisiblePartyUrls(undefined, chat, urls);
+}
+
+/**
+ * 成员转发的频道标题只留主机名。
+ * 讨论组原帖不读这段标题。用户名和来源签名不读。标题不进正文。
+ */
+function pushManualChannelTitle(
+  message: Record<string, unknown>,
+  chat: unknown,
+  urls: string[],
+): void {
+  if (message.is_automatic_forward === true || !isRecord(chat)) {
+    return;
+  }
+  if (typeof chat.title === "string" && chat.title.length > 0) {
+    pushPlainUrls(chat.title, urls);
   }
 }
 
 /**
  * 别的聊天代发时，标题只留主机名。
- * 编号和本群相同的身份不读。用户名不读。转发来源上的频道标题不读。
+ * 编号和本群相同的身份不读。用户名不读。
+ * 成员转发的频道标题在来源里另读。讨论组原帖仍不读来源标题。
  */
 function pushSenderChatUrls(
   message: Record<string, unknown>,

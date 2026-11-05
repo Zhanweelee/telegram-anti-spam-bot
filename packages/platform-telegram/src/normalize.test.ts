@@ -14112,9 +14112,8 @@ describe("normalizeUpdate", () => {
     expect(channel.event.message?.text).toBe("今天站会");
     expect(channel.event.message?.forward).toBe("channel");
     expect(channel.event.message?.hiddenName).toBeUndefined();
-    expect(channel.event.message?.hosts).toBeUndefined();
+    expect(channel.event.message?.hosts).toEqual(["bit.ly"]);
     const channelDump = JSON.stringify(channel.event);
-    expect(channelDump).not.toContain("bit.ly");
     expect(channelDump).not.toContain("tinyurl.com");
     expect(channelDump).not.toContain("ch60");
     expect(channelDump).not.toContain("sig60");

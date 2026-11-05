@@ -367,6 +367,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 名片名字里的短链、邀请或裸 IP 会删除这条消息。证据只有主机名。这个人的名字和电话不进事件。`example.com` 在关掉名片规则后仍留下。见 ADR 0609。
 
+成员转发的频道标题里的短链、邀请或裸 IP 会删除这条消息。证据只有主机名。标题和用户名不进事件。`example.com` 在关掉频道转发后仍留下。见 ADR 0610。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。
