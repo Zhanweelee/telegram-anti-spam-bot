@@ -4570,6 +4570,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushOwnerSenderUrls(message, urls);
   pushInviteSenderUrls(message, urls);
   pushProximitySenderUrls(message, urls);
+  pushJoinSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4923,6 +4924,22 @@ function pushProximitySenderUrls(
   urls: string[],
 ): void {
   if (!nearUsers(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 拉人进群的人只留主机名。
+ * 入群名单里至少有一个用户对象时读。空对象也读。
+ * 空数组、非用户对象和布尔值不读。退群不读发送者。
+ * 加入的人的名字仍按原来的正文。用户编号不读。用户名不读。
+ */
+function pushJoinSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (serviceNotice(message) !== "join") {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
