@@ -72,6 +72,7 @@ function withoutButtonText(event: object): string {
       pollDescription: undefined,
       richText: undefined,
       richButton: undefined,
+      laterName: undefined,
     },
   });
 }
@@ -12568,9 +12569,10 @@ describe("normalizeUpdate", () => {
     expect(clips.event.message?.text).toBe("今天站会");
     expect(clips.event.message?.hosts).toEqual(["cutt.ly", "example.com"]);
     expect(clips.event.message?.mediaName).toBe("https://cutt.ly/anim53.gif");
+    expect(clips.event.message?.laterName).toBe("https://example.com/vid53.mp4");
     const clipsDump = withoutButtonText(clips.event);
     expect(clipsDump).not.toContain("/anim53");
-    expect(JSON.stringify(clips.event)).not.toContain("/vid53");
+    expect(clipsDump).not.toContain("/vid53");
     expect(clipsDump).not.toContain(fileId);
 
     const asBody = "免费领取 https://bit.ly/body53.pdf";
@@ -12846,6 +12848,7 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("免费领取.mp4");
     expect(outcome.event.message?.media).toBe("animation");
+    expect(outcome.event.message?.laterName).toBe("加微信.mp4");
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("加微信");
     expect(dumped).not.toContain("an-99");
@@ -33554,6 +33557,81 @@ describe("normalizeUpdate", () => {
     const asTextDump = JSON.stringify(asText.event);
     expect(asTextDump).not.toContain(tail);
     expect(asTextDump).not.toContain(path);
+  });
+
+  it("keeps the first 4096 characters of a later media name", async () => {
+    const tail = "TAIL36";
+    const path = "later36";
+    const labeled = await normalize({
+      update_id: 5929,
+      message: {
+        message_id: 5929,
+        date: 1761955200,
+        chat: { id: -1005929, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        caption: "今天站会",
+        animation: {
+          file_id: "AN5929",
+          file_name: "甲.gif",
+        },
+        video: {
+          file_id: "VID5929",
+          mime_type: "video/mp4",
+          file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+        document: {
+          file_id: "DOC5929",
+          file_name: "乙.pdf",
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.mediaName).toBe("甲.gif");
+    expect(labeled.event.message?.laterName).toHaveLength(4096);
+    expect(labeled.event.message?.laterName).not.toContain(tail);
+    expect(labeled.event.message?.laterName).not.toContain("乙");
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("Ada");
+    expect(labeledDump).not.toContain("VID5929");
+    expect(labeledDump).not.toContain("DOC5929");
+
+    const asText = await normalize({
+      update_id: 5930,
+      message: {
+        message_id: 5930,
+        date: 1761955200,
+        chat: { id: -1005930, type: "supergroup" },
+        from: { id: 93 },
+        animation: {
+          file_id: "AN5930",
+          file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+        video: {
+          file_id: "VID5930",
+          file_name: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        },
+      },
+    });
+    expect(asText.status).toBe("event");
+    if (asText.status !== "event") {
+      return;
+    }
+    expect(asText.event.message?.text).toHaveLength(4096);
+    expect(asText.event.message?.mediaName).toBeUndefined();
+    expect(asText.event.message?.laterName).toBeUndefined();
+    expect(asText.event.message?.hosts).toEqual(["bit.ly"]);
+    const asTextDump = JSON.stringify(asText.event);
+    expect(asTextDump).not.toContain(tail);
+    expect(asTextDump).not.toContain(path);
+    expect(asTextDump).not.toContain("VID5930");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {

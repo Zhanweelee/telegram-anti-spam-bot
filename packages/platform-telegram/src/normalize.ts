@@ -173,6 +173,7 @@ async function messageEvent(
   const sidePollDescription = besidePollDescription(message, text);
   const sideRichText = besideRichText(message, text);
   const sideRichButton = besideRichButton(message, text);
+  const sideLaterName = besideLaterName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -281,6 +282,7 @@ async function messageEvent(
         : {}),
       ...(sideRichText.length > 0 ? { richText: sideRichText } : {}),
       ...(sideRichButton.length > 0 ? { richButton: sideRichButton } : {}),
+      ...(sideLaterName.length > 0 ? { laterName: sideLaterName } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -7125,6 +7127,52 @@ function besideRichButton(
     return "";
   }
   return clipped(labels, 4096);
+}
+
+/** 选中的名称之后，后面的文件名和被挤开的音频标题另留最多 4096 字。已经选中的那一段、音频文件名和付费后段不重复。文件编号和 MIME 不进这个字段。 */
+function besideLaterName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const label = mediaLabel(message);
+  const parts: string[] = [];
+  for (const name of laterMediaNames(message)) {
+    const slice = name.slice(0, MAX_TEXT);
+    if (slice.length === 0 || text === slice || label === slice) {
+      continue;
+    }
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+    parts.push(trimmed);
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+function laterMediaNames(message: Record<string, unknown>): string[] {
+  const names: string[] = [];
+  for (const field of ["animation", "video"] as const) {
+    const value = message[field];
+    if (isRecord(value) && typeof value.file_name === "string") {
+      names.push(value.file_name);
+    }
+  }
+  const audio = message.audio;
+  if (isRecord(audio) && typeof audio.title === "string") {
+    const file = typeof audio.file_name === "string" ? audio.file_name : "";
+    if (audio.title.trim() !== file.trim()) {
+      names.push(audio.title);
+    }
+  }
+  const document = message.document;
+  if (isRecord(document) && typeof document.file_name === "string") {
+    names.push(document.file_name);
+  }
+  return names;
 }
 
 /** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */

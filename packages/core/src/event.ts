@@ -132,6 +132,8 @@ export const messageSchema = z
     richText: z.string().min(1).max(4096).optional(),
     /** Rich button labels beside a paragraph. Joined and capped at 4096. Absent when they are the body or the rich text. */
     richButton: z.string().min(1).max(4096).optional(),
+    /** Later file names and a displaced audio title. Joined and capped at 4096. Absent when that slice is the chosen name or the body. */
+    laterName: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
