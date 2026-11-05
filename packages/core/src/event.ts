@@ -122,6 +122,8 @@ export const messageSchema = z
     audioFile: z.string().min(1).max(4096).optional(),
     /** Later paid video file names beside the chosen name. Joined and capped at 4096. */
     paidFile: z.string().min(1).max(4096).optional(),
+    /** Rich-text media names beside another body. Joined and capped at 4096. Absent when that slice is the body. */
+    richName: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */

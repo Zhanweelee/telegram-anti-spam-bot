@@ -219,6 +219,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 后面的付费视频文件名命中同一组模式时删除。`/rule <chatId> paid_file_regex off` 回到只看关键词和短链。第一段自己就是名称时仍要打开 `regex_hint`。见 ADR 0560。
 
+富文本里的文件名、音频标题和表演者命中同一组模式时删除。`/rule <chatId> rich_name_regex off` 回到只看关键词和短链。和正文是同一截时不重复存放。见 ADR 0561。
+
 `/rule <chatId> hidden_forward on` 只删这个群的隐藏来源转发。`chat_forward` 删从别的群转发来的消息，`user_forward` 删用户转发。三条默认关闭。频道转发仍由 `channel_forward` 删除。见 ADR 0468。
 
 `/rule <chatId> media_sticker on` 只删这个群的贴纸。`media_animation` 删动图，`media_voice` 删语音，`media_video_note` 删视频留言，`media_dice` 删骰子。五条默认关闭。付费帖仍留下。见 ADR 0469。
