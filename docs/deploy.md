@@ -353,6 +353,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 勾完或取消勾完清单的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。这个人的名字和用户名不进事件。`example.com` 仍留下。见 ADR 0602。
 
+新加清单任务的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。这个人的名字和用户名不进事件。`example.com` 仍留下。见 ADR 0603。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。

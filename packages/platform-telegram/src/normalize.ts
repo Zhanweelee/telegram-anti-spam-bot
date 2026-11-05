@@ -4575,6 +4575,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushDeclineSenderUrls(message, urls);
   pushPostSenderUrls(message, urls);
   pushChecklistSenderUrls(message, urls);
+  pushAddedSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -5008,6 +5009,23 @@ function pushChecklistSenderUrls(
   urls: string[],
 ): void {
   if (taskNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 新加清单任务的人只留主机名。
+ * `tasks` 里至少有一条长度大于 0 的文字时读。空白也算。
+ * 空字符串、空数组和布尔值不读。投票选项不读。
+ * 任务文字仍按原来的正文。完成者仍按原来的主机名。
+ * 嵌套原清单不读。用户名不读。
+ */
+function pushAddedSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!addedChecklist(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);

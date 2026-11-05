@@ -27744,7 +27744,11 @@ describe("normalizeUpdate", () => {
         message_id: 720,
         date: 1761955200,
         chat: { id: -100499660, type: "supergroup" },
-        from: { id: 103, first_name: actor },
+        from: {
+          id: 103,
+          first_name: "https://tinyurl.com/from103",
+          last_name: actor,
+        },
         checklist_tasks_added: {
           tasks: [
             {
@@ -27770,7 +27774,9 @@ describe("normalizeUpdate", () => {
     expect(added.event.message?.asChecklistAdded).toBe(true);
     expect(added.event.message?.text).toBe(`${first} ${second}`);
     expect(added.event.message?.addedText).toBeUndefined();
+    expect(added.event.message?.hosts).toEqual(["tinyurl.com"]);
     const dumped = JSON.stringify(added.event);
+    expect(dumped).not.toContain("from103");
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(completer);
     expect(dumped).not.toContain(title);
@@ -27783,7 +27789,7 @@ describe("normalizeUpdate", () => {
         message_id: 721,
         date: 1761955200,
         chat: { id: -100499661, type: "supergroup" },
-        from: { id: 103, first_name: actor },
+        from: { id: 103, first_name: "请免费领取礼品" },
         text: "今天站会",
         checklist_tasks_added: {
           tasks: [{ id: firstId, text: first }],
@@ -27797,7 +27803,10 @@ describe("normalizeUpdate", () => {
     expect(kept.event.message?.text).toBe("今天站会");
     expect(kept.event.message?.asChecklistAdded).toBe(true);
     expect(kept.event.message?.addedText).toBe(first);
-    expect(withoutButtonText(kept.event)).not.toContain(first);
+    expect(kept.event.message?.hosts).toBeUndefined();
+    const keptDump = withoutButtonText(kept.event);
+    expect(keptDump).not.toContain(first);
+    expect(keptDump).not.toContain("请免费领取礼品");
 
     const skippedBlank = await normalize({
       update_id: 4672,
@@ -27805,7 +27814,7 @@ describe("normalizeUpdate", () => {
         message_id: 722,
         date: 1761955200,
         chat: { id: -100499662, type: "supergroup" },
-        from: { id: 103 },
+        from: { id: 103, first_name: "https://bit.ly/later103" },
         checklist_tasks_added: {
           tasks: [
             { id: firstId, text: "" },
@@ -27821,7 +27830,9 @@ describe("normalizeUpdate", () => {
     expect(skippedBlank.event.message?.asChecklistAdded).toBe(true);
     expect(skippedBlank.event.message?.text).toBe(second);
     expect(skippedBlank.event.message?.addedText).toBeUndefined();
+    expect(skippedBlank.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(skippedBlank.event)).not.toContain(String(secondId));
+    expect(JSON.stringify(skippedBlank.event)).not.toContain("later103");
 
     const empty = await normalize({
       update_id: 4673,
@@ -27829,7 +27840,7 @@ describe("normalizeUpdate", () => {
         message_id: 723,
         date: 1761955200,
         chat: { id: -100499663, type: "supergroup" },
-        from: { id: 103 },
+        from: { id: 103, first_name: "https://ow.ly/empty103" },
         checklist_tasks_added: { tasks: [] },
       },
     });
@@ -27838,6 +27849,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.asChecklistAdded).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty103");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
 
     const blank = await normalize({
       update_id: 4674,
@@ -27845,7 +27859,7 @@ describe("normalizeUpdate", () => {
         message_id: 724,
         date: 1761955200,
         chat: { id: -100499664, type: "supergroup" },
-        from: { id: 103 },
+        from: { id: 103, first_name: "https://bit.ly/blank103" },
         checklist_tasks_added: { tasks: [{ id: firstId, text: "" }] },
       },
     });
@@ -27854,6 +27868,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(blank.event.message?.asChecklistAdded).toBeUndefined();
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank103");
+    expect(JSON.stringify(blank.event)).not.toContain("bit.ly");
 
     const flag = await normalize({
       update_id: 4675,
@@ -27861,7 +27878,7 @@ describe("normalizeUpdate", () => {
         message_id: 725,
         date: 1761955200,
         chat: { id: -100499665, type: "supergroup" },
-        from: { id: 103 },
+        from: { id: 103, first_name: "https://bit.ly/flag103" },
         checklist_tasks_added: true,
       },
     });
@@ -27870,6 +27887,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(flag.event.message?.asChecklistAdded).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag103");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
   });
 
   it("marks a poll option change and keeps the option text", async () => {
@@ -28726,11 +28746,10 @@ describe("normalizeUpdate", () => {
     }
     expect(added.event.message?.checklistNotice).toBeUndefined();
     expect(added.event.message?.text).toBe("新加的事项");
-    expect(added.event.message?.hosts).toBeUndefined();
+    expect(added.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(added.event)).not.toContain(title);
     expect(JSON.stringify(added.event)).not.toContain(String(doneId));
     expect(JSON.stringify(added.event)).not.toContain("add97");
-    expect(JSON.stringify(added.event)).not.toContain("bit.ly");
 
     const empty = await normalize({
       update_id: 4596,
