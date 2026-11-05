@@ -156,6 +156,7 @@ async function messageEvent(
   const sideWebAppButton = besideWebAppButton(message, text);
   const sideQuote = besideManualQuote(message, text);
   const sideGift = besideGiftText(message, text);
+  const sideGiftLabel = besideGiftLabel(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -245,6 +246,7 @@ async function messageEvent(
         : {}),
       ...(sideQuote.length > 0 ? { quoteText: sideQuote } : {}),
       ...(sideGift.length > 0 ? { giftText: sideGift } : {}),
+      ...(sideGiftLabel.length > 0 ? { giftLabel: sideGiftLabel } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -4385,7 +4387,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(value.text, urls);
     pushTextLinks(value.entities, urls);
   }
-  pushPlainUrls(uniqueGiftLabels(message), urls);
+  pushPlainUrls(uniqueGiftLabelSource(message), urls);
   pushPlainUrls(giftPublisherNames(message), urls);
   for (const field of ["forum_topic_created", "forum_topic_edited"]) {
     const value = message[field];
@@ -6626,6 +6628,18 @@ function pushUserLabels(value: unknown, parts: string[]): void {
   }
 }
 
+/** 已有别的正文时，收藏名另留最多 4096 字。这段自己就是正文时不重复。有附言时不读型号、符号和背景。短名和发布者不进这个字段。 */
+function besideGiftLabel(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = uniqueGiftLabels(message);
+  if (raw.length === 0 || text === raw) {
+    return "";
+  }
+  return raw;
+}
+
 /** 已有别的正文时，礼物附言另留最多 128 字。这段自己就是正文时改看下一种。贴纸、星星和收藏名不进这个字段。 */
 function besideGiftText(
   message: Record<string, unknown>,
@@ -7134,6 +7148,11 @@ function giftText(message: Record<string, unknown>): string {
 
 /** 独特礼物卡片上的收藏名。有附言时型号、符号和背景不出现。 */
 function uniqueGiftLabels(message: Record<string, unknown>): string {
+  return uniqueGiftLabelSource(message).slice(0, MAX_TEXT);
+}
+
+/** 收藏名的整段，供主机名抽取。字段和正文仍截到 4096。 */
+function uniqueGiftLabelSource(message: Record<string, unknown>): string {
   const info = message.unique_gift;
   if (!isRecord(info) || !isRecord(info.gift)) {
     return "";
@@ -7152,7 +7171,7 @@ function uniqueGiftLabels(message: Record<string, unknown>): string {
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ").slice(0, MAX_TEXT);
+  return parts.join(" ");
 }
 
 /** 普通礼物上画出的发布者用户名。标题不读。 */

@@ -55,6 +55,7 @@ function withoutButtonText(event: object): string {
       webAppButtonText: undefined,
       quoteText: undefined,
       giftText: undefined,
+      giftLabel: undefined,
     },
   });
 }
@@ -29629,6 +29630,7 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.giftText).toBe("https://example.com/note291");
+    expect(labeled.event.message?.giftLabel).toBe(visible);
     expect(labeled.event.message?.hosts).toEqual([
       "example.com",
       "bit.ly",
@@ -29682,8 +29684,9 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ordinary.event.message?.text).toBe("今天站会");
+    expect(ordinary.event.message?.giftLabel).toBe("https://example.com/ok291");
     expect(ordinary.event.message?.hosts).toEqual(["example.com"]);
-    const ordinaryDump = JSON.stringify(ordinary.event);
+    const ordinaryDump = withoutButtonText(ordinary.event);
     expect(ordinaryDump).not.toContain("ok291");
     expect(ordinaryDump).not.toContain("kept291");
     expect(ordinaryDump).not.toContain("slug291b");
@@ -29717,6 +29720,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(alone.event.message?.text).toBe(names);
+    expect(alone.event.message?.giftLabel).toBeUndefined();
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(alone.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
     const aloneDump = JSON.stringify(alone.event);
@@ -32190,6 +32194,74 @@ describe("normalizeUpdate", () => {
     expect(asGift.event.message?.text).toHaveLength(4096);
     expect(asGift.event.message?.giftText).toBeUndefined();
     expect(JSON.stringify(asGift.event)).not.toContain(tail);
+  });
+
+  it("keeps the first 4096 characters of a unique gift label", async () => {
+    const tail = "TAIL82";
+    const path = "gift82";
+    const labeled = await normalize({
+      update_id: 5769,
+      message: {
+        message_id: 5769,
+        date: 1761955200,
+        chat: { id: -1005769, type: "private" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        unique_gift: {
+          gift: {
+            gift_id: "GIFTID",
+            base_name: `${"藏".repeat(4096)}${tail} https://bit.ly/${path}`,
+            name: "NFTSLUG",
+            number: 8642,
+          },
+          origin: "upgrade",
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.giftLabel).toHaveLength(4096);
+    expect(labeled.event.message?.giftLabel).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = JSON.stringify(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("NFTSLUG");
+    expect(labeledDump).not.toContain("GIFTID");
+    expect(labeledDump).not.toContain("8642");
+    expect(labeledDump).not.toContain("Ada");
+
+    const asLabel = await normalize({
+      update_id: 5770,
+      message: {
+        message_id: 5770,
+        date: 1761955200,
+        chat: { id: -1005770, type: "private" },
+        from: { id: 93 },
+        unique_gift: {
+          gift: {
+            base_name: `${"藏".repeat(4096)}${tail} https://bit.ly/${path}`,
+            name: "NFTSLUG",
+          },
+          origin: "upgrade",
+        },
+      },
+    });
+    expect(asLabel.status).toBe("event");
+    if (asLabel.status !== "event") {
+      return;
+    }
+    expect(asLabel.event.message?.text).toHaveLength(4096);
+    expect(asLabel.event.message?.giftLabel).toBeUndefined();
+    expect(asLabel.event.message?.hosts).toEqual(["bit.ly"]);
+    const asLabelDump = JSON.stringify(asLabel.event);
+    expect(asLabelDump).not.toContain(tail);
+    expect(asLabelDump).not.toContain(path);
+    expect(asLabelDump).not.toContain("NFTSLUG");
   });
 
   it("keeps the host Android opens in an empty game description", async () => {
