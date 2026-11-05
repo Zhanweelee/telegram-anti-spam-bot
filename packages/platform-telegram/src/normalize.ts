@@ -4569,6 +4569,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushCommunitySenderUrls(message, urls);
   pushOwnerSenderUrls(message, urls);
   pushInviteSenderUrls(message, urls);
+  pushProximitySenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4906,6 +4907,22 @@ function pushInviteSenderUrls(
   urls: string[],
 ): void {
   if (!videoInvite(message)) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 靠近提醒上操作的人只留主机名。
+ * 距离是大于等于 0 的安全整数时读。0 米也读。
+ * 负数、小数、字符串、布尔值和空对象不读。
+ * 两个人的名字仍按原来的正文。距离和用户编号不读。用户名不读。
+ */
+function pushProximitySenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!nearUsers(message)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
