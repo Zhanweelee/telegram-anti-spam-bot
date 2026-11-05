@@ -2982,6 +2982,40 @@ describe("event schema", () => {
       joinQueryId: "query83",
     });
     expect(event.joinQueryId).toBe("query83");
+    const named = parseEvent({
+      id: "evt_join_name",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "join_request",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "83", isAdmin: false },
+      nameHosts: ["bit.ly"],
+      nameInvites: ["t.me"],
+    });
+    expect(named.nameHosts).toEqual(["bit.ly"]);
+    expect(named.nameInvites).toEqual(["t.me"]);
+    expect(() =>
+      parseEvent({
+        id: "evt_join_name",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "join_request",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "83", isAdmin: false },
+        nameHosts: ["https://bit.ly/name83"],
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_join_name",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "join_request",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "83", isAdmin: false },
+        nameHosts: [],
+      }),
+    ).toThrow();
     expect(() =>
       parseEvent({
         id: "evt_join",

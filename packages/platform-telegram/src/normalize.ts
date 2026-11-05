@@ -1488,6 +1488,7 @@ async function joinRequestEvent(
   const profile = await requestBio(value.bio);
   const joinQueryId = safeJoinQueryId(value.query_id);
   const direct = isPrivateChat(value.chat);
+  const links = requestNameLinks(value.from);
   return finish({
     id: `tg_${updateId}`,
     tenantId: input.tenantId,
@@ -1498,7 +1499,23 @@ async function joinRequestEvent(
     ...(direct ? { direct: true } : {}),
     ...(profile ? { profile } : {}),
     ...(joinQueryId ? { joinQueryId } : {}),
+    ...(links.hosts.length > 0 ? { nameHosts: links.hosts } : {}),
+    ...(links.invites.length > 0 ? { nameInvites: links.invites } : {}),
   });
+}
+
+/**
+ * 入群申请上画出的名字只留主机名。
+ * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
+ * 群名、邀请链接和用户编号不读。名字不进简介。
+ */
+function requestNameLinks(user: unknown): {
+  hosts: string[];
+  invites: string[];
+} {
+  const urls: string[] = [];
+  pushVisiblePartyUrls(user, undefined, urls);
+  return collectLinkHosts(urls);
 }
 
 function safeJoinQueryId(value: unknown): string | undefined {
@@ -1850,10 +1867,6 @@ function linkHosts(message: Record<string, unknown>): {
   hosts: string[];
   invites: string[];
 } {
-  const hosts: string[] = [];
-  const invites: string[] = [];
-  const seenHosts = new Set<string>();
-  const seenInvites = new Set<string>();
   const urls: unknown[] = [];
   const poll = message.poll;
   const checklist = message.checklist;
@@ -1899,6 +1912,17 @@ function linkHosts(message: Record<string, unknown>): {
   for (const url of sideUrls(message)) {
     urls.push(url);
   }
+  return collectLinkHosts(urls);
+}
+
+function collectLinkHosts(urls: readonly unknown[]): {
+  hosts: string[];
+  invites: string[];
+} {
+  const hosts: string[] = [];
+  const invites: string[] = [];
+  const seenHosts = new Set<string>();
+  const seenInvites = new Set<string>();
   for (const url of urls) {
     const link = hostFromUrl(url);
     if (!link) {

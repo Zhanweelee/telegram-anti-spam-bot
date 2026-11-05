@@ -154,6 +154,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `left_chat_member` 是对象时，`from` 的可见名字只留主机名。空对象也读。自己离开时也读。名的长度大于 0 时不读姓。空白也算有名。用户名和用户编号不进事件。名字里的关键词不命中这个人。离开的人的主机名仍排在前面，名字仍不进正文。布尔值不读发送者。见 ADR 0606。
 
+入群申请的 `from` 可见名字只留主机名，记在 `nameHosts`。名的长度大于 0 时不读姓。空白也算有名。用户名、群名、邀请链接和用户编号不进事件。名字不进简介。名字里的关键词不命中。简介里已有短链时，证据仍先记简介的主机名。布尔值的 `from` 仍忽略这条更新。见 ADR 0607。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。

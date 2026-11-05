@@ -205,7 +205,13 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
     async detect(ctx, parsed) {
       const message = ctx.event.message;
       const text = message?.text ?? ctx.event.profile?.text;
-      if (text === undefined) {
+      const carriedHosts = ctx.event.nameHosts ?? [];
+      const carriedInvites = ctx.event.nameInvites ?? [];
+      if (
+        text === undefined &&
+        carriedHosts.length === 0 &&
+        carriedInvites.length === 0
+      ) {
         return null;
       }
       const inviteNames = new Set(
@@ -213,18 +219,21 @@ export function createLinkDetector(deps: LinkDetectorDeps = {}): Detector {
           item.toLowerCase(),
         ),
       );
-      const compared = foldHostScan(text);
-      const shaped = foldHostScanKeepingStops(text);
+      const source = text ?? "";
+      const compared = foldHostScan(source);
+      const shaped = foldHostScanKeepingStops(source);
       const gapInvites =
         shaped === compared ? [] : extractInviteHosts(shaped, inviteNames);
       const invites = mergeHosts(extractInviteHosts(compared, inviteNames), [
         ...gapInvites,
         ...(message?.invites ?? []),
+        ...carriedInvites,
       ]);
       const gapHosts = shaped === compared ? [] : extractHosts(shaped);
       const hosts = mergeHosts(extractHosts(compared), [
         ...gapHosts,
         ...(message?.hosts ?? []),
+        ...carriedHosts,
       ]);
       if (hosts.length === 0 && invites.length === 0) {
         return null;

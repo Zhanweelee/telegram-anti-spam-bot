@@ -31450,13 +31450,14 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.profile?.text).toBe(bio);
     expect(labeled.event.profile?.textSha256).toBe(await sha256Hex(bio));
     expect(labeled.event.joinQueryId).toBe("query83");
+    expect(labeled.event.nameHosts).toEqual(["tinyurl.com"]);
+    expect(labeled.event.nameInvites).toBeUndefined();
     const labeledDump = JSON.stringify(labeled.event);
     expect(labeledDump).not.toContain("name83");
     expect(labeledDump).not.toContain("grp83");
     expect(labeledDump).not.toContain("inv83");
     expect(labeledDump).not.toContain("83001");
     expect(labeledDump).not.toContain("cutt.ly");
-    expect(labeledDump).not.toContain("tinyurl.com");
     expect(labeledDump).not.toContain("ow.ly");
 
     const ordinary = await normalize({
@@ -31477,6 +31478,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(ordinary.event.profile?.text).toBe("https://example.com/ok83");
+    expect(ordinary.event.nameHosts).toBeUndefined();
     const ordinaryDump = JSON.stringify(ordinary.event);
     expect(ordinaryDump).not.toContain("kept83");
     expect(ordinaryDump).not.toContain("免费领取");
@@ -31519,9 +31521,77 @@ describe("normalizeUpdate", () => {
     }
     expect(unsafe.event.joinQueryId).toBeUndefined();
     expect(unsafe.event.profile?.text).toBe("今天站会");
+    expect(unsafe.event.nameHosts).toBeUndefined();
     const unsafeDump = JSON.stringify(unsafe.event);
     expect(unsafeDump).not.toContain(phrase);
     expect(unsafeDump).not.toContain("query_id");
+
+    const surname = await normalize({
+      update_id: 5414,
+      chat_join_request: {
+        chat: { id: -101084, type: "supergroup", title: "https://cutt.ly/room84" },
+        from: {
+          id: 84,
+          first_name: "",
+          last_name: "https://bit.ly/last84",
+          username: "user84",
+        },
+        user_chat_id: 84001,
+        date: 1761955200,
+        invite_link: { invite_link: "https://ow.ly/inv84" },
+      },
+    });
+    expect(surname.status).toBe("event");
+    if (surname.status !== "event") {
+      return;
+    }
+    expect(surname.event.profile).toBeUndefined();
+    expect(surname.event.nameHosts).toEqual(["bit.ly"]);
+    expect(surname.event.nameInvites).toBeUndefined();
+    const surnameDump = JSON.stringify(surname.event);
+    expect(surnameDump).not.toContain("last84");
+    expect(surnameDump).not.toContain("user84");
+    expect(surnameDump).not.toContain("room84");
+    expect(surnameDump).not.toContain("cutt.ly");
+    expect(surnameDump).not.toContain("inv84");
+    expect(surnameDump).not.toContain("ow.ly");
+    expect(surnameDump).not.toContain("84001");
+
+    const spaced = await normalize({
+      update_id: 5415,
+      chat_join_request: {
+        chat: { id: -101085, type: "supergroup" },
+        from: {
+          id: 84,
+          first_name: "   ",
+          last_name: "https://tinyurl.com/space84",
+        },
+        date: 1761955200,
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.nameHosts).toBeUndefined();
+    expect(JSON.stringify(spaced.event)).not.toContain("space84");
+    expect(JSON.stringify(spaced.event)).not.toContain("tinyurl");
+
+    const invited = await normalize({
+      update_id: 5416,
+      chat_join_request: {
+        chat: { id: -101086, type: "supergroup" },
+        from: { id: 84, first_name: `https://t.me/+${code}` },
+        date: 1761955200,
+      },
+    });
+    expect(invited.status).toBe("event");
+    if (invited.status !== "event") {
+      return;
+    }
+    expect(invited.event.nameHosts).toEqual(["t.me"]);
+    expect(invited.event.nameInvites).toEqual(["t.me"]);
+    expect(JSON.stringify(invited.event)).not.toContain(code);
   });
 
   it("keeps a join service message name and drops the sender name", async () => {
