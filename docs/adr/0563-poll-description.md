@@ -46,3 +46,4 @@ Bot API 写明 `sendPoll` 的 `description` 是 0 到 1024 字。测验说明已
 - 关掉 `poll_description_regex` 后，这种描述回到只看关键词和短链。`poll_media_regex` 和 `poll_explanation_regex` 不受影响。
 - 整份替换规则的群要自己加上这条，才会删除投票描述上的「加微x」。
 - 30 天保留期没有改。
+- `places` 后来加上 `richText`。已有正文时，看得见的富文本另留。见 ADR 0564。

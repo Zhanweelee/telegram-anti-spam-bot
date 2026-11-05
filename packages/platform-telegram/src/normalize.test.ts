@@ -70,6 +70,7 @@ function withoutButtonText(event: object): string {
       richName: undefined,
       pollMedia: undefined,
       pollDescription: undefined,
+      richText: undefined,
     },
   });
 }
@@ -14856,6 +14857,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("免费领取点邀 甲 乙");
+    expect(outcome.event.message?.richText).toBeUndefined();
     expect(outcome.event.message?.textSha256).toBe(
       await sha256Hex("免费领取点邀 甲 乙"),
     );
@@ -14903,6 +14905,9 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(
       await sha256Hex("caption-only"),
     );
+    expect(outcome.event.message?.richText).toBe(
+      `${phrase} https://evil.example/hide 短链`,
+    );
     expect(outcome.event.message?.hosts).toEqual(["evil.example", "bit.ly"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain(phrase);
@@ -14949,6 +14954,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(outcome.event.message?.text).toBe("免费领取 今天站会 skip");
+    expect(outcome.event.message?.richText).toBeUndefined();
     expect(outcome.event.message?.hosts).toEqual([
       "t.me",
       "example.com",
@@ -15177,13 +15183,14 @@ describe("normalizeUpdate", () => {
     }
     expect(beside.event.message?.text).toBe("今天站会");
     expect(beside.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(beside.event.message?.richText).toBe("https://t.me/+code95");
     expect(beside.event.message?.hosts).toEqual(["t.me"]);
     expect(beside.event.message?.invites).toEqual(["t.me"]);
     const besideDump = JSON.stringify(beside.event);
     expect(besideDump).not.toContain(emojiId);
-    expect(besideDump).not.toContain("code95");
     expect(besideDump).not.toContain("from95");
     expect(besideDump).not.toContain("keep-title");
+    expect(withoutButtonText(beside.event)).not.toContain("code95");
 
     const decoy = await normalize({
       update_id: 6412,
@@ -19505,6 +19512,7 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.richName).toBe(
       `https://bit.ly/doc75 https://ow.ly/song75 https://t.me/+${code}`,
     );
+    expect(outcome.event.message?.richText).toBe("附件说明");
     expect(outcome.event.message?.richName).not.toContain("附件说明");
     expect(outcome.event.message?.richName).not.toContain("pic75");
     expect(outcome.event.message?.richName).not.toContain("voice75");
@@ -19560,6 +19568,9 @@ describe("normalizeUpdate", () => {
     expect(outcome.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(outcome.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(outcome.event.message?.invites).toEqual(["t.me"]);
+    expect(outcome.event.message?.richText).toBe(
+      `https://bit.ly/lab76 内文说明 打开 https://t.me/+${code}`,
+    );
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("lab76");
     expect(dumped).not.toContain(code);
@@ -19590,6 +19601,7 @@ describe("normalizeUpdate", () => {
     }
     expect(asBody.event.message?.text).toBe(label);
     expect(asBody.event.message?.textSha256).toBe(await sha256Hex(label));
+    expect(asBody.event.message?.richText).toBeUndefined();
     expect(asBody.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
@@ -33396,6 +33408,71 @@ describe("normalizeUpdate", () => {
     }
     expect(asText.event.message?.text).toHaveLength(4096);
     expect(asText.event.message?.pollDescription).toBeUndefined();
+    expect(asText.event.message?.hosts).toEqual(["bit.ly"]);
+    const asTextDump = JSON.stringify(asText.event);
+    expect(asTextDump).not.toContain(tail);
+    expect(asTextDump).not.toContain(path);
+  });
+
+  it("keeps the first 4096 characters of rich message text", async () => {
+    const tail = "TAIL34";
+    const path = "rich34";
+    const labeled = await normalize({
+      update_id: 5901,
+      message: {
+        message_id: 5901,
+        date: 1761955200,
+        chat: { id: -1005901, type: "supergroup", title: "机密群名" },
+        from: { id: 93, first_name: "Ada" },
+        text: "今天站会",
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+            },
+          ],
+        },
+      },
+    });
+    expect(labeled.status).toBe("event");
+    if (labeled.status !== "event") {
+      return;
+    }
+    expect(labeled.event.message?.text).toBe("今天站会");
+    expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.richText).toHaveLength(4096);
+    expect(labeled.event.message?.richText).not.toContain(tail);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly"]);
+    const labeledDump = withoutButtonText(labeled.event);
+    expect(labeledDump).not.toContain(tail);
+    expect(labeledDump).not.toContain(path);
+    expect(labeledDump).not.toContain("Ada");
+
+    const asText = await normalize({
+      update_id: 5902,
+      message: {
+        message_id: 5902,
+        date: 1761955200,
+        chat: { id: -1005902, type: "supergroup" },
+        from: { id: 93 },
+        text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: `${"名".repeat(4096)}${tail} https://bit.ly/${path}`,
+            },
+          ],
+        },
+      },
+    });
+    expect(asText.status).toBe("event");
+    if (asText.status !== "event") {
+      return;
+    }
+    expect(asText.event.message?.text).toHaveLength(4096);
+    expect(asText.event.message?.richText).toBeUndefined();
     expect(asText.event.message?.hosts).toEqual(["bit.ly"]);
     const asTextDump = JSON.stringify(asText.event);
     expect(asTextDump).not.toContain(tail);

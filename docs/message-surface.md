@@ -195,3 +195,5 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 `poll.media`、`poll.explanation_media` 和 `poll.options[].media` 上的动图、视频、文件 `file_name`，音频的 `title`、`file_name`、`performer`，以及场馆的 `title`、`address`，去掉空白后用空格拼起来，前 4096 字另留在 `pollMedia`。关键词或默认正则命中时删除。第 4097 字起不进事件。照片、贴纸、位置、地点编号和文件编号不进这个字段。这一截和正文相同时不设这个字段。见 ADR 0562。
 
 已有别的正文时，`poll.description` 去掉空白后的前 1024 字另留在 `pollDescription`。关键词或默认正则命中时删除。第 1025 字起不进事件。投票人数、正确选项和添加者名字不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0563。
+
+已有别的正文时，富文本里看得见的字去掉空白后的前 4096 字另留在 `richText`。关键词或默认正则命中时删除。第 4097 字起不进事件。公式、语言标签、表情编号和隐藏标识不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0564。

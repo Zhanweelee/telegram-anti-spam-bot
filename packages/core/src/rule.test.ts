@@ -587,6 +587,22 @@ describe("rules", () => {
         serviceEvent({ pollDescription: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ richText: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { richText: true },
+        serviceEvent({ pollDescription: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen({ richText: true }, serviceEvent({ richText: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { pollDescription: true },
+        serviceEvent({ richText: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

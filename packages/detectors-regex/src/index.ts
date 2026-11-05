@@ -109,6 +109,7 @@ export function createRegexDetector(config: RegexConfig): Detector {
         ["richName", ctx.event.message?.richName],
         ["pollMedia", ctx.event.message?.pollMedia],
         ["pollDescription", ctx.event.message?.pollDescription],
+        ["richText", ctx.event.message?.richText],
         ["profile", ctx.event.profile?.text],
       ];
       const places: TextPlace[] = [];
