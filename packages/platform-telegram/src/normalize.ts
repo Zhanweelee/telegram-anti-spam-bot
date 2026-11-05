@@ -4537,6 +4537,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPinSenderUrls(message, urls);
   pushCreatedGroupSenderUrls(message, urls);
   pushCallSenderUrls(message, urls);
+  pushForumSenderUrls(message, urls);
   const webApp = message.web_app_data;
   if (isRecord(webApp)) {
     pushPlainUrls(webApp.data, urls);
@@ -4776,6 +4777,21 @@ function pushCallSenderUrls(
   urls: string[],
 ): void {
   if (callNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 关掉、重开、隐藏或重新显示话题的人只留主机名。
+ * 这四个对象本身没有字段，空对象也读。布尔值不读。
+ * 话题名、图标和话题号不读。用户名不读。普通消息的发送者不读。
+ */
+function pushForumSenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (forumService(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
