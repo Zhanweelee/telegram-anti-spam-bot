@@ -4566,6 +4566,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
       pushPlainUrls(community.name, urls);
     }
   }
+  pushCommunitySenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   return urls;
@@ -4856,6 +4857,22 @@ function pushBackgroundSenderUrls(
   urls: string[],
 ): void {
   if (backgroundNotice(message) === undefined) {
+    return;
+  }
+  pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 移入、加入或移出社区的人只留主机名。
+ * 移入和加入要有社区对象。移出只要是对象，空对象也读。
+ * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名。
+ * 社区编号和移出对象上的其它字段不读。用户名不读。
+ */
+function pushCommunitySenderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (communityNotice(message) === undefined) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
