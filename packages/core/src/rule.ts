@@ -27,6 +27,7 @@ export type RuleWhen =
   | { readonly quoteText: true }
   | { readonly giftText: true }
   | { readonly giftLabel: true }
+  | { readonly topicName: true }
   | { readonly all: readonly RuleWhen[] }
   | { readonly any: readonly RuleWhen[] }
   | { readonly not: RuleWhen };
@@ -57,6 +58,7 @@ export const ruleWhenSchema: z.ZodType<RuleWhen> = z.lazy(() =>
     z.strictObject({ quoteText: z.literal(true) }),
     z.strictObject({ giftText: z.literal(true) }),
     z.strictObject({ giftLabel: z.literal(true) }),
+    z.strictObject({ topicName: z.literal(true) }),
     z.strictObject({ all: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ any: z.array(ruleWhenSchema).min(1) }),
     z.strictObject({ not: ruleWhenSchema }),
@@ -180,6 +182,9 @@ export function matchesWhen(when: RuleWhen | undefined, event: Event): boolean {
   if ("giftLabel" in when) {
     return giftLabel(event);
   }
+  if ("topicName" in when) {
+    return topicName(event);
+  }
   if ("all" in when) {
     return when.all.every((item) => matchesWhen(item, event));
   }
@@ -207,6 +212,10 @@ function giftText(event: Event): boolean {
 
 function giftLabel(event: Event): boolean {
   return event.message?.giftLabel !== undefined;
+}
+
+function topicName(event: Event): boolean {
+  return event.message?.topicName !== undefined;
 }
 
 function invoiceTitle(event: Event): boolean {

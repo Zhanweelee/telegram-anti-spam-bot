@@ -17079,6 +17079,217 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(hidden.event)).not.toContain(phrase);
   });
 
+  it("deletes a forum topic name that matches beside another body", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const named = await normalizeUpdate({
+      update: {
+        update_id: 5771,
+        message: {
+          message_id: 5771,
+          date: 1761955200,
+          chat: { id: -1005771, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          text: "今天站会",
+          forum_topic_created: {
+            name: phrase,
+            icon_color: 9367192,
+            icon_custom_emoji_id: "TOPICEMOJI",
+            is_name_implicit: true,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(named.event.message?.topicName).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(named.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005771", messageId: "5771" },
+    ]);
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("TOPICEMOJI");
+    expect(namedDump).not.toContain("9367192");
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5772,
+        message: {
+          message_id: 5772,
+          date: 1761955200,
+          chat: { id: -1005772, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forum_topic_edited: {
+            name: `  ${label}  `,
+            icon_custom_emoji_id: "TOPICEMOJI",
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.topicName).toBe(label);
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("topic_name_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patterned.event)).not.toContain("TOPICEMOJI");
+
+    const same = await normalizeUpdate({
+      update: {
+        update_id: 5773,
+        message: {
+          message_id: 5773,
+          date: 1761955200,
+          chat: { id: -1005773, type: "supergroup" },
+          from: { id: 93 },
+          forum_topic_created: {
+            name: label,
+            icon_color: 9367192,
+            icon_custom_emoji_id: "TOPICEMOJI",
+            is_name_implicit: true,
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.text).toBe(label);
+    expect(same.event.message?.topicName).toBeUndefined();
+    const keptSame = await screenTelegramEvent(same.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptSame.decision.action).toBe("allow");
+    expect(JSON.stringify(keptSame)).not.toContain(label);
+    const sameDump = JSON.stringify(same.event);
+    expect(sameDump).not.toContain("TOPICEMOJI");
+    expect(sameDump).not.toContain("9367192");
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5774,
+        message: {
+          message_id: 5774,
+          date: 1761955200,
+          chat: { id: -1005774, type: "supergroup" },
+          from: { id: 93 },
+          text: label,
+          forum_topic_created: { name: "今天站会", icon_color: 1 },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.topicName).toBe("今天站会");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const later = await normalizeUpdate({
+      update: {
+        update_id: 5775,
+        message: {
+          message_id: 5775,
+          date: 1761955200,
+          chat: { id: -1005775, type: "supergroup" },
+          from: { id: 93 },
+          forum_topic_created: {
+            name: "今天站会",
+            icon_custom_emoji_id: "TOPICEMOJI",
+          },
+          forum_topic_edited: { name: phrase },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.text).toBe("今天站会");
+    expect(later.event.message?.topicName).toBe(phrase);
+    const laterResult = await screenTelegramEvent(later.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(laterResult.decision.action).toBe("delete");
+    expect(laterResult.decision.ruleIds).toContain("spam_keywords");
+    expect(JSON.stringify(laterResult)).not.toContain(phrase);
+    expect(JSON.stringify(later.event)).not.toContain("TOPICEMOJI");
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 5776,
+        message: {
+          message_id: 5776,
+          date: 1761955200,
+          chat: { id: -1005776, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          forum_topic_created: { name: "   ", icon_color: 9367192 },
+          forum_topic_edited: { name: "   " },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.topicName).toBeUndefined();
+    const keptBlank = await screenTelegramEvent(blank.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBlank.decision.action).toBe("allow");
+    expect(JSON.stringify(blank.event)).not.toContain("9367192");
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,
