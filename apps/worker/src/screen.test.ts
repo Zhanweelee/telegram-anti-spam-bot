@@ -21070,6 +21070,262 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(buttons.event)).not.toContain("cbsecretonly");
   });
 
+  it("deletes a rich button label that matches beside a paragraph", async () => {
+    const phrase = "请免费领取礼品";
+    const label = "加微x";
+    const named = await normalizeUpdate({
+      update: {
+        update_id: 5903,
+        message: {
+          message_id: 5903,
+          date: 1761955200,
+          chat: { id: -1005903, type: "supergroup", title: "机密群名" },
+          from: { id: 93, first_name: "Ada" },
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "今天站会" },
+              {
+                type: "buttons",
+                buttons: [{ text: phrase }],
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("今天站会");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(named.event.message?.richText).toBeUndefined();
+    expect(named.event.message?.richButton).toBe(phrase);
+    const logger = createMemoryLogger();
+    const moderator = createMemoryModerator();
+    const result = await screenTelegramEvent(named.event, {
+      logger,
+      moderator,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.reasons).toContain("keyword_match");
+    expect(result.decision.ruleIds).toContain("spam_keywords");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005903", messageId: "5903" },
+    ]);
+    expect(JSON.stringify({ result, logs: logger.entries })).not.toContain(
+      phrase,
+    );
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain("Ada");
+    expect(namedDump).not.toContain("机密群名");
+
+    const patterned = await normalizeUpdate({
+      update: {
+        update_id: 5904,
+        message: {
+          message_id: 5904,
+          date: 1761955200,
+          chat: { id: -1005904, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "今天站会" },
+              {
+                type: "list",
+                items: [
+                  {
+                    blocks: [
+                      {
+                        type: "buttons",
+                        buttons: [
+                          {
+                            text: `  ${label}  `,
+                            copy_text: { text: "机密句子" },
+                            callback_data: "cbsecretonly",
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(patterned.status).toBe("event");
+    if (patterned.status !== "event") {
+      return;
+    }
+    expect(patterned.event.message?.richButton).toBe(label);
+    const patternResult = await screenTelegramEvent(patterned.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(patternResult.decision.action).toBe("delete");
+    expect(patternResult.decision.ruleIds).toContain("rich_button_regex");
+    expect(patternResult.decision.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(JSON.stringify(patternResult)).not.toContain(label);
+    expect(JSON.stringify(patterned.event)).not.toContain("Ada");
+    expect(JSON.stringify(patterned.event)).not.toContain("机密句子");
+    expect(JSON.stringify(patterned.event)).not.toContain("cbsecretonly");
+
+    const bodyHit = await normalizeUpdate({
+      update: {
+        update_id: 5905,
+        message: {
+          message_id: 5905,
+          date: 1761955200,
+          chat: { id: -1005905, type: "supergroup" },
+          from: { id: 93 },
+          text: label,
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "今天站会" },
+              { type: "buttons", buttons: [{ text: "打开" }] },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(bodyHit.status).toBe("event");
+    if (bodyHit.status !== "event") {
+      return;
+    }
+    expect(bodyHit.event.message?.text).toBe(label);
+    expect(bodyHit.event.message?.richText).toBe("今天站会");
+    expect(bodyHit.event.message?.richButton).toBe("打开");
+    const keptBody = await screenTelegramEvent(bodyHit.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBody.decision.action).toBe("allow");
+    expect(keptBody.decision.ruleIds).not.toContain("rich_button_regex");
+    expect(JSON.stringify(keptBody)).not.toContain(label);
+
+    const blank = await normalizeUpdate({
+      update: {
+        update_id: 5906,
+        message: {
+          message_id: 5906,
+          date: 1761955200,
+          chat: { id: -1005906, type: "supergroup" },
+          from: { id: 93 },
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "今天站会" },
+              {
+                type: "buttons",
+                buttons: [
+                  {
+                    text: "   ",
+                    copy_text: { text: phrase },
+                    callback_data: "cbblankonly",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.richButton).toBeUndefined();
+    const keptBlank = await screenTelegramEvent(blank.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(keptBlank.decision.action).toBe("allow");
+    expect(JSON.stringify(blank.event)).not.toContain(phrase);
+    expect(JSON.stringify(blank.event)).not.toContain("cbblankonly");
+
+    const written = await normalizeUpdate({
+      update: {
+        update_id: 5907,
+        message: {
+          message_id: 5907,
+          date: 1761955200,
+          chat: { id: -1005907, type: "supergroup" },
+          from: { id: 93, first_name: "Ada" },
+          rich_message: {
+            blocks: [
+              { type: "buttons", buttons: [{ text: phrase }] },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(written.status).toBe("event");
+    if (written.status !== "event") {
+      return;
+    }
+    expect(written.event.message?.text).toBe(phrase);
+    expect(written.event.message?.richText).toBeUndefined();
+    expect(written.event.message?.richButton).toBeUndefined();
+    const writtenResult = await screenTelegramEvent(written.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(writtenResult.decision.action).toBe("delete");
+    expect(writtenResult.decision.ruleIds).toContain("spam_keywords");
+    expect(writtenResult.decision.ruleIds).not.toContain("rich_button_regex");
+    expect(JSON.stringify(writtenResult)).not.toContain(phrase);
+    expect(JSON.stringify(written.event)).not.toContain("Ada");
+
+    const onlyButtons = await normalizeUpdate({
+      update: {
+        update_id: 5908,
+        message: {
+          message_id: 5908,
+          date: 1761955200,
+          chat: { id: -1005908, type: "supergroup" },
+          from: { id: 93 },
+          text: "今天站会",
+          rich_message: {
+            blocks: [
+              { type: "buttons", buttons: [{ text: label }] },
+            ],
+          },
+        },
+      },
+      tenantId: "local",
+      adminUserIds: [],
+      nowIso: "2026-11-01T00:00:00.000Z",
+    });
+    expect(onlyButtons.status).toBe("event");
+    if (onlyButtons.status !== "event") {
+      return;
+    }
+    expect(onlyButtons.event.message?.text).toBe("今天站会");
+    expect(onlyButtons.event.message?.richText).toBe(label);
+    expect(onlyButtons.event.message?.richButton).toBeUndefined();
+    const onlyResult = await screenTelegramEvent(onlyButtons.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(onlyResult.decision.action).toBe("delete");
+    expect(onlyResult.decision.ruleIds).toContain("rich_text_regex");
+    expect(onlyResult.decision.ruleIds).not.toContain("rich_button_regex");
+    expect(JSON.stringify(onlyResult)).not.toContain(label);
+  });
+
   it("deletes a video chat invite whose visible name carries a short link", async () => {
     const screenInvite = async (
       updateId: number,

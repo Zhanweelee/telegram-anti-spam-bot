@@ -603,6 +603,16 @@ describe("rules", () => {
         serviceEvent({ richText: "加微x" }),
       ),
     ).toBe(false);
+    expect(matchesWhen({ richButton: true }, event)).toBe(false);
+    expect(
+      matchesWhen({ richButton: true }, serviceEvent({ richText: "加微x" })),
+    ).toBe(false);
+    expect(
+      matchesWhen({ richButton: true }, serviceEvent({ richButton: "加微x" })),
+    ).toBe(true);
+    expect(
+      matchesWhen({ richText: true }, serviceEvent({ richButton: "加微x" })),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

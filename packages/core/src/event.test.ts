@@ -579,6 +579,7 @@ describe("event schema", () => {
         pollMedia: "投票媒体",
         pollDescription: "投票描述",
         richText: "富文本段落",
+        richButton: "富文本按钮",
       },
     });
     expect(played.message?.gameText).toBe("加微x");
@@ -610,6 +611,7 @@ describe("event schema", () => {
     expect(played.message?.pollMedia).toBe("投票媒体");
     expect(played.message?.pollDescription).toBe("投票描述");
     expect(played.message?.richText).toBe("富文本段落");
+    expect(played.message?.richButton).toBe("富文本按钮");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -1183,6 +1185,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           richText: "a".repeat(4097),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          richButton: "a".repeat(4097),
         },
       }),
     ).toThrow();
