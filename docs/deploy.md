@@ -299,6 +299,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> media_spoiler on` 删这个群里盖着剧透的媒体。默认关闭。文件号不进证据。说明仍参与关键词。没有剧透的照片和视频仍留下。见 ADR 0500。
 
+`/rule <chatId> message_effect on` 删这个群里带消息特效的消息。默认关闭。特效编号不进证据。正文仍参与关键词。没有特效的消息仍留下。见 ADR 0576。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。

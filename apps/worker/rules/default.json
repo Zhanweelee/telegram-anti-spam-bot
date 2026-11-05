@@ -395,6 +395,14 @@
       "actions": ["delete"]
     },
     {
+      "id": "message_effect",
+      "enabled": false,
+      "when": { "eventKind": "message" },
+      "detectorIds": ["message_effect"],
+      "threshold": 1,
+      "actions": ["delete"]
+    },
+    {
       "id": "rich_phone",
       "enabled": false,
       "when": { "eventKind": "message" },

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "message_effect_spam",
+    "kind": "message",
+    "label": "spam",
+    "asEffect": true
+  },
+  {
+    "id": "message_effect_plain",
+    "kind": "message",
+    "label": "ham"
+  },
+  {
+    "id": "message_effect_join",
+    "kind": "chat_member",
+    "label": "ham"
+  }
+]

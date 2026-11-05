@@ -1,0 +1,5 @@
+{
+  "detector": "message_effect",
+  "precision": 1,
+  "recall": 1
+}

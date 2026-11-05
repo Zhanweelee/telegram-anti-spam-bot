@@ -4160,6 +4160,181 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain("机密群名");
   });
 
+  it("deletes a message effect when that chat asks", async () => {
+    const effectId = "fx5982secret";
+    async function posted(input: {
+      updateId: number;
+      chatId: number;
+      effect?: unknown;
+      nested?: boolean;
+      paid?: boolean;
+    }) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: input.updateId,
+          message: {
+            message_id: input.updateId,
+            date: 1761955200,
+            chat: {
+              id: input.chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(input.paid ? { is_paid_post: true } : {}),
+            text: "今天站会",
+            ...(input.effect === undefined
+              ? {}
+              : { effect_id: input.effect }),
+            ...(input.nested
+              ? {
+                  reply_to_message: {
+                    message_id: input.updateId + 1,
+                    date: 1761955200,
+                    chat: { id: input.chatId, type: "supergroup" },
+                    effect_id: "fx5987nested",
+                    text: "原消息特效",
+                  },
+                }
+              : {}),
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "message_effect",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["message_effect"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    const idle = await posted({
+      updateId: 5982,
+      chatId: -1005982,
+      effect: effectId,
+    });
+    expect(idle.message?.asEffect).toBe(true);
+    expect(idle.message?.text).toBe("今天站会");
+    expect(JSON.stringify(idle)).not.toContain(effectId);
+    const allowed = await screenTelegramEvent(idle, {
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(allowed.decision.action).toBe("allow");
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(
+      await posted({
+        updateId: 5983,
+        chatId: -1005983,
+        effect: effectId,
+      }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator,
+      },
+    );
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("message_effect");
+    expect(removed.decision.ruleIds).toContain("message_effect");
+    expect(removed.decision.evidence).toEqual([
+      { kind: "feature", summary: "effect:message" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1005983", messageId: "5983" },
+    ]);
+    const blank = await screenTelegramEvent(
+      await posted({
+        updateId: 5984,
+        chatId: -1005984,
+        effect: "   ",
+      }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(blank.decision.action).toBe("allow");
+    const flag = await posted({
+      updateId: 5985,
+      chatId: -1005985,
+      effect: true,
+    });
+    expect(flag.message?.asEffect).toBeUndefined();
+    const nested = await posted({
+      updateId: 5986,
+      chatId: -1005986,
+      nested: true,
+    });
+    expect(nested.message?.asEffect).toBeUndefined();
+    expect(JSON.stringify(nested)).not.toContain("fx5987nested");
+    const plain = await screenTelegramEvent(
+      await posted({ updateId: 5987, chatId: -1005987 }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: createMemoryModerator(),
+      },
+    );
+    expect(plain.decision.action).toBe("allow");
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(
+      await posted({
+        updateId: 5988,
+        chatId: -1005988,
+        effect: effectId,
+        paid: true,
+      }),
+      {
+        source: rule(),
+        cache: createMemoryCache(),
+        rateWindow: createMemoryRateWindow(),
+        moderator: paidModerator,
+      },
+    );
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    const dumped = JSON.stringify({
+      removed: removed.decision,
+      skipped: skipped.decision,
+    });
+    expect(dumped).not.toContain(effectId);
+    expect(dumped).not.toContain("Ada");
+    expect(dumped).not.toContain("机密群名");
+  });
+
   it("keeps other scripts until a chat locks that one", async () => {
     const arabic = "اشتر الآن مجانا اليوم";
     const cyrillic = "Бесплатно получите подарок";

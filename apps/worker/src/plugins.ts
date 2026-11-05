@@ -349,6 +349,12 @@ export const builtinManifests = {
     integrity:
       "d0cfd88bf2fe25574ba3d3e57e41ca9132bdc33717ac725d6def44d11275a629",
   }),
+  messageEffect: manifest({
+    id: "message_effect",
+    kind: "detector",
+    integrity:
+      "ef0745afdcdd0b4533bcbff7ce5dcade1ce71f0d7b7d0451e44dc45fe04787ba",
+  }),
   richPhone: manifest({
     id: "rich_phone",
     kind: "detector",

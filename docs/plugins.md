@@ -181,6 +181,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `media_spoiler` 在 `packages/detectors-spoiler`。只在 `message.asSpoiler` 为 true 时返回 score 1。证据是 `media:spoiler`。文件号不进证据。说明仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种媒体。贴纸、动图、语音、视频留言和骰子仍由各自的规则决定。见 ADR 0500。
 
+`message_effect` 在 `packages/detectors-effect`。只在 `message.asEffect` 为 true 时返回 score 1。证据是 `effect:message`。特效编号不进证据。正文仍是这条消息自己的文字。规则默认关闭。私聊 `/rule` 打开后删除这种消息。见 ADR 0576。
+
 `rich_phone` 和 `rich_card` 在 `packages/detectors-rich`。只在对应标记为 true 时返回 score 1。证据是 `rich:phone` 或 `rich:card`。号码不进证据。看得见的字仍是正文。两条规则默认关闭。私聊 `/rule` 打开后只删除这一种。见 ADR 0501。
 
 `rich_email` 也在 `packages/detectors-rich`。只在 `message.asRichEmail` 为 true 时返回 score 1。证据是 `rich:email`。地址不进证据。看得见的字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。电话和银行卡仍由各自的规则决定。见 ADR 0502。
