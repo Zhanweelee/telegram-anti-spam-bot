@@ -579,7 +579,7 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   return false;
 }
 
-/** 清单任务上的按标识提及。投票选项和手动引用不读。 */
+/** 清单任务上的实体列表。投票选项和手动引用不读。 */
 function pushTaskMentionLists(tasks: unknown, lists: unknown[]): void {
   if (!Array.isArray(tasks)) {
     return;
@@ -618,6 +618,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
         }
       }
     }
+  }
+  const addedTasks = message.checklist_tasks_added;
+  if (isRecord(addedTasks)) {
+    pushTaskMentionLists(addedTasks.tasks, lists);
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];

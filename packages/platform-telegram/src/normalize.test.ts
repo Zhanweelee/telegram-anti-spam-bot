@@ -23806,6 +23806,64 @@ describe("normalizeUpdate", () => {
     expect(task.event.message?.asCustomEmoji).toBe(true);
     expect(JSON.stringify(task.event)).not.toContain("90246");
 
+    const added = await normalize({
+      update_id: 4912,
+      message: {
+        message_id: 952,
+        date: 1761955200,
+        chat: { id: -100499912, type: "supergroup" },
+        from: { id: 124 },
+        checklist_tasks_added: {
+          checklist_message: {
+            text: "原清单留下",
+            checklist: {
+              title: "原清单留下",
+              tasks: [
+                {
+                  id: 1,
+                  text: "旧任务表情",
+                  text_entities: [
+                    {
+                      type: "custom_emoji",
+                      offset: 0,
+                      length: 2,
+                      custom_emoji_id: "emoji90255",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+          tasks: [
+            {
+              id: 88090254,
+              text: "新任务表情",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji90254",
+                },
+              ],
+              completed_by_user: { id: 90254, first_name: "完90254" },
+            },
+          ],
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("新任务表情");
+    expect(added.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(added.event)).not.toContain("emoji90254");
+    expect(JSON.stringify(added.event)).not.toContain("90254");
+    expect(JSON.stringify(added.event)).not.toContain("emoji90255");
+    expect(JSON.stringify(added.event)).not.toContain("完90254");
+    expect(JSON.stringify(added.event)).not.toContain("88090254");
+
     const quoted = await normalize({
       update_id: 4902,
       message: {
