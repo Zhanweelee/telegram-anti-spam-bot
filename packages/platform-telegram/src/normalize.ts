@@ -4687,8 +4687,25 @@ function pushVisiblePartyUrls(
 }
 
 /**
+ * 已知用户转发抬头画出的全名。名和姓都去掉两端空白。
+ * 名为空时只画姓。空格不截断。用户名不读。
+ */
+function pushForwardUserUrls(user: unknown, urls: string[]): void {
+  if (!isRecord(user)) {
+    return;
+  }
+  const parts: string[] = [];
+  pushTrimmed(user.first_name, parts);
+  pushTrimmed(user.last_name, parts);
+  if (parts.length === 0) {
+    return;
+  }
+  pushPlainUrls(parts.join(" "), urls);
+}
+
+/**
  * 已知用户和群的转发抬头只留主机名。
- * 现代来源优先。隐藏显示名旁边的真实姓名不读。
+ * 已知用户画全名。现代来源优先。隐藏显示名旁边的真实姓名不读。
  * 成员转发的频道标题和来源签名只留主机名。群来源签名只留主机名。外部回复不读。
  */
 function pushForwardPartyUrls(
@@ -4698,7 +4715,7 @@ function pushForwardPartyUrls(
   const origin = message.forward_origin;
   if (isRecord(origin)) {
     if (origin.type === "user") {
-      pushVisiblePartyUrls(origin.sender_user, undefined, urls);
+      pushForwardUserUrls(origin.sender_user, urls);
     } else if (origin.type === "chat") {
       pushVisiblePartyUrls(undefined, origin.sender_chat, urls);
       pushChatOriginSignature(origin.author_signature, urls);
@@ -4715,7 +4732,7 @@ function pushForwardPartyUrls(
     return;
   }
   if (isRecord(message.forward_from)) {
-    pushVisiblePartyUrls(message.forward_from, undefined, urls);
+    pushForwardUserUrls(message.forward_from, urls);
     return;
   }
   const chat = message.forward_from_chat;
