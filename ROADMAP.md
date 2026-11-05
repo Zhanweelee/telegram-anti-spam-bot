@@ -645,6 +645,10 @@
 
 验收：`t.me/用户名/数字`、`telegram.me/用户名/数字`、`telegram.dog/用户名/数字`、`用户名.t.me` 和 `用户名.t.me/数字` 的 `text` 是裸 IP、短链或邀请时删除这条消息。证据只有主机名。用户名、数字和路径不进证据。`example.com` 保留。讨论串、小程序路径、Passport、保留子域、单字母子域和其它网站的 `text` 不读。用户名后一段应用名后来由 P3-113 读取。子域上的应用名仍不读。再套一层仍放行。`text` 里的关键词不命中。默认名单仍是 ADR 0026。
 
+### P3-540 后加清单任务上的自定义表情也走 custom_emoji — done
+
+验收：`checklist_tasks_added.tasks` 的 `text_entities` 里，`type` 正好是 `custom_emoji` 且 `custom_emoji_id` 去掉空白后非空时，消息带 `asCustomEmoji`。私聊 `/rule <chatId> custom_emoji on` 之后删除这种后加任务，证据是 `entity:custom_emoji`。规则仍默认关闭，关闭时留下。空白、布尔值和缺编号不带。编号、任务编号和完成者名字不进事件，也不进证据。嵌套的 `checklist_message` 不读。任务看得见的字仍留在原来的字段。正文和哈希不变。付费帖仍不删除。不新增规则，不新增命令。菜单仍是 99 条。不改 ADR 0026 的基础检测器名单。30 天保留期不动。
+
 ### P3-539 投票描述上的自定义表情也走 custom_emoji — done
 
 验收：`poll.description_entities` 里，`type` 正好是 `custom_emoji` 且 `custom_emoji_id` 去掉空白后非空时，消息带 `asCustomEmoji`。私聊 `/rule <chatId> custom_emoji on` 之后删除这种描述，证据是 `entity:custom_emoji`。规则仍默认关闭，关闭时留下。空白、布尔值和缺编号不带。编号不进事件，也不进证据。描述看得见的字仍留在 `pollDescription`。题干仍是正文，哈希不变。付费帖仍不删除。不新增规则，不新增命令。菜单仍是 99 条。不改 ADR 0026 的基础检测器名单。30 天保留期不动。
@@ -2392,6 +2396,12 @@
 验收：README 的「30 秒」只留入口，字段清单在 `docs/message-surface.md`。`docs/deploy.md` 的确认步骤与 ADR 0020 一致：配了 token 就调用 Telegram 的删除、禁言或封禁。webhook 示例同样指向这份清单，并写明配了 `TELEGRAM_BOT_TOKEN` 才会请求删除、禁言或封禁。架构说明和插件说明不再复述字段清单。`pnpm check` 会卡住这些页面再变长或写回旧句子。
 
 ## Retro
+
+### 2026-11-05 P3-540
+
+- 做了什么：后加清单任务上的自定义表情也交给已经存在的 `custom_emoji`。打开后删除，默认仍留下。
+- 学到什么：新任务是另一条服务消息，原清单上的表情不会跟着嵌套再标一次。完成者名字仍留在事件外面。
+- 下一步：P3-01 仍按非目标后置。S0-02 在同意保存原文之前不能收集。支付要另一次明确决定。云额度的基础检测器名单仍按 ADR 0026。额度计数仍在内存。30 天清理仍要先问。
 
 ### 2026-11-05 P3-539
 

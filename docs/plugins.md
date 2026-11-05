@@ -219,6 +219,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 投票描述上的自定义表情也让 `asCustomEmoji` 为 true。编号不进证据。见 ADR 0571。
 
+后加清单任务上的自定义表情也让 `asCustomEmoji` 为 true。完成者名字不进证据。见 ADR 0572。
+
 `copy_text` 在 `packages/detectors-copy`。只在 `message.asCopyText` 为 true 时返回 score 1。证据是 `button:copy_text`。复制句子不进证据。看得见的按钮文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。自定义表情仍由 `custom_emoji` 决定。见 ADR 0516。
 
 `switch_query` 在 `packages/detectors-query`。只在 `message.asSwitchQuery` 为 true 时返回 score 1。证据是 `button:switch_query`。查询不进证据。看得见的按钮文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种正文。复制按钮仍由 `copy_text` 决定。见 ADR 0517。
