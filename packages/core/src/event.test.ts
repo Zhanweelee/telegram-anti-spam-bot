@@ -509,6 +509,21 @@ describe("event schema", () => {
       },
     });
     expect(tasked.message?.checklistTask).toBe("加微x");
+    const named = parseEvent({
+      id: "evt_1",
+      tenantId: "tenant_1",
+      chatId: "chat_1",
+      kind: "message",
+      occurredAt: "2026-11-01T00:00:00Z",
+      actor: { id: "user_1", isAdmin: false },
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: "ab".repeat(32),
+        mediaName: "加微x",
+      },
+    });
+    expect(named.message?.mediaName).toBe("加微x");
     expect(() =>
       parseEvent({
         id: "evt_1",
@@ -586,6 +601,22 @@ describe("event schema", () => {
           text: "今天站会",
           textSha256: "ab".repeat(32),
           checklistTask: "a".repeat(3030),
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      parseEvent({
+        id: "evt_1",
+        tenantId: "tenant_1",
+        chatId: "chat_1",
+        kind: "message",
+        occurredAt: "2026-11-01T00:00:00Z",
+        actor: { id: "user_1", isAdmin: false },
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: "ab".repeat(32),
+          mediaName: "a".repeat(4097),
         },
       }),
     ).toThrow();

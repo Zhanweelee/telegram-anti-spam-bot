@@ -1150,6 +1150,114 @@ describe("runPipeline", () => {
     expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
   });
 
+  it("redacts a media name copied into evidence", async () => {
+    const label = "请免费领取礼品";
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "今天站会",
+          textSha256: HASH,
+          mediaName: label,
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "media_name_regex",
+            enabled: true,
+            when: { mediaName: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: [label],
+          evidence: [{ kind: "feature", summary: label }],
+          places: ["mediaName"],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("delete");
+    expect(result.decision.evidence).toEqual([
+      { kind: "feature", summary: "redacted" },
+    ]);
+    expect(result.decision.ruleIds).toEqual(["media_name_regex"]);
+    expect(JSON.stringify(kit.records)).not.toContain(label);
+    expect(JSON.stringify(kit.logger.entries)).not.toContain(label);
+    expect(JSON.stringify(result)).not.toContain(label);
+  });
+
+  it("ignores a regex hit that missed the media name", async () => {
+    const kit = harness();
+    const result = await runPipeline({
+      event: event({
+        message: {
+          id: "msg_1",
+          text: "加微x",
+          textSha256: HASH,
+          mediaName: "你好",
+        },
+      }),
+      rules: parseRuleSet({
+        version: 1,
+        aggregate: "max",
+        rules: [
+          {
+            id: "media_name_regex",
+            enabled: true,
+            when: { mediaName: true },
+            detectorIds: ["regex"],
+            threshold: 1,
+            actions: ["delete"],
+          },
+        ],
+      }),
+      policy: { exemptAdmins: false, allowActorIds: [] },
+      detectors: [
+        detector("regex", async () => ({
+          detectorId: "regex",
+          score: 1,
+          reasons: ["regex_match"],
+          evidence: [{ kind: "feature", summary: "regex:hit" }],
+          places: ["message"],
+        })),
+      ],
+      actions: [
+        action("delete", async () => ({
+          actionId: "delete",
+          status: "executed",
+        })),
+      ],
+      storage: kit.storage,
+      moderator: kit.moderator,
+      logger: kit.logger,
+      clock: kit.clock,
+    });
+    expect(result.decision.action).toBe("allow");
+    expect(JSON.stringify(result)).not.toContain("加微x");
+    expect(JSON.stringify(kit.logger.entries)).not.toContain("加微x");
+  });
+
   it("picks the most severe action and reports a missing plugin", async () => {
     const kit = harness();
     const result = await runPipeline({

@@ -141,6 +141,7 @@ async function messageEvent(
   const sideMirror = besideMirrorSignature(message, text);
   const sidePoll = besidePollOption(message, text);
   const sideTasks = besideChecklistTask(message, text);
+  const sideMedia = besideMediaName(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -209,6 +210,7 @@ async function messageEvent(
       ...(sideMirror.length > 0 ? { mirrorSignature: sideMirror } : {}),
       ...(sidePoll.length > 0 ? { pollOption: sidePoll } : {}),
       ...(sideTasks.length > 0 ? { checklistTask: sideTasks } : {}),
+      ...(sideMedia.length > 0 ? { mediaName: sideMedia } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6643,6 +6645,19 @@ function besideAuthorSignature(
     return "";
   }
   return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，文件名或音频标题另留最多 4096 字。这段名称自己就是正文时不重复。 */
+function besideMediaName(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = mediaLabel(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, MAX_TEXT);
 }
 
 /** 已有别的正文时，清单任务另留最多 3029 字。任务自己就是正文时不重复。 */
