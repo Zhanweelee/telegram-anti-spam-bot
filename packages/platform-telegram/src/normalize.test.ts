@@ -16803,7 +16803,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(winners.event.message?.text).toBe("今天站会");
-    expect(winners.event.message?.hosts).toEqual(["203.0.113.9"]);
+    expect(winners.event.message?.hosts).toEqual([
+      "203.0.113.9",
+      "tinyurl.com",
+    ]);
     const winnersDump = JSON.stringify(winners.event);
     expect(winnersDump).not.toContain("path101");
     expect(winnersDump).not.toContain("win101");
