@@ -5258,8 +5258,10 @@ function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
 /**
  * 联系人卡片上的 URL 行、可见名字和公司名只留主机名。
  * 名的长度大于 0 时不读姓。空白也算有名。
+ * 姓名去掉空白后都是空的，标题就是原始电话。
+ * 已有姓名且没有 vCard 时，只在电话会原样画出时才读。
  * 公司名是气泡副标题里最后一条以 ORG 开头的值。
- * 电话、用户编号、邮箱、职务和备注不读。名字不进正文。
+ * 用户编号、邮箱、职务和备注不读。名字和电话不进正文。
  */
 function pushContactUrls(
   message: Record<string, unknown>,
@@ -5275,9 +5277,53 @@ function pushContactUrls(
     }
   }
   pushVisiblePartyUrls(contact, undefined, urls);
+  pushPlainUrls(contactPhoneDrawn(contact), urls);
   if (typeof contact.vcard === "string") {
     pushPlainUrls(vcardCompany(contact.vcard), urls);
   }
+}
+
+/**
+ * 名片上会原样画出的电话。
+ * 姓名去掉两端空白后都是空的，标题就是这段原文。
+ * 已有姓名时，副标题先走电话格式化。去掉非电话字符后以加号开头、
+ * 后面没有数字，格式化才会退回原文。旁边有 vCard 时副标题改走 vCard。
+ */
+function contactPhoneDrawn(
+  contact: Record<string, unknown>,
+): string | undefined {
+  const phone = contact.phone_number;
+  if (typeof phone !== "string" || phone.length === 0) {
+    return undefined;
+  }
+  if (!trimmedName(contact.first_name) && !trimmedName(contact.last_name)) {
+    return phone;
+  }
+  if (typeof contact.vcard === "string" && contact.vcard.trim().length > 0) {
+    return undefined;
+  }
+  if (phoneFormatKeepsOriginal(phone)) {
+    return phone;
+  }
+  return undefined;
+}
+
+function trimmedName(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+/** 只保留 0-9、+、*、#。以加号开头且后面没有数字时，客户端退回原文。 */
+function phoneFormatKeepsOriginal(phone: string): boolean {
+  let stripped = "";
+  for (const char of phone) {
+    if ("0123456789+*#".includes(char)) {
+      stripped += char;
+    }
+  }
+  if (!stripped.startsWith("+")) {
+    return false;
+  }
+  return !/[0-9]/.test(stripped.slice(1));
 }
 
 /**

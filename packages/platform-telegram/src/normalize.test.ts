@@ -11090,6 +11090,178 @@ describe("normalizeUpdate", () => {
     expect(withoutButtonText(prefixed.event)).not.toContain("org124");
   });
 
+  it("keeps only the hostname from a contact phone used as the title", async () => {
+    const phone = "https://bit.ly/phone79113";
+    const userId = 88079113;
+    const outcome = await normalize({
+      update_id: 79113,
+      message: {
+        message_id: 79113,
+        date: 1761955200,
+        chat: { id: -100879113, type: "supergroup" },
+        from: { id: 79113 },
+        text: "你好",
+        contact: {
+          phone_number: phone,
+          first_name: " ",
+          last_name: "",
+          user_id: userId,
+        },
+      },
+    });
+    expect(outcome.status).toBe("event");
+    if (outcome.status !== "event") {
+      return;
+    }
+    expect(outcome.event.message?.contact).toBe(true);
+    expect(outcome.event.message?.text).toBe("你好");
+    expect(outcome.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(outcome.event.message?.invites).toBeUndefined();
+    const dumped = withoutButtonText(outcome.event);
+    expect(dumped).not.toContain("phone79113");
+    expect(dumped).not.toContain(String(userId));
+
+    const named = await normalize({
+      update_id: 79114,
+      message: {
+        message_id: 79114,
+        date: 1761955200,
+        chat: { id: -100879114, type: "supergroup" },
+        from: { id: 79114 },
+        contact: {
+          phone_number: "https://bit.ly/beside79114",
+          first_name: "名片",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(named.event)).not.toContain("beside79114");
+
+    const plus = await normalize({
+      update_id: 79115,
+      message: {
+        message_id: 79115,
+        date: 1761955200,
+        chat: { id: -100879115, type: "supergroup" },
+        from: { id: 79115 },
+        contact: {
+          phone_number: "+https://tinyurl.com/pluspath",
+          first_name: "名片",
+        },
+      },
+    });
+    expect(plus.status).toBe("event");
+    if (plus.status !== "event") {
+      return;
+    }
+    expect(plus.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(withoutButtonText(plus.event)).not.toContain("pluspath");
+
+    const digits = await normalize({
+      update_id: 79116,
+      message: {
+        message_id: 79116,
+        date: 1761955200,
+        chat: { id: -100879116, type: "supergroup" },
+        from: { id: 79116 },
+        contact: {
+          phone_number: "+1https://bit.ly/digit79116",
+          first_name: "名片",
+        },
+      },
+    });
+    expect(digits.status).toBe("event");
+    if (digits.status !== "event") {
+      return;
+    }
+    expect(digits.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(digits.event)).not.toContain("digit79116");
+
+    const covered = await normalize({
+      update_id: 79117,
+      message: {
+        message_id: 79117,
+        date: 1761955200,
+        chat: { id: -100879117, type: "supergroup" },
+        from: { id: 79117 },
+        contact: {
+          phone_number: "+https://bit.ly/hiddenpath",
+          first_name: "名片",
+          vcard: "BEGIN:VCARD\nORG:编辑\nEND:VCARD",
+        },
+      },
+    });
+    expect(covered.status).toBe("event");
+    if (covered.status !== "event") {
+      return;
+    }
+    expect(covered.event.message?.hosts).toBeUndefined();
+    expect(withoutButtonText(covered.event)).not.toContain("hiddenpath");
+
+    const ordered = await normalize({
+      update_id: 79118,
+      message: {
+        message_id: 79118,
+        date: 1761955200,
+        chat: { id: -100879118, type: "supergroup" },
+        from: { id: 79118 },
+        text: "你好",
+        contact: {
+          phone_number: "https://tinyurl.com/title79118",
+          vcard: [
+            "BEGIN:VCARD",
+            "URL:https://bit.ly/url79118",
+            "ORG:https://cutt.ly/job79118",
+            "END:VCARD",
+          ].join("\n"),
+        },
+      },
+    });
+    expect(ordered.status).toBe("event");
+    if (ordered.status !== "event") {
+      return;
+    }
+    expect(ordered.event.message?.textSha256).toBe(
+      outcome.event.message?.textSha256,
+    );
+    expect(ordered.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "cutt.ly",
+    ]);
+    const orderedDump = withoutButtonText(ordered.event);
+    expect(orderedDump).not.toContain("url79118");
+    expect(orderedDump).not.toContain("title79118");
+    expect(orderedDump).not.toContain("job79118");
+
+    const surname = await normalize({
+      update_id: 79119,
+      message: {
+        message_id: 79119,
+        date: 1761955200,
+        chat: { id: -100879119, type: "supergroup" },
+        from: { id: 79119 },
+        contact: {
+          phone_number: "https://bit.ly/phone79119",
+          first_name: "",
+          last_name: "https://tinyurl.com/last79119",
+        },
+      },
+    });
+    expect(surname.status).toBe("event");
+    if (surname.status !== "event") {
+      return;
+    }
+    expect(surname.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(withoutButtonText(surname.event)).not.toContain("phone79119");
+    expect(withoutButtonText(surname.event)).not.toContain("last79119");
+  });
+
   it("keeps an inline bot as a flag and drops its username", async () => {
     const name = "机密代发";
     const outcome = await normalize({
