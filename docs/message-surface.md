@@ -172,6 +172,8 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 名片副标题里会原样画出的电话和邮箱只留主机名。电话含 `#` 或 `*` 时用原文。其余电话和全部邮箱只在格式化退回原文时才读。不解开 `QUOTED-PRINTABLE`。没有 `END:VCARD` 时不读。这行排在公司名前面。原文不进正文。关键词不命中这些原文。见 ADR 0615。
 
+客座回复抬头上 bot 自己的短名只留主机名。有名时不读姓。从下标 2 起的第一个空格后面不画。没有客座召唤者时不读。短名不进正文。短名里的关键词不命中。召唤者的完整名仍排在后面。正文里已有短链时，证据仍先记正文的主机名。见 ADR 0616。
+
 `rich_message` 里 `type` 为 `phone_number` 且号码去掉空白后非空时，消息带 `asRichPhone`。`bank_card_number` 同样非空时带 `asRichCard`。空白和布尔值不带标记。号码不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 `rich_message` 里 `type` 为 `email_address` 且地址去掉空白后非空时，消息带 `asRichEmail`。空白和布尔值不带标记。地址不进事件。看得见的字仍是正文。已有正文时正文不变。规则 `rich_email` 默认关闭。见 ADR 0502。

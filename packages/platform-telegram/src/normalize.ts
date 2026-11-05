@@ -4604,6 +4604,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushTopicSenderUrls(message, urls);
   pushLeaveSenderUrls(message, urls);
   pushPlainUrls(storyPosterNames(message), urls);
+  pushPlainUrls(guestBotDrawnName(message), urls);
   pushPlainUrls(guestCallerLabel(message), urls);
   pushDirectTopicUrls(message, urls);
   return urls;
@@ -8603,6 +8604,36 @@ function giftPublisherNames(message: Record<string, unknown>): string {
     return "";
   }
   return parts.join(" ").slice(0, MAX_TEXT);
+}
+
+/**
+ * 客座回复抬头上 bot 自己的短名。有名时不读姓。
+ * 从下标 2 起的第一个空格后面不画。没有客座召唤者时不读。
+ */
+function guestBotDrawnName(message: Record<string, unknown>): string {
+  if (
+    (!isRecord(message.guest_bot_caller_user) &&
+      !isRecord(message.guest_bot_caller_chat)) ||
+    !isRecord(message.from)
+  ) {
+    return "";
+  }
+  const from = message.from;
+  let name = "";
+  if (typeof from.first_name === "string" && from.first_name.length > 0) {
+    name = from.first_name;
+  } else if (
+    (from.first_name === undefined || from.first_name === "") &&
+    typeof from.last_name === "string" &&
+    from.last_name.length > 0
+  ) {
+    name = from.last_name;
+  } else {
+    return "";
+  }
+  const split = name.indexOf(" ", 2);
+  const drawn = split >= 0 ? name.slice(0, split) : name;
+  return drawn.slice(0, MAX_TEXT);
 }
 
 /**
