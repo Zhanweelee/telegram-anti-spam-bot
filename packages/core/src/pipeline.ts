@@ -5,6 +5,7 @@ import {
   type DetectorHit,
   detectorHitSchema,
   moreSevere,
+  type TextPlace,
 } from "./decision.js";
 import { PipelineConfigError, RawContentError } from "./errors.js";
 import { type Event, parseEvent } from "./event.js";
@@ -28,6 +29,7 @@ import {
   matchesWhen,
   type Rule,
   type RuleSet,
+  type RuleWhen,
   ruleSetSchema,
 } from "./rule.js";
 import { withTimeout } from "./timeout.js";
@@ -162,8 +164,8 @@ export async function runPipeline(
 
   const fired: { rule: Rule; score: number }[] = [];
   for (const rule of activeRules) {
-    const scores = rule.detectorIds.map(
-      (detectorId) => hitsById.get(detectorId)?.score ?? 0,
+    const scores = rule.detectorIds.map((detectorId) =>
+      scoreFor(rule, hitsById.get(detectorId)),
     );
     const score = aggregateScores(rules.aggregate, scores);
     if (score >= rule.threshold) {
@@ -228,6 +230,36 @@ function assertUnique(
   if (new Set(ids).size !== ids.length) {
     throw new PipelineConfigError(code);
   }
+}
+
+function scoreFor(rule: Rule, hit: DetectorHit | undefined): number {
+  if (!hit) {
+    return 0;
+  }
+  const place = sideTextPlace(rule.when);
+  if (place !== undefined && hit.places !== undefined) {
+    return hit.places.includes(place) ? hit.score : 0;
+  }
+  return hit.score;
+}
+
+function sideTextPlace(when: RuleWhen | undefined): TextPlace | undefined {
+  if (!when) {
+    return undefined;
+  }
+  if ("senderTag" in when) {
+    return "senderTag";
+  }
+  if ("buttonText" in when) {
+    return "buttonText";
+  }
+  if ("authorSignature" in when) {
+    return "authorSignature";
+  }
+  if ("mirrorSignature" in when) {
+    return "mirrorSignature";
+  }
+  return undefined;
 }
 
 function uniqueIds(ids: readonly string[]): string[] {
@@ -340,6 +372,8 @@ function eventTexts(event: Event): readonly string[] {
   const profile = event.profile?.text;
   const tag = event.message?.senderTag;
   const buttons = event.message?.buttonText;
+  const signature = event.message?.authorSignature;
+  const mirror = event.message?.mirrorSignature;
   if (message && message.length > 0) {
     texts.push(message);
   }
@@ -350,11 +384,32 @@ function eventTexts(event: Event): readonly string[] {
     texts.push(buttons);
   }
   if (
+    signature &&
+    signature.length > 0 &&
+    signature !== message &&
+    signature !== tag &&
+    signature !== buttons
+  ) {
+    texts.push(signature);
+  }
+  if (
+    mirror &&
+    mirror.length > 0 &&
+    mirror !== message &&
+    mirror !== tag &&
+    mirror !== buttons &&
+    mirror !== signature
+  ) {
+    texts.push(mirror);
+  }
+  if (
     profile &&
     profile.length > 0 &&
     profile !== message &&
     profile !== tag &&
-    profile !== buttons
+    profile !== buttons &&
+    profile !== signature &&
+    profile !== mirror
   ) {
     texts.push(profile);
   }

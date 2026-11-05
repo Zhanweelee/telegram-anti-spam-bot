@@ -142,6 +142,41 @@ describe("regex detector", () => {
       { kind: "feature", summary: "regex:hit" },
     ]);
     expect(JSON.stringify(buttonHit)).not.toContain(name);
+    const signed = parseEvent({
+      ...messageEvent("今天站会"),
+      message: {
+        id: "msg_1",
+        text: "今天站会",
+        textSha256: HASH,
+        authorSignature: `打开 ${name}`,
+      },
+    });
+    const signatureHit = await detector.detect({
+      event: signed,
+      logger,
+      signal,
+    });
+    expect(signatureHit?.evidence).toEqual([
+      { kind: "feature", summary: "regex:hit" },
+    ]);
+    expect(signatureHit?.places).toEqual(["authorSignature"]);
+    expect(JSON.stringify(signatureHit)).not.toContain(name);
+    const bodyOnly = parseEvent({
+      ...messageEvent(name),
+      message: {
+        id: "msg_1",
+        text: name,
+        textSha256: HASH,
+        authorSignature: "你好",
+      },
+    });
+    const bodyHit = await detector.detect({
+      event: bodyOnly,
+      logger,
+      signal,
+    });
+    expect(bodyHit?.places).toEqual(["message"]);
+    expect(JSON.stringify(bodyHit)).not.toContain("你好");
   });
 
   it("accepts a short unquantified subset and rejects the rest", () => {

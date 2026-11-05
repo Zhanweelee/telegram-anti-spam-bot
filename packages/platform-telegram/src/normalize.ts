@@ -137,6 +137,8 @@ async function messageEvent(
   const text = messageText(message);
   const sideTag = besideSenderTag(message, text);
   const sideButtons = besideButtonText(message, text);
+  const sideSignature = besideAuthorSignature(message, text);
+  const sideMirror = besideMirrorSignature(message, text);
   const forward = forwardKind(message);
   const links = linkHosts(message);
   const media = await mediaMark(message);
@@ -201,6 +203,8 @@ async function messageEvent(
       textSha256: await sha256Hex(text),
       ...(sideTag.length > 0 ? { senderTag: sideTag } : {}),
       ...(sideButtons.length > 0 ? { buttonText: sideButtons } : {}),
+      ...(sideSignature.length > 0 ? { authorSignature: sideSignature } : {}),
+      ...(sideMirror.length > 0 ? { mirrorSignature: sideMirror } : {}),
       ...(ephemeralId !== null && audienceId !== null ? { audienceId } : {}),
       ...(forward ? { forward } : {}),
       ...(links.hosts.length > 0 ? { hosts: links.hosts } : {}),
@@ -6617,6 +6621,32 @@ function besideButtonText(
   text: string,
 ): string {
   const raw = buttonLabel(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，这条消息自己的作者签名另留最多 256 字。签名自己就是正文时不重复。 */
+function besideAuthorSignature(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = authorSignature(message);
+  const trimmed = raw.trim();
+  if (trimmed.length === 0 || text === raw) {
+    return "";
+  }
+  return trimmed.slice(0, 256);
+}
+
+/** 已有别的正文时，讨论组原帖来源上的作者签名另留最多 256 字。签名自己就是正文时不重复。 */
+function besideMirrorSignature(
+  message: Record<string, unknown>,
+  text: string,
+): string {
+  const raw = mirrorAuthorSignature(message);
   const trimmed = raw.trim();
   if (trimmed.length === 0 || text === raw) {
     return "";

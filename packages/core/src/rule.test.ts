@@ -95,6 +95,56 @@ describe("rules", () => {
     expect(
       matchesWhen({ senderTag: true }, serviceEvent({ buttonText: "加微x" })),
     ).toBe(false);
+    expect(matchesWhen({ authorSignature: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { authorSignature: true },
+        serviceEvent({ senderTag: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { authorSignature: true },
+        serviceEvent({ buttonText: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { authorSignature: true },
+        serviceEvent({ authorSignature: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { senderTag: true },
+        serviceEvent({ authorSignature: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { buttonText: true },
+        serviceEvent({ authorSignature: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(matchesWhen({ mirrorSignature: true }, event)).toBe(false);
+    expect(
+      matchesWhen(
+        { mirrorSignature: true },
+        serviceEvent({ authorSignature: "加微x" }),
+      ),
+    ).toBe(false);
+    expect(
+      matchesWhen(
+        { mirrorSignature: true },
+        serviceEvent({ mirrorSignature: "加微x" }),
+      ),
+    ).toBe(true);
+    expect(
+      matchesWhen(
+        { authorSignature: true },
+        serviceEvent({ mirrorSignature: "加微x" }),
+      ),
+    ).toBe(false);
   });
 
   it("aggregates empty, max, and sum", () => {

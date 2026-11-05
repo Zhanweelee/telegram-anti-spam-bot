@@ -33,7 +33,12 @@ function withoutButtonText(event: object): string {
   }
   return JSON.stringify({
     ...event,
-    message: { ...message, buttonText: undefined },
+    message: {
+      ...message,
+      buttonText: undefined,
+      authorSignature: undefined,
+      mirrorSignature: undefined,
+    },
   });
 }
 
@@ -18600,9 +18605,15 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
     expect(labeled.event.message?.forward).toBe("channel");
+    expect(labeled.event.message?.authorSignature).toBe(
+      `${phrase} https://bit.ly/sig68 https://t.me/+${code}.`,
+    );
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    const labeledDump = JSON.stringify({
+      ...labeled.event,
+      message: { ...labeled.event.message, authorSignature: undefined },
+    });
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("sig68");
@@ -18633,8 +18644,14 @@ describe("normalizeUpdate", () => {
     }
     expect(earlier.event.message?.text).toBe("会议录音");
     expect(earlier.event.message?.textSha256).toBe(await sha256Hex("会议录音"));
+    expect(earlier.event.message?.authorSignature).toBe(
+      `${phrase} https://example.com/page68`,
+    );
     expect(earlier.event.message?.hosts).toEqual(["example.com"]);
-    const earlierDump = JSON.stringify(earlier.event);
+    const earlierDump = JSON.stringify({
+      ...earlier.event,
+      message: { ...earlier.event.message, authorSignature: undefined },
+    });
     expect(earlierDump).not.toContain(phrase);
     expect(earlierDump).not.toContain("page68");
     expect(earlierDump).not.toContain("doc-191");
@@ -18664,8 +18681,51 @@ describe("normalizeUpdate", () => {
     }
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.authorSignature).toBeUndefined();
     expect(body.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(body.event)).not.toContain("ph-192");
+
+    const capped = "a".repeat(256);
+    const tail = await normalize({
+      update_id: 3913,
+      message: {
+        message_id: 193,
+        date: 1761955200,
+        chat: { id: -100923, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        author_signature: `  ${capped}TAIL56 https://bit.ly/tail56`,
+      },
+    });
+    expect(tail.status).toBe("event");
+    if (tail.status !== "event") {
+      return;
+    }
+    expect(tail.event.message?.text).toBe("今天站会");
+    expect(tail.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(tail.event.message?.authorSignature).toBe(capped);
+    expect(tail.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(tail.event)).not.toContain("TAIL56");
+    expect(JSON.stringify(tail.event)).not.toContain("tail56");
+
+    const spaced = await normalize({
+      update_id: 3914,
+      message: {
+        message_id: 194,
+        date: 1761955200,
+        chat: { id: -100924, type: "supergroup" },
+        from: { id: 9 },
+        text: "今天站会",
+        author_signature: "  加微x  ",
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("今天站会");
+    expect(spaced.event.message?.authorSignature).toBe("加微x");
+    expect(JSON.stringify(spaced.event)).not.toContain("  加微x  ");
   });
 
   it("keeps a tg deep link as an invite host", async () => {
@@ -29692,8 +29752,14 @@ describe("normalizeUpdate", () => {
     }
     expect(earlier.event.message?.text).toBe("今天站会");
     expect(earlier.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(earlier.event.message?.authorSignature).toBe(
+      "https://tinyurl.com/sig80",
+    );
     expect(earlier.event.message?.hosts).toEqual(["tinyurl.com", "is.gd"]);
-    const earlierDump = JSON.stringify(earlier.event);
+    const earlierDump = JSON.stringify({
+      ...earlier.event,
+      message: { ...earlier.event.message, authorSignature: undefined },
+    });
     expect(earlierDump).not.toContain("sig80");
     expect(earlierDump).not.toContain("tag80");
     expect(earlierDump).not.toContain("post80");
@@ -31905,9 +31971,15 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.forward).toBeUndefined();
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(labeled.event.message?.mirrorSignature).toBe(
+      `${phrase} https://bit.ly/sig93 https://t.me/+${code}.`,
+    );
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
-    const labeledDump = JSON.stringify(labeled.event);
+    const labeledDump = JSON.stringify({
+      ...labeled.event,
+      message: { ...labeled.event.message, mirrorSignature: undefined },
+    });
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("sig93");
@@ -31946,6 +32018,7 @@ describe("normalizeUpdate", () => {
     expect(body.event.message?.forward).toBeUndefined();
     expect(body.event.message?.text).toBe(asBody);
     expect(body.event.message?.textSha256).toBe(await sha256Hex(asBody));
+    expect(body.event.message?.mirrorSignature).toBeUndefined();
     expect(body.event.message?.hosts).toEqual(["cutt.ly"]);
     expect(JSON.stringify(body.event)).not.toContain(title);
     expect(JSON.stringify(body.event)).not.toContain("ph-4931");
@@ -31974,8 +32047,15 @@ describe("normalizeUpdate", () => {
     }
     expect(both.event.message?.text).toBe(own);
     expect(both.event.message?.textSha256).toBe(await sha256Hex(own));
+    expect(both.event.message?.authorSignature).toBeUndefined();
+    expect(both.event.message?.mirrorSignature).toBe(
+      "https://tinyurl.com/orig93",
+    );
     expect(both.event.message?.hosts).toEqual(["tinyurl.com"]);
-    const bothDump = JSON.stringify(both.event);
+    const bothDump = JSON.stringify({
+      ...both.event,
+      message: { ...both.event.message, mirrorSignature: undefined },
+    });
     expect(bothDump).not.toContain("orig93");
     expect(bothDump).not.toContain(title);
 
@@ -32083,9 +32163,14 @@ describe("normalizeUpdate", () => {
     expect(edited.event.edited).toBe(true);
     expect(edited.event.message?.forward).toBeUndefined();
     expect(edited.event.message?.text).toBe("今天站会");
+    expect(edited.event.message?.mirrorSignature).toBe("https://bit.ly/edit93");
     expect(edited.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(edited.event)).not.toContain("edit93");
-    expect(JSON.stringify(edited.event)).not.toContain(title);
+    const editedDump = JSON.stringify({
+      ...edited.event,
+      message: { ...edited.event.message, mirrorSignature: undefined },
+    });
+    expect(editedDump).not.toContain("edit93");
+    expect(editedDump).not.toContain(title);
   });
 
   it("keeps a numeric album id and leaves other group ids out", async () => {

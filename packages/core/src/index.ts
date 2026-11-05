@@ -56,6 +56,9 @@ export {
   detectorHitSchema,
   moreSevere,
   punitiveActions,
+  type TextPlace,
+  textPlaceSchema,
+  textPlaces,
 } from "./decision.js";
 export { PipelineConfigError, RawContentError } from "./errors.js";
 export {
