@@ -4954,9 +4954,10 @@ function pushPhotoSenderUrls(
 }
 
 /**
- * 改名的人只留主机名。
+ * 改名的人画出的全名只留主机名。
  * 新群名是非空字符串时读。空字符串不读。
- * 新群名本身仍只留主机名。本群群名不读。用户名不读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 新群名本身仍只留主机名，排在前面。本群群名不读。用户名不读。
  */
 function pushTitleSenderUrls(
   message: Record<string, unknown>,
@@ -4965,7 +4966,7 @@ function pushTitleSenderUrls(
   if (!renamedChat(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
