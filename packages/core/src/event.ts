@@ -70,6 +70,8 @@ export const messageSchema = z
     checklistTask: z.string().min(1).max(3029).optional(),
     /** Filename or audio title beside another body. Capped at 4096. Absent when it is the body. */
     mediaName: z.string().min(1).max(4096).optional(),
+    /** Audio performer beside another body. Capped at 4096. Absent when it is the body. */
+    performer: z.string().min(1).max(4096).optional(),
     /** Source class only. Titles and author names stay out. */
     forward: forwardKindSchema.optional(),
     /** Hostnames from hidden links. Paths and queries stay out. */
