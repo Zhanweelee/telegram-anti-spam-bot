@@ -4901,9 +4901,11 @@ function pushCallSenderUrls(
 }
 
 /**
- * 关掉、重开、隐藏或重新显示话题的人只留主机名。
+ * 关掉、重开、隐藏或重新显示话题的人画出的全名只留主机名。
+ * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 这四个对象本身没有字段，空对象也读。布尔值不读。
  * 话题名、图标和话题号不读。用户名不读。普通消息的发送者不读。
+ * 新建和改名仍按原来的名。
  */
 function pushForumSenderUrls(
   message: Record<string, unknown>,
@@ -4912,7 +4914,7 @@ function pushForumSenderUrls(
   if (forumService(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
