@@ -1191,6 +1191,15 @@ function giftRecord(value: unknown): boolean {
   return isRecord(value) && isRecord(value.gift);
 }
 
+/** 购买报价成交这行不画发送者。普通礼物同时出现时仍先认礼物卡片。 */
+function uniqueOffer(message: Record<string, unknown>): boolean {
+  if (giftRecord(message.gift)) {
+    return false;
+  }
+  const info = message.unique_gift;
+  return isRecord(info) && info.origin === "offer";
+}
+
 function backgroundNotice(
   message: Record<string, unknown>,
 ): "wallpaper" | "pattern" | "fill" | "theme" | undefined {
@@ -5358,6 +5367,8 @@ function pushJoinSenderUrls(
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
  * 频道、群和超级群都一样。编号和本群相同时也读。用户仍按全名。
+ * 购买报价成交不画人。`origin` 正好是 `offer` 时不读 `from`，也不读标题。
+ * 别的聊天的标题仍由通用代发规则读取。转账、转售和升级仍读发送者。
  * 空的外层对象、布尔值和只有附言的对象不读。
  * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
  */
@@ -5365,7 +5376,7 @@ function pushGiftSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (giftNotice(message) === undefined) {
+  if (giftNotice(message) === undefined || uniqueOffer(message)) {
     return;
   }
   const sender = message.sender_chat;
