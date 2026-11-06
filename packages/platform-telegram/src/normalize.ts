@@ -1952,7 +1952,14 @@ function linkHosts(message: Record<string, unknown>): {
   const urls: unknown[] = [];
   const poll = message.poll;
   const checklist = message.checklist;
-  const lists = [message.entities, message.caption_entities];
+  const lists: unknown[] = [];
+  if (typeof message.text === "string") {
+    // 正文上的文字链接，起点必须落在正文里。
+    lists.push(visibleTextLinks(message.entities, message.text.length));
+  } else {
+    lists.push(message.entities);
+  }
+  lists.push(message.caption_entities);
   if (isRecord(poll)) {
     const question = poll.question;
     // 题干上的文字链接，起点必须落在题干里。

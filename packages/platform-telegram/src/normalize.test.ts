@@ -11684,6 +11684,72 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a message text link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80861,
+      message: {
+        message_id: 80861,
+        date: 1761955200,
+        chat: { id: -10080861, type: "supergroup" },
+        from: { id: 80861, first_name: "Ada" },
+        text: "文",
+        entities: [
+          {
+            type: "text_link",
+            offset: 1,
+            length: 1,
+            url: "https://bit.ly/text80861",
+          },
+        ],
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("文");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("text80861");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80862,
+      message: {
+        message_id: 80862,
+        date: 1761955200,
+        chat: { id: -10080862, type: "supergroup" },
+        from: { id: 80862, first_name: "Ada" },
+        text: "https://tinyurl.com/plain80862",
+        entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 4,
+            url: "https://cutt.ly/text80862",
+          },
+          {
+            type: "text_link",
+            offset: 99,
+            length: 1,
+            url: "https://evil.example/late80862",
+          },
+        ],
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("https://tinyurl.com/plain80862");
+    expect(kept.event.message?.hosts).toEqual(["cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).toContain("plain80862");
+    expect(keptDump).not.toContain("text80862");
+    expect(keptDump).not.toContain("late80862");
+    expect(keptDump).not.toContain("evil.example");
+  });
+
   it("skips a poll question link that starts after the question", async () => {
     const past = await normalize({
       update_id: 80841,
