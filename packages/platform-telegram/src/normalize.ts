@@ -5781,7 +5781,7 @@ interface PinnedRichPreview {
 /**
  * 置顶一条富文本时，提示画出 `formatRichMessage` 的前 20 个码元。
  * 段落、标题、引用、列表、表格标题、按钮、音频名和文件名按这条预览拼接。
- * 思考块不在这条预览里。气泡里的整篇文章仍读。
+ * 思考块不在这条预览里。提及、日期和表情替代字也不在。气泡里的整篇文章仍读。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
@@ -6049,10 +6049,12 @@ function appendPinnedRichText(
   if (!isRecord(value)) {
     return;
   }
-  if (value.type === "url" && typeof value.url === "string") {
+  if (value.type === "url") {
     const at = preview.text.length;
     const count = preview.urls.length;
-    preview.urls.push(value.url);
+    if (typeof value.url === "string") {
+      preview.urls.push(value.url);
+    }
     if ("text" in value) {
       appendPinnedRichText(value.text, preview);
     }
@@ -6061,18 +6063,21 @@ function appendPinnedRichText(
     }
     return;
   }
-  if (value.type === "mathematical_expression") {
-    return;
-  }
-  if (value.type === "custom_emoji") {
-    appendPinnedRichText(value.alternative_text, preview);
-    return;
-  }
   if (value.type === "button") {
     appendPinnedRichButton(value.button, preview);
     return;
   }
-  if ("text" in value) {
+  // formatRichText 只画出这些样式的可见文字。提及、日期、表情替代字不在短预览里。
+  if (
+    value.type === "bold" ||
+    value.type === "italic" ||
+    value.type === "underline" ||
+    value.type === "strikethrough" ||
+    value.type === "spoiler" ||
+    value.type === "code" ||
+    value.type === "email_address" ||
+    value.type === "phone_number"
+  ) {
     appendPinnedRichText(value.text, preview);
   }
 }
