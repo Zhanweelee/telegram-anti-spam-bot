@@ -303,7 +303,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `post_notice` 在 `packages/detectors-post`。`message.postNotice` 是通过、失败、付款或退款时返回 score 1。证据是 `post:` 加这一种。原帖和价格不进证据。规则默认关闭。私聊 `/rule` 打开后删除这四种提示。稿子状态不变。见 ADR 0488。
 
-`checklist_notice` 在 `packages/detectors-checklist`。`message.checklistNotice` 是完成或取消完成时返回 score 1。证据是 `checklist:` 加这一种。任务号不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。任务完成状态不变。见 ADR 0489。对上的第一条任务里的短链仍走 `links`。见 ADR 0655。勾完的任务上的文字链接后来由 ADR 0728 不能越过正文。
+`checklist_notice` 在 `packages/detectors-checklist`。`message.checklistNotice` 是完成或取消完成时返回 score 1。证据是 `checklist:` 加这一种。任务号不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。任务完成状态不变。见 ADR 0489。对上的第一条任务里的短链仍走 `links`。见 ADR 0655。勾完的任务上的文字链接后来由 ADR 0728 不能越过正文。勾完的任务上的文字链接后来由 ADR 0777 要求长度大于 0。
 
 `call_invite` 在 `packages/detectors-call-invite`。只在 `message.asCallInvite` 为 true 时返回 score 1。证据是 `invite:video`。用户编号不进证据。被邀请的名字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除邀请提示。开始、结束和预约仍由 `call_notice` 决定。见 ADR 0491。
 
