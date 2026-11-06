@@ -19501,9 +19501,9 @@ describe("screenTelegramEvent", () => {
         },
       },
     );
-    expect(refunded.message?.hosts).toBeUndefined();
-    const refundedKept = await judged(refunded);
-    expect(refundedKept.decision.action).toBe("allow");
+    expect(refunded.message?.hosts).toEqual(["bit.ly"]);
+    const refundedHit = await judged(refunded);
+    expect(refundedHit.decision.action).toBe("delete");
     expect(JSON.stringify(refunded)).not.toContain("back78137");
     expect(JSON.stringify(refunded)).not.toContain("backload78137");
     expect(JSON.stringify(refunded)).not.toContain("tinyurl");
