@@ -589,7 +589,19 @@ function textMentionMark(message: Record<string, unknown>): boolean {
     } else {
       lists.push(checklist.title_entities);
     }
-    pushTaskMentionLists(checklist.tasks, lists);
+    if (Array.isArray(checklist.tasks)) {
+      for (const task of checklist.tasks) {
+        if (!isRecord(task)) {
+          continue;
+        }
+        if (typeof task.text === "string") {
+          // 按标识提及的起点必须落在这条任务里。
+          lists.push(drawnMention(task.text_entities, task.text.length));
+        } else {
+          lists.push(task.text_entities);
+        }
+      }
+    }
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks)) {
