@@ -171,7 +171,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 正文旁边的作者签名，以及讨论组原帖来源上的签名，命中同一组模式时删除。`/rule <chatId> author_signature_regex off` 和 `mirror_signature_regex off` 回到只看关键词和短链。签名自己就是正文时仍要打开 `regex_hint`。见 ADR 0536。
 
-投票选项命中同一组模式时删除。`/rule <chatId> poll_option_regex off` 回到只看关键词和短链。选项自己就是题干时仍要打开 `regex_hint`。见 ADR 0537。
+投票选项命中同一组模式时删除。`/rule <chatId> poll_option_regex off` 回到只看关键词和短链。选项自己就是题干时仍要打开 `regex_hint`。见 ADR 0537。投票选项上的文字链接后来由 ADR 0729 不能越过正文。
 
 清单任务命中同一组模式时删除。`/rule <chatId> checklist_task_regex off` 回到只看关键词和短链。任务自己就是标题时仍要打开 `regex_hint`。见 ADR 0538。清单标题和任务上的文字链接后来由 ADR 0726 不能越过正文。
 
