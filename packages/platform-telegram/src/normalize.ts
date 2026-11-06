@@ -5058,7 +5058,7 @@ function pushInviteSenderUrls(
  * 靠近提醒上操作的人只留主机名。
  * 距离是大于等于 0 的安全整数时读。0 米也读。
  * 负数、小数、字符串、布尔值和空对象不读。
- * 两个人的名字仍按原来的正文。距离和用户编号不读。用户名不读。
+ * 两个人画出的全名仍按正文。距离和用户编号不读。用户名不读。
  */
 function pushProximitySenderUrls(
   message: Record<string, unknown>,
@@ -7545,7 +7545,8 @@ function memberNameSource(message: Record<string, unknown>): string {
   }
   const proximity = message.proximity_alert_triggered;
   if (isRecord(proximity)) {
-    pushUserLabels([proximity.traveler, proximity.watcher], parts);
+    pushProximityNames(proximity.traveler, parts);
+    pushProximityNames(proximity.watcher, parts);
   }
   if (parts.length === 0) {
     return "";
@@ -7598,6 +7599,23 @@ function writeAccessNameSource(message: Record<string, unknown>): string {
     return "";
   }
   return allowed.web_app_name.trim();
+}
+
+/**
+ * 靠近提醒上画出的全名。名和姓都去掉两端空白，名在前。
+ * 空白名不挡住姓。空格不截断。用户名不进这行。
+ */
+function pushProximityNames(user: unknown, parts: string[]): void {
+  if (!isRecord(user)) {
+    return;
+  }
+  const name: string[] = [];
+  pushTrimmed(user.first_name, name);
+  pushTrimmed(user.last_name, name);
+  if (name.length === 0) {
+    return;
+  }
+  parts.push(name.join(" "));
 }
 
 function pushUserLabels(value: unknown, parts: string[]): void {
