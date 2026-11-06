@@ -42668,6 +42668,106 @@ describe("normalizeUpdate", () => {
     expect(namedDump).not.toContain("890464");
   });
 
+  it("keeps only the hostname from the full name drawn for a gift sender", async () => {
+    const drawn = await normalize({
+      update_id: 79474,
+      message: {
+        message_id: 79474,
+        date: 1761955200,
+        chat: {
+          id: -10079474,
+          type: "private",
+          title: "https://example.com/room79474",
+        },
+        from: {
+          id: 124,
+          first_name: "   ",
+          last_name: "https://bit.ly/last79474",
+          username: "https://tinyurl.com/user79474",
+        },
+        gift: {
+          gift: { id: "gid79474", star_count: 90174 },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.gift).toBe("card");
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(drawn.event.message?.invites).toBeUndefined();
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain("last79474");
+    expect(dumped).not.toContain("user79474");
+    expect(dumped).not.toContain("tinyurl");
+    expect(dumped).not.toContain("gid79474");
+    expect(dumped).not.toContain("90174");
+    expect(dumped).not.toContain("room79474");
+    expect(dumped).not.toContain("example.com");
+
+    const spaced = await normalize({
+      update_id: 79475,
+      message: {
+        message_id: 79475,
+        date: 1761955200,
+        chat: { id: -10079475, type: "private" },
+        from: {
+          id: 124,
+          first_name: "Go https://bit.ly/later79475",
+          last_name: "https://tinyurl.com/last79475",
+          username: "https://ow.ly/user79475",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名", name: "Slug79475", number: 90175 },
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("收藏名");
+    expect(spaced.event.message?.gift).toBe("unique");
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedDump = JSON.stringify(spaced.event);
+    expect(spacedDump).not.toContain("later79475");
+    expect(spacedDump).not.toContain("last79475");
+    expect(spacedDump).not.toContain("user79475");
+    expect(spacedDump).not.toContain("ow.ly");
+    expect(spacedDump).not.toContain("Slug79475");
+    expect(spacedDump).not.toContain("90175");
+
+    const upgraded = await normalize({
+      update_id: 79476,
+      message: {
+        message_id: 79476,
+        date: 1761955200,
+        chat: { id: -10079476, type: "private" },
+        from: {
+          id: 124,
+          first_name: "Ada",
+          last_name: "请免费领取礼品",
+          username: "https://bit.ly/user79476",
+        },
+        gift_upgrade_sent: { gift: { id: "gid79476" } },
+      },
+    });
+    expect(upgraded.status).toBe("event");
+    if (upgraded.status !== "event") {
+      return;
+    }
+    expect(upgraded.event.message?.text).toBe("");
+    expect(upgraded.event.message?.gift).toBe("upgrade");
+    expect(upgraded.event.message?.hosts).toBeUndefined();
+    const upgradedDump = JSON.stringify(upgraded.event);
+    expect(upgradedDump).not.toContain("请免费领取礼品");
+    expect(upgradedDump).not.toContain("user79476");
+    expect(upgradedDump).not.toContain("bit.ly");
+    expect(upgradedDump).not.toContain("gid79476");
+  });
+
   it("marks a dice without keeping the face or the emoji", async () => {
     const emoji = "\u{1F3B0}";
     const dice = await normalize({
