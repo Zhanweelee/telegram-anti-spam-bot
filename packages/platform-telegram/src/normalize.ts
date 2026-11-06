@@ -4760,8 +4760,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (!isRecord(value)) {
       continue;
     }
-    // 文字链接的起点必须落在这段附言里。
-    pushDrawnLine(value.text, value.entities, urls);
+    // 文字链接的起点必须落在这段附言里，长度必须大于 0。
+    pushPlainUrls(value.text, urls);
+    pushTextLinks(
+      typeof value.text === "string"
+        ? drawnTextLink(value.entities, value.text.length)
+        : value.entities,
+      urls,
+    );
   }
   pushPlainUrls(uniqueGiftLabelSource(message), urls);
   pushPlainUrls(giftPublisherNames(message), urls);
