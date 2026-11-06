@@ -4426,7 +4426,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     if (field === "giveaway_winners" && Array.isArray(value.winners)) {
       for (const winner of value.winners) {
-        pushVisiblePartyUrls(winner, undefined, urls);
+        // 结果页画出的全名。名和姓都去掉两端空白。空白名不挡住姓。空格不截断。
+        pushFormattedUserUrls(winner, urls);
       }
     }
   }
