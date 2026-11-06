@@ -43658,6 +43658,136 @@ describe("normalizeUpdate", () => {
     expect(bubble.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("skips a reply link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80561,
+      message: {
+        message_id: 80561,
+        date: 1761955200,
+        chat: { id: -10080561, type: "supergroup" },
+        from: { id: 80561, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805611,
+          date: 1761955100,
+          chat: { id: -10080561, type: "supergroup" },
+          text: "你好",
+          entities: [
+            {
+              type: "text_link",
+              offset: 2,
+              length: 1,
+              url: "https://bit.ly/past80561",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("你好");
+    expect(past.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("past80561");
+
+    const caption = await normalize({
+      update_id: 80562,
+      message: {
+        message_id: 80562,
+        date: 1761955200,
+        chat: { id: -10080562, type: "supergroup" },
+        from: { id: 80562, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805621,
+          date: 1761955100,
+          chat: { id: -10080562, type: "supergroup" },
+          caption: "图",
+          caption_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/cap80562",
+            },
+          ],
+        },
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.hosts).toBeUndefined();
+
+    const kept = await normalize({
+      update_id: 80563,
+      message: {
+        message_id: 80563,
+        date: 1761955200,
+        chat: { id: -10080563, type: "supergroup" },
+        from: { id: 80563, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805631,
+          date: 1761955100,
+          chat: { id: -10080563, type: "supergroup" },
+          text: "点这里看",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://bit.ly/keep80563",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(kept.event)).not.toContain("keep80563");
+
+    const checklist = await normalize({
+      update_id: 80564,
+      message: {
+        message_id: 80564,
+        date: 1761955200,
+        chat: { id: -10080564, type: "supergroup" },
+        from: { id: 80564, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805641,
+          date: 1761955100,
+          chat: { id: -10080564, type: "supergroup" },
+          checklist: {
+            title: "清单",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 2,
+                length: 1,
+                url: "https://bit.ly/list80564",
+              },
+            ],
+            tasks: [{ id: 1, text: "https://tinyurl.com/task80564" }],
+          },
+        },
+      },
+    });
+    expect(checklist.status).toBe("event");
+    if (checklist.status !== "event") {
+      return;
+    }
+    expect(checklist.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(checklist.event)).not.toContain("list80564");
+    expect(JSON.stringify(checklist.event)).not.toContain("task80564");
+  });
+
   it("reads the hostname drawn on a reply under a rich message", async () => {
     const phrase = "请免费领取礼品";
     const replied = await normalize({
