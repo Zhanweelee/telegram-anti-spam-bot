@@ -4587,6 +4587,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(quote.text, urls);
     pushTextLinks(quote.entities, urls);
   }
+  pushReplyTargetUrls(message, urls);
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const value = message[field];
     if (!isRecord(value)) {
@@ -4930,6 +4931,66 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
   if (typeof signature === "string" && signature.length > 0) {
     pushPlainUrls(signature, urls);
   }
+}
+
+/**
+ * 回复某一条清单任务或投票选项时，引用条上画出的那一行只留主机名。
+ * 任务号对得上才读那条任务的文字和文字链接。对不上就改读清单标题。
+ * 没有清单时，选项编号对得上才读选项文字。对不上就改读问题。
+ * 其余任务、选项、清单正文和投票说明不读。外部回复上的清单和投票不读。
+ */
+function pushReplyTargetUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const reply = message.reply_to_message;
+  if (!isRecord(reply)) {
+    return;
+  }
+  const taskId = message.reply_to_checklist_task_id;
+  if (
+    typeof taskId === "number" &&
+    Number.isSafeInteger(taskId) &&
+    taskId > 0 &&
+    isRecord(reply.checklist)
+  ) {
+    const tasks = reply.checklist.tasks;
+    if (Array.isArray(tasks)) {
+      for (const task of tasks) {
+        if (!isRecord(task) || task.id !== taskId) {
+          continue;
+        }
+        pushPlainUrls(task.text, urls);
+        pushTextLinks(task.text_entities, urls);
+        return;
+      }
+    }
+    pushPlainUrls(reply.checklist.title, urls);
+    pushTextLinks(reply.checklist.title_entities, urls);
+    return;
+  }
+  const optionId = message.reply_to_poll_option_id;
+  if (
+    typeof optionId !== "string" ||
+    optionId.length === 0 ||
+    optionId.length > 256 ||
+    !isRecord(reply.poll)
+  ) {
+    return;
+  }
+  const options = reply.poll.options;
+  if (Array.isArray(options)) {
+    for (const option of options) {
+      if (!isRecord(option) || option.persistent_id !== optionId) {
+        continue;
+      }
+      pushPlainUrls(option.text, urls);
+      pushTextLinks(option.text_entities, urls);
+      return;
+    }
+  }
+  pushPlainUrls(reply.poll.question, urls);
+  pushTextLinks(reply.poll.question_entities, urls);
 }
 
 /**

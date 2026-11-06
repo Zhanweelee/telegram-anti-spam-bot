@@ -41415,6 +41415,212 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the checklist task or poll option drawn on a reply", async () => {
+    const phrase = "请免费领取礼品";
+    const task = await normalize({
+      update_id: 80161,
+      message: {
+        message_id: 80161,
+        date: 1761955200,
+        chat: { id: -10080161, type: "supergroup", title: "本群" },
+        from: {
+          id: 80161,
+          first_name: "https://example.com/speaker80161",
+        },
+        text: "你好",
+        reply_to_checklist_task_id: 7,
+        reply_to_message: {
+          message_id: 801611,
+          date: 1761955100,
+          chat: { id: -10080161, type: "supergroup" },
+          text: `${phrase} https://tinyurl.com/body80161`,
+          checklist: {
+            title: "https://example.com/list80161",
+            tasks: [
+              {
+                id: 3,
+                text: "https://is.gd/other80161",
+              },
+              {
+                id: 7,
+                text: `https://bit.ly/task80161 ${phrase}`,
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 0,
+                    length: 4,
+                    url: "https://cutt.ly/link80161",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(task.status).toBe("event");
+    if (task.status !== "event") {
+      return;
+    }
+    expect(task.event.message?.text).toBe("你好");
+    expect(task.event.message?.hosts).toEqual(["bit.ly", "cutt.ly"]);
+    const taskDump = JSON.stringify(task.event);
+    expect(taskDump).not.toContain(phrase);
+    expect(taskDump).not.toContain("task80161");
+    expect(taskDump).not.toContain("link80161");
+    expect(taskDump).not.toContain("other80161");
+    expect(taskDump).not.toContain("body80161");
+    expect(taskDump).not.toContain("list80161");
+    expect(taskDump).not.toContain("speaker80161");
+    expect(taskDump).not.toContain("tinyurl");
+    expect(taskDump).not.toContain("is.gd");
+    expect(taskDump).not.toContain("example.com");
+    expect(taskDump).toContain("bit.ly");
+    expect(taskDump).toContain("cutt.ly");
+
+    const title = await normalize({
+      update_id: 80162,
+      message: {
+        message_id: 80162,
+        date: 1761955200,
+        chat: { id: -10080162, type: "supergroup" },
+        from: { id: 80162, first_name: "Ada" },
+        text: "你好",
+        reply_to_checklist_task_id: 9,
+        reply_to_message: {
+          message_id: 801621,
+          date: 1761955100,
+          chat: { id: -10080162, type: "supergroup" },
+          checklist: {
+            title: "https://bit.ly/title80162",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 0,
+                length: 4,
+                url: "https://tinyurl.com/titlelink80162",
+              },
+            ],
+            tasks: [{ id: 1, text: "https://example.com/task80162" }],
+          },
+        },
+      },
+    });
+    expect(title.status).toBe("event");
+    if (title.status !== "event") {
+      return;
+    }
+    expect(title.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const titleDump = JSON.stringify(title.event);
+    expect(titleDump).not.toContain("title80162");
+    expect(titleDump).not.toContain("titlelink80162");
+    expect(titleDump).not.toContain("task80162");
+    expect(titleDump).not.toContain("example.com");
+
+    const option = await normalize({
+      update_id: 80163,
+      message: {
+        message_id: 80163,
+        date: 1761955200,
+        chat: { id: -10080163, type: "supergroup" },
+        from: { id: 80163, first_name: "Ada" },
+        text: "你好",
+        reply_to_poll_option_id: "opt-7",
+        reply_to_message: {
+          message_id: 801631,
+          date: 1761955100,
+          chat: { id: -10080163, type: "supergroup" },
+          poll: {
+            question: "https://example.com/ask80163",
+            options: [
+              { persistent_id: "opt-3", text: "https://tinyurl.com/opt80163" },
+              {
+                persistent_id: "opt-7",
+                text: "https://bit.ly/choice80163",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 0,
+                    length: 4,
+                    url: "https://is.gd/choicelink80163",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(option.status).toBe("event");
+    if (option.status !== "event") {
+      return;
+    }
+    expect(option.event.message?.hosts).toEqual(["bit.ly", "is.gd"]);
+    const optionDump = JSON.stringify(option.event);
+    expect(optionDump).not.toContain("choice80163");
+    expect(optionDump).not.toContain("choicelink80163");
+    expect(optionDump).not.toContain("opt80163");
+    expect(optionDump).not.toContain("ask80163");
+    expect(optionDump).not.toContain("tinyurl");
+    expect(optionDump).not.toContain("example.com");
+
+    const question = await normalize({
+      update_id: 80164,
+      message: {
+        message_id: 80164,
+        date: 1761955200,
+        chat: { id: -10080164, type: "supergroup" },
+        from: { id: 80164, first_name: "Ada" },
+        text: "你好",
+        reply_to_poll_option_id: "missing",
+        reply_to_message: {
+          message_id: 801641,
+          date: 1761955100,
+          chat: { id: -10080164, type: "supergroup" },
+          poll: {
+            question: "https://bit.ly/ask80164",
+            options: [
+              { persistent_id: "opt-1", text: "https://tinyurl.com/opt80164" },
+            ],
+          },
+        },
+      },
+    });
+    expect(question.status).toBe("event");
+    if (question.status !== "event") {
+      return;
+    }
+    expect(question.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(question.event)).not.toContain("ask80164");
+    expect(JSON.stringify(question.event)).not.toContain("opt80164");
+    expect(JSON.stringify(question.event)).not.toContain("tinyurl");
+
+    const external = await normalize({
+      update_id: 80165,
+      message: {
+        message_id: 80165,
+        date: 1761955200,
+        chat: { id: -10080165, type: "supergroup" },
+        from: { id: 80165, first_name: "Ada" },
+        text: "你好",
+        reply_to_checklist_task_id: 7,
+        external_reply: {
+          checklist: {
+            title: "清单",
+            tasks: [{ id: 7, text: "https://bit.ly/ext80165" }],
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(external.event)).not.toContain("ext80165");
+    expect(JSON.stringify(external.event)).not.toContain("bit.ly");
+  });
+
   it("reads both names drawn on a quoted reply", async () => {
     const phrase = "请免费领取礼品";
     const quoted = await normalize({
