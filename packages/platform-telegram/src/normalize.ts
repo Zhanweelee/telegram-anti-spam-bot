@@ -4601,6 +4601,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushGiftSenderUrls(message, urls);
   pushDeclineSenderUrls(message, urls);
   pushPostSenderUrls(message, urls);
+  pushPostTopicUrls(message, urls);
   pushChecklistSenderUrls(message, urls);
   pushAddedSenderUrls(message, urls);
   pushPollSenderUrls(message, urls);
@@ -5133,6 +5134,27 @@ function pushPostSenderUrls(
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 付款失败或退款建议帖上画出的话题用户全名只留主机名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 发言人不是这个人时也读。用户名、话题号和频道标题不读。
+ * 通过和付款不读这个人。嵌套原帖不读。
+ */
+function pushPostTopicUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const notice = suggestedPost(message);
+  if (notice !== "failed" && notice !== "refunded") {
+    return;
+  }
+  const topic = message.direct_messages_topic;
+  if (!isRecord(topic)) {
+    return;
+  }
+  pushFormattedUserUrls(topic.user, urls);
 }
 
 /**
