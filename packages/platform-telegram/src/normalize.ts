@@ -7532,7 +7532,7 @@ function memberNames(message: Record<string, unknown>): string {
 
 function memberNameSource(message: Record<string, unknown>): string {
   const parts: string[] = [];
-  pushUserLabels(message.new_chat_members, parts);
+  pushJoinedFullNames(message.new_chat_members, parts);
   const invited = message.video_chat_participants_invited;
   if (isRecord(invited)) {
     pushUserLabels(invited.users, parts);
@@ -7601,6 +7601,24 @@ function writeAccessNameSource(message: Record<string, unknown>): string {
     return "";
   }
   return allowed.web_app_name.trim();
+}
+
+/**
+ * 入群名单上画出的全名。每个人名和姓去掉两端空白，名在前。
+ * 几个人用逗号分开。用户名不进这行。
+ */
+function pushJoinedFullNames(value: unknown, parts: string[]): void {
+  if (!Array.isArray(value)) {
+    return;
+  }
+  const names: string[] = [];
+  for (const member of value) {
+    pushDrawnFullName(member, names);
+  }
+  if (names.length === 0) {
+    return;
+  }
+  parts.push(names.join(", "));
 }
 
 /**
@@ -7736,7 +7754,7 @@ function besideHiddenName(
   return clipped(source, MAX_TEXT);
 }
 
-/** 已有别的正文时，入群、邀请、换群主和靠近提醒的可见名字另留最多 4096 字。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
+/** 已有别的正文时，入群画出的全名、邀请、换群主和靠近提醒另留最多 4096 字。入群名单不进用户名，几个人用逗号分开。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
 function besideMemberName(
   message: Record<string, unknown>,
   text: string,
