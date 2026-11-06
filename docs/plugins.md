@@ -81,7 +81,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 关话题的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0589。
 
-创建抽奖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0590。
+创建抽奖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0590。创建公告上画出的群名也只留主机名。见 ADR 0656。
 
 换头像的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0591。
 
@@ -289,7 +289,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `pin_notice` 在 `packages/detectors-pin`。只在 `message.asPin` 为 true 时返回 score 1。证据是 `pin:notice`。被置顶的原文和消息号不进证据。规则默认关闭。私聊 `/rule` 打开后删除置顶提示。置顶本身还在。见 ADR 0482。文字、账单说明、清单标题的前 20 个码元和游戏标题里的短链仍走 `links`。见 ADR 0653 与 ADR 0654。
 
-`giveaway_notice` 在 `packages/detectors-giveaway-notice`。`message.giveawayNotice` 是创建或私下结束时返回 score 1。证据是 `giveaway:` 加这一种。星星数量、中奖人数和奖品原文不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种公告。见 ADR 0483。
+`giveaway_notice` 在 `packages/detectors-giveaway-notice`。`message.giveawayNotice` 是创建或私下结束时返回 score 1。证据是 `giveaway:` 加这一种。星星数量、中奖人数和奖品原文不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种公告。见 ADR 0483。创建公告上画出的群名里的短链仍走 `links`。见 ADR 0656。
 
 `chat_boost` 在 `packages/detectors-boost`。只在 `message.asBoost` 为 true 时返回 score 1。证据是 `boost:added`。次数和发送者名字不进证据。规则默认关闭。私聊 `/rule` 打开后删除助推提示。助推本身还在。见 ADR 0484。
 

@@ -263,7 +263,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> pin_notice on` 删这个群里的置顶提示。默认关闭。被置顶的原文不进证据。置顶本身还在。见 ADR 0482。文字、账单说明、清单标题的前 20 个码元和游戏标题里的短链也会删除。见 ADR 0653 与 ADR 0654。
 
-`/rule <chatId> giveaway_notice on` 删这个群里的抽奖创建公告和没有公开中奖者的结束公告。默认关闭。奖品原文不进证据。抽奖本身不取消。见 ADR 0483。
+`/rule <chatId> giveaway_notice on` 删这个群里的抽奖创建公告和没有公开中奖者的结束公告。默认关闭。奖品原文不进证据。抽奖本身不取消。见 ADR 0483。创建公告上画出的群名里的短链也会删除。见 ADR 0656。
 
 `/rule <chatId> chat_boost on` 删这个群里的助推提示。默认关闭。次数不进证据。助推本身还在。见 ADR 0484。
 
@@ -327,7 +327,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 关话题的人，名字里的短链、邀请或裸 IP 会删掉这条提示。重开、隐藏和重新显示同样。证据只有主机名。名字、用户名和话题名不进事件。`example.com` 仍留下。见 ADR 0589。
 
-创建抽奖的人，名字里的短链、邀请或裸 IP 会删掉这条提示。私下结束同样。证据只有主机名。名字、用户名和星星数量不进事件。`example.com` 仍留下。见 ADR 0590。
+创建抽奖的人，名字里的短链、邀请或裸 IP 会删掉这条提示。私下结束同样。证据只有主机名。名字、用户名和星星数量不进事件。`example.com` 仍留下。见 ADR 0590。创建公告上画出的群名同样只留主机名。见 ADR 0656。
 
 换头像的人，名字里的短链、邀请或裸 IP 会删掉这条提示。删头像同样。证据只有主机名。名字、用户名和文件号不进事件。`example.com` 仍留下。见 ADR 0591。
 
