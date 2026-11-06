@@ -19145,7 +19145,7 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(connected)).not.toContain("bit.ly");
   });
 
-  it("deletes a short link in the topic user drawn on a suggested post refund", async () => {
+  it("deletes a short link in the topic user drawn on a suggested post", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
       updateId: number,
@@ -19267,6 +19267,68 @@ describe("screenTelegramEvent", () => {
     });
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paidHit.decision)).not.toContain("paid79485");
+
+    const priced = await posted(79486, {
+      from: { id: 125, first_name: "Ada", last_name: "https://ow.ly/skip79486" },
+      direct_messages_topic: {
+        topic_id: 79486,
+        user: {
+          id: 126,
+          first_name: "Go https://bit.ly/later79486",
+          last_name: "https://tinyurl.com/last79486",
+          username: "secretuser79486",
+        },
+      },
+      suggested_post_approved: {
+        send_date: 1,
+        price: { currency: "XTR", amount: 5 },
+      },
+    });
+    expect(priced.message?.text).toBe("");
+    expect(priced.message?.postNotice).toBe("approved");
+    expect(priced.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const pricedModerator = createMemoryModerator();
+    const pricedHit = await screenTelegramEvent(priced, {
+      moderator: pricedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pricedHit.decision.action).toBe("delete");
+    expect(pricedHit.decision.reasons).toContain("short_link");
+    expect(pricedHit.decision.ruleIds).not.toContain("post_notice");
+    expect(JSON.stringify(pricedHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(pricedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079486", messageId: "79486" },
+    ]);
+    const pricedDump = JSON.stringify({
+      event: priced,
+      decision: pricedHit.decision,
+    });
+    expect(pricedDump).not.toContain("later79486");
+    expect(pricedDump).not.toContain("last79486");
+    expect(pricedDump).not.toContain("secretuser79486");
+    expect(pricedDump).not.toContain("skip79486");
+    expect(pricedDump).not.toContain("ow.ly");
+
+    const free = await posted(79487, {
+      direct_messages_topic: {
+        topic_id: 79487,
+        user: { id: 126, last_name: "https://bit.ly/zero79487" },
+      },
+      suggested_post_approved: {
+        send_date: 1,
+        price: { currency: "XTR", amount: 0 },
+      },
+    });
+    expect(free.message?.postNotice).toBe("approved");
+    expect(free.message?.hosts).toBeUndefined();
+    const freeHit = await screenTelegramEvent(free, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(freeHit.decision.action).toBe("allow");
+    expect(JSON.stringify(free)).not.toContain("zero79487");
   });
 
   it("deletes a short link in the name drawn for a paid transfer", async () => {

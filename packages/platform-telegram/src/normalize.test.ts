@@ -42748,6 +42748,123 @@ describe("normalizeUpdate", () => {
     expect(failedDump).not.toContain("user79481");
     expect(failedDump).not.toContain("ow.ly");
 
+    const priced = await normalize({
+      update_id: 79486,
+      message: {
+        message_id: 79486,
+        date: 1761955200,
+        chat: {
+          id: -10079486,
+          type: "channel",
+          title: "https://example.com/room79486",
+        },
+        from: { id: 1, first_name: "Ada", last_name: "https://ow.ly/from79486" },
+        direct_messages_topic: {
+          topic_id: 79486,
+          user: {
+            id: 2,
+            first_name: "   ",
+            last_name: "https://bit.ly/last79486",
+            username: "https://tinyurl.com/user79486",
+          },
+        },
+        suggested_post_approved: {
+          send_date: 1,
+          price: { currency: "XTR", amount: 5 },
+          suggested_post_message: { text: "https://cutt.ly/nest79486" },
+        },
+      },
+    });
+    expect(priced.status).toBe("event");
+    if (priced.status !== "event") {
+      return;
+    }
+    expect(priced.event.message?.text).toBe("");
+    expect(priced.event.message?.postNotice).toBe("approved");
+    expect(priced.event.message?.hosts).toEqual(["bit.ly"]);
+    const pricedDump = JSON.stringify(priced.event);
+    expect(pricedDump).not.toContain("last79486");
+    expect(pricedDump).not.toContain("user79486");
+    expect(pricedDump).not.toContain("tinyurl");
+    expect(pricedDump).not.toContain("from79486");
+    expect(pricedDump).not.toContain("ow.ly");
+    expect(pricedDump).not.toContain("nest79486");
+    expect(pricedDump).not.toContain("cutt.ly");
+    expect(pricedDump).not.toContain("room79486");
+    expect(pricedDump).not.toContain("example.com");
+
+    const free = await normalize({
+      update_id: 79487,
+      message: {
+        message_id: 79487,
+        date: 1761955200,
+        chat: { id: -10079487, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79487,
+          user: { id: 2, first_name: "https://bit.ly/zero79487" },
+        },
+        suggested_post_approved: {
+          send_date: 1,
+          price: { currency: "XTR", amount: 0 },
+        },
+      },
+    });
+    expect(free.status).toBe("event");
+    if (free.status !== "event") {
+      return;
+    }
+    expect(free.event.message?.postNotice).toBe("approved");
+    expect(free.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(free.event)).not.toContain("zero79487");
+
+    const settled = await normalize({
+      update_id: 79488,
+      message: {
+        message_id: 79488,
+        date: 1761955200,
+        chat: { id: -10079488, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79488,
+          user: { id: 2, last_name: "https://bit.ly/paid79488" },
+        },
+        suggested_post_paid: { currency: "XTR", star_amount: { amount: 5 } },
+      },
+    });
+    expect(settled.status).toBe("event");
+    if (settled.status !== "event") {
+      return;
+    }
+    expect(settled.event.message?.postNotice).toBe("paid");
+    expect(settled.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(settled.event)).not.toContain("paid79488");
+
+    const written = await normalize({
+      update_id: 79489,
+      message: {
+        message_id: 79489,
+        date: 1761955200,
+        chat: { id: -10079489, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79489,
+          user: { id: 2, last_name: "https://bit.ly/text79489" },
+        },
+        suggested_post_approved: {
+          send_date: 1,
+          price: { currency: "XTR", amount: "5" },
+        },
+      },
+    });
+    expect(written.status).toBe("event");
+    if (written.status !== "event") {
+      return;
+    }
+    expect(written.event.message?.postNotice).toBe("approved");
+    expect(written.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(written.event)).not.toContain("text79489");
+
     const approved = await normalize({
       update_id: 79482,
       message: {
