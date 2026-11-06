@@ -4813,8 +4813,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (!isRecord(value)) {
       continue;
     }
-    // 文字链接的起点必须落在这条画出的选项文字里。
-    pushDrawnLine(value.option_text, value.option_text_entities, urls);
+    // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。
+    pushPlainUrls(value.option_text, urls);
+    pushTextLinks(
+      typeof value.option_text === "string"
+        ? drawnTextLink(value.option_text_entities, value.option_text.length)
+        : value.option_text_entities,
+      urls,
+    );
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks) && Array.isArray(addedTasks.tasks)) {
