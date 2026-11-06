@@ -34,3 +34,4 @@ Android 对 `TL_messageActionPollAppendAnswer` 和 `TL_messageActionPollDeleteAn
 - 被截断的路径不进事件。写在选项里的路径仍留在正文或 `addedText`。关键词不命中没画上去的链接。内容哈希不变。
 - `example.com` 和公开的 `t.me/名字` 留下。付费帖仍不删除。见 ADR 0356。
 - 管理员仍豁免。云额度的基础检测器名单没有改。30 天保留期没有改。
+- 引用上的文字链接后来由 ADR 0732 同样要求起点落在摘录里。投票描述、游戏说明和礼物仍不在那条里。

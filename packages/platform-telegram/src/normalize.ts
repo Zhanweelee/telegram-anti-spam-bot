@@ -4592,8 +4592,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushSenderChatUrls(message, urls);
   const quote = message.quote;
   if (isRecord(quote) && typeof quote.text === "string") {
-    pushPlainUrls(quote.text, urls);
-    pushTextLinks(quote.entities, urls);
+    // 文字链接的起点必须落在这段引用里。
+    pushDrawnLine(quote.text, quote.entities, urls);
   }
   pushReplyTargetUrls(message, urls);
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
