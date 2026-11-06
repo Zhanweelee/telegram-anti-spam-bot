@@ -7128,6 +7128,139 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(admin)).not.toContain("admin79262");
   });
 
+  it("deletes a short link behind a pinned checklist title", async () => {
+    const phrase = "点这里看这条清单";
+    async function posted(updateId: number, extra: Record<string, unknown>) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(80451, {
+      pinned_message: {
+        message_id: 88080451,
+        checklist: {
+          title: phrase,
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: "https://bit.ly/title80451",
+            },
+          ],
+          tasks: [{ id: 1, text: "https://tinyurl.com/task80451" }],
+        },
+        from: { id: 97, first_name: "https://ow.ly/who80451" },
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.asPin).toBe(true);
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080451", messageId: "80451" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("title80451");
+    expect(namedDump).not.toContain("task80451");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("who80451");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("88080451");
+
+    const kept = await posted(80452, {
+      pinned_message: {
+        message_id: 1,
+        checklist: {
+          title: phrase,
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: "https://example.com/title80452",
+            },
+          ],
+          tasks: [],
+        },
+      },
+    });
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("title80452");
+
+    const paid = await posted(80453, {
+      is_paid_post: true,
+      pinned_message: {
+        message_id: 1,
+        checklist: {
+          title: phrase,
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: "https://bit.ly/title80453",
+            },
+          ],
+          tasks: [],
+        },
+      },
+    });
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("title80453");
+  });
+
   it("deletes a short link behind the text drawn on a pin", async () => {
     const phrase = "点这里看这条置顶";
     async function posted(updateId: number, extra: Record<string, unknown>) {

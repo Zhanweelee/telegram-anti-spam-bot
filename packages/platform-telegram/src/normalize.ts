@@ -5704,7 +5704,8 @@ function pushPinSenderUrls(
 /**
  * 置顶提示上画出的原文预览只留主机名。
  * 文字消息只画前 20 个 UTF-16 码元，起点落在这 20 个码元里的文字链接也画。
- * 账单画说明，清单画标题，同样只取前 20 个。富文本画预览的前 20 个码元。
+ * 账单画说明。清单画标题，标题上同样位置的文字链接也画。任务不画。
+ * 富文本画预览的前 20 个码元。
  * 图片、视频、文件、地点等固定说法不画原文。游戏只画标题。
  * 预览不进正文。第 21 个字起、账单标题、任务和被置顶的人不读。
  */
@@ -5735,11 +5736,23 @@ function pushPinnedPreviewUrls(
   }
   const preview = drawn.slice(0, 20);
   pushPlainUrls(preview, urls);
-  if (isRecord(pinned.invoice) || isRecord(pinned.checklist)) {
+  if (isRecord(pinned.invoice)) {
     return;
   }
+  const links = isRecord(pinned.checklist)
+    ? pinned.checklist.title_entities
+    : pinned.entities;
+  pushPinnedTextLinks(links, preview.length, urls);
+}
+
+/** 置顶预览上，起点落在画出的那段里的文字链接只留主机名。 */
+function pushPinnedTextLinks(
+  list: unknown,
+  limit: number,
+  urls: string[],
+): void {
   pushTextLinks(
-    visibleTextLinks(pinned.entities, preview.length).filter(
+    visibleTextLinks(list, limit).filter(
       (entity) => isRecord(entity) && entity.type === "text_link",
     ),
     urls,
