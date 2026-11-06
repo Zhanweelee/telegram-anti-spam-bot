@@ -41187,6 +41187,152 @@ describe("normalizeUpdate", () => {
     expect(invalidDump).not.toContain("tinyurl");
   });
 
+  it("leaves a short link in the chat title when a chat sends a gift", async () => {
+    const phrase = "请免费领取礼品";
+    const card = await normalize({
+      update_id: 79896,
+      message: {
+        message_id: 79896,
+        date: 1761955200,
+        chat: {
+          id: -10079896,
+          type: "supergroup",
+          title: `https://example.com/room79896 ${phrase}`,
+        },
+        sender_chat: {
+          id: -10079896,
+          type: "supergroup",
+          title: `ab https://bit.ly/gift79896 ${phrase}`,
+          username: "secretuser79896",
+        },
+        from: {
+          id: 79896,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79896",
+          last_name: "https://cutt.ly/also79896",
+          username: "adder79896",
+        },
+        gift: { gift: { id: "gid79896", star_count: 12 } },
+      },
+    });
+    expect(card.status).toBe("event");
+    if (card.status !== "event") {
+      return;
+    }
+    expect(card.event.message?.text).toBe("");
+    expect(card.event.message?.gift).toBe("card");
+    expect(card.event.message?.hosts).toEqual(["bit.ly"]);
+    const cardDump = JSON.stringify(card.event);
+    expect(cardDump).not.toContain(phrase);
+    expect(cardDump).not.toContain("gift79896");
+    expect(cardDump).not.toContain("skip79896");
+    expect(cardDump).not.toContain("also79896");
+    expect(cardDump).not.toContain("room79896");
+    expect(cardDump).not.toContain("secretuser79896");
+    expect(cardDump).not.toContain("adder79896");
+    expect(cardDump).not.toContain("gid79896");
+    expect(cardDump).not.toContain("tinyurl");
+    expect(cardDump).not.toContain("cutt.ly");
+    expect(cardDump).not.toContain("example.com");
+
+    const other = await normalize({
+      update_id: 79897,
+      message: {
+        message_id: 79897,
+        date: 1761955200,
+        chat: { id: -10079897, type: "group", title: "本群" },
+        sender_chat: {
+          id: -100798970,
+          type: "channel",
+          title: "https://bit.ly/gift79897",
+          username: "secretuser79897",
+        },
+        from: {
+          id: 79897,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79897",
+          last_name: "https://cutt.ly/also79897",
+          username: "adder79897",
+        },
+        unique_gift: { gift: { base_name: "收藏名", name: "Slug79897" } },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.text).toBe("收藏名");
+    expect(other.event.message?.gift).toBe("unique");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("gift79897");
+    expect(otherDump).not.toContain("skip79897");
+    expect(otherDump).not.toContain("also79897");
+    expect(otherDump).not.toContain("secretuser79897");
+    expect(otherDump).not.toContain("adder79897");
+    expect(otherDump).not.toContain("Slug79897");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+
+    const person = await normalize({
+      update_id: 79898,
+      message: {
+        message_id: 79898,
+        date: 1761955200,
+        chat: { id: -10079898, type: "private" },
+        from: {
+          id: 79898,
+          first_name: "https://bit.ly/who79898",
+          last_name: "https://tinyurl.com/also79898",
+          username: "adder79898",
+        },
+        gift_upgrade_sent: { gift: { id: "gid79898" } },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.gift).toBe("upgrade");
+    expect(person.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79898");
+    expect(personDump).not.toContain("also79898");
+    expect(personDump).not.toContain("adder79898");
+    expect(personDump).not.toContain("gid79898");
+
+    const quiet = await normalize({
+      update_id: 79899,
+      message: {
+        message_id: 79899,
+        date: 1761955200,
+        chat: { id: -10079899, type: "supergroup", title: "本群" },
+        sender_chat: {
+          id: -10079899,
+          type: "supergroup",
+          title: "https://bit.ly/quiet79899",
+        },
+        from: {
+          id: 79899,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79899",
+        },
+        gift: {},
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.gift).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    const quietDump = JSON.stringify(quiet.event);
+    expect(quietDump).not.toContain("quiet79899");
+    expect(quietDump).not.toContain("skip79899");
+    expect(quietDump).not.toContain("bit.ly");
+    expect(quietDump).not.toContain("tinyurl");
+  });
+
   it("skips the placeholder name when a chat adds or removes a poll option", async () => {
     const phrase = "请免费领取礼品";
     const added = await normalize({

@@ -99,7 +99,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 拉人进群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0598。
 
-送礼的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0599 与 ADR 0648。
+送礼的人画出的全名只留主机名，仍走 `links`。发送者是聊天时只读聊天标题，不读占位名字。用户仍按全名。名字里的关键词不命中。见 ADR 0599、ADR 0648 与 ADR 0691。
 
 拒绝建议帖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0600。回复的人不是话题用户时，话题用户全名也只留主机名。见 ADR 0652。
 
