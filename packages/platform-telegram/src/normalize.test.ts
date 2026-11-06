@@ -31136,6 +31136,70 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(titled.event)).not.toContain("secretchan79579");
   });
 
+  it("leaves a short link in the name of a scheduled video chat", async () => {
+    const phrase = "请免费领取礼品";
+    const scheduled = await normalize({
+      update_id: 79587,
+      message: {
+        message_id: 79587,
+        date: 1761955200,
+        chat: {
+          id: -10079587,
+          type: "supergroup",
+          title: "https://ow.ly/room79587",
+        },
+        from: {
+          id: 880087,
+          first_name: `https://bit.ly/later79587 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79587",
+          username: "secretuser79587",
+        },
+        video_chat_scheduled: { start_date: 17620079587 },
+      },
+    });
+    expect(scheduled.status).toBe("event");
+    if (scheduled.status !== "event") {
+      return;
+    }
+    expect(scheduled.event.message?.text).toBe("");
+    expect(scheduled.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(scheduled.event.message?.call).toBe("scheduled");
+    expect(scheduled.event.message?.hosts).toBeUndefined();
+    const scheduledDump = JSON.stringify(scheduled.event);
+    expect(scheduledDump).not.toContain(phrase);
+    expect(scheduledDump).not.toContain("later79587");
+    expect(scheduledDump).not.toContain("bit.ly");
+    expect(scheduledDump).not.toContain("skiplast79587");
+    expect(scheduledDump).not.toContain("secretuser79587");
+    expect(scheduledDump).not.toContain("room79587");
+    expect(scheduledDump).not.toContain("17620079587");
+
+    const started = await normalize({
+      update_id: 79588,
+      message: {
+        message_id: 79588,
+        date: 1761955200,
+        chat: { id: -10079588, type: "supergroup" },
+        from: {
+          id: 131,
+          first_name: "https://bit.ly/keep79588",
+          last_name: "https://tinyurl.com/also79588",
+        },
+        video_chat_started: {},
+        video_chat_scheduled: { start_date: 17620079588 },
+      },
+    });
+    expect(started.status).toBe("event");
+    if (started.status !== "event") {
+      return;
+    }
+    expect(started.event.message?.call).toBe("started");
+    expect(started.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(started.event)).not.toContain("keep79588");
+    expect(JSON.stringify(started.event)).not.toContain("also79588");
+    expect(JSON.stringify(started.event)).not.toContain("17620079588");
+  });
+
   it("drops the part after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     const cut = await normalize({
@@ -41950,10 +42014,11 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(scheduled.event.message?.call).toBe("scheduled");
-    expect(scheduled.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(scheduled.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(scheduled.event)).not.toContain("skiplast79317");
     expect(JSON.stringify(scheduled.event)).not.toContain("tinyurl");
     expect(JSON.stringify(scheduled.event)).not.toContain("plan79317");
+    expect(JSON.stringify(scheduled.event)).not.toContain("bit.ly");
     expect(JSON.stringify(scheduled.event)).not.toContain("17620079317");
 
     const near = await normalize({
