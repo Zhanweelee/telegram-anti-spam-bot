@@ -41617,6 +41617,177 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(external.event)).not.toContain("bit.ly");
   });
 
+  it("reads the sticker alt drawn on a reply", async () => {
+    const phrase = "请免费领取礼品";
+    const replied = await normalize({
+      update_id: 80281,
+      message: {
+        message_id: 80281,
+        date: 1761955200,
+        chat: { id: -10080281, type: "supergroup" },
+        from: { id: 80281, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802811,
+          date: 1761955100,
+          chat: { id: -10080281, type: "supergroup" },
+          sticker: {
+            file_id: "STK80281",
+            emoji: `https://bit.ly/alt80281 ${phrase}`,
+            set_name: "https://example.com/set80281",
+          },
+          document: {
+            file_id: "DOC80281",
+            file_name: "https://tinyurl.com/file80281",
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain(phrase);
+    expect(repliedDump).not.toContain("alt80281");
+    expect(repliedDump).not.toContain("set80281");
+    expect(repliedDump).not.toContain("file80281");
+    expect(repliedDump).not.toContain("tinyurl");
+    expect(repliedDump).not.toContain("example.com");
+
+    const caption = await normalize({
+      update_id: 80282,
+      message: {
+        message_id: 80282,
+        date: 1761955200,
+        chat: { id: -10080282, type: "supergroup" },
+        from: { id: 80282, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802821,
+          date: 1761955100,
+          chat: { id: -10080282, type: "supergroup" },
+          caption: "说明",
+          sticker: { file_id: "STK80282", emoji: "https://bit.ly/alt80282" },
+        },
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(caption.event)).not.toContain("alt80282");
+    expect(JSON.stringify(caption.event)).not.toContain("bit.ly");
+
+    const late = await normalize({
+      update_id: 80283,
+      message: {
+        message_id: 80283,
+        date: 1761955200,
+        chat: { id: -10080283, type: "supergroup" },
+        from: { id: 80283, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802831,
+          date: 1761955100,
+          chat: { id: -10080283, type: "supergroup" },
+          sticker: {
+            file_id: "STK80283",
+            emoji: `${"a".repeat(150)} https://bit.ly/late80283`,
+          },
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(late.event)).not.toContain("late80283");
+    expect(JSON.stringify(late.event)).not.toContain("bit.ly");
+
+    const posted = await normalize({
+      update_id: 80284,
+      message: {
+        message_id: 80284,
+        date: 1761955200,
+        chat: { id: -10080284, type: "supergroup" },
+        from: { id: 80284, first_name: "Ada" },
+        sticker: {
+          file_id: "STK80284",
+          emoji: `https://bit.ly/own80284 ${phrase}`,
+          set_name: "https://tinyurl.com/set80284",
+        },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.text).toBe("");
+    expect(posted.event.message?.hosts).toEqual(["bit.ly"]);
+    const postedDump = JSON.stringify(posted.event);
+    expect(postedDump).not.toContain(phrase);
+    expect(postedDump).not.toContain("own80284");
+    expect(postedDump).not.toContain("set80284");
+    expect(postedDump).not.toContain("tinyurl");
+
+    const titled = await normalize({
+      update_id: 80285,
+      message: {
+        message_id: 80285,
+        date: 1761955200,
+        chat: { id: -10080285, type: "supergroup" },
+        from: { id: 80285, first_name: "Ada" },
+        caption: "你好",
+        sticker: { file_id: "STK80285", emoji: "https://bit.ly/own80285" },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("你好");
+    expect(titled.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(titled.event)).not.toContain("own80285");
+    expect(JSON.stringify(titled.event)).not.toContain("bit.ly");
+
+    const external = await normalize({
+      update_id: 80286,
+      message: {
+        message_id: 80286,
+        date: 1761955200,
+        chat: { id: -10080286, type: "supergroup" },
+        from: { id: 80286, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 802861, first_name: "Ada" },
+          },
+          sticker: { file_id: "STK80286", emoji: "https://bit.ly/ext80286" },
+          document: {
+            file_id: "DOC80286",
+            file_name: "https://tinyurl.com/file80286",
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.hosts).toBeUndefined();
+    const externalDump = JSON.stringify(external.event);
+    expect(externalDump).not.toContain("ext80286");
+    expect(externalDump).not.toContain("file80286");
+    expect(externalDump).not.toContain("bit.ly");
+    expect(externalDump).not.toContain("tinyurl");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
