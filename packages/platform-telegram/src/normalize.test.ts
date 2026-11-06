@@ -12562,6 +12562,185 @@ describe("normalizeUpdate", () => {
     expect(keptDump).not.toContain("evil.example");
   });
 
+  it("skips a poll description link that starts after the description", async () => {
+    const past = await normalize({
+      update_id: 80921,
+      message: {
+        message_id: 80921,
+        date: 1761955200,
+        chat: { id: -10080921, type: "supergroup" },
+        from: { id: 80921, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          description: "描",
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/desc80921",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.pollDescription).toBe("描");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("desc80921");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80922,
+      message: {
+        message_id: 80922,
+        date: 1761955200,
+        chat: { id: -10080922, type: "supergroup" },
+        from: { id: 80922, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          description: "https://tinyurl.com/plain80922",
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/desc80922",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80922",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.pollDescription).toBe(
+      "https://tinyurl.com/plain80922",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).toContain("plain80922");
+    expect(keptDump).not.toContain("desc80922");
+    expect(keptDump).not.toContain("late80922");
+    expect(keptDump).not.toContain("evil.example");
+
+    const tail = "尾";
+    const longText = `${"名".repeat(1024)}${tail}`;
+    const late = await normalize({
+      update_id: 80923,
+      message: {
+        message_id: 80923,
+        date: 1761955200,
+        chat: { id: -10080923, type: "supergroup" },
+        from: { id: 80923, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          description: longText,
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 1024,
+              length: 1,
+              url: "https://bit.ly/desc80923",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.pollDescription).toHaveLength(1024);
+    expect(late.event.message?.pollDescription).not.toContain(tail);
+    expect(late.event.message?.hosts).toEqual(["bit.ly"]);
+    const lateDump = JSON.stringify(late.event);
+    expect(lateDump).not.toContain("desc80923");
+
+    const empty = await normalize({
+      update_id: 80924,
+      message: {
+        message_id: 80924,
+        date: 1761955200,
+        chat: { id: -10080924, type: "supergroup" },
+        from: { id: 80924, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          description: "",
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://bit.ly/desc80924",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.pollDescription).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("desc80924");
+    expect(emptyDump).not.toContain("bit.ly");
+
+    const open = await normalize({
+      update_id: 80925,
+      message: {
+        message_id: 80925,
+        date: 1761955200,
+        chat: { id: -10080925, type: "supergroup" },
+        from: { id: 80925, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          description_entities: [
+            {
+              type: "text_link",
+              offset: 9,
+              length: 1,
+              url: "https://bit.ly/desc80925",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(open.status).toBe("event");
+    if (open.status !== "event") {
+      return;
+    }
+    expect(open.event.message?.pollDescription).toBeUndefined();
+    expect(open.event.message?.hosts).toEqual(["bit.ly"]);
+    const openDump = JSON.stringify(open.event);
+    expect(openDump).not.toContain("desc80925");
+  });
+
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80741,
