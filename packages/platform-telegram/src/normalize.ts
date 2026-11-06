@@ -5017,6 +5017,7 @@ function pushCreatedGroupSenderUrls(
  * 开始或结束视频聊天的人画出的全名只留主机名。
  * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 预约这行不画人，不读发送者。
+ * 频道开始或结束也不画人，不读发送者。群和超级群仍按全名。
  * 空的结束不读。时长和开始时间不读。只有邀请名单时不读。
  * 用户名不读。普通消息的发送者不读。
  */
@@ -5026,6 +5027,10 @@ function pushCallSenderUrls(
 ): void {
   const notice = callNotice(message);
   if (notice === undefined || notice === "scheduled") {
+    return;
+  }
+  const chat = message.chat;
+  if (isRecord(chat) && chat.type === "channel") {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
