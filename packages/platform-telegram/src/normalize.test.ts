@@ -14256,8 +14256,271 @@ describe("normalizeUpdate", () => {
     if (tasked.status !== "event") {
       return;
     }
-    expect(tasked.event.message?.asCustomEmoji).toBe(true);
+    expect(tasked.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(tasked.event)).not.toContain("emoji81087");
+  });
+
+  it("skips a checklist task custom emoji that does not fit inside the task", async () => {
+    const past = await normalize({
+      update_id: 81101,
+      message: {
+        message_id: 81101,
+        date: 1761955200,
+        chat: { id: -10081101, type: "supergroup" },
+        from: { id: 81101, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text: "务",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji81101",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.checklistTask).toBe("务");
+    expect(past.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("emoji81101");
+
+    const empty = await normalize({
+      update_id: 81102,
+      message: {
+        message_id: 81102,
+        date: 1761955200,
+        chat: { id: -10081102, type: "supergroup" },
+        from: { id: 81102, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text: "",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 1,
+                  custom_emoji_id: "emoji81102",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("emoji81102");
+
+    const wide = await normalize({
+      update_id: 81103,
+      message: {
+        message_id: 81103,
+        date: 1761955200,
+        chat: { id: -10081103, type: "supergroup" },
+        from: { id: 81103, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text: "务".repeat(151),
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 150,
+                  length: 1,
+                  custom_emoji_id: "emoji81103",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.checklistTask).toBe("务".repeat(151));
+    expect(wide.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("emoji81103");
+
+    const stored = await normalize({
+      update_id: 81104,
+      message: {
+        message_id: 81104,
+        date: 1761955200,
+        chat: { id: -10081104, type: "supergroup" },
+        from: { id: 81104, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text: "务".repeat(3030),
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 3029,
+                  length: 1,
+                  custom_emoji_id: "emoji81104",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.checklistTask).toHaveLength(3029);
+    expect(stored.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("emoji81104");
+
+    const fitted = await normalize({
+      update_id: 81105,
+      message: {
+        message_id: 81105,
+        date: 1761955200,
+        chat: { id: -10081105, type: "supergroup" },
+        from: { id: 81105, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text: "务",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 1,
+                  custom_emoji_id: "emoji81105",
+                },
+                {
+                  type: "custom_emoji",
+                  offset: 4,
+                  length: 1,
+                  custom_emoji_id: "emoji81105b",
+                },
+              ],
+            },
+            {
+              id: 2,
+              text: "甲",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji81105c",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(fitted.status).toBe("event");
+    if (fitted.status !== "event") {
+      return;
+    }
+    expect(fitted.event.message?.asCustomEmoji).toBe(true);
+    const fittedDump = JSON.stringify(fitted.event);
+    expect(fittedDump).not.toContain("emoji81105");
+    expect(fittedDump).not.toContain("emoji81105b");
+    expect(fittedDump).not.toContain("emoji81105c");
+
+    const loose = await normalize({
+      update_id: 81106,
+      message: {
+        message_id: 81106,
+        date: 1761955200,
+        chat: { id: -10081106, type: "supergroup" },
+        from: { id: 81106, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "清",
+          tasks: [
+            {
+              id: 1,
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 9,
+                  length: 2,
+                  custom_emoji_id: "emoji81106",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("emoji81106");
+
+    const added = await normalize({
+      update_id: 81107,
+      message: {
+        message_id: 81107,
+        date: 1761955200,
+        chat: { id: -10081107, type: "supergroup" },
+        from: { id: 81107, first_name: "Ada" },
+        text: "站会",
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 1,
+              text: "新",
+              text_entities: [
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji81107",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(added.event)).not.toContain("emoji81107");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
