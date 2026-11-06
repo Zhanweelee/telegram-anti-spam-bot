@@ -4567,6 +4567,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushCallSenderUrls(message, urls);
   pushForumSenderUrls(message, urls);
   pushGiveawaySenderUrls(message, urls);
+  pushGiveawayChatTitleUrls(message, urls);
   pushPhotoSenderUrls(message, urls);
   pushTitleSenderUrls(message, urls);
   pushBackgroundSenderUrls(message, urls);
@@ -5020,6 +5021,25 @@ function pushGiveawaySenderUrls(
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 创建抽奖这行画出的群名只留主机名。
+ * 私下结束、进行中的卡片和普通消息不读这条群名。
+ * 用户名和星星数量不读。群名不进正文。
+ */
+function pushGiveawayChatTitleUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!isRecord(message.giveaway_created)) {
+    return;
+  }
+  const chat = message.chat;
+  if (!isRecord(chat)) {
+    return;
+  }
+  pushPlainUrls(chat.title, urls);
 }
 
 /**

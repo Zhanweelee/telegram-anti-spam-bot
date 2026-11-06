@@ -30464,6 +30464,132 @@ describe("normalizeUpdate", () => {
     expect(zero.event.message?.text).toBe("今天站会");
   });
 
+  it("keeps only the hostname from the chat title drawn on a giveaway launch", async () => {
+    const stars = 424242;
+    const launched = await normalize({
+      update_id: 79509,
+      message: {
+        message_id: 79509,
+        date: 1761955200,
+        chat: {
+          id: -10079509,
+          type: "channel",
+          title: "https://bit.ly/start79509",
+          username: "https://tinyurl.com/user79509",
+        },
+        from: { id: 1, first_name: "Ada" },
+        giveaway_created: { prize_star_count: stars },
+      },
+    });
+    expect(launched.status).toBe("event");
+    if (launched.status !== "event") {
+      return;
+    }
+    expect(launched.event.message?.text).toBe("");
+    expect(launched.event.message?.giveawayNotice).toBe("created");
+    expect(launched.event.message?.hosts).toEqual(["bit.ly"]);
+    const launchedDump = JSON.stringify(launched.event);
+    expect(launchedDump).not.toContain("start79509");
+    expect(launchedDump).not.toContain("user79509");
+    expect(launchedDump).not.toContain("tinyurl");
+    expect(launchedDump).not.toContain(String(stars));
+
+    const finished = await normalize({
+      update_id: 79510,
+      message: {
+        message_id: 79510,
+        date: 1761955200,
+        chat: {
+          id: -10079510,
+          type: "supergroup",
+          title: "https://bit.ly/done79510",
+        },
+        from: { id: 1, first_name: "Ada" },
+        giveaway_completed: { winner_count: 0 },
+      },
+    });
+    expect(finished.status).toBe("event");
+    if (finished.status !== "event") {
+      return;
+    }
+    expect(finished.event.message?.giveawayNotice).toBe("completed");
+    expect(finished.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(finished.event)).not.toContain("done79510");
+    expect(JSON.stringify(finished.event)).not.toContain("bit.ly");
+
+    const card = await normalize({
+      update_id: 79511,
+      message: {
+        message_id: 79511,
+        date: 1761955200,
+        chat: {
+          id: -10079511,
+          type: "supergroup",
+          title: "https://bit.ly/card79511",
+        },
+        from: { id: 1, first_name: "Ada" },
+        giveaway: { prize_description: "星星" },
+      },
+    });
+    expect(card.status).toBe("event");
+    if (card.status !== "event") {
+      return;
+    }
+    expect(card.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(card.event)).not.toContain("card79511");
+    expect(JSON.stringify(card.event)).not.toContain("bit.ly");
+
+    const blank = await normalize({
+      update_id: 79512,
+      message: {
+        message_id: 79512,
+        date: 1761955200,
+        chat: {
+          id: -10079512,
+          type: "channel",
+          title: "",
+          username: "https://bit.ly/name79512",
+        },
+        from: { id: 1, first_name: "Ada" },
+        giveaway_created: {},
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.giveawayNotice).toBe("created");
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("name79512");
+    expect(JSON.stringify(blank.event)).not.toContain("bit.ly");
+
+    const both = await normalize({
+      update_id: 79513,
+      message: {
+        message_id: 79513,
+        date: 1761955200,
+        chat: {
+          id: -10079513,
+          type: "supergroup",
+          title: "https://bit.ly/room79513",
+        },
+        from: { id: 1, first_name: "https://cutt.ly/ada79513" },
+        text: "今天开会",
+        giveaway_created: {},
+      },
+    });
+    expect(both.status).toBe("event");
+    if (both.status !== "event") {
+      return;
+    }
+    expect(both.event.message?.text).toBe("今天开会");
+    expect(both.event.message?.hosts).toEqual(["cutt.ly", "bit.ly"]);
+    const bothDump = JSON.stringify(both.event);
+    expect(bothDump).not.toContain("room79513");
+    expect(bothDump).not.toContain("ada79513");
+    expect(bothDump).not.toContain("https://bit.ly/room79513");
+  });
+
   it("marks a giveaway notice and leaves the prize message out", async () => {
     const prize = "抽奖广告正文";
     const prizeId = 90184;

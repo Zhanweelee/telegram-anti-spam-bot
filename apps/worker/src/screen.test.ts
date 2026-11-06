@@ -8882,11 +8882,10 @@ describe("screenTelegramEvent", () => {
     });
     expect(beside.message?.text).toBe("今天站会");
     expect(beside.message?.giveawayNotice).toBe("created");
-    expect(beside.message?.hosts).toEqual(["bit.ly"]);
+    expect(beside.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const besideDump = JSON.stringify(beside);
     expect(besideDump).not.toContain("only6114");
     expect(besideDump).not.toContain("room6114");
-    expect(besideDump).not.toContain("tinyurl");
     expect(besideDump).not.toContain(String(stars));
 
     const negative = await posted(6115, {
@@ -29546,6 +29545,113 @@ describe("screenTelegramEvent", () => {
     });
     expect(dumped).not.toContain(booster);
     expect(dumped).not.toContain(String(count));
+  });
+
+  it("deletes a short link in the chat title drawn on a giveaway launch", async () => {
+    const phrase = "请免费领取礼品";
+    const stars = 424242;
+    async function posted(updateId: number, extra: Record<string, unknown>) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "channel",
+              title: "机密群名",
+              username: "newsroom",
+            },
+            from: { id: 126, first_name: "Ada" },
+            giveaway_created: { prize_star_count: stars },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79509, {
+      chat: {
+        id: -(1_000_000 + 79509),
+        type: "channel",
+        title: `https://bit.ly/start79509 ${phrase}`,
+        username: "https://tinyurl.com/user79509",
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.giveawayNotice).toBe("created");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("giveaway_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079509", messageId: "79509" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("start79509");
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("user79509");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain(String(stars));
+
+    const words = await posted(79510, {
+      chat: {
+        id: -(1_000_000 + 79510),
+        type: "channel",
+        title: phrase,
+      },
+    });
+    expect(words.message?.text).toBe("");
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await screenTelegramEvent(words, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(JSON.stringify(words)).not.toContain(phrase);
+
+    const paid = await posted(79511, {
+      is_paid_post: true,
+      chat: {
+        id: -(1_000_000 + 79511),
+        type: "channel",
+        title: "https://bit.ly/paid79511",
+      },
+    });
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid79511");
   });
 
   it("keeps a giveaway notice until that chat asks", async () => {
