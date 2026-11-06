@@ -7540,7 +7540,7 @@ function memberNameSource(message: Record<string, unknown>): string {
   for (const field of ["chat_owner_changed", "chat_owner_left"]) {
     const value = message[field];
     if (isRecord(value)) {
-      pushUserLabels([value.new_owner], parts);
+      pushDrawnFullName(value.new_owner, parts);
     }
   }
   const proximity = message.proximity_alert_triggered;
@@ -7638,27 +7638,6 @@ function pushDrawnFullName(user: unknown, parts: string[]): void {
   parts.push(name.join(" "));
 }
 
-function pushUserLabels(value: unknown, parts: string[]): void {
-  if (!Array.isArray(value)) {
-    return;
-  }
-  for (const member of value) {
-    if (!isRecord(member)) {
-      continue;
-    }
-    for (const key of ["first_name", "last_name", "username"]) {
-      const label = member[key];
-      if (typeof label !== "string") {
-        continue;
-      }
-      const trimmed = label.trim();
-      if (trimmed.length > 0) {
-        parts.push(trimmed);
-      }
-    }
-  }
-}
-
 /** 已有别的正文时，话题名另留最多 128 字。先看新建，再看改名。这段自己就是正文时改看下一种。图标不进这个字段。 */
 function besideTopicName(
   message: Record<string, unknown>,
@@ -7754,7 +7733,7 @@ function besideHiddenName(
   return clipped(source, MAX_TEXT);
 }
 
-/** 已有别的正文时，入群和视频聊天邀请画出的全名、换群主和靠近提醒另留最多 4096 字。入群和邀请不进用户名，几个人用逗号分开。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
+/** 已有别的正文时，入群、视频聊天邀请和换群主画出的全名，以及靠近提醒，另留最多 4096 字。入群、邀请和新群主不进用户名。入群和邀请的几个人用逗号分开。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
 function besideMemberName(
   message: Record<string, unknown>,
   text: string,
