@@ -29547,6 +29547,173 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(String(count));
   });
 
+  it("drops a short link after the first space in a community add or remove name", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      from: Record<string, unknown>,
+      extra: Record<string, unknown> = {},
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -(1_000_000 + updateId), type: "supergroup" },
+            from,
+            community_chat_added: {
+              community: { id: 88000000 + updateId, name: "移入的社区" },
+            },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const cut = await posted(79530, {
+      id: 124,
+      first_name: `Go https://bit.ly/later79530 ${phrase}`,
+      last_name: "https://tinyurl.com/skiplast79530",
+      username: "secretuser79530",
+    });
+    expect(cut.message?.text).toBe("");
+    expect(cut.message?.community).toBe("added");
+    expect(cut.message?.hosts).toBeUndefined();
+    const cutKept = await screenTelegramEvent(cut, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(cutKept.decision.action).toBe("allow");
+    const cutDump = JSON.stringify({ event: cut, decision: cutKept.decision });
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("later79530");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79530");
+    expect(cutDump).not.toContain("secretuser79530");
+    expect(cutDump).not.toContain("88079530");
+
+    const early = await posted(79531, {
+      id: 124,
+      first_name: "A https://bit.ly/keep79531",
+    });
+    expect(early.message?.hosts).toEqual(["bit.ly"]);
+    const earlyModerator = createMemoryModerator();
+    const earlyHit = await screenTelegramEvent(early, {
+      moderator: earlyModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(earlyHit.decision.action).toBe("delete");
+    expect(earlyHit.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(earlyHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(earlyModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079531", messageId: "79531" },
+    ]);
+    expect(JSON.stringify(early)).not.toContain("keep79531");
+
+    const paid = await posted(
+      79532,
+      { id: 124, first_name: "https://bit.ly/paid79532" },
+      { is_paid_post: true },
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(skipped.decision)).not.toContain("paid79532");
+
+    const removed = await posted(
+      79533,
+      { id: 124, first_name: "https://t.me/+code79533" },
+      {
+        community_chat_added: undefined,
+        community_chat_removed: {},
+      },
+    );
+    expect(removed.message?.community).toBe("removed");
+    expect(removed.message?.hosts).toEqual(["t.me"]);
+    expect(removed.message?.invites).toEqual(["t.me"]);
+    const removedHit = await screenTelegramEvent(removed, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(removedHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(removed)).not.toContain("code79533");
+
+    const plain = await posted(79534, {
+      id: 124,
+      first_name: "https://example.com/ok79534",
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plain)).not.toContain("ok79534");
+
+    const pub = await posted(79535, {
+      id: 124,
+      first_name: "https://t.me/durov",
+    });
+    expect(pub.message?.hosts).toEqual(["t.me"]);
+    expect(pub.message?.invites).toBeUndefined();
+    const pubKept = await screenTelegramEvent(pub, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pubKept.decision.action).toBe("allow");
+
+    const joined = await posted(
+      79536,
+      {
+        id: 124,
+        first_name: "Go https://bit.ly/join79536",
+        last_name: "https://tinyurl.com/last79536",
+      },
+      {
+        community_chat_added: undefined,
+        community_chat_joined: {
+          community: { id: 88079536, name: "加入的社区" },
+        },
+      },
+    );
+    expect(joined.message?.community).toBe("joined");
+    expect(joined.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const joinedHit = await screenTelegramEvent(joined, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(joinedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(joinedHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(joined)).not.toContain("join79536");
+    expect(JSON.stringify(joined)).not.toContain("last79536");
+  });
+
   it("deletes a short link in the name drawn on a passport notice", async () => {
     const phrase = "请免费领取礼品";
     const papers = {

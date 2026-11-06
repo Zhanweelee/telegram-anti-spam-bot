@@ -30464,6 +30464,189 @@ describe("normalizeUpdate", () => {
     expect(zero.event.message?.text).toBe("今天站会");
   });
 
+  it("drops the part after the first space in a community add or remove name", async () => {
+    const phrase = "请免费领取礼品";
+    const cut = await normalize({
+      update_id: 79523,
+      message: {
+        message_id: 79523,
+        date: 1761955200,
+        chat: {
+          id: -10079523,
+          type: "supergroup",
+          title: "https://ow.ly/room79523",
+        },
+        from: {
+          id: 124,
+          first_name: `Go https://bit.ly/later79523 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79523",
+          username: "secretuser79523",
+        },
+        community_chat_added: {
+          community: { id: 88079523, name: "移入的社区" },
+        },
+      },
+    });
+    expect(cut.status).toBe("event");
+    if (cut.status !== "event") {
+      return;
+    }
+    expect(cut.event.message?.text).toBe("");
+    expect(cut.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(cut.event.message?.community).toBe("added");
+    expect(cut.event.message?.hosts).toBeUndefined();
+    const cutDump = JSON.stringify(cut.event);
+    expect(cutDump).not.toContain("later79523");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79523");
+    expect(cutDump).not.toContain("tinyurl");
+    expect(cutDump).not.toContain("secretuser79523");
+    expect(cutDump).not.toContain("room79523");
+    expect(cutDump).not.toContain("ow.ly");
+    expect(cutDump).not.toContain("88079523");
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("移入的社区");
+
+    const early = await normalize({
+      update_id: 79524,
+      message: {
+        message_id: 79524,
+        date: 1761955200,
+        chat: { id: -10079524, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "A https://bit.ly/keep79524",
+          last_name: "https://tinyurl.com/skiplast79524",
+        },
+        community_chat_added: {
+          community: { id: 88079524, name: "移入的社区" },
+        },
+      },
+    });
+    expect(early.status).toBe("event");
+    if (early.status !== "event") {
+      return;
+    }
+    expect(early.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(early.event)).not.toContain("keep79524");
+    expect(JSON.stringify(early.event)).not.toContain("skiplast79524");
+
+    const lastCut = await normalize({
+      update_id: 79525,
+      message: {
+        message_id: 79525,
+        date: 1761955200,
+        chat: { id: -10079525, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "",
+          last_name: "Go https://bit.ly/last79525",
+        },
+        community_chat_removed: {},
+      },
+    });
+    expect(lastCut.status).toBe("event");
+    if (lastCut.status !== "event") {
+      return;
+    }
+    expect(lastCut.event.message?.community).toBe("removed");
+    expect(lastCut.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(lastCut.event)).not.toContain("last79525");
+    expect(JSON.stringify(lastCut.event)).not.toContain("bit.ly");
+
+    const lastOnly = await normalize({
+      update_id: 79526,
+      message: {
+        message_id: 79526,
+        date: 1761955200,
+        chat: { id: -10079526, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "",
+          last_name: "https://bit.ly/only79526",
+        },
+        community_chat_added: {
+          community: { id: 88079526, name: "移入的社区" },
+        },
+      },
+    });
+    expect(lastOnly.status).toBe("event");
+    if (lastOnly.status !== "event") {
+      return;
+    }
+    expect(lastOnly.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(lastOnly.event)).not.toContain("only79526");
+
+    const blank = await normalize({
+      update_id: 79527,
+      message: {
+        message_id: 79527,
+        date: 1761955200,
+        chat: { id: -10079527, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79527",
+        },
+        community_chat_removed: {},
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank79527");
+
+    const prefix = await normalize({
+      update_id: 79528,
+      message: {
+        message_id: 79528,
+        date: 1761955200,
+        chat: { id: -10079528, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/keep79528 extra",
+        },
+        community_chat_added: {
+          community: { id: 88079528, name: "移入的社区" },
+        },
+      },
+    });
+    expect(prefix.status).toBe("event");
+    if (prefix.status !== "event") {
+      return;
+    }
+    expect(prefix.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(prefix.event)).not.toContain("keep79528");
+    expect(JSON.stringify(prefix.event)).not.toContain("extra");
+
+    const joined = await normalize({
+      update_id: 79529,
+      message: {
+        message_id: 79529,
+        date: 1761955200,
+        chat: { id: -10079529, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "Go https://bit.ly/join79529",
+          last_name: "https://tinyurl.com/last79529",
+        },
+        community_chat_joined: {
+          community: { id: 88079529, name: "加入的社区" },
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.community).toBe("joined");
+    expect(joined.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(joined.event)).not.toContain("join79529");
+    expect(JSON.stringify(joined.event)).not.toContain("last79529");
+  });
+
   it("keeps only the hostname from the name drawn on a passport notice", async () => {
     const phrase = "请免费领取礼品";
     const papers = {
