@@ -67,7 +67,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 退群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0582。
 
-助推的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0583。
+助推的人，名字只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0674。
 
 改自动删除计时的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0584。
 

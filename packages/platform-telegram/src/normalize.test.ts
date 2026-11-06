@@ -41159,6 +41159,120 @@ describe("normalizeUpdate", () => {
     expect(groupDump).not.toContain("bit.ly");
   });
 
+  it("leaves a short link in the chat title on a boost", async () => {
+    const phrase = "请免费领取礼品";
+    const same = await normalize({
+      update_id: 79680,
+      message: {
+        message_id: 79680,
+        date: 1761955200,
+        chat: {
+          id: -10079680,
+          type: "channel",
+          title: "https://ow.ly/room79680",
+        },
+        sender_chat: {
+          id: -10079680,
+          type: "channel",
+          title: `https://bit.ly/later79680 ${phrase}`,
+          username: "secretuser79680",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79680",
+          last_name: "https://cutt.ly/also79680",
+          username: "adder79680",
+        },
+        boost_added: { boost_count: 880680 },
+      },
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.asBoost).toBe(true);
+    expect(same.event.message?.hosts).toEqual(["bit.ly"]);
+    const sameDump = JSON.stringify(same.event);
+    expect(sameDump).not.toContain(phrase);
+    expect(sameDump).not.toContain("later79680");
+    expect(sameDump).not.toContain("skip79680");
+    expect(sameDump).not.toContain("also79680");
+    expect(sameDump).not.toContain("secretuser79680");
+    expect(sameDump).not.toContain("adder79680");
+    expect(sameDump).not.toContain("room79680");
+    expect(sameDump).not.toContain("tinyurl");
+    expect(sameDump).not.toContain("cutt.ly");
+    expect(sameDump).not.toContain("ow.ly");
+    expect(sameDump).not.toContain("880680");
+
+    const other = await normalize({
+      update_id: 79681,
+      message: {
+        message_id: 79681,
+        date: 1761955200,
+        chat: { id: -10079681, type: "supergroup" },
+        sender_chat: {
+          id: -100796810,
+          type: "channel",
+          title: "https://bit.ly/boost79681",
+          username: "secretuser79681",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79681",
+          last_name: "https://cutt.ly/also79681",
+        },
+        boost_added: { boost_count: 880681 },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.asBoost).toBe(true);
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("boost79681");
+    expect(otherDump).not.toContain("skip79681");
+    expect(otherDump).not.toContain("also79681");
+    expect(otherDump).not.toContain("secretuser79681");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+    expect(otherDump).not.toContain("880681");
+
+    const group = await normalize({
+      update_id: 79682,
+      message: {
+        message_id: 79682,
+        date: 1761955200,
+        chat: { id: -10079682, type: "supergroup" },
+        sender_chat: {
+          id: -10079682,
+          type: "supergroup",
+          title: "https://bit.ly/group79682",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/who79682",
+          last_name: "https://cutt.ly/also79682",
+        },
+        boost_added: { boost_count: 2 },
+      },
+    });
+    expect(group.status).toBe("event");
+    if (group.status !== "event") {
+      return;
+    }
+    expect(group.event.message?.asBoost).toBe(true);
+    expect(group.event.message?.hosts).toEqual(["bit.ly"]);
+    const groupDump = JSON.stringify(group.event);
+    expect(groupDump).not.toContain("who79682");
+    expect(groupDump).not.toContain("also79682");
+    expect(groupDump).not.toContain("group79682");
+    expect(groupDump).not.toContain("tinyurl");
+    expect(groupDump).not.toContain("cutt.ly");
+  });
+
   it("skips the sender name when a chat sets the background", async () => {
     const phrase = "请免费领取礼品";
     const same = await normalize({
