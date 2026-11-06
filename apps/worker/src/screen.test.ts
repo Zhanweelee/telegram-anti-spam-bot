@@ -71345,4 +71345,167 @@ describe("screenTelegramEvent", () => {
     );
     expect(JSON.stringify(result.decision)).not.toContain(path);
   });
+
+  it("leaves a message custom emoji that does not fit inside the text", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "custom_emoji",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["custom_emoji"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+
+    const hidden = await posted(80951, {
+      text: "文",
+      entities: [
+        {
+          type: "custom_emoji",
+          offset: 0,
+          length: 2,
+          custom_emoji_id: `emoji80951 ${phrase}`,
+        },
+      ],
+    });
+    expect(hidden.message?.text).toBe("文");
+    expect(hidden.message?.asCustomEmoji).toBeUndefined();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify(hidden);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("emoji80951");
+
+    const drawn = await posted(80952, {
+      text: "文",
+      entities: [
+        {
+          type: "custom_emoji",
+          offset: 0,
+          length: 1,
+          custom_emoji_id: "emoji80952",
+        },
+      ],
+    });
+    expect(drawn.message?.asCustomEmoji).toBe(true);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("custom_emoji");
+    expect(drawnHit.decision.evidence).toEqual([
+      { kind: "feature", summary: "entity:custom_emoji" },
+    ]);
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080952", messageId: "80952" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("emoji80952");
+
+    const idle = await posted(80953, {
+      text: "文",
+      entities: [
+        {
+          type: "custom_emoji",
+          offset: 0,
+          length: 1,
+          custom_emoji_id: "emoji80953",
+        },
+      ],
+    });
+    expect(idle.message?.asCustomEmoji).toBe(true);
+    const idleHit = await screenTelegramEvent(idle, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(idleHit.decision.action).toBe("allow");
+    expect(JSON.stringify(idle)).not.toContain("emoji80953");
+
+    const paid = await posted(
+      80954,
+      {
+        text: "文",
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 1,
+            custom_emoji_id: "emoji80954",
+          },
+        ],
+      },
+      true,
+    );
+    expect(paid.message?.asCustomEmoji).toBe(true);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("emoji80954");
+  });
 });
