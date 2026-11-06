@@ -4943,6 +4943,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 付款成功的账单标题仍按原来的顺序。
  * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
  * 本条回复是普通文件且没有说明时，引用条画文件名的前 150 个码元。
+ * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -5020,6 +5021,9 @@ function pushLoadedReplyLine(
   if (pushExternalReplyPreview(message, urls)) {
     return;
   }
+  if (pushReplyTopicTitle(reply, urls)) {
+    return;
+  }
   if (isRecord(reply.game)) {
     pushPlainUrls(reply.game.title, urls);
     return;
@@ -5031,6 +5035,23 @@ function pushLoadedReplyLine(
     return;
   }
   pushReplyDocumentName(reply, urls);
+}
+
+/**
+ * 回复改过名字的话题时，引用条画出的新名字只留主机名。
+ * 只读 `name`。图标编号不读。没有名字时不占这一行。
+ * 新建话题的回复条不画名字。
+ */
+function pushReplyTopicTitle(
+  reply: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  const edited = reply.forum_topic_edited;
+  if (!isRecord(edited) || typeof edited.name !== "string") {
+    return false;
+  }
+  pushPlainUrls(edited.name, urls);
+  return true;
 }
 
 /** 没有说明的普通文件，引用条只画文件名的前 150 个码元。 */
