@@ -13868,8 +13868,285 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(task.event.message?.text).toBe("站会");
-    expect(task.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(task.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(task.event)).not.toContain("task81703");
+    expect(JSON.stringify(task.event)).not.toContain("bit.ly");
+  });
+
+  it("skips a checklist task link whose length is not positive", async () => {
+    const link = (length: number, url: string) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (
+      id: number,
+      text: unknown,
+      entities: Record<string, unknown>[],
+      extra: Record<string, unknown> = { text: "站会" },
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...extra,
+        checklist: {
+          title: "单",
+          tasks: [
+            {
+              id: 1,
+              ...(text === undefined ? {} : { text }),
+              text_entities: entities,
+            },
+          ],
+        },
+      },
+    });
+
+    const zero = await normalize(
+      asked(81721, "做", [link(0, "https://bit.ly/task81721")]),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("站会");
+    expect(zero.event.message?.checklistTask).toBe("做");
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("task81721");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      asked(81722, "做", [link(-1, "https://bit.ly/task81722")]),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("task81722");
+
+    const fraction = await normalize(
+      asked(81723, "做", [link(1.5, "https://bit.ly/task81723")]),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("task81723");
+
+    const clamped = await normalize(
+      asked(81724, "做", [link(2, "https://bit.ly/task81724")]),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.checklistTask).toBe("做");
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("task81724");
+
+    const plain = await normalize(
+      asked(81725, "https://example.com/plain81725", [
+        link(0, "https://bit.ly/task81725"),
+      ]),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("站会");
+    expect(plain.event.message?.checklistTask).toBe(
+      "https://example.com/plain81725",
+    );
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).toContain("plain81725");
+    expect(plainDump).not.toContain("task81725");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(81726, "做", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 0,
+          language: "https://bit.ly/task81726",
+        },
+      ]),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("task81726");
+
+    const keptCode = await normalize(
+      asked(81727, "做", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 1,
+          language: "https://bit.ly/task81727",
+        },
+      ]),
+    );
+    expect(keptCode.status).toBe("event");
+    if (keptCode.status !== "event") {
+      return;
+    }
+    expect(keptCode.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptCode.event)).not.toContain("task81727");
+
+    const beside = await normalize(
+      asked(81728, "做".repeat(3030), [
+        {
+          type: "text_link",
+          offset: 3029,
+          length: 1,
+          url: "https://bit.ly/task81728",
+        },
+      ]),
+    );
+    expect(beside.status).toBe("event");
+    if (beside.status !== "event") {
+      return;
+    }
+    expect(beside.event.message?.text).toBe("站会");
+    expect(beside.event.message?.checklistTask).toHaveLength(3029);
+    expect(beside.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(beside.event)).not.toContain("task81728");
+
+    const tail = await normalize({
+      update_id: 81729,
+      message: {
+        message_id: 81729,
+        date: 1761955200,
+        chat: { id: -10081729, type: "supergroup" },
+        from: { id: 81729, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "单",
+          tasks: [
+            { id: 1, text: "做".repeat(3029) },
+            {
+              id: 2,
+              text: "https://example.com/tail81729",
+              text_entities: [link(0, "https://bit.ly/task81729")],
+            },
+          ],
+        },
+      },
+    });
+    expect(tail.status).toBe("event");
+    if (tail.status !== "event") {
+      return;
+    }
+    expect(tail.event.message?.checklistTask).toHaveLength(3029);
+    expect(tail.event.message?.hosts).toEqual(["example.com"]);
+    const tailDump = JSON.stringify(tail.event);
+    expect(tailDump).not.toContain("tail81729");
+    expect(tailDump).not.toContain("task81729");
+    expect(tailDump).not.toContain("bit.ly");
+
+    const stored = await normalize(
+      asked(
+        81730,
+        "做".repeat(4097),
+        [
+          {
+            type: "text_link",
+            offset: 4096,
+            length: 1,
+            url: "https://bit.ly/task81730",
+          },
+        ],
+        { text: "做".repeat(4096) },
+      ),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.text).toHaveLength(4096);
+    expect(stored.event.message?.checklistTask).toBeUndefined();
+    expect(stored.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(stored.event)).not.toContain("task81730");
+
+    const loose = await normalize(
+      asked(81731, undefined, [link(0, "https://bit.ly/task81731")]),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(loose.event)).not.toContain("task81731");
+
+    const later = await normalize({
+      update_id: 81732,
+      message: {
+        message_id: 81732,
+        date: 1761955200,
+        chat: { id: -10081732, type: "supergroup" },
+        from: { id: 81732, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "单",
+          tasks: [
+            { id: 1, text: "做".repeat(3029) },
+            {
+              id: 2,
+              text: "乙",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 1,
+                  url: "https://bit.ly/task81732",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.checklistTask).toHaveLength(3029);
+    expect(later.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(later.event)).not.toContain("task81732");
+
+    const added = await normalize({
+      update_id: 81733,
+      message: {
+        message_id: 81733,
+        date: 1761955200,
+        chat: { id: -10081733, type: "supergroup" },
+        from: { id: 81733, first_name: "Ada" },
+        text: "站会",
+        poll_option_added: {
+          option_text: "甲",
+          option_text_entities: [link(0, "https://bit.ly/add81733")],
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("站会");
+    expect(added.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(added.event)).not.toContain("add81733");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
