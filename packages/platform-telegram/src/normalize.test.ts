@@ -43290,6 +43290,168 @@ describe("normalizeUpdate", () => {
     expect(bubble.event.message?.hosts).toEqual(["bit.ly"]);
   });
 
+  it("skips a link the list checkbox pushes out of the preview", async () => {
+    const pinned = await normalize({
+      update_id: 80521,
+      message: {
+        message_id: 80521,
+        date: 1761955200,
+        chat: { id: -10080521, type: "supergroup" },
+        from: { id: 80521, first_name: "Ada" },
+        pinned_message: {
+          message_id: 805211,
+          date: 1761955100,
+          chat: { id: -10080521, type: "supergroup" },
+          text: "https://tinyurl.com/text80521",
+          rich_message: {
+            blocks: [
+              {
+                type: "list",
+                items: [
+                  {
+                    value: 10,
+                    has_checkbox: true,
+                    blocks: [
+                      { type: "paragraph", text: "https://bit.ly/edge80521" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(pinned.event.message?.hosts).toEqual(["bit.l"]);
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain("edge80521");
+    expect(pinnedDump).not.toContain("bit.ly");
+    expect(pinnedDump).not.toContain("text80521");
+    expect(pinnedDump).not.toContain("tinyurl");
+
+    const kept = await normalize({
+      update_id: 80522,
+      message: {
+        message_id: 80522,
+        date: 1761955200,
+        chat: { id: -10080522, type: "supergroup" },
+        from: { id: 80522, first_name: "Ada" },
+        pinned_message: {
+          message_id: 805221,
+          date: 1761955100,
+          chat: { id: -10080522, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "list",
+                items: [
+                  {
+                    value: 1,
+                    has_checkbox: true,
+                    is_checked: true,
+                    blocks: [
+                      { type: "paragraph", text: "http://bit.ly/ok80522" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(kept.event)).not.toContain("ok80522");
+
+    const pad = "x".repeat(134);
+    const replied = await normalize({
+      update_id: 80523,
+      message: {
+        message_id: 80523,
+        date: 1761955200,
+        chat: { id: -10080523, type: "supergroup" },
+        from: { id: 80523, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805231,
+          date: 1761955100,
+          chat: { id: -10080523, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "list",
+                items: [
+                  {
+                    has_checkbox: true,
+                    blocks: [
+                      {
+                        type: "paragraph",
+                        text: `${pad}https://bit.ly/edge80523`,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(replied.event.message?.hosts).toEqual(["bit.l"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain("edge80523");
+    expect(repliedDump).not.toContain("bit.ly");
+    expect(repliedDump).not.toContain(pad);
+
+    const bubble = await normalize({
+      update_id: 80524,
+      message: {
+        message_id: 80524,
+        date: 1761955200,
+        chat: { id: -10080524, type: "supergroup" },
+        from: { id: 80524, first_name: "Ada" },
+        rich_message: {
+          blocks: [
+            {
+              type: "list",
+              items: [
+                {
+                  value: 1,
+                  has_checkbox: true,
+                  blocks: [
+                    { type: "paragraph", text: "https://bit.ly/bubble80524" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(bubble.status).toBe("event");
+    if (bubble.status !== "event") {
+      return;
+    }
+    expect(bubble.event.message?.text).toBe("https://bit.ly/bubble80524");
+    expect(bubble.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("reads the hostname drawn on a reply under a rich message", async () => {
     const phrase = "请免费领取礼品";
     const replied = await normalize({

@@ -5782,6 +5782,7 @@ interface PinnedRichPreview {
  * 置顶一条富文本时，提示画出 `formatRichMessage` 的前 20 个码元。
  * 段落、标题、引用、列表、表格标题、按钮、音频名和文件名按这条预览拼接。
  * 思考块不在这条预览里。提及、日期和表情替代字也不在。气泡里的整篇文章仍读。
+ * 有复选框时用勾选框代替圆点。没勾上的框多占一个码元。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
@@ -5979,16 +5980,28 @@ function appendPinnedRichList(
     }
     started = true;
     const label = typeof item.label === "string" ? item.label : "";
+    const checkbox = pinnedRichCheckbox(item);
     if (typeof item.value === "number") {
       const marker = label.length > 0 ? label : String(item.value);
       appendPinnedRichText(`${marker}. `, preview);
+      if (checkbox !== undefined) {
+        appendPinnedRichText(checkbox, preview);
+      }
     } else {
-      appendPinnedRichText(`• ${label}`, preview);
+      appendPinnedRichText(`${checkbox ?? "• "}${label}`, preview);
     }
     if (Array.isArray(item.blocks)) {
       appendPinnedRichBlocks(item.blocks, preview);
     }
   }
+}
+
+/** 有复选框时，短预览用勾选框代替圆点。没勾上的框多一个变体选择符。 */
+function pinnedRichCheckbox(item: Record<string, unknown>): string | undefined {
+  if (item.has_checkbox !== true) {
+    return undefined;
+  }
+  return item.is_checked === true ? "✅ " : "☑️ ";
 }
 
 function appendPinnedRichButtons(
