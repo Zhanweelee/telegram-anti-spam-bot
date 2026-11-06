@@ -11963,7 +11963,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(named.message?.text).toBe(label);
     expect(named.message?.gift).toBe("unique");
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
       moderator,
@@ -11984,7 +11984,6 @@ describe("screenTelegramEvent", () => {
     });
     expect(namedDump).not.toContain("gift6209");
     expect(namedDump).not.toContain("skip6209");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("secretuser6209");
     expect(namedDump).not.toContain(giftId);
     expect(namedDump).not.toContain("Slug6209");
@@ -12091,12 +12090,16 @@ describe("screenTelegramEvent", () => {
       },
     });
     expect(blank.message?.text).toBe(label);
-    expect(blank.message?.hosts).toBeUndefined();
-    const blankKept = await screenTelegramEvent(blank, {
-      moderator: createMemoryModerator(),
+    expect(blank.message?.hosts).toEqual(["bit.ly"]);
+    const blankModerator = createMemoryModerator();
+    const blankHit = await screenTelegramEvent(blank, {
+      moderator: blankModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(blankKept.decision.action).toBe("allow");
+    expect(blankHit.decision.action).toBe("delete");
+    expect(blankModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1006214", messageId: "6214" },
+    ]);
     expect(JSON.stringify(blank)).not.toContain("space6214");
 
     const empty = await posted(6215, {

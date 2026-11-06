@@ -5087,8 +5087,9 @@ function pushJoinSenderUrls(
 }
 
 /**
- * 送礼的人只留主机名。
+ * 送礼的人画出的全名只留主机名。
  * 普通礼物、独特礼物或升级购买里嵌套的礼物是对象时读。空的嵌套对象也读。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 空的外层对象、布尔值和只有附言的对象不读。
  * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
  */
@@ -5099,7 +5100,7 @@ function pushGiftSenderUrls(
   if (giftNotice(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushFormattedUserUrls(message.from, urls);
 }
 
 /**
