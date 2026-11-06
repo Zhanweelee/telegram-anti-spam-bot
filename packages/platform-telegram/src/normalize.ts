@@ -4567,6 +4567,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     pushPlainUrls(value.file_name, urls);
   }
   pushStickerPreview(message, urls);
+  pushDicePreview(message, urls);
   const paid = message.paid_media;
   if (isRecord(paid) && Array.isArray(paid.paid_media)) {
     for (const item of paid.paid_media) {
@@ -4948,6 +4949,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 没有说明的贴纸画表情加固定字样。只读表情的前 150 个码元。包名不读。
  * 外部回复的贴纸只画固定字样，不读那张贴纸的表情。
  * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。任务不读。
+ * 骰子画出表情。去掉变体选择符后再留主机名。点数不读。外部回复也读这张骰子的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  */
 function pushReplyTargetUrls(
@@ -5040,6 +5042,9 @@ function pushLoadedReplyLine(
     return;
   }
   if (pushReplyChecklistTitle(reply, urls)) {
+    return;
+  }
+  if (pushReplyDiceEmoji(reply, urls)) {
     return;
   }
   if (pushReplyStickerAlt(reply, urls)) {
@@ -5174,6 +5179,69 @@ function pushReplyChecklistTitle(
   return true;
 }
 
+/**
+ * 骰子预览行画出表情。Android 先去掉变体选择符。
+ * 空表情仍占住这一行，改画默认骰子。点数不读。
+ * 有说明时改画说明。
+ */
+function pushReplyDiceEmoji(
+  reply: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  if (typeof reply.caption === "string" && reply.caption.length > 0) {
+    return false;
+  }
+  if (typeof reply.text === "string" && reply.text.length > 0) {
+    return false;
+  }
+  if (!isRecord(reply.dice)) {
+    return false;
+  }
+  pushPlainUrls(drawnDiceEmoji(reply.dice), urls);
+  return true;
+}
+
+/** 没有说明时，这条骰子自己的列表预览画出表情。 */
+function pushDicePreview(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (typeof message.caption === "string" && message.caption.length > 0) {
+    return;
+  }
+  if (typeof message.text === "string" && message.text.length > 0) {
+    return;
+  }
+  if (!isRecord(message.dice)) {
+    return;
+  }
+  pushPlainUrls(drawnDiceEmoji(message.dice), urls);
+}
+
+/** 外部回复的骰子直接画这份表情，不取当前消息的文件。 */
+function pushExternalDiceEmoji(
+  external: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  if (!isRecord(external.dice)) {
+    return false;
+  }
+  pushPlainUrls(drawnDiceEmoji(external.dice), urls);
+  return true;
+}
+
+/** 画出的表情去掉 U+FE0F，再只留前 150 个码元。 */
+function drawnDiceEmoji(dice: Record<string, unknown>): string | undefined {
+  if (typeof dice.emoji !== "string") {
+    return undefined;
+  }
+  const drawn = dice.emoji.replaceAll("\uFE0F", "");
+  if (drawn.length === 0) {
+    return undefined;
+  }
+  return drawn.slice(0, 150);
+}
+
 /** 文字链接的起点落在画出的前一段里才读。 */
 function visibleTextLinks(list: unknown, limit: number): unknown[] {
   if (!Array.isArray(list)) {
@@ -5216,6 +5284,7 @@ const externalPreviewKeys = [
  * 账单读说明，不读标题。
  * 普通文件读文件名。动图、图片、视频和游戏只占这一行，不读附带的文件名。
  * 贴纸只画固定字样。这一行的表情取自当前消息，不读外部贴纸的表情。
+ * 骰子画出这份表情。点数不读。
  * 这一行已经占住时返回 true，不再改读本条回复的游戏或账单。
  */
 function pushExternalReplyPreview(
@@ -5233,6 +5302,9 @@ function pushExternalReplyPreview(
   }
   if (isRecord(external.invoice)) {
     pushPlainUrls(external.invoice.description, urls);
+    return true;
+  }
+  if (pushExternalDiceEmoji(external, urls)) {
     return true;
   }
   if (labeledReplyMedia(external)) {

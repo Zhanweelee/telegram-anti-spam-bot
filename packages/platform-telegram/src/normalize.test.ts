@@ -41944,6 +41944,163 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quoted.event)).not.toContain("bit.ly");
   });
 
+  it("reads the dice emoji drawn on a reply", async () => {
+    const phrase = "请免费领取礼品";
+    const replied = await normalize({
+      update_id: 80321,
+      message: {
+        message_id: 80321,
+        date: 1761955200,
+        chat: { id: -10080321, type: "supergroup" },
+        from: { id: 80321, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 803211,
+          date: 1761955100,
+          chat: { id: -10080321, type: "supergroup" },
+          dice: { emoji: `bit.ly/die80321 ${phrase}`, value: 1 },
+          document: {
+            file_id: "DOC80321",
+            file_name: "https://tinyurl.com/file80321",
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain(phrase);
+    expect(repliedDump).not.toContain("die80321");
+    expect(repliedDump).not.toContain("file80321");
+    expect(repliedDump).not.toContain("tinyurl");
+
+    const joined = await normalize({
+      update_id: 80322,
+      message: {
+        message_id: 80322,
+        date: 1761955200,
+        chat: { id: -10080322, type: "supergroup" },
+        from: { id: 80322, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 803221,
+          date: 1761955100,
+          chat: { id: -10080322, type: "supergroup" },
+          dice: { emoji: "bit\uFE0F.ly/join80322", value: 2 },
+        },
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(joined.event)).not.toContain("join80322");
+
+    const posted = await normalize({
+      update_id: 80323,
+      message: {
+        message_id: 80323,
+        date: 1761955200,
+        chat: { id: -10080323, type: "supergroup" },
+        from: { id: 80323, first_name: "Ada" },
+        dice: { emoji: `bit.ly/own80323 ${phrase}`, value: 3 },
+      },
+    });
+    expect(posted.status).toBe("event");
+    if (posted.status !== "event") {
+      return;
+    }
+    expect(posted.event.message?.text).toBe("");
+    expect(posted.event.message?.hosts).toEqual(["bit.ly"]);
+    const postedDump = JSON.stringify(posted.event);
+    expect(postedDump).not.toContain(phrase);
+    expect(postedDump).not.toContain("own80323");
+
+    const caption = await normalize({
+      update_id: 80324,
+      message: {
+        message_id: 80324,
+        date: 1761955200,
+        chat: { id: -10080324, type: "supergroup" },
+        from: { id: 80324, first_name: "Ada" },
+        caption: "你好",
+        dice: { emoji: "bit.ly/cap80324", value: 4 },
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.text).toBe("你好");
+    expect(caption.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(caption.event)).not.toContain("cap80324");
+    expect(JSON.stringify(caption.event)).not.toContain("bit.ly");
+
+    const external = await normalize({
+      update_id: 80325,
+      message: {
+        message_id: 80325,
+        date: 1761955200,
+        chat: { id: -10080325, type: "supergroup" },
+        from: { id: 80325, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 803251, first_name: "Ada" },
+          },
+          dice: { emoji: "bit.ly/ext80325", value: 5 },
+          document: {
+            file_id: "DOC80325",
+            file_name: "https://tinyurl.com/file80325",
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.hosts).toEqual(["bit.ly"]);
+    const externalDump = JSON.stringify(external.event);
+    expect(externalDump).not.toContain("ext80325");
+    expect(externalDump).not.toContain("file80325");
+    expect(externalDump).not.toContain("tinyurl");
+
+    const blank = await normalize({
+      update_id: 80326,
+      message: {
+        message_id: 80326,
+        date: 1761955200,
+        chat: { id: -10080326, type: "supergroup" },
+        from: { id: 80326, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 803261,
+          date: 1761955100,
+          chat: { id: -10080326, type: "supergroup" },
+          dice: { emoji: "", value: 6 },
+          document: {
+            file_id: "DOC80326",
+            file_name: "https://bit.ly/file80326",
+          },
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("file80326");
+    expect(JSON.stringify(blank.event)).not.toContain("bit.ly");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
