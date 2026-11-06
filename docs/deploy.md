@@ -173,7 +173,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 投票选项命中同一组模式时删除。`/rule <chatId> poll_option_regex off` 回到只看关键词和短链。选项自己就是题干时仍要打开 `regex_hint`。见 ADR 0537。
 
-清单任务命中同一组模式时删除。`/rule <chatId> checklist_task_regex off` 回到只看关键词和短链。任务自己就是标题时仍要打开 `regex_hint`。见 ADR 0538。
+清单任务命中同一组模式时删除。`/rule <chatId> checklist_task_regex off` 回到只看关键词和短链。任务自己就是标题时仍要打开 `regex_hint`。见 ADR 0538。清单标题和任务上的文字链接后来由 ADR 0726 不能越过正文。
 
 说明旁边的文件名或音频标题命中同一组模式时删除。`/rule <chatId> media_name_regex off` 回到只看关键词和短链。名称自己就是正文时仍要打开 `regex_hint`。见 ADR 0539。
 
