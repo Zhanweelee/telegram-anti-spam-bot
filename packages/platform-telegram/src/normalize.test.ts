@@ -41187,6 +41187,231 @@ describe("normalizeUpdate", () => {
     expect(invalidDump).not.toContain("tinyurl");
   });
 
+  it("leaves a short link in the chat title on a checklist", async () => {
+    const phrase = "请免费领取礼品";
+    const done = await normalize({
+      update_id: 79827,
+      message: {
+        message_id: 79827,
+        date: 1761955200,
+        chat: {
+          id: -10079827,
+          type: "supergroup",
+          title: `https://example.com/room79827 ${phrase}`,
+        },
+        sender_chat: {
+          id: -10079827,
+          type: "supergroup",
+          title: `https://bit.ly/later79827 ${phrase}`,
+          username: "secretuser79827",
+        },
+        from: {
+          id: 79827,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79827",
+          last_name: "https://cutt.ly/also79827",
+          username: "adder79827",
+        },
+        checklist_tasks_done: { marked_as_done_task_ids: [1] },
+      },
+    });
+    expect(done.status).toBe("event");
+    if (done.status !== "event") {
+      return;
+    }
+    expect(done.event.message?.text).toBe("");
+    expect(done.event.message?.checklistNotice).toBe("done");
+    expect(done.event.message?.hosts).toEqual(["bit.ly"]);
+    const doneDump = JSON.stringify(done.event);
+    expect(doneDump).not.toContain(phrase);
+    expect(doneDump).not.toContain("later79827");
+    expect(doneDump).not.toContain("skip79827");
+    expect(doneDump).not.toContain("also79827");
+    expect(doneDump).not.toContain("secretuser79827");
+    expect(doneDump).not.toContain("adder79827");
+    expect(doneDump).not.toContain("room79827");
+    expect(doneDump).not.toContain("tinyurl");
+    expect(doneDump).not.toContain("cutt.ly");
+    expect(doneDump).not.toContain("example.com");
+
+    const other = await normalize({
+      update_id: 79828,
+      message: {
+        message_id: 79828,
+        date: 1761955200,
+        chat: {
+          id: -10079828,
+          type: "supergroup",
+          title: "https://example.com/room79828",
+        },
+        sender_chat: {
+          id: -100798280,
+          type: "group",
+          title: "https://bit.ly/end79828",
+          username: "secretuser79828",
+        },
+        from: {
+          id: 79828,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79828",
+          last_name: "https://cutt.ly/also79828",
+          username: "adder79828",
+        },
+        checklist_tasks_done: {
+          marked_as_not_done_task_ids: [4],
+          checklist_message: {
+            checklist: {
+              tasks: [{ id: 4, text: "https://ow.ly/task79828" }],
+            },
+          },
+        },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.checklistNotice).toBe("undone");
+    expect(other.event.message?.hosts).toEqual(["bit.ly", "ow.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("end79828");
+    expect(otherDump).not.toContain("task79828");
+    expect(otherDump).not.toContain("skip79828");
+    expect(otherDump).not.toContain("also79828");
+    expect(otherDump).not.toContain("secretuser79828");
+    expect(otherDump).not.toContain("adder79828");
+    expect(otherDump).not.toContain("room79828");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+    expect(otherDump).not.toContain("example.com");
+
+    const user = await normalize({
+      update_id: 79829,
+      message: {
+        message_id: 79829,
+        date: 1761955200,
+        chat: { id: -10079829, type: "supergroup", title: "日程" },
+        from: {
+          id: 79829,
+          first_name: "https://bit.ly/who79829",
+          last_name: "https://tinyurl.com/also79829",
+          username: "adder79829",
+        },
+        checklist_tasks_done: { marked_as_done_task_ids: [1] },
+      },
+    });
+    expect(user.status).toBe("event");
+    if (user.status !== "event") {
+      return;
+    }
+    expect(user.event.message?.checklistNotice).toBe("done");
+    expect(user.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const userDump = JSON.stringify(user.event);
+    expect(userDump).not.toContain("who79829");
+    expect(userDump).not.toContain("also79829");
+    expect(userDump).not.toContain("adder79829");
+
+    const added = await normalize({
+      update_id: 79830,
+      message: {
+        message_id: 79830,
+        date: 1761955200,
+        chat: { id: -10079830, type: "supergroup" },
+        sender_chat: {
+          id: -10079830,
+          type: "supergroup",
+          title: "https://bit.ly/add79830",
+        },
+        from: {
+          id: 79830,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79830",
+          last_name: "https://cutt.ly/also79830",
+        },
+        checklist_tasks_added: {
+          tasks: [{ id: 1, text: "https://ow.ly/task79830" }],
+        },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.asChecklistAdded).toBe(true);
+    expect(added.event.message?.hosts).toEqual(["ow.ly", "bit.ly"]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain("add79830");
+    expect(addedDump).not.toContain("skip79830");
+    expect(addedDump).not.toContain("also79830");
+    expect(addedDump).not.toContain("tinyurl");
+    expect(addedDump).not.toContain("cutt.ly");
+
+    const otherAdded = await normalize({
+      update_id: 79831,
+      message: {
+        message_id: 79831,
+        date: 1761955200,
+        chat: { id: -10079831, type: "group" },
+        sender_chat: {
+          id: -100798310,
+          type: "channel",
+          title: "https://bit.ly/add79831",
+        },
+        from: {
+          id: 79831,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79831",
+        },
+        checklist_tasks_added: {
+          tasks: [{ id: 1, text: "买菜" }],
+        },
+      },
+    });
+    expect(otherAdded.status).toBe("event");
+    if (otherAdded.status !== "event") {
+      return;
+    }
+    expect(otherAdded.event.message?.asChecklistAdded).toBe(true);
+    expect(otherAdded.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherAddedDump = JSON.stringify(otherAdded.event);
+    expect(otherAddedDump).not.toContain("add79831");
+    expect(otherAddedDump).not.toContain("skip79831");
+    expect(otherAddedDump).not.toContain("tinyurl");
+
+    const quiet = await normalize({
+      update_id: 79832,
+      message: {
+        message_id: 79832,
+        date: 1761955200,
+        chat: { id: -10079832, type: "supergroup" },
+        sender_chat: {
+          id: -10079832,
+          type: "supergroup",
+          title: "https://bit.ly/quiet79832",
+        },
+        from: {
+          id: 79832,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79832",
+        },
+        checklist_tasks_done: { marked_as_done_task_ids: [] },
+        checklist_tasks_added: { tasks: [{ id: 1, text: "" }] },
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.checklistNotice).toBeUndefined();
+    expect(quiet.event.message?.asChecklistAdded).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    const quietDump = JSON.stringify(quiet.event);
+    expect(quietDump).not.toContain("quiet79832");
+    expect(quietDump).not.toContain("skip79832");
+    expect(quietDump).not.toContain("bit.ly");
+    expect(quietDump).not.toContain("tinyurl");
+  });
+
   it("leaves a short link in the group title on a topic change", async () => {
     const phrase = "请免费领取礼品";
     const edited = await normalize({

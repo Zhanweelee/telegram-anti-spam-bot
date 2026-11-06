@@ -5475,6 +5475,8 @@ function approvedPriceDrawn(message: Record<string, unknown>): boolean {
  * 勾完或取消勾完清单的人只留主机名。
  * 完成或取消完成的任务号全是大于 0 的安全整数时读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。编号和本群相同时也读。用户仍按全名。
  * 同时出现时先认完成。任务号不是正整数时不读。
  * 空对象、空数组、布尔值和新加的任务不读。嵌套原清单不读。用户名不读。
  */
@@ -5483,6 +5485,11 @@ function pushChecklistSenderUrls(
   urls: string[],
 ): void {
   if (taskNotice(message) === undefined) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
@@ -5547,7 +5554,9 @@ function drawnTaskId(done: Record<string, unknown>): number | null {
  * 新加清单任务的人只留主机名。
  * `tasks` 里至少有一条长度大于 0 的文字时读。空白也算。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
- * 空字符串、空数组和布尔值不读。投票选项不读。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。编号和本群相同时，任务文字排在前面。
+ * 用户仍按全名。空字符串、空数组和布尔值不读。投票选项不读。
  * 任务文字仍按原来的正文。勾完的人按全名。
  * 任务上的完成者按全名，主机名排在前面。
  * 嵌套原清单不读。用户名不读。
@@ -5557,6 +5566,11 @@ function pushAddedSenderUrls(
   urls: string[],
 ): void {
   if (!addedChecklist(message)) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
