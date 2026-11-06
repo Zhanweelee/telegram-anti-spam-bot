@@ -5807,6 +5807,7 @@ interface PinnedRichPreview {
  * 有序列表没写标签时，a、A、i、I 按字母或罗马数字占位。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
  * 语音不在这条预览里。说明也不画。后面的块仍读。
+ * 行内公式是固定说法，占满剩下的预览。公式原文不读。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
 function pushPinnedRichPreview(
@@ -6171,6 +6172,11 @@ function appendPinnedRichText(
   }
   if (value.type === "button") {
     appendPinnedRichButton(value.button, preview);
+    return;
+  }
+  // formatRichText 把行内公式画成固定说法，不画 LaTeX。长度随语言变。
+  if (value.type === "mathematical_expression") {
+    fillPinnedRichPreview(preview);
     return;
   }
   // formatRichText 只画出这些样式的可见文字。提及、日期、表情替代字不在短预览里。
