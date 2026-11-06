@@ -41415,6 +41415,185 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads both names drawn on a quoted reply", async () => {
+    const phrase = "请免费领取礼品";
+    const quoted = await normalize({
+      update_id: 80141,
+      message: {
+        message_id: 80141,
+        date: 1761955200,
+        chat: { id: -10080141, type: "supergroup", title: "本群" },
+        from: {
+          id: 80141,
+          first_name: "https://example.com/speaker80141",
+        },
+        text: "你好",
+        quote: {
+          text: `${phrase} https://example.com/quote80141`,
+          position: 0,
+        },
+        reply_to_message: {
+          message_id: 801411,
+          date: 1761955100,
+          chat: { id: -10080141, type: "supergroup", title: "本群" },
+          from: {
+            id: 801412,
+            first_name: "   ",
+            last_name: `https://tinyurl.com/who80141 ${phrase}`,
+            username: "forwarder80141",
+          },
+          forward_origin: {
+            type: "channel",
+            chat: {
+              id: -100801413,
+              type: "channel",
+              title: "https://bit.ly/chan80141",
+              username: "chanuser80141",
+            },
+            author_signature: "https://is.gd/sign80141",
+          },
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.text).toBe("你好");
+    expect(quoted.event.message?.hosts).toEqual(["tinyurl.com", "bit.ly"]);
+    const quotedDump = JSON.stringify(quoted.event);
+    expect(quotedDump).not.toContain(phrase);
+    expect(quotedDump).not.toContain("who80141");
+    expect(quotedDump).not.toContain("chan80141");
+    expect(quotedDump).not.toContain("chanuser80141");
+    expect(quotedDump).not.toContain("sign80141");
+    expect(quotedDump).not.toContain("quote80141");
+    expect(quotedDump).not.toContain("forwarder80141");
+    expect(quotedDump).not.toContain("speaker80141");
+    expect(quotedDump).not.toContain("example.com");
+    expect(quotedDump).not.toContain("is.gd");
+    expect(quotedDump).toContain("tinyurl.com");
+    expect(quotedDump).toContain("bit.ly");
+
+    const besideChat = await normalize({
+      update_id: 80142,
+      message: {
+        message_id: 80142,
+        date: 1761955200,
+        chat: { id: -10080142, type: "supergroup", title: "本群" },
+        from: { id: 80142, first_name: "Ada" },
+        text: "你好",
+        quote: { text: "摘录", position: 2 },
+        reply_to_message: {
+          message_id: 801421,
+          date: 1761955100,
+          chat: { id: -10080142, type: "supergroup" },
+          sender_chat: {
+            id: -100801422,
+            type: "supergroup",
+            title: "https://tinyurl.com/room80142",
+            username: "room80142",
+          },
+          from: {
+            id: 801423,
+            first_name: "https://example.com/fake80142",
+          },
+          forward_origin: {
+            type: "user",
+            sender_user: {
+              id: 801424,
+              first_name: "https://bit.ly/user80142",
+              username: "origin80142",
+            },
+          },
+        },
+      },
+    });
+    expect(besideChat.status).toBe("event");
+    if (besideChat.status !== "event") {
+      return;
+    }
+    expect(besideChat.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+    ]);
+    const besideDump = JSON.stringify(besideChat.event);
+    expect(besideDump).not.toContain("user80142");
+    expect(besideDump).not.toContain("room80142");
+    expect(besideDump).not.toContain("origin80142");
+    expect(besideDump).not.toContain("fake80142");
+    expect(besideDump).not.toContain("example.com");
+
+    const sourceOnly = await normalize({
+      update_id: 80143,
+      message: {
+        message_id: 80143,
+        date: 1761955200,
+        chat: { id: -10080143, type: "supergroup", title: "本群" },
+        from: { id: 80143, first_name: "Ada" },
+        text: "你好",
+        quote: { text: "摘录", position: 0, is_manual: true },
+        reply_to_message: {
+          message_id: 801431,
+          date: 1761955100,
+          chat: { id: -10080143, type: "supergroup" },
+          from: {
+            id: 801432,
+            first_name: "https://tinyurl.com/forwarder80143",
+          },
+          forward_origin: {
+            type: "hidden_user",
+            sender_user_name: "https://bit.ly/hide80143",
+          },
+        },
+      },
+    });
+    expect(sourceOnly.status).toBe("event");
+    if (sourceOnly.status !== "event") {
+      return;
+    }
+    expect(sourceOnly.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(sourceOnly.event)).not.toContain("hide80143");
+    expect(JSON.stringify(sourceOnly.event)).not.toContain("forwarder80143");
+    expect(JSON.stringify(sourceOnly.event)).not.toContain("tinyurl");
+
+    const plain = await normalize({
+      update_id: 80144,
+      message: {
+        message_id: 80144,
+        date: 1761955200,
+        chat: { id: -10080144, type: "supergroup", title: "本群" },
+        from: { id: 80144, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 801441,
+          date: 1761955100,
+          chat: { id: -10080144, type: "supergroup" },
+          from: {
+            id: 801442,
+            first_name: "https://tinyurl.com/forwarder80144",
+          },
+          forward_origin: {
+            type: "channel",
+            chat: {
+              id: -100801443,
+              type: "channel",
+              title: "https://bit.ly/chan80144",
+            },
+          },
+        },
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(plain.event)).not.toContain("chan80144");
+    expect(JSON.stringify(plain.event)).not.toContain("forwarder80144");
+    expect(JSON.stringify(plain.event)).not.toContain("tinyurl");
+  });
+
   it("reads the external reply header name", async () => {
     const phrase = "请免费领取礼品";
     const named = await normalize({

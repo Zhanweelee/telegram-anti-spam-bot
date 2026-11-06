@@ -4940,6 +4940,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 没有发送者时，只有频道帖改读频道标题。
  * 原文、说明、签名和用户名不读。
  * 有外部回复时，这行改画外部来源，本条回复不再读。
+ * 带引用时，转发来源只占一边，空着的一边改画这条消息的发送者。
  */
 function pushReplyHeaderUrls(
   message: Record<string, unknown>,
@@ -4950,9 +4951,59 @@ function pushReplyHeaderUrls(
     return;
   }
   const reply = message.reply_to_message;
-  if (!isRecord(reply) || pushReplyForwardName(reply, urls)) {
+  if (!isRecord(reply)) {
     return;
   }
+  const quote = message.quote;
+  if (isRecord(quote) && typeof quote.text === "string") {
+    pushQuotedReplyUrls(reply, urls);
+    return;
+  }
+  if (pushReplyForwardName(reply, urls)) {
+    return;
+  }
+  pushReplySenderUrls(reply, urls);
+}
+
+/**
+ * 带引用时，抬头先画人，再画聊天。
+ * 转发来源是用户或隐藏显示名时，人这一边已经画了，只补聊天标题。
+ * 转发来源是群或频道时，聊天这一边已经画了，只补用户全名。
+ * 没有转发来源时，只画这条消息的发送者。
+ * 用户名、签名和引用正文不在这里读。
+ */
+function pushQuotedReplyUrls(
+  reply: Record<string, unknown>,
+  urls: string[],
+): void {
+  const side = replyForwardSide(reply);
+  if (side === "user") {
+    pushReplyForwardName(reply, urls);
+  } else if (!isRecord(reply.sender_chat) && isRecord(reply.from)) {
+    pushFormattedUserUrls(reply.from, urls);
+  } else if (side !== "chat" && !isRecord(reply.sender_chat)) {
+    const chat = reply.chat;
+    if (isRecord(chat) && chat.type === "channel") {
+      pushPlainUrls(chat.title, urls);
+    }
+  }
+  if (side === "chat") {
+    pushReplyForwardName(reply, urls);
+    return;
+  }
+  if (isRecord(reply.sender_chat)) {
+    pushPlainUrls(reply.sender_chat.title, urls);
+  }
+}
+
+/**
+ * 没有转发来源时，回复抬头画这条消息的发送者。
+ * 聊天画标题。用户画全名。没有发送者时，只有频道帖改读频道标题。
+ */
+function pushReplySenderUrls(
+  reply: Record<string, unknown>,
+  urls: string[],
+): void {
   if (isRecord(reply.sender_chat)) {
     pushPlainUrls(reply.sender_chat.title, urls);
     return;
@@ -5017,51 +5068,77 @@ function pushReplyForwardName(
   reply: Record<string, unknown>,
   urls: string[],
 ): boolean {
+  return replyForwardSide(reply, urls) !== null;
+}
+
+/**
+ * 转发来源占抬头的一边。
+ * 用户和隐藏显示名占人这一边。群和频道占聊天这一边。
+ * 传了地址表才把名字留下。签名和用户名不读。
+ */
+function replyForwardSide(
+  reply: Record<string, unknown>,
+  urls?: string[],
+): "user" | "chat" | null {
   const origin = reply.forward_origin;
   if (isRecord(origin)) {
     if (origin.type === "user" && isRecord(origin.sender_user)) {
-      pushFormattedUserUrls(origin.sender_user, urls);
-      return true;
+      if (urls) {
+        pushFormattedUserUrls(origin.sender_user, urls);
+      }
+      return "user";
     }
     if (
       origin.type === "hidden_user" &&
       typeof origin.sender_user_name === "string"
     ) {
-      pushPlainUrls(origin.sender_user_name, urls);
-      return true;
+      if (urls) {
+        pushPlainUrls(origin.sender_user_name, urls);
+      }
+      return "user";
     }
     if (
       origin.type === "chat" &&
       isRecord(origin.sender_chat) &&
       typeof origin.sender_chat.title === "string"
     ) {
-      pushPlainUrls(origin.sender_chat.title, urls);
-      return true;
+      if (urls) {
+        pushPlainUrls(origin.sender_chat.title, urls);
+      }
+      return "chat";
     }
     if (
       origin.type === "channel" &&
       isRecord(origin.chat) &&
       typeof origin.chat.title === "string"
     ) {
-      pushPlainUrls(origin.chat.title, urls);
-      return true;
+      if (urls) {
+        pushPlainUrls(origin.chat.title, urls);
+      }
+      return "chat";
     }
-    return false;
+    return null;
   }
   if (typeof reply.forward_sender_name === "string") {
-    pushPlainUrls(reply.forward_sender_name, urls);
-    return true;
+    if (urls) {
+      pushPlainUrls(reply.forward_sender_name, urls);
+    }
+    return "user";
   }
   if (isRecord(reply.forward_from)) {
-    pushFormattedUserUrls(reply.forward_from, urls);
-    return true;
+    if (urls) {
+      pushFormattedUserUrls(reply.forward_from, urls);
+    }
+    return "user";
   }
   const chat = reply.forward_from_chat;
   if (isRecord(chat) && typeof chat.title === "string") {
-    pushPlainUrls(chat.title, urls);
-    return true;
+    if (urls) {
+      pushPlainUrls(chat.title, urls);
+    }
+    return "chat";
   }
-  return false;
+  return null;
 }
 
 /**
