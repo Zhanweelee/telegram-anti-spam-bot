@@ -1200,6 +1200,21 @@ function uniqueOffer(message: Record<string, unknown>): boolean {
   return isRecord(info) && info.origin === "offer";
 }
 
+/**
+ * 升级这行画私聊对方的全名。
+ * 群和频道的对话不是用户，名字是空的。礼物所属的频道不在这条更新上。
+ */
+function uniqueUpgrade(message: Record<string, unknown>): boolean {
+  if (giftRecord(message.gift)) {
+    return false;
+  }
+  const info = message.unique_gift;
+  return (
+    isRecord(info) &&
+    (info.origin === "upgrade" || info.origin === "gifted_upgrade")
+  );
+}
+
 function backgroundNotice(
   message: Record<string, unknown>,
 ): "wallpaper" | "pattern" | "fill" | "theme" | undefined {
@@ -5368,7 +5383,8 @@ function pushJoinSenderUrls(
  * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
  * 频道、群和超级群都一样。编号和本群相同时也读。用户仍按全名。
  * 购买报价成交不画人。`origin` 正好是 `offer` 时不读 `from`，也不读标题。
- * 别的聊天的标题仍由通用代发规则读取。转账、转售和升级仍读发送者。
+ * 升级和事后升级画私聊对方的全名，不读 `from`，也不读发送者标题。
+ * 群和频道不读群名。别的聊天的标题仍由通用代发规则读取。转账和转售仍读发送者。
  * 空的外层对象、布尔值和只有附言的对象不读。
  * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
  */
@@ -5377,6 +5393,13 @@ function pushGiftSenderUrls(
   urls: string[],
 ): void {
   if (giftNotice(message) === undefined || uniqueOffer(message)) {
+    return;
+  }
+  if (uniqueUpgrade(message)) {
+    const chat = message.chat;
+    if (isRecord(chat) && chat.type === "private") {
+      pushFormattedUserUrls(chat, urls);
+    }
     return;
   }
   const sender = message.sender_chat;
