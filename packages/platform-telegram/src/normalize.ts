@@ -613,7 +613,14 @@ function pushTaskMentionLists(tasks: unknown, lists: unknown[]): void {
 }
 
 function customEmojiMark(message: Record<string, unknown>): boolean {
-  const lists: unknown[] = [message.entities, message.caption_entities];
+  const lists: unknown[] = [];
+  if (typeof message.text === "string") {
+    // 自定义表情必须整段落在正文里。
+    lists.push(fittingEmoji(message.entities, message.text.length));
+  } else {
+    lists.push(message.entities);
+  }
+  lists.push(message.caption_entities);
   const poll = message.poll;
   if (isRecord(poll)) {
     lists.push(
@@ -5373,6 +5380,34 @@ function pushDrawnLine(text: unknown, entities: unknown, urls: string[]): void {
 /** 引用条最多画 window 个码元。正文更短时，链接起点不能超过正文。 */
 function drawnTextLimit(text: string, window: number): number {
   return Math.min(window, text.length);
+}
+
+/** 自定义表情的起点加长度不能越过画出的正文。 */
+function fittingEmoji(list: unknown, limit: number): unknown[] {
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.filter((entity) => {
+    if (!isRecord(entity)) {
+      return false;
+    }
+    if (
+      typeof entity.offset !== "number" ||
+      !Number.isSafeInteger(entity.offset) ||
+      entity.offset < 0
+    ) {
+      return false;
+    }
+    if (
+      typeof entity.length !== "number" ||
+      !Number.isSafeInteger(entity.length) ||
+      entity.length <= 0
+    ) {
+      return false;
+    }
+    const end = entity.offset + entity.length;
+    return Number.isSafeInteger(end) && end <= limit;
+  });
 }
 
 function visibleTextLinks(list: unknown, limit: number): unknown[] {
