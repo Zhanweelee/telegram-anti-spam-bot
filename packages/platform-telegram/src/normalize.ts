@@ -5600,6 +5600,9 @@ function pushAddedSenderUrls(
 /**
  * 加选项或删选项的人画出的短名只留主机名。
  * 选项文字长度大于 0 时读。空白也算。
+ * 这行只向用户表查发送者。聊天查不到，短名是空的。
+ * 发送者是聊天时不读 `from`，也不读这个聊天的标题。
+ * 别的聊天的标题仍由通用代发规则读取。用户仍按短名。
  * 名为空时改用姓。空白名挡住姓。
  * 从下标 2 起的第一个空格后面不读。
  * 同时出现时先认新加。空字符串落到另一种。
@@ -5610,7 +5613,10 @@ function pushPollSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (changedPoll(message) === undefined || !isRecord(message.from)) {
+  if (changedPoll(message) === undefined || isRecord(message.sender_chat)) {
+    return;
+  }
+  if (!isRecord(message.from)) {
     return;
   }
   pushPlainUrls(forcedFirstName(message.from), urls);
