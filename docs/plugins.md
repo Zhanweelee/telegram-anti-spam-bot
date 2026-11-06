@@ -185,6 +185,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 清单任务上的完成者全名只留主机名，仍走 `links`。名字里的关键词不命中。名字不进正文。见 ADR 0641。
 
+靠近提醒上画出的两个人的全名成为正文，短链仍走 `links`。用户名不进正文。操作的人仍只读名。见 ADR 0642。
+
 `checklist_task_regex` 默认打开。清单任务命中同一份正则时删除。任务干净，或任务自己就是标题时，仍留下。见 ADR 0538。
 
 `media_name_regex` 默认打开。说明旁边的文件名或音频标题命中同一份正则时删除。名称干净，或名称自己就是正文时，仍留下。见 ADR 0539。

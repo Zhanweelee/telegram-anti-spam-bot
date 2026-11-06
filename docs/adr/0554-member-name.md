@@ -48,5 +48,6 @@ ADR 0118、ADR 0119、ADR 0120 和 ADR 0121 在已有别的正文时，只从入
 - 退群的人后来由 ADR 0582 只留下主机名。这段名字仍不进 `memberName`。
 - 关掉 `member_name_regex` 后，距离无效的靠近提醒回到只看关键词和短链。另外四类仍由 `service_name_regex` 删除正则命中。`service_notice`、`call_invite`、`owner_notice` 和 `proximity_notice` 仍默认关闭。
 - `places` 后来由 ADR 0555 加上 `sharedName`。分享来的用户名字只认自己的字段。
+- 靠近的两个人后来按全名留在 `memberName`。名和姓都去掉两端空白，名在前。用户名不进。见 ADR 0642。入群、邀请和换群主仍读用户名。
 - 整份替换规则的群要自己加上这条，才会删除被挤开的名字上的「加微x」。
 - 30 天保留期没有改。
