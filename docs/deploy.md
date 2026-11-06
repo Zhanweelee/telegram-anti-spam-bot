@@ -183,7 +183,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 地点地址命中同一组模式时删除。`/rule <chatId> venue_address_regex off` 回到只看关键词和短链。地址自己就是正文时仍要打开 `regex_hint`。见 ADR 0542。
 
-测验说明命中同一组模式时删除。`/rule <chatId> poll_explanation_regex off` 回到只看关键词和短链。说明自己就是正文时仍要打开 `regex_hint`。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。
+测验说明命中同一组模式时删除。`/rule <chatId> poll_explanation_regex off` 回到只看关键词和短链。说明自己就是正文时仍要打开 `regex_hint`。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。测验说明上的文字链接后来由 ADR 0771 要求长度大于 0。
 
 题干、奖品说明和清单标题命中同一组模式时删除。`/rule <chatId> poll_question_regex off`、`prize_text_regex off` 和 `checklist_title_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0544。外部回复清单标题上的文字链接后来由 ADR 0735 不能越过标题。投票题干上的文字链接后来由 ADR 0736 不能越过题干。投票题干上的文字链接后来由 ADR 0766 要求长度大于 0。清单标题上的文字链接后来由 ADR 0767 要求长度大于 0。
 
