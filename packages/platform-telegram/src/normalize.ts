@@ -4951,6 +4951,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。任务不读。
  * 骰子画出表情。去掉变体选择符后再留主机名。点数不读。外部回复也读这张骰子的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
+ * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里的文字链接也读。原文不进正文。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -5051,6 +5052,66 @@ function pushLoadedReplyLine(
     return;
   }
   pushReplyDocumentName(reply, urls);
+  pushReplyCaptionOrText(message, reply, urls);
+}
+
+/**
+ * 没有更早的标题时，普通消息的引用条画出说明，否则画出正文。
+ * 只读前 150 个码元。文字链接的起点落在这段里才读。
+ * 原文不进正文。服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
+ */
+function pushReplyCaptionOrText(
+  message: Record<string, unknown>,
+  reply: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!drawsContentReplyBar(message)) {
+    return;
+  }
+  if (typeof reply.caption === "string" && reply.caption.length > 0) {
+    pushPlainUrls(reply.caption.slice(0, 150), urls);
+    pushTextLinks(visibleTextLinks(reply.caption_entities, 150), urls);
+    return;
+  }
+  if (typeof reply.text === "string" && reply.text.length > 0) {
+    pushPlainUrls(reply.text.slice(0, 150), urls);
+    pushTextLinks(visibleTextLinks(reply.entities, 150), urls);
+  }
+}
+
+/** 普通气泡才画引用条。服务公告走另一块，不画被回复的说明或正文。 */
+function drawsContentReplyBar(message: Record<string, unknown>): boolean {
+  if (typeof message.text === "string" && message.text.length > 0) {
+    return true;
+  }
+  if (typeof message.caption === "string" && message.caption.length > 0) {
+    return true;
+  }
+  const mediaKeys = [
+    "animation",
+    "audio",
+    "checklist",
+    "contact",
+    "dice",
+    "document",
+    "game",
+    "giveaway",
+    "giveaway_winners",
+    "invoice",
+    "location",
+    "paid_media",
+    "photo",
+    "poll",
+    "sticker",
+    "story",
+    "venue",
+    "video",
+    "video_note",
+    "voice",
+  ] as const;
+  return mediaKeys.some(
+    (key) => isRecord(message[key]) || Array.isArray(message[key]),
+  );
 }
 
 /**
