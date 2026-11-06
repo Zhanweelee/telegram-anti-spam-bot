@@ -83,7 +83,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 创建抽奖不读发送者的名字。创建公告上画出的群名只留主机名，仍走 `links`。见 ADR 0664。
 
-换头像的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0591。
+换头像的人，名字只留主机名，仍走 `links`。频道不读发送者。群里发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0682。
 
 改名的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0592。
 
@@ -163,7 +163,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改自动删除计时的人画出的全名只留主机名，仍走 `links`。频道不读发送者。群里发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0679。
 
-换头像或删头像的人画出的全名只留主机名，仍走 `links`。频道不读发送者。名字里的关键词不命中。见 ADR 0666。
+换头像或删头像的人画出的全名只留主机名，仍走 `links`。频道不读发送者。群里发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0682。
 
 改群名的人画出的全名只留主机名，仍走 `links`。频道不读发送者。名字里的关键词不命中。见 ADR 0667。
 
