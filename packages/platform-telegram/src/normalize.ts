@@ -5783,6 +5783,7 @@ interface PinnedRichPreview {
  * 段落、标题、引用、列表、表格标题、按钮、音频名和文件名按这条预览拼接。
  * 思考块不在这条预览里。提及、日期和表情替代字也不在。气泡里的整篇文章仍读。
  * 有复选框时用勾选框代替圆点。没勾上的框多占一个码元。
+ * 有序列表没写标签时，a、A、i、I 按字母或罗马数字占位。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
@@ -5982,7 +5983,8 @@ function appendPinnedRichList(
     const label = typeof item.label === "string" ? item.label : "";
     const checkbox = pinnedRichCheckbox(item);
     if (typeof item.value === "number") {
-      const marker = label.length > 0 ? label : String(item.value);
+      const marker =
+        label.length > 0 ? label : orderedListMarker(item.value, item.type);
       appendPinnedRichText(`${marker}. `, preview);
       if (checkbox !== undefined) {
         appendPinnedRichText(checkbox, preview);
@@ -5994,6 +5996,72 @@ function appendPinnedRichList(
       appendPinnedRichBlocks(item.blocks, preview);
     }
   }
+}
+
+const ORDERED_ROMAN: ReadonlyArray<readonly [number, string]> = [
+  [1000, "m"],
+  [900, "cm"],
+  [500, "d"],
+  [400, "cd"],
+  [100, "c"],
+  [90, "xc"],
+  [50, "l"],
+  [40, "xl"],
+  [10, "x"],
+  [9, "ix"],
+  [5, "v"],
+  [4, "iv"],
+  [1, "i"],
+];
+
+/** 空标签时，按 HTML 列表类型把编号画成字母或罗马数字。写了标签就用标签。 */
+function orderedListMarker(value: number, type: unknown): string {
+  if (!Number.isInteger(value)) {
+    return String(value);
+  }
+  if (type === "a" || type === "A") {
+    const alpha = alphabeticMarker(value);
+    if (alpha !== undefined) {
+      return type === "A" ? alpha.toUpperCase() : alpha;
+    }
+  }
+  if (type === "i" || type === "I") {
+    const roman = romanMarker(value);
+    if (roman !== undefined) {
+      return type === "I" ? roman.toUpperCase() : roman;
+    }
+  }
+  return String(value);
+}
+
+function alphabeticMarker(value: number): string | undefined {
+  if (value < 1) {
+    return undefined;
+  }
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  let n = value;
+  let out = "";
+  while (n > 0) {
+    n -= 1;
+    out = letters.charAt(n % 26) + out;
+    n = Math.floor(n / 26);
+  }
+  return out;
+}
+
+function romanMarker(value: number): string | undefined {
+  if (value < 1 || value > 3999) {
+    return undefined;
+  }
+  let n = value;
+  let out = "";
+  for (const [amount, glyph] of ORDERED_ROMAN) {
+    while (n >= amount) {
+      out += glyph;
+      n -= amount;
+    }
+  }
+  return out;
 }
 
 /** 有复选框时，短预览用勾选框代替圆点。没勾上的框多一个变体选择符。 */
