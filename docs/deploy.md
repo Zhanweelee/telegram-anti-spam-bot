@@ -201,7 +201,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 拒绝建议帖的说明命中同一组模式时删除。`/rule <chatId> decline_comment_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0551。
 
-后加的投票选项或清单任务命中同一组模式时删除。`/rule <chatId> added_text_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0552。
+后加的投票选项或清单任务命中同一组模式时删除。`/rule <chatId> added_text_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。
 
 隐藏转发的显示名命中同一组模式时删除。`/rule <chatId> hidden_name_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0553。
 

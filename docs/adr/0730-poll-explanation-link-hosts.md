@@ -34,3 +34,4 @@ Android 的 `generateExplanation` 用 `addEntitiesToText` 把实体画到 `solut
 - 被截断的路径不进事件。写在说明里的路径仍留在 `pollExplanation`。关键词不命中没画上去的链接。内容哈希不变。
 - `example.com` 和公开的 `t.me/名字` 留下。付费帖仍不删除。见 ADR 0356。
 - 管理员仍豁免。云额度的基础检测器名单没有改。30 天保留期没有改。
+- 后加或删除的选项上的文字链接后来由 ADR 0731 同样要求起点落在选项文字里。投票描述仍不在那条里。

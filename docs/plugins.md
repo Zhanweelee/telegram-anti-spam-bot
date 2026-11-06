@@ -227,7 +227,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `decline_comment_regex` 默认打开。拒绝建议帖的说明命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0551。
 
-`added_text_regex` 默认打开。后加的投票选项或清单任务命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0552。
+`added_text_regex` 默认打开。后加的投票选项或清单任务命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。
 
 `hidden_name_regex` 默认打开。隐藏转发的显示名命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0553。
 
