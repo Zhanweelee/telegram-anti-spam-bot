@@ -81,7 +81,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 关话题的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0589。
 
-创建抽奖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0590。创建公告上画出的群名也只留主机名。见 ADR 0656。
+创建抽奖不读发送者的名字。创建公告上画出的群名只留主机名，仍走 `links`。见 ADR 0664。
 
 换头像的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0591。
 

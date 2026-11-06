@@ -31765,11 +31765,127 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(both.event.message?.text).toBe("今天开会");
-    expect(both.event.message?.hosts).toEqual(["cutt.ly", "bit.ly"]);
+    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
     const bothDump = JSON.stringify(both.event);
     expect(bothDump).not.toContain("room79513");
     expect(bothDump).not.toContain("ada79513");
     expect(bothDump).not.toContain("https://bit.ly/room79513");
+  });
+
+  it("leaves a short link in the name of a giveaway launch or result", async () => {
+    const phrase = "请免费领取礼品";
+    const launched = await normalize({
+      update_id: 79595,
+      message: {
+        message_id: 79595,
+        date: 1761955200,
+        chat: {
+          id: -10079595,
+          type: "channel",
+          title: "机密频道",
+          username: "secretchan79595",
+        },
+        from: {
+          id: 880095,
+          first_name: `https://bit.ly/later79595 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79595",
+          username: "secretuser79595",
+        },
+        giveaway_created: { prize_star_count: 17620079595 },
+      },
+    });
+    expect(launched.status).toBe("event");
+    if (launched.status !== "event") {
+      return;
+    }
+    expect(launched.event.message?.text).toBe("");
+    expect(launched.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(launched.event.message?.giveawayNotice).toBe("created");
+    expect(launched.event.message?.hosts).toBeUndefined();
+    const launchedDump = JSON.stringify(launched.event);
+    expect(launchedDump).not.toContain(phrase);
+    expect(launchedDump).not.toContain("later79595");
+    expect(launchedDump).not.toContain("bit.ly");
+    expect(launchedDump).not.toContain("skiplast79595");
+    expect(launchedDump).not.toContain("secretuser79595");
+    expect(launchedDump).not.toContain("secretchan79595");
+    expect(launchedDump).not.toContain("17620079595");
+
+    const titled = await normalize({
+      update_id: 79596,
+      message: {
+        message_id: 79596,
+        date: 1761955200,
+        chat: {
+          id: -10079596,
+          type: "supergroup",
+          title: "https://bit.ly/room79596",
+        },
+        from: {
+          id: 131,
+          first_name: "https://cutt.ly/ada79596",
+          last_name: "https://tinyurl.com/also79596",
+        },
+        giveaway_created: {},
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.giveawayNotice).toBe("created");
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titledDump = JSON.stringify(titled.event);
+    expect(titledDump).not.toContain("room79596");
+    expect(titledDump).not.toContain("ada79596");
+    expect(titledDump).not.toContain("also79596");
+    expect(titledDump).not.toContain("cutt.ly");
+    expect(titledDump).not.toContain("tinyurl");
+
+    const finished = await normalize({
+      update_id: 79597,
+      message: {
+        message_id: 79597,
+        date: 1761955200,
+        chat: {
+          id: -10079597,
+          type: "supergroup",
+          title: "https://ow.ly/done79597",
+        },
+        from: {
+          id: 132,
+          first_name: "",
+          last_name: "https://bit.ly/last79597",
+          username: "secretuser79597",
+        },
+        giveaway_completed: {
+          winner_count: 2,
+          unclaimed_prize_count: 17620079597,
+          giveaway_message: {
+            message_id: 1,
+            text: "https://tinyurl.com/nest79597",
+            from: { id: 97, first_name: "https://cutt.ly/inner79597" },
+          },
+        },
+      },
+    });
+    expect(finished.status).toBe("event");
+    if (finished.status !== "event") {
+      return;
+    }
+    expect(finished.event.message?.giveawayNotice).toBe("completed");
+    expect(finished.event.message?.hosts).toBeUndefined();
+    const finishedDump = JSON.stringify(finished.event);
+    expect(finishedDump).not.toContain("done79597");
+    expect(finishedDump).not.toContain("last79597");
+    expect(finishedDump).not.toContain("secretuser79597");
+    expect(finishedDump).not.toContain("nest79597");
+    expect(finishedDump).not.toContain("inner79597");
+    expect(finishedDump).not.toContain("bit.ly");
+    expect(finishedDump).not.toContain("tinyurl");
+    expect(finishedDump).not.toContain("cutt.ly");
+    expect(finishedDump).not.toContain("ow.ly");
+    expect(finishedDump).not.toContain("17620079597");
   });
 
   it("marks a giveaway notice and leaves the prize message out", async () => {

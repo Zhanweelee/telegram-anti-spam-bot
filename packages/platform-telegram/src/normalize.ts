@@ -4581,7 +4581,6 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushCreatedGroupSenderUrls(message, urls);
   pushCallSenderUrls(message, urls);
   pushForumSenderUrls(message, urls);
-  pushGiveawaySenderUrls(message, urls);
   pushGiveawayChatTitleUrls(message, urls);
   pushPhotoSenderUrls(message, urls);
   pushTitleSenderUrls(message, urls);
@@ -5042,21 +5041,6 @@ function pushForumSenderUrls(
     return;
   }
   pushFormattedUserUrls(message.from, urls);
-}
-
-/**
- * 创建抽奖或私下结束上的发送者只留主机名。
- * 空的结束、负数和小数人数不读。星星数量和中奖人数不读。
- * 嵌套的抽奖原文不读。进行中的卡片不读发送者。用户名不读。
- */
-function pushGiveawaySenderUrls(
-  message: Record<string, unknown>,
-  urls: string[],
-): void {
-  if (scheduledGiveaway(message) === undefined) {
-    return;
-  }
-  pushVisiblePartyUrls(message.from, undefined, urls);
 }
 
 /**
