@@ -14387,7 +14387,7 @@ describe("screenTelegramEvent", () => {
     const named = namedOutcome.event;
     expect(named.kind).toBe("join_request");
     expect(named.profile).toBeUndefined();
-    expect(named.nameHosts).toEqual(["bit.ly"]);
+    expect(named.nameHosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(named.nameInvites).toBeUndefined();
     const namedModerator = createMemoryModerator();
     const namedHit = await screenTelegramEvent(named, {
@@ -14409,7 +14409,6 @@ describe("screenTelegramEvent", () => {
     });
     expect(namedDump).not.toContain("name6327");
     expect(namedDump).not.toContain("skip6327");
-    expect(namedDump).not.toContain("tinyurl");
     expect(namedDump).not.toContain("secretuser6327");
     expect(namedDump).not.toContain("room6327");
     expect(namedDump).not.toContain("cutt.ly");
@@ -14486,11 +14485,15 @@ describe("screenTelegramEvent", () => {
     if (blankOutcome.status !== "event") {
       return;
     }
-    expect(blankOutcome.event.nameHosts).toBeUndefined();
-    const blankKept = await screenTelegramEvent(blankOutcome.event, {
-      moderator: createMemoryModerator(),
+    expect(blankOutcome.event.nameHosts).toEqual(["bit.ly"]);
+    const blankModerator = createMemoryModerator();
+    const blankHit = await screenTelegramEvent(blankOutcome.event, {
+      moderator: blankModerator,
     });
-    expect(blankKept.decision.action).toBe("allow");
+    expect(blankHit.decision.action).toBe("decline");
+    expect(blankModerator.declined).toEqual([
+      { tenantId: "local", chatId: "-1006331", actorId: "83" },
+    ]);
     expect(JSON.stringify(blankOutcome.event)).not.toContain("space6331");
 
     const bioOutcome = await requested(
@@ -14654,6 +14657,104 @@ describe("screenTelegramEvent", () => {
     expect(adminHit.outcome).toBe("exempt");
     expect(adminModerator.declined).toEqual([]);
     expect(JSON.stringify(adminOutcome.event)).not.toContain("name6339");
+
+    const spacedOutcome = await requested(79361, {
+      id: 83,
+      first_name: "Go https://bit.ly/later79361",
+      last_name: "https://tinyurl.com/skip79361",
+      username: "secretuser79361",
+    });
+    expect(spacedOutcome.status).toBe("event");
+    if (spacedOutcome.status !== "event") {
+      return;
+    }
+    expect(spacedOutcome.event.nameHosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedModerator = createMemoryModerator();
+    const spacedHit = await screenTelegramEvent(spacedOutcome.event, {
+      moderator: spacedModerator,
+    });
+    expect(spacedHit.decision.action).toBe("decline");
+    expect(JSON.stringify(spacedHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(spacedHit.decision.evidence)).not.toContain(
+      "tinyurl.com",
+    );
+    expect(spacedModerator.declined).toEqual([
+      { tenantId: "local", chatId: "-1079361", actorId: "83" },
+    ]);
+    const spacedDump = JSON.stringify({
+      event: spacedOutcome.event,
+      decision: spacedHit.decision,
+    });
+    expect(spacedDump).not.toContain("later79361");
+    expect(spacedDump).not.toContain("skip79361");
+    expect(spacedDump).not.toContain("secretuser79361");
+
+    const bioFullOutcome = await requested(
+      79362,
+      {
+        id: 83,
+        first_name: "https://bit.ly/name79362",
+        last_name: "https://tinyurl.com/skip79362",
+        username: "secretuser79362",
+      },
+      { bio: "https://ow.ly/bio79362" },
+    );
+    expect(bioFullOutcome.status).toBe("event");
+    if (bioFullOutcome.status !== "event") {
+      return;
+    }
+    expect(bioFullOutcome.event.profile?.text).toBe("https://ow.ly/bio79362");
+    expect(bioFullOutcome.event.nameHosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const bioFullHit = await screenTelegramEvent(bioFullOutcome.event, {
+      moderator: createMemoryModerator(),
+    });
+    expect(bioFullHit.decision.action).toBe("decline");
+    expect(JSON.stringify(bioFullHit.decision.evidence)).toContain(
+      "short_link:ow.ly",
+    );
+    expect(JSON.stringify(bioFullHit.decision.evidence)).not.toContain("bit.ly");
+    expect(JSON.stringify(bioFullHit.decision.evidence)).not.toContain(
+      "tinyurl.com",
+    );
+    const bioFullDump = JSON.stringify({
+      event: bioFullOutcome.event,
+      decision: bioFullHit.decision,
+    });
+    expect(bioFullDump).not.toContain("name79362");
+    expect(bioFullDump).not.toContain("skip79362");
+    expect(bioFullDump).not.toContain("secretuser79362");
+    expect(JSON.stringify(bioFullHit.decision)).not.toContain("bio79362");
+
+    const adminFullOutcome = await requested(
+      79363,
+      {
+        id: 83,
+        first_name: "https://bit.ly/name79363",
+        last_name: "https://tinyurl.com/skip79363",
+      },
+      {},
+      ["83"],
+    );
+    expect(adminFullOutcome.status).toBe("event");
+    if (adminFullOutcome.status !== "event") {
+      return;
+    }
+    expect(adminFullOutcome.event.actor.isAdmin).toBe(true);
+    expect(adminFullOutcome.event.nameHosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+    ]);
+    const adminFullModerator = createMemoryModerator();
+    const adminFullHit = await screenTelegramEvent(adminFullOutcome.event, {
+      moderator: adminFullModerator,
+    });
+    expect(adminFullHit.outcome).toBe("exempt");
+    expect(adminFullModerator.declined).toEqual([]);
+    const adminFullDump = JSON.stringify(adminFullOutcome.event);
+    expect(adminFullDump).not.toContain("name79363");
+    expect(adminFullDump).not.toContain("skip79363");
   });
 
   it("deletes a short link in a direct message topic name", async () => {

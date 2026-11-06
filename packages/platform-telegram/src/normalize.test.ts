@@ -32128,9 +32128,8 @@ describe("normalizeUpdate", () => {
     if (spaced.status !== "event") {
       return;
     }
-    expect(spaced.event.nameHosts).toBeUndefined();
+    expect(spaced.event.nameHosts).toEqual(["tinyurl.com"]);
     expect(JSON.stringify(spaced.event)).not.toContain("space84");
-    expect(JSON.stringify(spaced.event)).not.toContain("tinyurl");
 
     const invited = await normalize({
       update_id: 5416,
@@ -40910,6 +40909,161 @@ describe("normalizeUpdate", () => {
     expect(flag.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(flag.event)).not.toContain("flag79346");
     expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
+  });
+
+  it("keeps only the hostname from the full name drawn for a join request", async () => {
+    const phrase = "请免费领取礼品";
+    const code = "JOIN79353";
+    const drawn = await normalize({
+      update_id: 79353,
+      chat_join_request: {
+        chat: {
+          id: -10079353,
+          type: "supergroup",
+          title: "https://is.gd/room79353",
+        },
+        from: {
+          id: 83,
+          first_name: "https://bit.ly/request79353",
+          last_name: `${phrase} https://tinyurl.com/skip79353 https://t.me/+${code}.`,
+          username: "secretuser79353",
+        },
+        user_chat_id: 88079353,
+        date: 1761955200,
+        invite_link: { invite_link: "https://ow.ly/inv79353" },
+        query_id: "query79353",
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.kind).toBe("join_request");
+    expect(drawn.event.actor).toEqual({ id: "83", isAdmin: false });
+    expect(drawn.event.message).toBeUndefined();
+    expect(drawn.event.profile).toBeUndefined();
+    expect(drawn.event.joinQueryId).toBe("query79353");
+    expect(drawn.event.nameHosts).toEqual(["bit.ly", "tinyurl.com", "t.me"]);
+    expect(drawn.event.nameInvites).toEqual(["t.me"]);
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain(phrase);
+    expect(dumped).not.toContain(code);
+    expect(dumped).not.toContain("request79353");
+    expect(dumped).not.toContain("skip79353");
+    expect(dumped).not.toContain("secretuser79353");
+    expect(dumped).not.toContain("room79353");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("inv79353");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("88079353");
+
+    const blank = await normalize({
+      update_id: 79354,
+      chat_join_request: {
+        chat: { id: -10079354, type: "supergroup" },
+        from: {
+          id: 83,
+          first_name: "   ",
+          last_name: "https://bit.ly/blank79354",
+          username: "secretuser79354",
+        },
+        date: 1761955200,
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.profile).toBeUndefined();
+    expect(blank.event.nameHosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("blank79354");
+    expect(JSON.stringify(blank.event)).not.toContain("secretuser79354");
+
+    const spaced = await normalize({
+      update_id: 79355,
+      chat_join_request: {
+        chat: { id: -10079355, type: "supergroup" },
+        from: {
+          id: 83,
+          first_name: "Go https://bit.ly/later79355",
+          last_name: "https://tinyurl.com/skiplast79355",
+          username: "secretuser79355",
+        },
+        date: 1761955200,
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.nameHosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79355");
+    expect(JSON.stringify(spaced.event)).not.toContain("skiplast79355");
+    expect(JSON.stringify(spaced.event)).not.toContain("secretuser79355");
+
+    const quiet = await normalize({
+      update_id: 79356,
+      chat_join_request: {
+        chat: { id: -10079356, type: "supergroup" },
+        from: {
+          id: 83,
+          first_name: phrase,
+          last_name: "https://tinyurl.com/plainlast79356",
+          username: "secretuser79356",
+        },
+        date: 1761955200,
+        bio: "今天站会",
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.profile?.text).toBe("今天站会");
+    expect(quiet.event.profile?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(quiet.event.nameHosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(quiet.event)).not.toContain(phrase);
+    expect(JSON.stringify(quiet.event)).not.toContain("plainlast79356");
+    expect(JSON.stringify(quiet.event)).not.toContain("secretuser79356");
+
+    const empty = await normalize({
+      update_id: 79357,
+      chat_join_request: {
+        chat: {
+          id: -10079357,
+          type: "supergroup",
+          title: "https://bit.ly/empty79357",
+        },
+        from: { id: 83, username: "https://tinyurl.com/user79357" },
+        user_chat_id: 88079357,
+        date: 1761955200,
+        invite_link: { invite_link: "https://ow.ly/inv79357" },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.nameHosts).toBeUndefined();
+    expect(empty.event.nameInvites).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("empty79357");
+    expect(JSON.stringify(empty.event)).not.toContain("user79357");
+    expect(JSON.stringify(empty.event)).not.toContain("inv79357");
+    expect(JSON.stringify(empty.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(empty.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(empty.event)).not.toContain("ow.ly");
+    expect(JSON.stringify(empty.event)).not.toContain("88079357");
+
+    const flag = await normalize({
+      update_id: 79358,
+      chat_join_request: {
+        chat: { id: -10079358, type: "supergroup" },
+        from: true,
+        date: 1761955200,
+        bio: "https://bit.ly/flag79358",
+      },
+    });
+    expect(flag.status).toBe("ignored");
   });
 
   it("marks a dice without keeping the face or the emoji", async () => {
