@@ -15206,8 +15206,189 @@ describe("normalizeUpdate", () => {
     if (quoted.status !== "event") {
       return;
     }
-    expect(quoted.event.message?.asCustomEmoji).toBe(true);
+    expect(quoted.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(quoted.event)).not.toContain("emoji81166");
+  });
+
+  it("skips a manual quote custom emoji that does not fit inside the quote", async () => {
+    const past = await normalize({
+      update_id: 81181,
+      message: {
+        message_id: 81181,
+        date: 1761955200,
+        chat: { id: -10081181, type: "supergroup" },
+        from: { id: 81181, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "引",
+          is_manual: true,
+          position: 88081181,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji81181",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.quoteText).toBe("引");
+    expect(past.event.message?.asCustomEmoji).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("emoji81181");
+    expect(pastDump).not.toContain("88081181");
+
+    const empty = await normalize({
+      update_id: 81182,
+      message: {
+        message_id: 81182,
+        date: 1761955200,
+        chat: { id: -10081182, type: "supergroup" },
+        from: { id: 81182, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "",
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 1,
+              custom_emoji_id: "emoji81182",
+            },
+          ],
+        },
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("emoji81182");
+
+    const wide = await normalize({
+      update_id: 81183,
+      message: {
+        message_id: 81183,
+        date: 1761955200,
+        chat: { id: -10081183, type: "supergroup" },
+        from: { id: 81183, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "引".repeat(151),
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 150,
+              length: 1,
+              custom_emoji_id: "emoji81183",
+            },
+          ],
+        },
+      },
+    });
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.quoteText).toHaveLength(151);
+    expect(wide.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("emoji81183");
+
+    const stored = await normalize({
+      update_id: 81184,
+      message: {
+        message_id: 81184,
+        date: 1761955200,
+        chat: { id: -10081184, type: "supergroup" },
+        from: { id: 81184, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "引".repeat(4097),
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 4096,
+              length: 1,
+              custom_emoji_id: "emoji81184",
+            },
+          ],
+        },
+      },
+    });
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.quoteText).toHaveLength(4096);
+    expect(stored.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("emoji81184");
+
+    const loose = await normalize({
+      update_id: 81185,
+      message: {
+        message_id: 81185,
+        date: 1761955200,
+        chat: { id: -10081185, type: "supergroup" },
+        from: { id: 81185, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          is_manual: true,
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 9,
+              length: 2,
+              custom_emoji_id: "emoji81185",
+            },
+          ],
+        },
+      },
+    });
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("emoji81185");
+
+    const automatic = await normalize({
+      update_id: 81186,
+      message: {
+        message_id: 81186,
+        date: 1761955200,
+        chat: { id: -10081186, type: "supergroup" },
+        from: { id: 81186, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "自",
+          entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 1,
+              custom_emoji_id: "emoji81186",
+            },
+          ],
+        },
+      },
+    });
+    expect(automatic.status).toBe("event");
+    if (automatic.status !== "event") {
+      return;
+    }
+    expect(automatic.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(automatic.event)).not.toContain("emoji81186");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {

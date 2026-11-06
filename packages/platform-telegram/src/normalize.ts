@@ -739,7 +739,12 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
-    lists.push(quote.entities);
+    if (typeof quote.text === "string") {
+      // 自定义表情必须整段落在手动引用里。
+      lists.push(fittingEmoji(quote.entities, quote.text.length));
+    } else {
+      lists.push(quote.entities);
+    }
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {
