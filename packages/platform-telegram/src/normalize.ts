@@ -5137,17 +5137,22 @@ function pushPostSenderUrls(
 }
 
 /**
- * 付款失败或退款建议帖上画出的话题用户全名只留主机名。
+ * 付款失败、退款，或有价通过建议帖上画出的话题用户全名只留主机名。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 有价通过要有大于 0 的安全整数金额。0 和没标价的通过不读。
  * 发言人不是这个人时也读。用户名、话题号和频道标题不读。
- * 通过和付款不读这个人。嵌套原帖不读。
+ * 付款到账不读这个人。嵌套原帖不读。
  */
 function pushPostTopicUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   const notice = suggestedPost(message);
-  if (notice !== "failed" && notice !== "refunded") {
+  if (
+    notice !== "failed" &&
+    notice !== "refunded" &&
+    !(notice === "approved" && approvedPriceDrawn(message))
+  ) {
     return;
   }
   const topic = message.direct_messages_topic;
@@ -5155,6 +5160,18 @@ function pushPostTopicUrls(
     return;
   }
   pushFormattedUserUrls(topic.user, urls);
+}
+
+/** 管理员看见的通过第二句只在金额大于 0 时画出话题用户。 */
+function approvedPriceDrawn(message: Record<string, unknown>): boolean {
+  const approved = message.suggested_post_approved;
+  if (!isRecord(approved) || !isRecord(approved.price)) {
+    return false;
+  }
+  const amount = approved.price.amount;
+  return (
+    typeof amount === "number" && Number.isSafeInteger(amount) && amount > 0
+  );
 }
 
 /**
