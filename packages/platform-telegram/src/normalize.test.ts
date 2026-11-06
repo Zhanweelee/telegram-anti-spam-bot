@@ -12877,7 +12877,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(caption.event.message?.text).toBe("图");
-    expect(caption.event.message?.asCustomEmoji).toBe(true);
+    expect(caption.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(caption.event)).not.toContain("emoji80945");
 
     const loose = await normalize({
@@ -12904,6 +12904,149 @@ describe("normalizeUpdate", () => {
     }
     expect(loose.event.message?.asCustomEmoji).toBe(true);
     expect(JSON.stringify(loose.event)).not.toContain("emoji80946");
+  });
+
+  it("skips a caption custom emoji that does not fit inside the caption", async () => {
+    const past = await normalize({
+      update_id: 80961,
+      message: {
+        message_id: 80961,
+        date: 1761955200,
+        chat: { id: -10080961, type: "supergroup" },
+        from: { id: 80961, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80961", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji80961",
+          },
+        ],
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("图");
+    expect(past.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("emoji80961");
+
+    const empty = await normalize({
+      update_id: 80962,
+      message: {
+        message_id: 80962,
+        date: 1761955200,
+        chat: { id: -10080962, type: "supergroup" },
+        from: { id: 80962, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80962", width: 1, height: 1 }],
+        caption: "",
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 1,
+            custom_emoji_id: "emoji80962",
+          },
+        ],
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("");
+    expect(empty.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("emoji80962");
+
+    const wide = await normalize({
+      update_id: 80963,
+      message: {
+        message_id: 80963,
+        date: 1761955200,
+        chat: { id: -10080963, type: "supergroup" },
+        from: { id: 80963, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80963", width: 1, height: 1 }],
+        caption: "图".repeat(151),
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 150,
+            length: 1,
+            custom_emoji_id: "emoji80963",
+          },
+        ],
+      },
+    });
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.text).toBe("图".repeat(151));
+    expect(wide.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("emoji80963");
+
+    const fitted = await normalize({
+      update_id: 80964,
+      message: {
+        message_id: 80964,
+        date: 1761955200,
+        chat: { id: -10080964, type: "supergroup" },
+        from: { id: 80964, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80964", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 1,
+            custom_emoji_id: "emoji80964",
+          },
+          {
+            type: "custom_emoji",
+            offset: 4,
+            length: 1,
+            custom_emoji_id: "emoji80964b",
+          },
+        ],
+      },
+    });
+    expect(fitted.status).toBe("event");
+    if (fitted.status !== "event") {
+      return;
+    }
+    expect(fitted.event.message?.text).toBe("图");
+    expect(fitted.event.message?.asCustomEmoji).toBe(true);
+    const fittedDump = JSON.stringify(fitted.event);
+    expect(fittedDump).not.toContain("emoji80964");
+    expect(fittedDump).not.toContain("emoji80964b");
+
+    const loose = await normalize({
+      update_id: 80965,
+      message: {
+        message_id: 80965,
+        date: 1761955200,
+        chat: { id: -10080965, type: "supergroup" },
+        from: { id: 80965, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80965", width: 1, height: 1 }],
+        caption_entities: [
+          {
+            type: "custom_emoji",
+            offset: 9,
+            length: 2,
+            custom_emoji_id: "emoji80965",
+          },
+        ],
+      },
+    });
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("emoji80965");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
