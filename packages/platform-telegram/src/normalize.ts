@@ -4828,8 +4828,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
       if (!isRecord(task)) {
         continue;
       }
-      // 文字链接的起点必须落在这条画出的任务文字里。
-      pushDrawnLine(task.text, task.text_entities, urls);
+      // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。
+      pushPlainUrls(task.text, urls);
+      pushTextLinks(
+        typeof task.text === "string"
+          ? drawnTextLink(task.text_entities, task.text.length)
+          : task.text_entities,
+        urls,
+      );
       pushTaskCompleterUrls(task, urls);
     }
   }
