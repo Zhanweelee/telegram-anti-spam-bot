@@ -2093,8 +2093,8 @@ function linkHosts(message: Record<string, unknown>): {
   const checklist = message.checklist;
   const lists: unknown[] = [];
   if (typeof message.text === "string") {
-    // 正文上的文字链接，起点必须落在正文里。
-    lists.push(visibleTextLinks(message.entities, message.text.length));
+    // 正文上的文字链接，起点必须落在正文里，长度必须大于 0。
+    lists.push(drawnTextLink(message.entities, message.text.length));
   } else {
     lists.push(message.entities);
   }
@@ -5578,6 +5578,17 @@ function visibleTextLinks(list: unknown, limit: number): unknown[] {
       Number.isSafeInteger(entity.offset) &&
       entity.offset >= 0 &&
       entity.offset < limit,
+  );
+}
+
+/** 文字链接的起点落在这段文字里，并且长度大于 0，才算画出来。 */
+function drawnTextLink(list: unknown, limit: number): unknown[] {
+  return visibleTextLinks(list, limit).filter(
+    (entity) =>
+      isRecord(entity) &&
+      typeof entity.length === "number" &&
+      Number.isSafeInteger(entity.length) &&
+      entity.length > 0,
   );
 }
 
