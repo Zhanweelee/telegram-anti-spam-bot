@@ -1957,7 +1957,13 @@ function linkHosts(message: Record<string, unknown>): {
     lists.push(poll.question_entities);
   }
   if (isRecord(checklist)) {
-    lists.push(checklist.title_entities);
+    const title = checklist.title;
+    // 标题上的文字链接，起点必须落在标题里。
+    lists.push(
+      typeof title === "string"
+        ? visibleTextLinks(checklist.title_entities, title.length)
+        : checklist.title_entities,
+    );
   }
   const quote = message.quote;
   if (
@@ -4521,8 +4527,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
         if (!isRecord(task)) {
           continue;
         }
-        pushPlainUrls(task.text, urls);
-        pushTextLinks(task.text_entities, urls);
+        // 文字链接的起点必须落在这条任务文字里。
+        pushDrawnLine(task.text, task.text_entities, urls);
         pushTaskCompleterUrls(task, urls);
       }
     }

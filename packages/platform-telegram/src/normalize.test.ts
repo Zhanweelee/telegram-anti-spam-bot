@@ -11684,6 +11684,112 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a checklist link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80641,
+      message: {
+        message_id: 80641,
+        date: 1761955200,
+        chat: { id: -10080641, type: "supergroup" },
+        from: { id: 80641, first_name: "Ada" },
+        checklist: {
+          title: "清单",
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 2,
+              length: 1,
+              url: "https://bit.ly/title80641",
+            },
+          ],
+          tasks: [
+            {
+              id: 1,
+              text: "做",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 1,
+                  length: 1,
+                  url: "https://cutt.ly/task80641",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("清单");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("title80641");
+    expect(pastDump).not.toContain("task80641");
+    expect(pastDump).not.toContain("bit.ly");
+    expect(pastDump).not.toContain("cutt.ly");
+
+    const kept = await normalize({
+      update_id: 80642,
+      message: {
+        message_id: 80642,
+        date: 1761955200,
+        chat: { id: -10080642, type: "supergroup" },
+        from: { id: 80642, first_name: "Ada" },
+        checklist: {
+          title: "清单",
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/title80642",
+            },
+          ],
+          tasks: [
+            {
+              id: 1,
+              text: "https://tinyurl.com/plain80642",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 4,
+                  url: "https://cutt.ly/task80642",
+                },
+                {
+                  type: "text_link",
+                  offset: 99,
+                  length: 1,
+                  url: "https://evil.example/late80642",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.checklistTask).toBe(
+      "https://tinyurl.com/plain80642",
+    );
+    expect(kept.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "cutt.ly",
+    ]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("title80642");
+    expect(keptDump).not.toContain("task80642");
+    expect(keptDump).not.toContain("late80642");
+    expect(keptDump).not.toContain("evil.example");
+  });
+
   it("uses a checklist title when text and caption are missing", async () => {
     const phrase = "请免费领取礼品";
     const code = "INVITECHECK99";
