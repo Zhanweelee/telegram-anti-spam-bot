@@ -562,7 +562,15 @@ function textMentionMark(message: Record<string, unknown>): boolean {
     } else {
       lists.push(poll.question_entities);
     }
-    lists.push(poll.explanation_entities, poll.description_entities);
+    if (typeof poll.explanation === "string") {
+      // 按标识提及的起点必须落在测验说明里。
+      lists.push(
+        drawnMention(poll.explanation_entities, poll.explanation.length),
+      );
+    } else {
+      lists.push(poll.explanation_entities);
+    }
+    lists.push(poll.description_entities);
   }
   const checklist = message.checklist;
   if (isRecord(checklist)) {
