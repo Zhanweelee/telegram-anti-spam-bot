@@ -4566,6 +4566,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     pushPlainUrls(value.file_name, urls);
   }
+  pushStickerPreview(message, urls);
   const paid = message.paid_media;
   if (isRecord(paid) && Array.isArray(paid.paid_media)) {
     for (const item of paid.paid_media) {
@@ -4943,7 +4944,9 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 付款成功的账单标题仍按原来的顺序。
  * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
  * 本条回复是普通文件且没有说明时，引用条画文件名的前 150 个码元。
- * 动图、视频、音频、贴纸和图片占住这一行时，不读附带的文件名。
+ * 动图、视频、音频和图片占住这一行时，不读附带的文件名。
+ * 没有说明的贴纸画表情加固定字样。只读表情的前 150 个码元。包名不读。
+ * 外部回复的贴纸只画固定字样，不读那张贴纸的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  */
 function pushReplyTargetUrls(
@@ -5035,6 +5038,9 @@ function pushLoadedReplyLine(
     }
     return;
   }
+  if (pushReplyStickerAlt(reply, urls)) {
+    return;
+  }
   pushReplyDocumentName(reply, urls);
 }
 
@@ -5086,6 +5092,58 @@ function labeledReplyMedia(value: Record<string, unknown>): boolean {
   );
 }
 
+/** 说明或正文占住预览行时，贴纸表情不再画出来。 */
+function stickerPreviewLine(value: Record<string, unknown>): boolean {
+  if (typeof value.caption === "string" && value.caption.length > 0) {
+    return false;
+  }
+  if (typeof value.text === "string" && value.text.length > 0) {
+    return false;
+  }
+  if (!isRecord(value.sticker)) {
+    return false;
+  }
+  return !externalPreviewKeys.some(
+    (key) =>
+      key !== "sticker" && (isRecord(value[key]) || Array.isArray(value[key])),
+  );
+}
+
+/** 预览行画出的表情只留主机名。只读前 150 个码元。包名和编号不读。 */
+function pushStickerAlt(value: Record<string, unknown>, urls: string[]): void {
+  const sticker = value.sticker;
+  if (!isRecord(sticker) || typeof sticker.emoji !== "string") {
+    return;
+  }
+  pushPlainUrls(sticker.emoji.slice(0, 150), urls);
+}
+
+/** 没有说明时，这条贴纸自己的列表预览画出表情。 */
+function pushStickerPreview(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!stickerPreviewLine(message)) {
+    return;
+  }
+  pushStickerAlt(message, urls);
+}
+
+/**
+ * 已加载的贴纸回复画出表情加固定字样。
+ * 表情为空时仍占住这一行。外部回复不走这里。
+ */
+function pushReplyStickerAlt(
+  reply: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  if (!stickerPreviewLine(reply)) {
+    return false;
+  }
+  pushStickerAlt(reply, urls);
+  return true;
+}
+
 const externalPreviewKeys = [
   "animation",
   "audio",
@@ -5111,7 +5169,8 @@ const externalPreviewKeys = [
  * 外部回复的媒体标题只留主机名。
  * 清单读标题和标题上的文字链接。任务不读。
  * 账单读说明，不读标题。
- * 普通文件读文件名。动图、图片、贴纸、视频和游戏只占这一行，不读附带的文件名。
+ * 普通文件读文件名。动图、图片、视频和游戏只占这一行，不读附带的文件名。
+ * 贴纸只画固定字样。这一行的表情取自当前消息，不读外部贴纸的表情。
  * 这一行已经占住时返回 true，不再改读本条回复的游戏或账单。
  */
 function pushExternalReplyPreview(
