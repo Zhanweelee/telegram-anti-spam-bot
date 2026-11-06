@@ -219,7 +219,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `quote_text_regex` 默认打开。手动引用命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0547。引用上的文字链接后来由 ADR 0732 不能越过正文。
 
-`gift_text_regex` 默认打开。礼物附言命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0548。
+`gift_text_regex` 默认打开。礼物附言命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0548。礼物附言上的文字链接后来由 ADR 0734 不能越过正文。
 
 `gift_label_regex` 默认打开。独特礼物的收藏名命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0549。
 
