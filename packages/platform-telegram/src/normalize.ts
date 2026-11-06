@@ -4952,6 +4952,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 骰子画出表情。去掉变体选择符后再留主机名。点数不读。外部回复也读这张骰子的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里的文字链接也读。原文不进正文。
+ * 被回复的是富文本且没有说明时，画出富文本预览的前 150 个码元，不再读 text。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -5042,6 +5043,14 @@ function pushLoadedReplyLine(
     }
     return;
   }
+  if (
+    drawsContentReplyBar(message) &&
+    isRecord(reply.rich_message) &&
+    !(typeof reply.caption === "string" && reply.caption.length > 0)
+  ) {
+    pushRichWindow(reply.rich_message, 150, urls);
+    return;
+  }
   if (pushReplyChecklistTitle(reply, urls)) {
     return;
   }
@@ -5058,7 +5067,8 @@ function pushLoadedReplyLine(
 /**
  * 没有更早的标题时，普通消息的引用条画出说明，否则画出正文。
  * 只读前 150 个码元。文字链接的起点落在这段里才读。
- * 原文不进正文。富文本也画这行。服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
+ * 原文不进正文。当前消息是富文本时也画这行。被回复的富文本另走预览。
+ * 服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
  */
 function pushReplyCaptionOrText(
   message: Record<string, unknown>,
@@ -5764,6 +5774,7 @@ const PIN_RICH_PREVIEW = 20;
 interface PinnedRichPreview {
   text: string;
   urls: string[];
+  limit: number;
 }
 
 /**
@@ -5779,25 +5790,33 @@ function pushPinnedRichPreview(
   if (!isRecord(pinned.rich_message)) {
     return false;
   }
-  const preview: PinnedRichPreview = { text: "", urls: [] };
-  const rich = pinned.rich_message;
-  if (Array.isArray(rich.blocks)) {
-    appendPinnedRichBlocks(rich.blocks, preview);
-  }
-  pushPlainUrls(preview.text.slice(0, PIN_RICH_PREVIEW), urls);
-  for (const found of preview.urls) {
-    urls.push(found);
-  }
+  pushRichWindow(pinned.rich_message, PIN_RICH_PREVIEW, urls);
   return true;
 }
 
+/** 富文本预览只留前一段里的主机名。置顶用 20 个码元，引用条用 150 个。 */
+function pushRichWindow(
+  rich: Record<string, unknown>,
+  limit: number,
+  urls: string[],
+): void {
+  const preview: PinnedRichPreview = { text: "", urls: [], limit };
+  if (Array.isArray(rich.blocks)) {
+    appendPinnedRichBlocks(rich.blocks, preview);
+  }
+  pushPlainUrls(preview.text.slice(0, limit), urls);
+  for (const found of preview.urls) {
+    urls.push(found);
+  }
+}
+
 function pinnedRichOpen(preview: PinnedRichPreview): boolean {
-  return preview.text.length < PIN_RICH_PREVIEW;
+  return preview.text.length < preview.limit;
 }
 
 function fillPinnedRichPreview(preview: PinnedRichPreview): void {
-  if (preview.text.length < PIN_RICH_PREVIEW) {
-    preview.text += " ".repeat(PIN_RICH_PREVIEW - preview.text.length);
+  if (preview.text.length < preview.limit) {
+    preview.text += " ".repeat(preview.limit - preview.text.length);
   }
 }
 
@@ -5806,7 +5825,7 @@ function appendPinnedSeparator(preview: PinnedRichPreview): boolean {
   if (pinnedRichOpen(preview)) {
     return true;
   }
-  preview.text = preview.text.slice(0, PIN_RICH_PREVIEW);
+  preview.text = preview.text.slice(0, preview.limit);
   return false;
 }
 
@@ -5891,7 +5910,7 @@ function appendPinnedRichMarked(
   mark: string,
   preview: PinnedRichPreview,
 ): void {
-  const room = PIN_RICH_PREVIEW - preview.text.length;
+  const room = preview.limit - preview.text.length;
   preview.text += mark.slice(0, room);
   if (!pinnedRichOpen(preview)) {
     return;
@@ -6013,7 +6032,7 @@ function appendPinnedRichText(
     return;
   }
   if (typeof value === "string") {
-    preview.text += value.slice(0, PIN_RICH_PREVIEW - preview.text.length);
+    preview.text += value.slice(0, preview.limit - preview.text.length);
     return;
   }
   if (Array.isArray(value)) {
