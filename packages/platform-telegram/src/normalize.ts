@@ -4674,6 +4674,27 @@ function pushTaskCompleterUrls(
   pushVisiblePartyUrls(undefined, task.completed_by_chat, urls);
 }
 
+/**
+ * 客户端用短名画出的用户。名为空时改用姓。空白不算空。
+ * 从下标 2 起的第一个空格后面不画。用户名不读。
+ */
+function forcedFirstName(user: Record<string, unknown>): string {
+  let name = "";
+  if (typeof user.first_name === "string" && user.first_name.length > 0) {
+    name = user.first_name;
+  } else if (
+    (user.first_name === undefined || user.first_name === "") &&
+    typeof user.last_name === "string" &&
+    user.last_name.length > 0
+  ) {
+    name = user.last_name;
+  } else {
+    return "";
+  }
+  const split = name.indexOf(" ", 2);
+  return split >= 0 ? name.slice(0, split) : name;
+}
+
 function pushVisiblePartyUrls(
   user: unknown,
   chat: unknown,
@@ -5094,7 +5115,8 @@ function pushBackgroundSenderUrls(
 /**
  * 加入社区的人画出的全名只留主机名。
  * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
- * 移入和移出仍只读名，空白名挡住姓，空格不截断。
+ * 移入和移出画短名。名为空时改用姓。空白名挡住姓。
+ * 从下标 2 起的第一个空格后面不读。
  * 移入和加入要有社区对象。移出只要是对象，空对象也读。
  * 同时出现时先认移入，再认加入，再认移出。
  * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名，排在前面。
@@ -5112,7 +5134,10 @@ function pushCommunitySenderUrls(
     pushFormattedUserUrls(message.from, urls);
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  if (!isRecord(message.from)) {
+    return;
+  }
+  pushPlainUrls(forcedFirstName(message.from), urls);
 }
 
 /**
@@ -9015,22 +9040,7 @@ function guestBotDrawnName(message: Record<string, unknown>): string {
   ) {
     return "";
   }
-  const from = message.from;
-  let name = "";
-  if (typeof from.first_name === "string" && from.first_name.length > 0) {
-    name = from.first_name;
-  } else if (
-    (from.first_name === undefined || from.first_name === "") &&
-    typeof from.last_name === "string" &&
-    from.last_name.length > 0
-  ) {
-    name = from.last_name;
-  } else {
-    return "";
-  }
-  const split = name.indexOf(" ", 2);
-  const drawn = split >= 0 ? name.slice(0, split) : name;
-  return drawn.slice(0, MAX_TEXT);
+  return forcedFirstName(message.from).slice(0, MAX_TEXT);
 }
 
 /**
