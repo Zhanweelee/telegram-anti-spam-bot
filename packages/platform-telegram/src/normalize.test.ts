@@ -44622,6 +44622,202 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(option.event)).not.toContain("tinyurl");
   });
 
+  it("skips a task link that starts after the drawn line", async () => {
+    const past = await normalize({
+      update_id: 80621,
+      message: {
+        message_id: 80621,
+        date: 1761955200,
+        chat: { id: -10080621, type: "supergroup" },
+        from: { id: 80621, first_name: "Ada" },
+        text: "你好",
+        reply_to_checklist_task_id: 7,
+        reply_to_message: {
+          message_id: 806211,
+          date: 1761955100,
+          chat: { id: -10080621, type: "supergroup" },
+          checklist: {
+            title: "https://bit.ly/title80621",
+            tasks: [
+              {
+                id: 7,
+                text: "做",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 1,
+                    length: 1,
+                    url: "https://bit.ly/past80621",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("你好");
+    expect(past.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("past80621");
+    expect(JSON.stringify(past.event)).not.toContain("title80621");
+
+    const kept = await normalize({
+      update_id: 80622,
+      message: {
+        message_id: 80622,
+        date: 1761955200,
+        chat: { id: -10080622, type: "supergroup" },
+        from: { id: 80622, first_name: "Ada" },
+        text: "你好",
+        reply_to_checklist_task_id: 7,
+        reply_to_message: {
+          message_id: 806221,
+          date: 1761955100,
+          chat: { id: -10080622, type: "supergroup" },
+          checklist: {
+            title: "清单",
+            tasks: [
+              {
+                id: 7,
+                text: "做",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 0,
+                    length: 1,
+                    url: "https://bit.ly/keep80622",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(kept.event)).not.toContain("keep80622");
+
+    const title = await normalize({
+      update_id: 80623,
+      message: {
+        message_id: 80623,
+        date: 1761955200,
+        chat: { id: -10080623, type: "supergroup" },
+        from: { id: 80623, first_name: "Ada" },
+        text: "你好",
+        reply_to_checklist_task_id: 9,
+        reply_to_message: {
+          message_id: 806231,
+          date: 1761955100,
+          chat: { id: -10080623, type: "supergroup" },
+          checklist: {
+            title: "清单",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 2,
+                length: 1,
+                url: "https://bit.ly/title80623",
+              },
+            ],
+            tasks: [{ id: 1, text: "https://tinyurl.com/task80623" }],
+          },
+        },
+      },
+    });
+    expect(title.status).toBe("event");
+    if (title.status !== "event") {
+      return;
+    }
+    expect(title.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(title.event)).not.toContain("title80623");
+    expect(JSON.stringify(title.event)).not.toContain("task80623");
+
+    const option = await normalize({
+      update_id: 80624,
+      message: {
+        message_id: 80624,
+        date: 1761955200,
+        chat: { id: -10080624, type: "supergroup" },
+        from: { id: 80624, first_name: "Ada" },
+        text: "你好",
+        reply_to_poll_option_id: "a",
+        reply_to_message: {
+          message_id: 806241,
+          date: 1761955100,
+          chat: { id: -10080624, type: "supergroup" },
+          poll: {
+            question: "问题",
+            options: [
+              {
+                text: "甲",
+                persistent_id: "a",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 1,
+                    length: 1,
+                    url: "https://bit.ly/opt80624",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(option.status).toBe("event");
+    if (option.status !== "event") {
+      return;
+    }
+    expect(option.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(option.event)).not.toContain("opt80624");
+
+    const question = await normalize({
+      update_id: 80625,
+      message: {
+        message_id: 80625,
+        date: 1761955200,
+        chat: { id: -10080625, type: "supergroup" },
+        from: { id: 80625, first_name: "Ada" },
+        text: "你好",
+        reply_to_poll_option_id: "missing",
+        reply_to_message: {
+          message_id: 806251,
+          date: 1761955100,
+          chat: { id: -10080625, type: "supergroup" },
+          poll: {
+            question: "问",
+            question_entities: [
+              {
+                type: "text_link",
+                offset: 1,
+                length: 1,
+                url: "https://bit.ly/ask80625",
+              },
+            ],
+            options: [{ text: "https://tinyurl.com/other80625", persistent_id: "a" }],
+          },
+        },
+      },
+    });
+    expect(question.status).toBe("event");
+    if (question.status !== "event") {
+      return;
+    }
+    expect(question.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(question.event)).not.toContain("ask80625");
+    expect(JSON.stringify(question.event)).not.toContain("other80625");
+  });
+
   it("reads the checklist task or poll option drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const task = await normalize({
