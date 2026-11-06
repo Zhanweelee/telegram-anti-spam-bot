@@ -107,7 +107,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 勾完或取消勾完清单的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0602。
 
-新加清单任务的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0603。
+新加清单任务的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0603。四条起只读前三条任务。见 ADR 0660。
 
 加选项或删选项的人，短名只留主机名，仍走 `links`。从下标 2 起的空格后面不读。名字里的关键词不命中。见 ADR 0604 与 ADR 0659。
 

@@ -30621,6 +30621,158 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(optionFirst.event)).not.toContain("bit.ly");
   });
 
+  it("leaves a short link on an added checklist task past the third", async () => {
+    const phrase = "请免费领取礼品";
+    const hidden = await normalize({
+      update_id: 79550,
+      message: {
+        message_id: 79550,
+        date: 1761955200,
+        chat: {
+          id: -10079550,
+          type: "supergroup",
+          title: "https://ow.ly/room79550",
+        },
+        from: {
+          id: 128,
+          first_name: "Ada",
+          last_name: "Lee",
+          username: "secretuser79550",
+        },
+        checklist_tasks_added: {
+          tasks: [
+            { id: 1, text: "第一" },
+            { id: 2, text: "第二" },
+            { id: 3, text: "第三" },
+            {
+              id: 880050,
+              text: `https://bit.ly/later79550 ${phrase}`,
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 8,
+                  url: "https://cutt.ly/ent79550",
+                },
+                {
+                  type: "text_mention",
+                  offset: 0,
+                  length: 4,
+                  user: { id: 880051, first_name: "藏" },
+                },
+                {
+                  type: "custom_emoji",
+                  offset: 0,
+                  length: 2,
+                  custom_emoji_id: "emoji79550",
+                },
+              ],
+              completed_by_user: {
+                id: 9,
+                first_name: "https://is.gd/done79550",
+              },
+            },
+          ],
+          checklist_message: { text: "https://t.co/nest79550" },
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.text).toBe("第一 第二 第三");
+    expect(hidden.event.message?.textSha256).toBe(
+      await sha256Hex("第一 第二 第三"),
+    );
+    expect(hidden.event.message?.asChecklistAdded).toBe(true);
+    expect(hidden.event.message?.asTextMention).toBeUndefined();
+    expect(hidden.event.message?.asCustomEmoji).toBeUndefined();
+    expect(hidden.event.message?.hosts).toBeUndefined();
+    const hiddenDump = JSON.stringify(hidden.event);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("later79550");
+    expect(hiddenDump).not.toContain("bit.ly");
+    expect(hiddenDump).not.toContain("ent79550");
+    expect(hiddenDump).not.toContain("cutt.ly");
+    expect(hiddenDump).not.toContain("done79550");
+    expect(hiddenDump).not.toContain("is.gd");
+    expect(hiddenDump).not.toContain("nest79550");
+    expect(hiddenDump).not.toContain("room79550");
+    expect(hiddenDump).not.toContain("secretuser79550");
+    expect(hiddenDump).not.toContain("emoji79550");
+    expect(hiddenDump).not.toContain("880050");
+    expect(hiddenDump).not.toContain("880051");
+
+    const kept = await normalize({
+      update_id: 79551,
+      message: {
+        message_id: 79551,
+        date: 1761955200,
+        chat: { id: -10079551, type: "supergroup" },
+        from: { id: 128, first_name: "Ada" },
+        text: "今天站会",
+        checklist_tasks_added: {
+          tasks: [
+            { id: 1, text: "第一" },
+            { id: 2, text: "第二" },
+            {
+              id: 3,
+              text: "第三",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 2,
+                  url: "https://bit.ly/keep79551",
+                },
+              ],
+              completed_by_user: {
+                id: 9,
+                first_name: "https://tinyurl.com/done79551",
+              },
+            },
+            { id: 4, text: "https://cutt.ly/later79551" },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("今天站会");
+    expect(kept.event.message?.addedText).toBe("第一 第二 第三");
+    expect(kept.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(kept.event)).not.toContain("later79551");
+    expect(JSON.stringify(kept.event)).not.toContain("cutt.ly");
+    expect(JSON.stringify(kept.event)).not.toContain("keep79551");
+    expect(JSON.stringify(kept.event)).not.toContain("done79551");
+
+    const three = await normalize({
+      update_id: 79552,
+      message: {
+        message_id: 79552,
+        date: 1761955200,
+        chat: { id: -10079552, type: "supergroup" },
+        from: { id: 128, first_name: "Ada" },
+        checklist_tasks_added: {
+          tasks: [
+            { id: 1, text: "第一" },
+            { id: 2, text: "第二" },
+            { id: 3, text: "https://bit.ly/three79552" },
+          ],
+        },
+      },
+    });
+    expect(three.status).toBe("event");
+    if (three.status !== "event") {
+      return;
+    }
+    expect(three.event.message?.text).toBe("第一 第二 https://bit.ly/three79552");
+    expect(three.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("drops the part after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     const cut = await normalize({
@@ -35025,14 +35177,16 @@ describe("normalizeUpdate", () => {
 
     const taskTail = "TAIL96";
     const taskPath = "task96";
-    const tasks = Array.from({ length: 30 }, (_, index) => ({
-      id: index + 1,
-      text: "事".repeat(100),
-    }));
-    tasks.push({
-      id: 31,
-      text: `${taskTail} https://bit.ly/${taskPath}`,
-    });
+    const hiddenPath = "hidden96";
+    const tasks = [
+      {
+        id: 1,
+        text: `${"事".repeat(4000)}${taskTail} https://bit.ly/${taskPath}`,
+      },
+      { id: 2, text: "第二" },
+      { id: 3, text: "第三" },
+      { id: 31, text: `https://cutt.ly/${hiddenPath}` },
+    ];
     const added = await normalize({
       update_id: 5796,
       message: {
@@ -35058,6 +35212,8 @@ describe("normalizeUpdate", () => {
     const addedDump = JSON.stringify(added.event);
     expect(addedDump).not.toContain(taskTail);
     expect(addedDump).not.toContain(taskPath);
+    expect(addedDump).not.toContain(hiddenPath);
+    expect(addedDump).not.toContain("cutt.ly");
     expect(addedDump).not.toContain(nested);
     expect(addedDump).not.toContain("Ada");
   });

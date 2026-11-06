@@ -557,7 +557,7 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks)) {
-    pushTaskMentionLists(addedTasks.tasks, lists);
+    pushTaskMentionLists(drawnAddedTasks(addedTasks.tasks), lists);
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
@@ -584,6 +584,20 @@ function textMentionMark(message: Record<string, unknown>): boolean {
     }
   }
   return false;
+}
+
+/**
+ * 新加任务的服务消息最多画出前三条。三条及以内全部画出。
+ * 第四条起的标题、文字链接、提及和自定义表情不在这行里。
+ */
+function drawnAddedTasks(tasks: unknown): unknown[] {
+  if (!Array.isArray(tasks)) {
+    return [];
+  }
+  if (tasks.length >= 4) {
+    return tasks.slice(0, 3);
+  }
+  return tasks;
 }
 
 /** 清单任务上的实体列表。投票选项和手动引用不读。 */
@@ -634,7 +648,7 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks)) {
-    pushTaskMentionLists(addedTasks.tasks, lists);
+    pushTaskMentionLists(drawnAddedTasks(addedTasks.tasks), lists);
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
@@ -4532,7 +4546,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks) && Array.isArray(addedTasks.tasks)) {
-    for (const task of addedTasks.tasks) {
+    for (const task of drawnAddedTasks(addedTasks.tasks)) {
       if (!isRecord(task)) {
         continue;
       }
@@ -7945,7 +7959,7 @@ function besideDeclineComment(
   return clipped(source, 128);
 }
 
-/** 已有别的正文时，后加选项或任务另留。选项最多 100 字，任务拼起来最多 3029 字。先看新选项，再看被删选项，再看新任务。这段自己就是正文时改看下一种。编号、原消息和完成者不进这个字段。 */
+/** 已有别的正文时，后加选项或任务另留。选项最多 100 字。四条起的新任务只拼前三条，最多 3029 字。先看新选项，再看被删选项，再看新任务。这段自己就是正文时改看下一种。编号、原消息和完成者不进这个字段。 */
 function besideAddedText(
   message: Record<string, unknown>,
   text: string,
@@ -8860,7 +8874,7 @@ function addedTaskSource(message: Record<string, unknown>): string {
     return "";
   }
   const parts: string[] = [];
-  for (const task of added.tasks) {
+  for (const task of drawnAddedTasks(added.tasks)) {
     if (!isRecord(task) || typeof task.text !== "string") {
       continue;
     }

@@ -29703,6 +29703,194 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(optionFirst)).not.toContain("later79549");
   });
 
+  it("leaves a short link on an added checklist task past the third", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      tasks: Record<string, unknown>[],
+      extra: Record<string, unknown> = {},
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -(1_000_000 + updateId), type: "supergroup" },
+            from: { id: 128, first_name: "Ada", last_name: "Lee" },
+            checklist_tasks_added: { tasks },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const hidden = await posted(79553, [
+      { id: 1, text: "第一" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "第三" },
+      {
+        id: 4,
+        text: `https://bit.ly/later79553 ${phrase}`,
+        text_entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 8,
+            url: "https://cutt.ly/ent79553",
+          },
+        ],
+      },
+    ]);
+    expect(hidden.message?.text).toBe("第一 第二 第三");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenKept = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenKept.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify({
+      event: hidden,
+      decision: hiddenKept.decision,
+    });
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("later79553");
+    expect(hiddenDump).not.toContain("bit.ly");
+    expect(hiddenDump).not.toContain("cutt.ly");
+
+    const third = await posted(79554, [
+      { id: 1, text: "第一" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "https://bit.ly/keep79554" },
+      { id: 4, text: "第四" },
+    ]);
+    expect(third.message?.hosts).toEqual(["bit.ly"]);
+    const thirdModerator = createMemoryModerator();
+    const thirdHit = await screenTelegramEvent(third, {
+      moderator: thirdModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(thirdHit.decision.action).toBe("delete");
+    expect(thirdHit.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(thirdHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(thirdModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079554", messageId: "79554" },
+    ]);
+
+    const onlyThree = await posted(79555, [
+      { id: 1, text: "第一" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "https://bit.ly/three79555" },
+    ]);
+    expect(onlyThree.message?.hosts).toEqual(["bit.ly"]);
+    const onlyThreeHit = await screenTelegramEvent(onlyThree, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(onlyThreeHit.decision.action).toBe("delete");
+    expect(JSON.stringify(onlyThreeHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+
+    const paid = await posted(
+      79556,
+      [
+        { id: 1, text: "https://bit.ly/paid79556" },
+        { id: 2, text: "第二" },
+        { id: 3, text: "第三" },
+        { id: 4, text: "第四" },
+      ],
+      { is_paid_post: true },
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+
+    const invite = await posted(79557, [
+      { id: 1, text: "https://t.me/+code79557" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "第三" },
+      { id: 4, text: "https://t.me/+hidden79557" },
+    ]);
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    const inviteHit = await screenTelegramEvent(invite, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(inviteHit.decision.reasons).toContain("invite");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain("invite:t.me");
+    expect(JSON.stringify(invite)).not.toContain("hidden79557");
+
+    const example = await posted(79558, [
+      { id: 1, text: "第一" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "https://example.com/page79558" },
+      { id: 4, text: "https://bit.ly/later79558" },
+    ]);
+    expect(example.message?.hosts).toEqual(["example.com"]);
+    const exampleKept = await screenTelegramEvent(example, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(exampleKept.decision.action).toBe("allow");
+    expect(JSON.stringify(example)).not.toContain("later79558");
+
+    const pub = await posted(79559, [
+      { id: 1, text: "第一" },
+      { id: 2, text: "第二" },
+      { id: 3, text: "https://t.me/durov" },
+      { id: 4, text: "https://bit.ly/later79559" },
+    ]);
+    expect(pub.message?.hosts).toEqual(["t.me"]);
+    expect(pub.message?.invites).toBeUndefined();
+    const pubKept = await screenTelegramEvent(pub, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pubKept.decision.action).toBe("allow");
+    expect(JSON.stringify(pub)).not.toContain("later79559");
+
+    const buried = await posted(
+      79560,
+      [
+        { id: 1, text: "第一" },
+        { id: 2, text: "第二" },
+        { id: 3, text: "第三" },
+        { id: 4, text: phrase },
+      ],
+      { text: "今天站会" },
+    );
+    expect(buried.message?.text).toBe("今天站会");
+    expect(buried.message?.addedText).toBe("第一 第二 第三");
+    const buriedKept = await screenTelegramEvent(buried, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(buriedKept.decision.action).toBe("allow");
+    expect(JSON.stringify(buried)).not.toContain(phrase);
+  });
+
   it("drops a short link after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
