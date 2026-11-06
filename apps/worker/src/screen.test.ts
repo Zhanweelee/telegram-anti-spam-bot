@@ -7233,6 +7233,121 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(paidHit.decision)).not.toContain("paid79498");
   });
 
+  it("deletes a short link in the card drawn on a pin", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(updateId: number, extra: Record<string, unknown>) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79499, {
+      pinned_message: {
+        message_id: 88079499,
+        text: "https://ow.ly/text79499",
+        invoice: {
+          title: "https://tinyurl.com/title79499",
+          description: `https://bit.ly/inv79499 ${phrase}`,
+        },
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.asPin).toBe(true);
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("pin_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079499", messageId: "79499" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("inv79499");
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("title79499");
+    expect(namedDump).not.toContain("text79499");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("88079499");
+    expect(namedDump).not.toContain("机密群名");
+
+    const list = await posted(79501, {
+      pinned_message: {
+        message_id: 1,
+        checklist: {
+          title: phrase,
+          tasks: [{ id: 1, text: "https://bit.ly/task79501" }],
+        },
+      },
+    });
+    expect(list.message?.text).toBe("");
+    expect(list.message?.hosts).toBeUndefined();
+    const listKept = await screenTelegramEvent(list, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(listKept.decision.action).toBe("allow");
+    expect(JSON.stringify(list)).not.toContain(phrase);
+    expect(JSON.stringify(list)).not.toContain("task79501");
+    expect(JSON.stringify(list)).not.toContain("bit.ly");
+
+    const paid = await posted(79502, {
+      is_paid_post: true,
+      pinned_message: {
+        message_id: 1,
+        invoice: {
+          title: "Goods",
+          description: "https://bit.ly/paid79502",
+        },
+      },
+    });
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid79502");
+  });
+
   it("deletes a short link in a pin notice sender name", async () => {
     const phrase = "请免费领取礼品";
     const pinnedId = 880069;

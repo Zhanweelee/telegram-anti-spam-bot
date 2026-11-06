@@ -287,7 +287,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `gift_card` 在 `packages/detectors-gift`。`message.gift` 是普通礼物、独特礼物或升级购买时返回 score 1。证据是 `gift:` 加这一种。星星数量、编号和发布者名字不进证据。规则默认关闭。私聊 `/rule` 打开后删除这三种卡片。见 ADR 0481。
 
-`pin_notice` 在 `packages/detectors-pin`。只在 `message.asPin` 为 true 时返回 score 1。证据是 `pin:notice`。被置顶的原文和消息号不进证据。规则默认关闭。私聊 `/rule` 打开后删除置顶提示。置顶本身还在。见 ADR 0482。文字预览前 20 个码元和游戏标题里的短链仍走 `links`。见 ADR 0653。
+`pin_notice` 在 `packages/detectors-pin`。只在 `message.asPin` 为 true 时返回 score 1。证据是 `pin:notice`。被置顶的原文和消息号不进证据。规则默认关闭。私聊 `/rule` 打开后删除置顶提示。置顶本身还在。见 ADR 0482。文字、账单说明、清单标题的前 20 个码元和游戏标题里的短链仍走 `links`。见 ADR 0653 与 ADR 0654。
 
 `giveaway_notice` 在 `packages/detectors-giveaway-notice`。`message.giveawayNotice` 是创建或私下结束时返回 score 1。证据是 `giveaway:` 加这一种。星星数量、中奖人数和奖品原文不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种公告。见 ADR 0483。
 

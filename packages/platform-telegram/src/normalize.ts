@@ -4885,8 +4885,9 @@ function pushPinSenderUrls(
 
 /**
  * 置顶提示上画出的原文预览只留主机名。
- * 文字消息只画前 20 个 UTF-16 码元。图片、视频、文件等固定说法不画原文。
- * 游戏只画标题。预览不进正文。第 21 个字起、说明和被置顶的人不读。
+ * 文字消息只画前 20 个 UTF-16 码元。账单画说明，清单画标题，同样只取前 20 个。
+ * 图片、视频、文件、地点等固定说法不画原文。游戏只画标题。
+ * 预览不进正文。第 21 个字起、账单标题、任务和被置顶的人不读。
  */
 function pushPinnedPreviewUrls(
   message: Record<string, unknown>,
@@ -4903,10 +4904,30 @@ function pushPinnedPreviewUrls(
     pushPlainUrls(pinned.game.title, urls);
     return;
   }
-  if (typeof pinned.text !== "string" || pinned.text.length === 0) {
+  const drawn = pinnedPreviewText(pinned);
+  if (drawn.length === 0) {
     return;
   }
-  pushPlainUrls(pinned.text.slice(0, 20), urls);
+  pushPlainUrls(drawn.slice(0, 20), urls);
+}
+
+/**
+ * 置顶提示实际画出的那段原文。
+ * 账单的说明和清单标题会整段成为消息文字，提示里只留前 20 个码元。
+ * 空说明不改去读旁边的正文。
+ */
+function pinnedPreviewText(pinned: Record<string, unknown>): string {
+  if (isRecord(pinned.invoice)) {
+    return typeof pinned.invoice.description === "string"
+      ? pinned.invoice.description
+      : "";
+  }
+  if (isRecord(pinned.checklist)) {
+    return typeof pinned.checklist.title === "string"
+      ? pinned.checklist.title
+      : "";
+  }
+  return typeof pinned.text === "string" ? pinned.text : "";
 }
 
 /** 这些媒体在置顶提示里用固定说法，不把原文画出来。 */
@@ -4920,8 +4941,12 @@ function pinnedPreviewMedia(pinned: Record<string, unknown>): boolean {
     isRecord(pinned.sticker) ||
     isRecord(pinned.document) ||
     isRecord(pinned.location) ||
+    isRecord(pinned.venue) ||
     isRecord(pinned.contact) ||
     isRecord(pinned.poll) ||
+    isRecord(pinned.dice) ||
+    isRecord(pinned.giveaway) ||
+    isRecord(pinned.giveaway_winners) ||
     isRecord(pinned.paid_media) ||
     (Array.isArray(pinned.photo) && pinned.photo.length > 0)
   );
