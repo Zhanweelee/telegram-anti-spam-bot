@@ -1993,7 +1993,8 @@ function linkHosts(message: Record<string, unknown>): {
     typeof quote.text === "string" &&
     quote.text.length > 0
   ) {
-    lists.push(quote.entities);
+    // 手动引用自己就是正文时，文字链接的起点仍必须落在摘录里。
+    lists.push(visibleTextLinks(quote.entities, quote.text.length));
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {

@@ -12488,6 +12488,80 @@ describe("normalizeUpdate", () => {
     expect(automaticDump).not.toContain("bit.ly");
   });
 
+  it("skips a manual quote body link that starts after the quote", async () => {
+    const past = await normalize({
+      update_id: 80901,
+      message: {
+        message_id: 80901,
+        date: 1761955200,
+        chat: { id: -10080901, type: "supergroup" },
+        from: { id: 80901, first_name: "Ada" },
+        quote: {
+          text: "引",
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/body80901",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("引");
+    expect(past.event.message?.quoteText).toBeUndefined();
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("body80901");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80902,
+      message: {
+        message_id: 80902,
+        date: 1761955200,
+        chat: { id: -10080902, type: "supergroup" },
+        from: { id: 80902, first_name: "Ada" },
+        quote: {
+          text: "https://tinyurl.com/plain80902",
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/body80902",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80902",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("https://tinyurl.com/plain80902");
+    expect(kept.event.message?.quoteText).toBeUndefined();
+    expect(kept.event.message?.hosts).toEqual(["cutt.ly", "tinyurl.com"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).toContain("plain80902");
+    expect(keptDump).not.toContain("body80902");
+    expect(keptDump).not.toContain("late80902");
+    expect(keptDump).not.toContain("evil.example");
+  });
+
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80741,
