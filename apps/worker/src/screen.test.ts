@@ -19145,6 +19145,130 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(connected)).not.toContain("bit.ly");
   });
 
+  it("deletes a short link in the topic user drawn on a suggested post refund", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "channel",
+              title: "机密频道",
+            },
+            from: { id: 125, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79483, {
+      from: { id: 125, first_name: "Ada", last_name: "https://ow.ly/skip79483" },
+      direct_messages_topic: {
+        topic_id: 79483,
+        user: {
+          id: 126,
+          first_name: "   ",
+          last_name: "https://bit.ly/last79483",
+          username: "secretuser79483",
+        },
+      },
+      suggested_post_refunded: {
+        reason: "post_deleted",
+        suggested_post_message: { text: "https://tinyurl.com/nest79483" },
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.postNotice).toBe("refunded");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("post_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079483", messageId: "79483" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("last79483");
+    expect(namedDump).not.toContain("secretuser79483");
+    expect(namedDump).not.toContain("skip79483");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("nest79483");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("机密频道");
+
+    const keyword = await posted(79484, {
+      direct_messages_topic: {
+        topic_id: 79484,
+        user: { id: 126, first_name: "Ada", last_name: phrase },
+      },
+      suggested_post_refunded: { reason: "payment_refunded" },
+    });
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordKept = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordKept.decision.action).toBe("allow");
+    expect(JSON.stringify(keyword)).not.toContain(phrase);
+
+    const paid = await posted(
+      79485,
+      {
+        direct_messages_topic: {
+          topic_id: 79485,
+          user: { id: 126, first_name: "https://bit.ly/paid79485" },
+        },
+        suggested_post_approval_failed: {
+          price: { currency: "TON", amount: 1 },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.postNotice).toBe("failed");
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid79485");
+  });
+
   it("deletes a short link in the name drawn for a paid transfer", async () => {
     const phrase = "请免费领取礼品";
     const payment = {

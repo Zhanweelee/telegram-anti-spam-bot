@@ -103,7 +103,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 拒绝建议帖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0600。
 
-通过、失败、付款或退款建议帖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0601。
+通过、失败、付款或退款建议帖的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0601。付款失败和退款上的话题用户全名也只留主机名。见 ADR 0650。
 
 勾完或取消勾完清单的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0602。
 
