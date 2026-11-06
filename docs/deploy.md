@@ -179,7 +179,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 标题旁边的音频表演者命中同一组模式时删除。`/rule <chatId> performer_regex off` 回到只看关键词和短链。表演者自己就是正文时仍要打开 `regex_hint`。见 ADR 0540。
 
-游戏说明、附加文字和账单说明命中同一组模式时删除。`/rule <chatId> game_text_regex off` 和 `invoice_text_regex off` 回到只看关键词和短链。说明自己就是正文时仍要打开 `regex_hint`。见 ADR 0541。
+游戏说明、附加文字和账单说明命中同一组模式时删除。`/rule <chatId> game_text_regex off` 和 `invoice_text_regex off` 回到只看关键词和短链。说明自己就是正文时仍要打开 `regex_hint`。见 ADR 0541。游戏附加文字上的文字链接后来由 ADR 0733 不能越过正文。
 
 地点地址命中同一组模式时删除。`/rule <chatId> venue_address_regex off` 回到只看关键词和短链。地址自己就是正文时仍要打开 `regex_hint`。见 ADR 0542。
 
