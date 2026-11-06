@@ -41528,6 +41528,95 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quoted.event)).not.toContain("bit.ly");
   });
 
+  it("leaves the attached file name of a labeled reply unread", async () => {
+    async function replied(
+      updateId: number,
+      media: Record<string, unknown>,
+    ) {
+      return normalize({
+        update_id: updateId,
+        message: {
+          message_id: updateId,
+          date: 1761955200,
+          chat: { id: -10000000 - updateId, type: "supergroup" },
+          from: { id: updateId, first_name: "Ada" },
+          text: "你好",
+          reply_to_message: {
+            message_id: updateId * 10,
+            date: 1761955100,
+            chat: { id: -10000000 - updateId, type: "supergroup" },
+            document: {
+              file_id: `DOC${updateId}`,
+              file_name: `https://bit.ly/file${updateId}`,
+            },
+            ...media,
+          },
+        },
+      });
+    }
+
+    const animation = await replied(80261, {
+      animation: { file_id: "AN80261", file_name: "https://bit.ly/anim80261" },
+    });
+    expect(animation.status).toBe("event");
+    if (animation.status !== "event") {
+      return;
+    }
+    expect(animation.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(animation.event)).not.toContain("file80261");
+    expect(JSON.stringify(animation.event)).not.toContain("anim80261");
+    expect(JSON.stringify(animation.event)).not.toContain("bit.ly");
+
+    for (const [updateId, media] of [
+      [80262, { video: { file_id: "VID80262" } }],
+      [80263, { audio: { file_id: "AUD80263" } }],
+      [80264, { voice: { file_id: "VOC80264" } }],
+      [80265, { video_note: { file_id: "RND80265" } }],
+      [80266, { sticker: { file_id: "STK80266" } }],
+      [
+        80267,
+        {
+          photo: [{ file_id: "PHO80267", width: 1, height: 1 }],
+        },
+      ],
+    ] as const) {
+      const labeled = await replied(updateId, media);
+      expect(labeled.status).toBe("event");
+      if (labeled.status !== "event") {
+        return;
+      }
+      expect(labeled.event.message?.hosts).toBeUndefined();
+      expect(JSON.stringify(labeled.event)).not.toContain(`file${updateId}`);
+      expect(JSON.stringify(labeled.event)).not.toContain("bit.ly");
+    }
+
+    const external = await normalize({
+      update_id: 80268,
+      message: {
+        message_id: 80268,
+        date: 1761955200,
+        chat: { id: -10080268, type: "supergroup" },
+        from: { id: 80268, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 802681, first_name: "Ada" } },
+          animation: { file_id: "AN80268" },
+          document: {
+            file_id: "DOC80268",
+            file_name: "https://bit.ly/file80268",
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(external.event)).not.toContain("file80268");
+    expect(JSON.stringify(external.event)).not.toContain("bit.ly");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({

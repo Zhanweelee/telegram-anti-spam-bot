@@ -11415,6 +11415,102 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(words)).not.toContain(phrase);
   });
 
+  it("keeps a short link that is only attached to a labeled reply", async () => {
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            text: "你好",
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const animation = await posted(80271, {
+      reply_to_message: {
+        message_id: 802711,
+        date: 1761955100,
+        chat: { id: -1080271, type: "supergroup" },
+        animation: { file_id: "AN80271", file_name: "https://bit.ly/anim80271" },
+        document: {
+          file_id: "DOC80271",
+          file_name: "https://bit.ly/file80271",
+        },
+      },
+    });
+    expect(animation.message?.hosts).toBeUndefined();
+    const kept = await screenTelegramEvent(animation, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(kept.decision.action).toBe("allow");
+    expect(JSON.stringify(animation)).not.toContain("file80271");
+    expect(JSON.stringify(animation)).not.toContain("anim80271");
+    expect(JSON.stringify(animation)).not.toContain("bit.ly");
+
+    const video = await posted(80272, {
+      reply_to_message: {
+        message_id: 802721,
+        date: 1761955100,
+        chat: { id: -1080272, type: "supergroup" },
+        video: { file_id: "VID80272" },
+        document: {
+          file_id: "DOC80272",
+          file_name: "https://bit.ly/file80272",
+        },
+      },
+    });
+    expect(video.message?.hosts).toBeUndefined();
+    const videoKept = await screenTelegramEvent(video, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(videoKept.decision.action).toBe("allow");
+    expect(JSON.stringify(video)).not.toContain("file80272");
+    expect(JSON.stringify(video)).not.toContain("bit.ly");
+
+    const external = await posted(80273, {
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 802731, first_name: "Ada" } },
+        audio: { file_id: "AUD80273" },
+        document: {
+          file_id: "DOC80273",
+          file_name: "https://bit.ly/file80273",
+        },
+      },
+    });
+    expect(external.message?.hosts).toBeUndefined();
+    const externalKept = await screenTelegramEvent(external, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(externalKept.decision.action).toBe("allow");
+    expect(JSON.stringify(external)).not.toContain("file80273");
+    expect(JSON.stringify(external)).not.toContain("bit.ly");
+  });
+
   it("deletes a short link in a replied document name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
