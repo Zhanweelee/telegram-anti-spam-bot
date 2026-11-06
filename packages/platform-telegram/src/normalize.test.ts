@@ -41407,6 +41407,199 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the chat title when a chat sets a built-in theme", async () => {
+    const phrase = "请免费领取礼品";
+    const themed = await normalize({
+      update_id: 80021,
+      message: {
+        message_id: 80021,
+        date: 1761955200,
+        chat: {
+          id: -10080021,
+          type: "supergroup",
+          title: `https://example.com/room80021 ${phrase}`,
+          first_name: "https://ow.ly/chat80021",
+          username: "roomuser80021",
+        },
+        sender_chat: {
+          id: -10080021,
+          type: "supergroup",
+          title: `ab https://bit.ly/theme80021 ${phrase}`,
+          username: "secretuser80021",
+        },
+        from: {
+          id: 80021,
+          is_bot: true,
+          first_name: "https://tinyurl.com/who80021",
+          last_name: "https://cutt.ly/also80021",
+          username: "skipuser80021",
+        },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: "https://is.gd/name80021" },
+        },
+      },
+    });
+    expect(themed.status).toBe("event");
+    if (themed.status !== "event") {
+      return;
+    }
+    expect(themed.event.message?.background).toBe("theme");
+    expect(themed.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(themed.event.message?.text).toBe("");
+    const themedDump = JSON.stringify(themed.event);
+    expect(themedDump).not.toContain(phrase);
+    expect(themedDump).not.toContain("theme80021");
+    expect(themedDump).not.toContain("room80021");
+    expect(themedDump).not.toContain("who80021");
+    expect(themedDump).not.toContain("also80021");
+    expect(themedDump).not.toContain("chat80021");
+    expect(themedDump).not.toContain("name80021");
+    expect(themedDump).not.toContain("secretuser80021");
+    expect(themedDump).not.toContain("roomuser80021");
+    expect(themedDump).not.toContain("skipuser80021");
+    expect(themedDump).not.toContain("tinyurl");
+    expect(themedDump).not.toContain("cutt.ly");
+    expect(themedDump).not.toContain("example.com");
+    expect(themedDump).not.toContain("ow.ly");
+    expect(themedDump).not.toContain("is.gd");
+
+    const wallpaper = await normalize({
+      update_id: 80022,
+      message: {
+        message_id: 80022,
+        date: 1761955200,
+        chat: { id: -10080022, type: "supergroup" },
+        sender_chat: {
+          id: -10080022,
+          type: "supergroup",
+          title: "https://bit.ly/wall80022",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/who80022",
+        },
+        chat_background_set: {
+          type: {
+            type: "wallpaper",
+            document: { file_name: "https://cutt.ly/file80022" },
+          },
+        },
+      },
+    });
+    expect(wallpaper.status).toBe("event");
+    if (wallpaper.status !== "event") {
+      return;
+    }
+    expect(wallpaper.event.message?.background).toBe("wallpaper");
+    expect(wallpaper.event.message?.hosts).toEqual(["cutt.ly"]);
+    const wallpaperDump = JSON.stringify(wallpaper.event);
+    expect(wallpaperDump).not.toContain("wall80022");
+    expect(wallpaperDump).not.toContain("who80022");
+    expect(wallpaperDump).not.toContain("file80022");
+    expect(wallpaperDump).not.toContain("bit.ly");
+    expect(wallpaperDump).not.toContain("tinyurl");
+
+    const person = await normalize({
+      update_id: 80023,
+      message: {
+        message_id: 80023,
+        date: 1761955200,
+        chat: { id: -10080023, type: "group", title: "本群" },
+        from: {
+          id: 126,
+          first_name: "https://bit.ly/ada80023",
+          last_name: "https://tinyurl.com/lee80023",
+          username: "cutt.ly",
+        },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: "主题80023" },
+        },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.hosts).toEqual(["bit.ly"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("lee80023");
+    expect(personDump).not.toContain("ada80023");
+    expect(personDump).not.toContain("tinyurl");
+    expect(personDump).not.toContain("cutt.ly");
+    expect(personDump).not.toContain("主题80023");
+
+    const other = await normalize({
+      update_id: 80024,
+      message: {
+        message_id: 80024,
+        date: 1761955200,
+        chat: {
+          id: -10080024,
+          type: "channel",
+          title: "https://tinyurl.com/room80024",
+        },
+        sender_chat: {
+          id: -100800240,
+          type: "channel",
+          title: "https://bit.ly/other80024",
+          username: "other80024",
+        },
+        from: {
+          id: 124,
+          first_name: "https://cutt.ly/who80024",
+        },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: "主题80024" },
+        },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("other80024");
+    expect(otherDump).not.toContain("room80024");
+    expect(otherDump).not.toContain("who80024");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+    expect(otherDump).not.toContain("主题80024");
+
+    const quiet = await normalize({
+      update_id: 80025,
+      message: {
+        message_id: 80025,
+        date: 1761955200,
+        chat: { id: -10080025, type: "channel" },
+        sender_chat: {
+          id: -10080025,
+          type: "channel",
+          title: "本频道",
+        },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who80025",
+          last_name: "https://tinyurl.com/also80025",
+        },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: "主题80025" },
+        },
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    const quietDump = JSON.stringify(quiet.event);
+    expect(quietDump).not.toContain("who80025");
+    expect(quietDump).not.toContain("also80025");
+    expect(quietDump).not.toContain("bit.ly");
+    expect(quietDump).not.toContain("tinyurl");
+    expect(quietDump).not.toContain("主题80025");
+  });
+
   it("reads the dialog when a unique gift is transferred or resold", async () => {
     const phrase = "请免费领取礼品";
     const grouped = await normalize({
@@ -45411,13 +45604,12 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(group.event.message?.background).toBe("theme");
-    expect(group.event.message?.hosts).toBeUndefined();
+    expect(group.event.message?.hosts).toEqual(["bit.ly"]);
     const groupDump = JSON.stringify(group.event);
     expect(groupDump).not.toContain("who79672");
     expect(groupDump).not.toContain("also79672");
     expect(groupDump).not.toContain("group79672");
     expect(groupDump).not.toContain("主题79672");
-    expect(groupDump).not.toContain("bit.ly");
     expect(groupDump).not.toContain("tinyurl");
     expect(groupDump).not.toContain("cutt.ly");
   });
