@@ -71,7 +71,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改自动删除计时的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0584。
 
-改价的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0585。
+改价的人，名字只留主机名，仍走 `links`。发送者是频道时只读频道标题。名字里的关键词不命中。见 ADR 0671。
 
 置顶的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0586。文字预览前 20 个码元和游戏标题也只留主机名。见 ADR 0653。
 
@@ -159,7 +159,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 新加清单任务的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0628。
 
-改付费发言或私信开关的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0629。
+改付费发言或私信开关的人画出的全名只留主机名，仍走 `links`。发送者是频道时只读频道标题。名字里的关键词不命中。见 ADR 0671。
 
 改自动删除计时的人画出的全名只留主机名，仍走 `links`。频道不读发送者。名字里的关键词不命中。见 ADR 0668。
 
