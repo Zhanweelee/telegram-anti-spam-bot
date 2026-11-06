@@ -541,7 +541,14 @@ function hiddenSecret(value: unknown): boolean {
 }
 
 function textMentionMark(message: Record<string, unknown>): boolean {
-  const lists: unknown[] = [message.entities, message.caption_entities];
+  const lists: unknown[] = [];
+  if (typeof message.text === "string") {
+    // 按标识提及的起点必须落在正文里。
+    lists.push(drawnMention(message.entities, message.text.length));
+  } else {
+    lists.push(message.entities);
+  }
+  lists.push(message.caption_entities);
   const poll = message.poll;
   if (isRecord(poll)) {
     lists.push(
@@ -5458,6 +5465,31 @@ function drawnTextLimit(text: string, window: number): number {
 }
 
 /** 自定义表情的起点加长度不能越过画出的这段文字。 */
+/** 按标识提及的起点必须落在画出的这段文字里。长度越过末尾时，客户端仍会画。 */
+function drawnMention(list: unknown, limit: number): unknown[] {
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.filter((entity) => {
+    if (!isRecord(entity)) {
+      return false;
+    }
+    if (
+      typeof entity.offset !== "number" ||
+      !Number.isSafeInteger(entity.offset) ||
+      entity.offset < 0 ||
+      entity.offset >= limit
+    ) {
+      return false;
+    }
+    return (
+      typeof entity.length === "number" &&
+      Number.isSafeInteger(entity.length) &&
+      entity.length > 0
+    );
+  });
+}
+
 function fittingEmoji(list: unknown, limit: number): unknown[] {
   if (!Array.isArray(list)) {
     return [];
