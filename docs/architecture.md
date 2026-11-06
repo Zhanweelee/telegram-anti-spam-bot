@@ -149,7 +149,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 投票选项的后加和删除可以按群删除。规则 `poll_notice` 默认关闭。见 ADR 0494。
 
-新加的清单任务可以按群删除。规则 `checklist_added` 默认关闭。见 ADR 0495。
+新加的清单任务可以按群删除。规则 `checklist_added` 默认关闭。见 ADR 0495。后加任务上的文字链接后来由 ADR 0727 不能越过正文。
 
 话题的新建和改名可以按群删除。规则 `topic_notice` 默认关闭。见 ADR 0496。
 

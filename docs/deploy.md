@@ -287,7 +287,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> poll_notice on` 删这个群里后加投票选项和删除投票选项的提示。默认关闭。选项编号和原投票不进证据。选项文字仍参与关键词。投票题干仍不带这个标记。见 ADR 0494。
 
-`/rule <chatId> checklist_added on` 删这个群里新加清单任务的提示。默认关闭。任务编号、完成者名字和原清单不进证据。任务文字仍参与关键词。完成和取消完成仍看 `checklist_notice`。见 ADR 0495。
+`/rule <chatId> checklist_added on` 删这个群里新加清单任务的提示。默认关闭。任务编号、完成者名字和原清单不进证据。任务文字仍参与关键词。完成和取消完成仍看 `checklist_notice`。见 ADR 0495。后加任务上的文字链接后来由 ADR 0727 不能越过正文。
 
 `/rule <chatId> topic_notice on` 删这个群里新建话题和改名的提示。默认关闭。图标颜色和自定义表情编号不进证据。话题名仍参与关键词。只改图标时这行也会删除。关掉和重开仍看 `forum_notice`。见 ADR 0496。
 

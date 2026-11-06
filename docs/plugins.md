@@ -313,7 +313,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `poll_notice` 在 `packages/detectors-poll`。`message.pollNotice` 是后加或删除选项时返回 score 1。证据是 `poll:` 加这一种。选项编号和原投票不进证据。选项文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。投票题干仍不带这个标记。见 ADR 0494。
 
-`checklist_added` 在 `packages/detectors-task`。只在 `message.asChecklistAdded` 为 true 时返回 score 1。证据是 `checklist:added`。任务编号、完成者名字和原清单不进证据。任务文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种提示。完成和取消完成仍由 `checklist_notice` 决定。见 ADR 0495。
+`checklist_added` 在 `packages/detectors-task`。只在 `message.asChecklistAdded` 为 true 时返回 score 1。证据是 `checklist:added`。任务编号、完成者名字和原清单不进证据。任务文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种提示。完成和取消完成仍由 `checklist_notice` 决定。见 ADR 0495。后加任务上的文字链接后来由 ADR 0727 不能越过正文。
 
 `topic_notice` 在 `packages/detectors-topic`。`message.topicNotice` 是新建或改名时返回 score 1。证据是 `topic:` 加这一种。图标颜色和自定义表情编号不进证据。话题名仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。关掉和重开仍由 `forum_notice` 决定。见 ADR 0496。
 

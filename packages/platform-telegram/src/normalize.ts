@@ -4627,8 +4627,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
       if (!isRecord(task)) {
         continue;
       }
-      pushPlainUrls(task.text, urls);
-      pushTextLinks(task.text_entities, urls);
+      // 文字链接的起点必须落在这条画出的任务文字里。
+      pushDrawnLine(task.text, task.text_entities, urls);
       pushTaskCompleterUrls(task, urls);
     }
   }
