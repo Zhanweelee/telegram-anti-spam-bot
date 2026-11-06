@@ -4698,8 +4698,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (gameDescriptionOpen(message, game)) {
       pushOpenedSpans(game.description, urls);
     }
-    // 文字链接的起点必须落在这段附加文字里。
-    pushDrawnLine(game.text, game.text_entities, urls);
+    // 文字链接的起点必须落在这段附加文字里，长度必须大于 0。
+    pushPlainUrls(game.text, urls);
+    pushTextLinks(
+      typeof game.text === "string"
+        ? drawnTextLink(game.text_entities, game.text.length)
+        : game.text_entities,
+      urls,
+    );
     if (isRecord(game.animation)) {
       pushPlainUrls(game.animation.file_name, urls);
     }
