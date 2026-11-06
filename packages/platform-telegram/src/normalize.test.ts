@@ -11684,6 +11684,82 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a poll explanation link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80721,
+      message: {
+        message_id: 80721,
+        date: 1761955200,
+        chat: { id: -10080721, type: "supergroup" },
+        from: { id: 80721, first_name: "Ada" },
+        poll: {
+          question: "站会",
+          options: [{ text: "甲", voter_count: 0 }],
+          explanation: "说",
+          explanation_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/ex80721",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.pollExplanation).toBe("说");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("ex80721");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80722,
+      message: {
+        message_id: 80722,
+        date: 1761955200,
+        chat: { id: -10080722, type: "supergroup" },
+        from: { id: 80722, first_name: "Ada" },
+        poll: {
+          question: "站会",
+          options: [{ text: "甲", voter_count: 0 }],
+          explanation: "https://tinyurl.com/plain80722",
+          explanation_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/ex80722",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80722",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.pollExplanation).toBe(
+      "https://tinyurl.com/plain80722",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("ex80722");
+    expect(keptDump).not.toContain("late80722");
+    expect(keptDump).not.toContain("evil.example");
+  });
+
   it("skips a poll option link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80701,

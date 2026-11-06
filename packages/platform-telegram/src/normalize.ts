@@ -4481,8 +4481,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
         pushPollAdderUrls(option, urls);
       }
     }
-    pushPlainUrls(poll.explanation, urls);
-    pushTextLinks(poll.explanation_entities, urls);
+    // 文字链接的起点必须落在测验说明里。
+    pushDrawnLine(poll.explanation, poll.explanation_entities, urls);
     pushPlainUrls(poll.description, urls);
     pushTextLinks(poll.description_entities, urls);
     pushPollMedia(poll.media, urls);
