@@ -16592,8 +16592,169 @@ describe("normalizeUpdate", () => {
     }
     expect(added.event.message?.text).toBe("站会");
     expect(added.event.message?.addedText).toBe("加");
-    expect(added.event.message?.asTextMention).toBe(true);
+    expect(added.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(added.event)).not.toContain("77081321");
+  });
+
+  it("skips an added task text mention that starts outside the task", async () => {
+    const user = { id: 77081341, first_name: "隐名辛", username: "user77095" };
+    const mention = (offset: number, length: number) => [
+      { type: "text_mention", offset, length, user },
+    ];
+    const added = (id: number, tasks: unknown[]) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        checklist_tasks_added: { tasks },
+      },
+    });
+
+    const past = await normalize(
+      added(81341, [{ id: 1, text: "加", text_entities: mention(1, 1) }]),
+    );
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.addedText).toBe("加");
+    expect(past.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("77081341");
+
+    const empty = await normalize(
+      added(81342, [{ id: 1, text: "", text_entities: mention(0, 1) }]),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.addedText).toBeUndefined();
+    expect(empty.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("77081341");
+
+    const zero = await normalize(
+      added(81343, [{ id: 1, text: "加", text_entities: mention(0, 0) }]),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(zero.event)).not.toContain("77081341");
+
+    const negative = await normalize(
+      added(81344, [{ id: 1, text: "加", text_entities: mention(-1, 1) }]),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("77081341");
+
+    const clamped = await normalize(
+      added(81345, [{ id: 1, text: "加", text_entities: mention(0, 2) }]),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.addedText).toBe("加");
+    expect(clamped.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(clamped.event)).not.toContain("77081341");
+
+    const wide = await normalize(
+      added(81346, [
+        { id: 1, text: "加".repeat(151), text_entities: mention(150, 1) },
+      ]),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.addedText).toHaveLength(151);
+    expect(wide.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("77081341");
+
+    const stored = await normalize(
+      added(81347, [
+        { id: 1, text: "加".repeat(3030), text_entities: mention(3029, 1) },
+      ]),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.addedText).toHaveLength(3029);
+    expect(stored.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("77081341");
+
+    const loose = await normalize(
+      added(81348, [{ id: 1, text_entities: mention(9, 2) }]),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("77081341");
+
+    const fourth = await normalize(
+      added(81349, [
+        { id: 1, text: "甲" },
+        { id: 2, text: "甲" },
+        { id: 3, text: "甲" },
+        { id: 4, text: "丁", text_entities: mention(0, 1) },
+      ]),
+    );
+    expect(fourth.status).toBe("event");
+    if (fourth.status !== "event") {
+      return;
+    }
+    expect(fourth.event.message?.addedText).toBe("甲 甲 甲");
+    expect(fourth.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(fourth.event)).not.toContain("77081341");
+
+    const third = await normalize(
+      added(81350, [
+        { id: 1, text: "甲" },
+        { id: 2, text: "甲" },
+        { id: 3, text: "丙", text_entities: mention(0, 1) },
+        { id: 4, text: "丁", text_entities: mention(0, 1) },
+      ]),
+    );
+    expect(third.status).toBe("event");
+    if (third.status !== "event") {
+      return;
+    }
+    expect(third.event.message?.addedText).toBe("甲 甲 丙");
+    expect(third.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(third.event)).not.toContain("77081341");
+
+    const gifted = await normalize({
+      update_id: 81351,
+      message: {
+        message_id: 81351,
+        date: 1761955200,
+        chat: { id: -10081351, type: "supergroup" },
+        from: { id: 81351, first_name: "Ada" },
+        text: "站会",
+        gift: { text: "礼", entities: mention(1, 1) },
+      },
+    });
+    expect(gifted.status).toBe("event");
+    if (gifted.status !== "event") {
+      return;
+    }
+    expect(gifted.event.message?.text).toBe("站会");
+    expect(gifted.event.message?.giftText).toBe("礼");
+    expect(gifted.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(gifted.event)).not.toContain("77081341");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
