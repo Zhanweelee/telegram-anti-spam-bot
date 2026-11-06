@@ -199,7 +199,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 新群主画出的全名成为正文，短链仍走 `links`。用户名不进正文。见 ADR 0647。
 
-`checklist_task_regex` 默认打开。清单任务命中同一份正则时删除。任务干净，或任务自己就是标题时，仍留下。见 ADR 0538。清单标题和任务上的文字链接后来由 ADR 0726 不能越过正文。
+`checklist_task_regex` 默认打开。清单任务命中同一份正则时删除。任务干净，或任务自己就是标题时，仍留下。见 ADR 0538。清单标题和任务上的文字链接后来由 ADR 0726 不能越过正文。清单标题上的文字链接后来由 ADR 0767 要求长度大于 0。
 
 `media_name_regex` 默认打开。说明旁边的文件名或音频标题命中同一份正则时删除。名称干净，或名称自己就是正文时，仍留下。见 ADR 0539。
 
@@ -211,7 +211,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `poll_explanation_regex` 默认打开。测验说明命中同一份正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。
 
-`poll_question_regex`、`prize_text_regex` 和 `checklist_title_regex` 默认打开。题干、奖品说明或清单标题命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0544。外部回复清单标题上的文字链接后来由 ADR 0735 不能越过标题。投票题干上的文字链接后来由 ADR 0736 不能越过题干。投票题干上的文字链接后来由 ADR 0766 要求长度大于 0。
+`poll_question_regex`、`prize_text_regex` 和 `checklist_title_regex` 默认打开。题干、奖品说明或清单标题命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0544。外部回复清单标题上的文字链接后来由 ADR 0735 不能越过标题。投票题干上的文字链接后来由 ADR 0736 不能越过题干。投票题干上的文字链接后来由 ADR 0766 要求长度大于 0。清单标题上的文字链接后来由 ADR 0767 要求长度大于 0。
 
 `game_title_regex`、`invoice_title_regex` 和 `venue_title_regex` 默认打开。游戏、账单或场馆标题命中同一份正则时删除。标题干净，或自己就是正文时，仍留下。见 ADR 0545。
 

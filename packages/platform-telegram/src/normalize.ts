@@ -2115,10 +2115,10 @@ function linkHosts(message: Record<string, unknown>): {
   }
   if (isRecord(checklist)) {
     const title = checklist.title;
-    // 标题上的文字链接，起点必须落在标题里。
+    // 标题上的文字链接，起点必须落在标题里，长度必须大于 0。
     lists.push(
       typeof title === "string"
-        ? visibleTextLinks(checklist.title_entities, title.length)
+        ? drawnTextLink(checklist.title_entities, title.length)
         : checklist.title_entities,
     );
   }
