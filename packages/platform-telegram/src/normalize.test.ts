@@ -14597,13 +14597,17 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.hiddenName).toBe(
       `${phrase} https://bit.ly/hide60 https://t.me/+${code}.`,
     );
-    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(labeled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "t.me",
+      "tinyurl.com",
+    ]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
     expect(labeledDump).not.toContain(code);
     expect(labeledDump).not.toContain("hide60");
-    expect(labeledDump).not.toContain("tinyurl.com");
+    expect(labeledDump).toContain("tinyurl.com");
     expect(labeledDump).not.toContain("ext60");
 
     const legacy = await normalize({
@@ -39131,11 +39135,11 @@ describe("normalizeUpdate", () => {
     if (external.status !== "event") {
       return;
     }
-    expect(external.event.message?.hosts).toBeUndefined();
+    expect(external.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     expect(external.event.message?.forward).toBeUndefined();
     expect(JSON.stringify(external.event)).not.toContain("ext79168");
     expect(JSON.stringify(external.event)).not.toContain("extlast79168");
-    expect(JSON.stringify(external.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(external.event)).toContain("tinyurl.com");
 
     const speaker = await normalize({
       update_id: 79169,
@@ -41411,6 +41415,196 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the external reply header name", async () => {
+    const phrase = "请免费领取礼品";
+    const named = await normalize({
+      update_id: 80121,
+      message: {
+        message_id: 80121,
+        date: 1761955200,
+        chat: { id: -10080121, type: "supergroup", title: "本群" },
+        from: {
+          id: 80121,
+          first_name: "https://example.com/speaker80121",
+          username: "speaker80121",
+        },
+        text: "你好",
+        reply_to_message: {
+          message_id: 801211,
+          date: 1761955100,
+          chat: { id: -10080121, type: "supergroup", title: "本群" },
+          from: {
+            id: 801212,
+            first_name: "https://is.gd/reply80121",
+            username: "replied80121",
+          },
+        },
+        external_reply: {
+          origin: {
+            type: "user",
+            date: 1761955000,
+            sender_user: {
+              id: 801213,
+              first_name: `https://bit.ly/who80121 ${phrase}`,
+              last_name: "https://tinyurl.com/also80121",
+              username: "origin80121",
+            },
+          },
+          chat: {
+            id: -10080121,
+            type: "supergroup",
+            title: "https://example.com/same80121",
+            username: "same80121",
+          },
+          link_preview_options: { url: "https://cutt.ly/preview80121" },
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("你好");
+    expect(named.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("who80121");
+    expect(namedDump).not.toContain("also80121");
+    expect(namedDump).not.toContain("origin80121");
+    expect(namedDump).not.toContain("speaker80121");
+    expect(namedDump).not.toContain("replied80121");
+    expect(namedDump).not.toContain("same80121");
+    expect(namedDump).not.toContain("preview80121");
+    expect(namedDump).not.toContain("reply80121");
+    expect(namedDump).not.toContain("example.com");
+    expect(namedDump).not.toContain("is.gd");
+    expect(namedDump).not.toContain("cutt.ly");
+    expect(namedDump).toContain("bit.ly");
+    expect(namedDump).toContain("tinyurl.com");
+
+    const blank = await normalize({
+      update_id: 80122,
+      message: {
+        message_id: 80122,
+        date: 1761955200,
+        chat: { id: -10080122, type: "supergroup", title: "本群" },
+        from: { id: 80122, first_name: "Ada" },
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: {
+              id: 801222,
+              first_name: "   ",
+              last_name: "https://bit.ly/last80122",
+              username: "origin80122",
+            },
+          },
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("last80122");
+    expect(JSON.stringify(blank.event)).not.toContain("origin80122");
+
+    const hidden = await normalize({
+      update_id: 80123,
+      message: {
+        message_id: 80123,
+        date: 1761955200,
+        chat: { id: -10080123, type: "supergroup", title: "本群" },
+        from: { id: 80123, first_name: "Ada" },
+        external_reply: {
+          origin: {
+            type: "hidden_user",
+            sender_user_name: "https://bit.ly/hide80123",
+          },
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.text).toBe("");
+    expect(hidden.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(hidden.event)).not.toContain("hide80123");
+
+    const channel = await normalize({
+      update_id: 80124,
+      message: {
+        message_id: 80124,
+        date: 1761955200,
+        chat: { id: -10080124, type: "supergroup", title: "本群" },
+        from: { id: 80124, first_name: "Ada" },
+        external_reply: {
+          origin: {
+            type: "channel",
+            chat: {
+              id: -100801241,
+              type: "channel",
+              title: "https://bit.ly/chan80124",
+              username: "chanuser80124",
+            },
+            author_signature: "https://example.com/sign80124",
+          },
+        },
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.hosts).toEqual(["bit.ly"]);
+    const channelDump = JSON.stringify(channel.event);
+    expect(channelDump).not.toContain("chan80124");
+    expect(channelDump).not.toContain("chanuser80124");
+    expect(channelDump).not.toContain("sign80124");
+    expect(channelDump).not.toContain("example.com");
+
+    const otherChat = await normalize({
+      update_id: 80125,
+      message: {
+        message_id: 80125,
+        date: 1761955200,
+        chat: { id: -10080125, type: "supergroup", title: "本群" },
+        from: { id: 80125, first_name: "Ada" },
+        external_reply: {
+          origin: {
+            type: "chat",
+            sender_chat: {
+              id: -100801251,
+              type: "supergroup",
+              title: "https://bit.ly/chat80125",
+              username: "chatuser80125",
+            },
+            author_signature: "https://tinyurl.com/sig80125",
+          },
+          chat: {
+            id: -100801252,
+            type: "channel",
+            title: "https://example.com/room80125",
+            username: "room80125",
+          },
+        },
+      },
+    });
+    expect(otherChat.status).toBe("event");
+    if (otherChat.status !== "event") {
+      return;
+    }
+    expect(otherChat.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const otherDump = JSON.stringify(otherChat.event);
+    expect(otherDump).not.toContain("chat80125");
+    expect(otherDump).not.toContain("chatuser80125");
+    expect(otherDump).not.toContain("sig80125");
+    expect(otherDump).not.toContain("room80125");
+    expect(otherDump).not.toContain("tinyurl");
+  });
+
   it("reads the reply header name", async () => {
     const phrase = "请免费领取礼品";
     const named = await normalize({
@@ -41723,14 +41917,14 @@ describe("normalizeUpdate", () => {
     if (external.status !== "event") {
       return;
     }
-    expect(external.event.message?.hosts).toBeUndefined();
+    expect(external.event.message?.hosts).toEqual(["tinyurl.com"]);
     const externalDump = JSON.stringify(external.event);
     expect(externalDump).not.toContain("who80109");
     expect(externalDump).not.toContain("ext80109");
     expect(externalDump).not.toContain("replied80109");
     expect(externalDump).not.toContain("extuser80109");
     expect(externalDump).not.toContain("bit.ly");
-    expect(externalDump).not.toContain("tinyurl");
+    expect(externalDump).toContain("tinyurl.com");
   });
 
   it("skips the message sender on a suggested post", async () => {
