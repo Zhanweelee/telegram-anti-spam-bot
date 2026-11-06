@@ -185,7 +185,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 测验说明命中同一组模式时删除。`/rule <chatId> poll_explanation_regex off` 回到只看关键词和短链。说明自己就是正文时仍要打开 `regex_hint`。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。
 
-题干、奖品说明和清单标题命中同一组模式时删除。`/rule <chatId> poll_question_regex off`、`prize_text_regex off` 和 `checklist_title_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0544。
+题干、奖品说明和清单标题命中同一组模式时删除。`/rule <chatId> poll_question_regex off`、`prize_text_regex off` 和 `checklist_title_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0544。外部回复清单标题上的文字链接后来由 ADR 0735 不能越过标题。
 
 游戏、账单和场馆标题命中同一组模式时删除。`/rule <chatId> game_title_regex off`、`invoice_title_regex off` 和 `venue_title_regex off` 回到只看关键词和短链。标题自己就是正文时仍要打开 `regex_hint`。见 ADR 0545。
 

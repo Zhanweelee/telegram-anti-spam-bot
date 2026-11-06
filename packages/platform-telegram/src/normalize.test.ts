@@ -11684,6 +11684,131 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips an external checklist title link that starts after the title", async () => {
+    const past = await normalize({
+      update_id: 80821,
+      message: {
+        message_id: 80821,
+        date: 1761955200,
+        chat: { id: -10080821, type: "supergroup" },
+        from: { id: 80821, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 808211, first_name: "Ada" },
+          },
+          checklist: {
+            title: "单",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 1,
+                length: 1,
+                url: "https://bit.ly/list80821",
+              },
+            ],
+            tasks: [{ id: 1, text: "https://tinyurl.com/task80821" }],
+          },
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("你好");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("list80821");
+    expect(pastDump).not.toContain("task80821");
+    expect(pastDump).not.toContain("bit.ly");
+    expect(pastDump).not.toContain("tinyurl");
+
+    const kept = await normalize({
+      update_id: 80822,
+      message: {
+        message_id: 80822,
+        date: 1761955200,
+        chat: { id: -10080822, type: "supergroup" },
+        from: { id: 80822, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 808221, first_name: "Ada" },
+          },
+          checklist: {
+            title: "https://tinyurl.com/plain80822",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 0,
+                length: 4,
+                url: "https://cutt.ly/list80822",
+              },
+              {
+                type: "text_link",
+                offset: 99,
+                length: 1,
+                url: "https://evil.example/late80822",
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("你好");
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("list80822");
+    expect(keptDump).not.toContain("late80822");
+    expect(keptDump).not.toContain("evil.example");
+    expect(keptDump).not.toContain("plain80822");
+
+    const wide = "单".repeat(200);
+    const later = await normalize({
+      update_id: 80823,
+      message: {
+        message_id: 80823,
+        date: 1761955200,
+        chat: { id: -10080823, type: "supergroup" },
+        from: { id: 80823, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 808231, first_name: "Ada" },
+          },
+          checklist: {
+            title: wide,
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 160,
+                length: 1,
+                url: "https://bit.ly/wide80823",
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.text).toBe("你好");
+    expect(later.event.message?.hosts).toEqual(["bit.ly"]);
+    const laterDump = JSON.stringify(later.event);
+    expect(laterDump).not.toContain("wide80823");
+    expect(laterDump).not.toContain(wide);
+  });
+
   it("skips a gift text link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80801,
