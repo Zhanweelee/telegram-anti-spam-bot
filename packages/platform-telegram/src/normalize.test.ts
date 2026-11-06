@@ -41187,6 +41187,150 @@ describe("normalizeUpdate", () => {
     expect(invalidDump).not.toContain("tinyurl");
   });
 
+  it("skips the placeholder name when a chat adds or removes a poll option", async () => {
+    const phrase = "请免费领取礼品";
+    const added = await normalize({
+      update_id: 79884,
+      message: {
+        message_id: 79884,
+        date: 1761955200,
+        chat: {
+          id: -10079884,
+          type: "supergroup",
+          title: `https://example.com/room79884 ${phrase}`,
+        },
+        sender_chat: {
+          id: -10079884,
+          type: "supergroup",
+          title: `https://bit.ly/opt79884 ${phrase}`,
+          username: "secretuser79884",
+        },
+        from: {
+          id: 79884,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79884",
+          last_name: "https://cutt.ly/also79884",
+          username: "adder79884",
+        },
+        poll_option_added: { option_text: "选项" },
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.text).toBe("选项");
+    expect(added.event.message?.pollNotice).toBe("added");
+    expect(added.event.message?.hosts).toBeUndefined();
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain(phrase);
+    expect(addedDump).not.toContain("opt79884");
+    expect(addedDump).not.toContain("skip79884");
+    expect(addedDump).not.toContain("also79884");
+    expect(addedDump).not.toContain("room79884");
+    expect(addedDump).not.toContain("secretuser79884");
+    expect(addedDump).not.toContain("adder79884");
+    expect(addedDump).not.toContain("bit.ly");
+    expect(addedDump).not.toContain("tinyurl");
+    expect(addedDump).not.toContain("cutt.ly");
+    expect(addedDump).not.toContain("example.com");
+
+    const other = await normalize({
+      update_id: 79885,
+      message: {
+        message_id: 79885,
+        date: 1761955200,
+        chat: { id: -10079885, type: "group", title: "本群" },
+        sender_chat: {
+          id: -100798850,
+          type: "channel",
+          title: "https://bit.ly/opt79885",
+          username: "secretuser79885",
+        },
+        from: {
+          id: 79885,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79885",
+          last_name: "https://cutt.ly/also79885",
+          username: "adder79885",
+        },
+        poll_option_deleted: { option_text: "删掉的选项" },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.text).toBe("删掉的选项");
+    expect(other.event.message?.pollNotice).toBe("deleted");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("opt79885");
+    expect(otherDump).not.toContain("skip79885");
+    expect(otherDump).not.toContain("also79885");
+    expect(otherDump).not.toContain("secretuser79885");
+    expect(otherDump).not.toContain("adder79885");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+
+    const person = await normalize({
+      update_id: 79886,
+      message: {
+        message_id: 79886,
+        date: 1761955200,
+        chat: { id: -10079886, type: "supergroup", title: "本群" },
+        from: {
+          id: 79886,
+          first_name: "https://bit.ly/who79886",
+          last_name: "https://tinyurl.com/also79886",
+          username: "adder79886",
+        },
+        poll_option_added: { option_text: "选项" },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.hosts).toEqual(["bit.ly"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79886");
+    expect(personDump).not.toContain("also79886");
+    expect(personDump).not.toContain("adder79886");
+    expect(personDump).not.toContain("tinyurl");
+
+    const quiet = await normalize({
+      update_id: 79887,
+      message: {
+        message_id: 79887,
+        date: 1761955200,
+        chat: { id: -10079887, type: "supergroup", title: "本群" },
+        sender_chat: {
+          id: -10079887,
+          type: "supergroup",
+          title: "https://bit.ly/quiet79887",
+        },
+        from: {
+          id: 79887,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79887",
+        },
+        poll_option_added: { option_text: "" },
+      },
+    });
+    expect(quiet.status).toBe("event");
+    if (quiet.status !== "event") {
+      return;
+    }
+    expect(quiet.event.message?.pollNotice).toBeUndefined();
+    expect(quiet.event.message?.hosts).toBeUndefined();
+    const quietDump = JSON.stringify(quiet.event);
+    expect(quietDump).not.toContain("quiet79887");
+    expect(quietDump).not.toContain("skip79887");
+    expect(quietDump).not.toContain("bit.ly");
+    expect(quietDump).not.toContain("tinyurl");
+  });
+
   it("skips the placeholder name when a chat shares a proximity alert", async () => {
     const phrase = "请免费领取礼品";
     const near = await normalize({
