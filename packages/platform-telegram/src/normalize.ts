@@ -5310,6 +5310,9 @@ function pushInviteSenderUrls(
  * 靠近提醒上操作的人只留主机名。
  * 距离是大于等于 0 的安全整数时读。0 米也读。
  * 负数、小数、字符串、布尔值和空对象不读。
+ * 这行画的是触发者和设置者，不画消息发送者。
+ * 发送者是聊天时不读 `from`，也不读这个聊天的标题。
+ * 别的聊天的标题仍由通用代发规则读取。用户仍只读名。
  * 两个人画出的全名仍按正文。距离和用户编号不读。用户名不读。
  */
 function pushProximitySenderUrls(
@@ -5317,6 +5320,9 @@ function pushProximitySenderUrls(
   urls: string[],
 ): void {
   if (!nearUsers(message)) {
+    return;
+  }
+  if (isRecord(message.sender_chat)) {
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
