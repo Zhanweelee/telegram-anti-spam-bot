@@ -5356,6 +5356,8 @@ function pushJoinSenderUrls(
  * 送礼的人画出的全名只留主机名。
  * 普通礼物、独特礼物或升级购买里嵌套的礼物是对象时读。空的嵌套对象也读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。编号和本群相同时也读。用户仍按全名。
  * 空的外层对象、布尔值和只有附言的对象不读。
  * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
  */
@@ -5364,6 +5366,11 @@ function pushGiftSenderUrls(
   urls: string[],
 ): void {
   if (giftNotice(message) === undefined) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);

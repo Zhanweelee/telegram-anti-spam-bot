@@ -10965,6 +10965,263 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(invite)).not.toContain("durov");
   });
 
+  it("leaves a short link in the chat title when a chat sends a gift", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 124, first_name: "Ada" },
+            gift: { gift: { id: "gid" } },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79900, {
+      sender_chat: {
+        id: -(1_000_000 + 79900),
+        type: "supergroup",
+        title: `ab https://bit.ly/title79900 ${phrase}`,
+        username: "secretuser79900",
+      },
+      from: {
+        id: 124,
+        first_name: "https://tinyurl.com/skip79900",
+        last_name: "https://cutt.ly/also79900",
+        username: "adder79900",
+      },
+    });
+    expect(named.message?.gift).toBe("card");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const namedModerator = createMemoryModerator();
+    const namedHit = await screenTelegramEvent(named, {
+      moderator: namedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(namedHit.outcome).toBe("exempt");
+    expect(namedHit.decision.action).toBe("allow");
+    expect(namedModerator.deleted).toEqual([]);
+    const policyStore = createMemoryPolicyStore();
+    await policyStore.put("local", "-1079900", {
+      exemptAdmins: false,
+      allowActorIds: [],
+    });
+    const openModerator = createMemoryModerator();
+    const openHit = await screenTelegramEvent(named, {
+      cache: createMemoryCache(),
+      policyStore,
+      moderator: openModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(openHit.decision.action).toBe("delete");
+    expect(openModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079900", messageId: "79900" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: openHit.decision,
+    });
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("title79900");
+    expect(namedDump).not.toContain("skip79900");
+    expect(namedDump).not.toContain("also79900");
+    expect(namedDump).not.toContain("secretuser79900");
+    expect(namedDump).not.toContain("adder79900");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("cutt.ly");
+
+    const other = await posted(79901, {
+      gift: undefined,
+      unique_gift: { gift: { base_name: "收藏名" } },
+      sender_chat: {
+        id: -100799010,
+        type: "channel",
+        title: "https://bit.ly/title79901",
+        username: "secretuser79901",
+      },
+      from: {
+        id: 124,
+        first_name: "https://tinyurl.com/skip79901",
+        last_name: "https://cutt.ly/also79901",
+        username: "adder79901",
+      },
+    });
+    expect(other.message?.gift).toBe("unique");
+    expect(other.message?.text).toBe("收藏名");
+    expect(other.message?.hosts).toEqual(["bit.ly"]);
+    const otherModerator = createMemoryModerator();
+    const otherRemoved = await screenTelegramEvent(other, {
+      moderator: otherModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(otherRemoved.decision.action).toBe("delete");
+    expect(otherModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079901", messageId: "79901" },
+    ]);
+    const otherDump = JSON.stringify({
+      event: other,
+      decision: otherRemoved.decision,
+    });
+    expect(otherDump).not.toContain("title79901");
+    expect(otherDump).not.toContain("skip79901");
+    expect(otherDump).not.toContain("also79901");
+    expect(otherDump).not.toContain("secretuser79901");
+    expect(otherDump).not.toContain("adder79901");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+
+    const body = await posted(79902, {
+      text: "https://bit.ly/body79902",
+      sender_chat: {
+        id: -100799020,
+        type: "channel",
+        title: "https://tinyurl.com/name79902",
+      },
+    });
+    expect(body.message?.text).toBe("https://bit.ly/body79902");
+    expect(body.message?.hosts).toEqual(["tinyurl.com"]);
+    const bodyHit = await screenTelegramEvent(body, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(bodyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(bodyHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(bodyHit.decision.evidence)).not.toContain("tinyurl");
+    expect(JSON.stringify(body)).toContain("body79902");
+    expect(JSON.stringify(body)).not.toContain("name79902");
+
+    const paid = await posted(
+      79903,
+      {
+        gift: undefined,
+        gift_upgrade_sent: { gift: { id: "gid79903" } },
+        sender_chat: {
+          id: -100799030,
+          type: "channel",
+          title: "https://bit.ly/paid79903",
+        },
+      },
+      true,
+    );
+    expect(paid.message?.gift).toBe("upgrade");
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+
+    const plain = await posted(79904, {
+      sender_chat: {
+        id: -100799040,
+        type: "group",
+        title: "https://example.com/ok79904",
+      },
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plain)).not.toContain("ok79904");
+
+    const invite = await posted(79905, {
+      sender_chat: {
+        id: -100799050,
+        type: "supergroup",
+        title: "https://t.me/durov",
+      },
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toBeUndefined();
+    const inviteKept = await screenTelegramEvent(invite, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(inviteKept.decision.action).toBe("allow");
+    expect(JSON.stringify(invite)).not.toContain("durov");
+
+    const user = await posted(79906, {
+      from: {
+        id: 124,
+        first_name: "https://bit.ly/who79906",
+        last_name: "https://tinyurl.com/also79906",
+        username: "adder79906",
+      },
+    });
+    expect(user.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const userModerator = createMemoryModerator();
+    const userHit = await screenTelegramEvent(user, {
+      moderator: userModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(userHit.decision.action).toBe("delete");
+    expect(userModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079906", messageId: "79906" },
+    ]);
+    expect(JSON.stringify(user)).not.toContain("who79906");
+    expect(JSON.stringify(user)).not.toContain("also79906");
+    expect(JSON.stringify(user)).not.toContain("adder79906");
+
+    const quiet = await posted(79907, {
+      gift: {},
+      sender_chat: {
+        id: -(1_000_000 + 79907),
+        type: "supergroup",
+        title: "https://bit.ly/quiet79907",
+      },
+      from: {
+        id: 124,
+        first_name: "https://tinyurl.com/skip79907",
+      },
+    });
+    expect(quiet.message?.gift).toBeUndefined();
+    expect(quiet.message?.hosts).toBeUndefined();
+    const quietKept = await screenTelegramEvent(quiet, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(quietKept.decision.action).toBe("allow");
+    expect(JSON.stringify(quiet)).not.toContain("quiet79907");
+    expect(JSON.stringify(quiet)).not.toContain("skip79907");
+    expect(JSON.stringify(quiet)).not.toContain("bit.ly");
+    expect(JSON.stringify(quiet)).not.toContain("tinyurl");
+  });
+
   it("skips the placeholder name when a chat adds or removes a poll option", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
