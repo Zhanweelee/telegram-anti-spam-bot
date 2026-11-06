@@ -43788,6 +43788,158 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(checklist.event)).not.toContain("task80564");
   });
 
+  it("skips a short link after an inline formula in the preview", async () => {
+    const pinned = await normalize({
+      update_id: 80601,
+      message: {
+        message_id: 80601,
+        date: 1761955200,
+        chat: { id: -10080601, type: "supergroup" },
+        from: { id: 80601, first_name: "Ada" },
+        pinned_message: {
+          message_id: 806011,
+          date: 1761955100,
+          chat: { id: -10080601, type: "supergroup" },
+          text: "https://tinyurl.com/text80601",
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: [
+                  {
+                    type: "mathematical_expression",
+                    expression: "https://evil.example/latex80601",
+                  },
+                  "https://bit.ly/after80601",
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(pinned.event.message?.hosts).toBeUndefined();
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain("after80601");
+    expect(pinnedDump).not.toContain("bit.ly");
+    expect(pinnedDump).not.toContain("latex80601");
+    expect(pinnedDump).not.toContain("evil.example");
+    expect(pinnedDump).not.toContain("text80601");
+    expect(pinnedDump).not.toContain("tinyurl");
+
+    const before = await normalize({
+      update_id: 80602,
+      message: {
+        message_id: 80602,
+        date: 1761955200,
+        chat: { id: -10080602, type: "supergroup" },
+        from: { id: 80602, first_name: "Ada" },
+        pinned_message: {
+          message_id: 806021,
+          date: 1761955100,
+          chat: { id: -10080602, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: [
+                  "https://bit.ly/before80602",
+                  {
+                    type: "mathematical_expression",
+                    expression: "https://evil.example/latex80602",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(before.status).toBe("event");
+    if (before.status !== "event") {
+      return;
+    }
+    expect(before.event.message?.hosts).toEqual(["bit.ly"]);
+    const beforeDump = JSON.stringify(before.event);
+    expect(beforeDump).not.toContain("before80602");
+    expect(beforeDump).not.toContain("latex80602");
+    expect(beforeDump).not.toContain("evil.example");
+
+    const replied = await normalize({
+      update_id: 80603,
+      message: {
+        message_id: 80603,
+        date: 1761955200,
+        chat: { id: -10080603, type: "supergroup" },
+        from: { id: 80603, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 806031,
+          date: 1761955100,
+          chat: { id: -10080603, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: [
+                  {
+                    type: "mathematical_expression",
+                    expression: "x^2",
+                  },
+                  "https://bit.ly/reply80603",
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(replied.event)).not.toContain("reply80603");
+
+    const article = await normalize({
+      update_id: 80604,
+      message: {
+        message_id: 80604,
+        date: 1761955200,
+        chat: { id: -10080604, type: "supergroup" },
+        from: { id: 80604, first_name: "Ada" },
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                {
+                  type: "mathematical_expression",
+                  expression: "https://bit.ly/article80604",
+                },
+                "后面",
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(article.status).toBe("event");
+    if (article.status !== "event") {
+      return;
+    }
+    expect(article.event.message?.text).toBe("后面");
+    expect(article.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(article.event)).not.toContain("article80604");
+  });
+
   it("reads the hostname drawn after a rich voice note", async () => {
     const pinned = await normalize({
       update_id: 80581,
