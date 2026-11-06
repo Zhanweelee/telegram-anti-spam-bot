@@ -40814,6 +40814,120 @@ describe("normalizeUpdate", () => {
     expect(bodyDump).not.toContain("cutt.ly");
   });
 
+  it("leaves a short link in the name of the person who joined a channel", async () => {
+    const phrase = "请免费领取礼品";
+    const joined = await normalize({
+      update_id: 79640,
+      message: {
+        message_id: 79640,
+        date: 1761955200,
+        chat: {
+          id: -10079640,
+          type: "channel",
+          title: "https://ow.ly/room79640",
+        },
+        from: {
+          id: 124,
+          first_name: `https://bit.ly/later79640 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79640",
+          username: "secretuser79640",
+        },
+        new_chat_members: [
+          {
+            id: 124,
+            first_name: `https://bit.ly/later79640 ${phrase}`,
+            last_name: "https://tinyurl.com/skiplast79640",
+            username: "secretuser79640",
+          },
+        ],
+      },
+    });
+    expect(joined.status).toBe("event");
+    if (joined.status !== "event") {
+      return;
+    }
+    expect(joined.event.message?.text).toBe("");
+    expect(joined.event.message?.notice).toBe("join");
+    expect(joined.event.message?.hosts).toBeUndefined();
+    expect(joined.event.message?.memberName).toBeUndefined();
+    const joinedDump = JSON.stringify(joined.event);
+    expect(joinedDump).not.toContain(phrase);
+    expect(joinedDump).not.toContain("later79640");
+    expect(joinedDump).not.toContain("skiplast79640");
+    expect(joinedDump).not.toContain("secretuser79640");
+    expect(joinedDump).not.toContain("room79640");
+    expect(joinedDump).not.toContain("bit.ly");
+    expect(joinedDump).not.toContain("tinyurl");
+    expect(joinedDump).not.toContain("ow.ly");
+
+    const added = await normalize({
+      update_id: 79641,
+      message: {
+        message_id: 79641,
+        date: 1761955200,
+        chat: { id: -10079641, type: "channel" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/adder79641",
+          last_name: "https://tinyurl.com/skip79641",
+        },
+        new_chat_members: [
+          { id: 125, first_name: "https://cutt.ly/who79641" },
+        ],
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.notice).toBe("join");
+    expect(added.event.message?.text).toBe("https://cutt.ly/who79641");
+    expect(added.event.message?.hosts).toEqual([
+      "cutt.ly",
+      "bit.ly",
+      "tinyurl.com",
+    ]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain("adder79641");
+    expect(addedDump).not.toContain("skip79641");
+    expect(addedDump).toContain("who79641");
+
+    const body = await normalize({
+      update_id: 79642,
+      message: {
+        message_id: 79642,
+        date: 1761955200,
+        chat: { id: -10079642, type: "channel" },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/name79642",
+          last_name: "https://cutt.ly/also79642",
+        },
+        text: "https://bit.ly/body79642",
+        new_chat_members: [
+          {
+            id: 124,
+            first_name: "https://tinyurl.com/name79642",
+            last_name: "https://cutt.ly/also79642",
+          },
+        ],
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe("https://bit.ly/body79642");
+    expect(body.event.message?.notice).toBe("join");
+    expect(body.event.message?.hosts).toBeUndefined();
+    expect(body.event.message?.memberName).toBeUndefined();
+    const bodyDump = JSON.stringify(body.event);
+    expect(bodyDump).not.toContain("name79642");
+    expect(bodyDump).not.toContain("also79642");
+    expect(bodyDump).not.toContain("tinyurl");
+    expect(bodyDump).not.toContain("cutt.ly");
+  });
+
   it("keeps only the hostname from the full name drawn for a checklist completer", async () => {
     const phrase = "请免费领取礼品";
     const code = "DONE79234";

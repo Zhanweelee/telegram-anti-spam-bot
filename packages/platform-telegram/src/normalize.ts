@@ -1359,6 +1359,36 @@ function sentAsForeignChannel(message: Record<string, unknown>): boolean {
   return chat !== null && senderId !== null && chat !== senderId;
 }
 
+/**
+ * 频道里自己加入时，这行不画人。
+ * 只有一个入群用户，并且编号和 from 相同。
+ * 群和超级群仍画全名。别人拉进频道仍画全名。
+ */
+function channelSelfJoin(message: Record<string, unknown>): boolean {
+  const chat = message.chat;
+  if (!isRecord(chat) || chat.type !== "channel") {
+    return false;
+  }
+  const members = message.new_chat_members;
+  if (!Array.isArray(members) || members.length !== 1) {
+    return false;
+  }
+  const member = members[0];
+  const from = message.from;
+  if (!isRecord(member) || !isRecord(from)) {
+    return false;
+  }
+  const memberId = member.id;
+  const fromId = from.id;
+  return (
+    typeof memberId === "number" &&
+    typeof fromId === "number" &&
+    Number.isSafeInteger(memberId) &&
+    Number.isSafeInteger(fromId) &&
+    memberId === fromId
+  );
+}
+
 function serviceNotice(
   message: Record<string, unknown>,
 ): "join" | "leave" | undefined {
@@ -5210,6 +5240,8 @@ function pushProximitySenderUrls(
 /**
  * 拉人进群的人画出的全名只留主机名。
  * 入群名单里至少有一个用户对象时读。空对象也读。
+ * 频道里自己加入不画人，不读发送者，也不读这份名单。
+ * 群和超级群仍按全名。别人拉进频道仍按全名。
  * 空数组、非用户对象和布尔值不读。退群不读发送者。
  * 加入的人的名字仍按原来的正文。用户编号不读。用户名不读。
  */
@@ -5217,7 +5249,7 @@ function pushJoinSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (serviceNotice(message) !== "join") {
+  if (serviceNotice(message) !== "join" || channelSelfJoin(message)) {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
@@ -7813,7 +7845,9 @@ function memberNames(message: Record<string, unknown>): string {
 
 function memberNameSource(message: Record<string, unknown>): string {
   const parts: string[] = [];
-  pushJoinedFullNames(message.new_chat_members, parts);
+  if (!channelSelfJoin(message)) {
+    pushJoinedFullNames(message.new_chat_members, parts);
+  }
   const invited = message.video_chat_participants_invited;
   if (isRecord(invited)) {
     pushJoinedFullNames(invited.users, parts);
