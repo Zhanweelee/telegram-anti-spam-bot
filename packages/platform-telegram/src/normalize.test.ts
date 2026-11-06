@@ -11884,8 +11884,186 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(caption.event.message?.text).toBe("文");
-    expect(caption.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(caption.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(caption.event)).not.toContain("cap81438");
+  });
+
+  it("skips a caption text link whose length is not positive", async () => {
+    const photo = (id: number) => [
+      { file_id: `AgAD${id}`, file_unique_id: `uniq${id}` },
+    ];
+    const link = (length: number, url: string) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const captioned = (
+      id: number,
+      caption: unknown,
+      entities: Record<string, unknown>[],
+      extra: Record<string, unknown> = {},
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        photo: photo(id),
+        ...extra,
+        ...(caption === undefined ? {} : { caption }),
+        caption_entities: entities,
+      },
+    });
+
+    const zero = await normalize(
+      captioned(81451, "文", [link(0, "https://bit.ly/cap81451")]),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("文");
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("cap81451");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      captioned(81452, "文", [link(-1, "https://bit.ly/cap81452")]),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("cap81452");
+
+    const fraction = await normalize(
+      captioned(81453, "文", [link(1.5, "https://bit.ly/cap81453")]),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("cap81453");
+
+    const clamped = await normalize(
+      captioned(81454, "文", [link(2, "https://bit.ly/cap81454")]),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("cap81454");
+
+    const plain = await normalize(
+      captioned(81455, "https://example.com/plain81455", [
+        link(0, "https://bit.ly/cap81455"),
+      ]),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("https://example.com/plain81455");
+    expect(plain.event.message?.hosts).toBeUndefined();
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).toContain("plain81455");
+    expect(plainDump).not.toContain("cap81455");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      captioned(81456, "文", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 0,
+          language: "https://bit.ly/cap81456",
+        },
+      ]),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("cap81456");
+
+    const keptCode = await normalize(
+      captioned(81457, "文", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 1,
+          language: "https://bit.ly/cap81457",
+        },
+      ]),
+    );
+    expect(keptCode.status).toBe("event");
+    if (keptCode.status !== "event") {
+      return;
+    }
+    expect(keptCode.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptCode.event)).not.toContain("cap81457");
+
+    const stored = await normalize(
+      captioned(81458, "文".repeat(4097), [
+        {
+          type: "text_link",
+          offset: 4096,
+          length: 1,
+          url: "https://bit.ly/cap81458",
+        },
+      ]),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.text).toHaveLength(4096);
+    expect(stored.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(stored.event)).not.toContain("cap81458");
+
+    const loose = await normalize(
+      captioned(81459, undefined, [link(0, "https://bit.ly/cap81459")], {
+        text: "站会",
+      }),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(loose.event)).not.toContain("cap81459");
+
+    const asked = await normalize({
+      update_id: 81460,
+      message: {
+        message_id: 81460,
+        date: 1761955200,
+        chat: { id: -10081460, type: "supergroup" },
+        from: { id: 81460, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          question_entities: [link(0, "https://bit.ly/ask81460")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(asked.status).toBe("event");
+    if (asked.status !== "event") {
+      return;
+    }
+    expect(asked.event.message?.text).toBe("站会");
+    expect(asked.event.message?.pollQuestion).toBe("题");
+    expect(asked.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(asked.event)).not.toContain("ask81460");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {

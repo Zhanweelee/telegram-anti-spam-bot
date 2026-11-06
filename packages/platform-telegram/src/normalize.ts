@@ -2099,10 +2099,8 @@ function linkHosts(message: Record<string, unknown>): {
     lists.push(message.entities);
   }
   if (typeof message.caption === "string") {
-    // 说明上的文字链接，起点必须落在说明里。
-    lists.push(
-      visibleTextLinks(message.caption_entities, message.caption.length),
-    );
+    // 说明上的文字链接，起点必须落在说明里，长度必须大于 0。
+    lists.push(drawnTextLink(message.caption_entities, message.caption.length));
   } else {
     lists.push(message.caption_entities);
   }
