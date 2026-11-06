@@ -11684,6 +11684,140 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips an added task link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80661,
+      message: {
+        message_id: 80661,
+        date: 1761955200,
+        chat: { id: -10080661, type: "supergroup" },
+        from: { id: 80661, first_name: "Ada" },
+        text: "站会",
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 1,
+              text: "加",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 1,
+                  length: 1,
+                  url: "https://bit.ly/added80661",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.addedText).toBe("加");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("added80661");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80662,
+      message: {
+        message_id: 80662,
+        date: 1761955200,
+        chat: { id: -10080662, type: "supergroup" },
+        from: { id: 80662, first_name: "Ada" },
+        text: "站会",
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 1,
+              text: "https://tinyurl.com/plain80662",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 4,
+                  url: "https://cutt.ly/added80662",
+                },
+                {
+                  type: "text_link",
+                  offset: 99,
+                  length: 1,
+                  url: "https://evil.example/late80662",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.addedText).toBe(
+      "https://tinyurl.com/plain80662",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("added80662");
+    expect(keptDump).not.toContain("late80662");
+    expect(keptDump).not.toContain("evil.example");
+
+    const later = await normalize({
+      update_id: 80663,
+      message: {
+        message_id: 80663,
+        date: 1761955200,
+        chat: { id: -10080663, type: "supergroup" },
+        from: { id: 80663, first_name: "Ada" },
+        text: "站会",
+        checklist_tasks_added: {
+          tasks: [
+            {
+              id: 1,
+              text: "甲",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 1,
+                  length: 1,
+                  url: "https://bit.ly/one80663",
+                },
+              ],
+            },
+            { id: 2, text: "乙" },
+            { id: 3, text: "丙" },
+            {
+              id: 4,
+              text: "丁",
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 1,
+                  url: "https://bit.ly/four80663",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.hosts).toBeUndefined();
+    const laterDump = JSON.stringify(later.event);
+    expect(laterDump).not.toContain("one80663");
+    expect(laterDump).not.toContain("four80663");
+    expect(laterDump).not.toContain("bit.ly");
+  });
+
   it("skips a checklist link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80641,
