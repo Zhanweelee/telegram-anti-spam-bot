@@ -12819,7 +12819,7 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain('"position"');
   });
 
-  it("leaves an automatic quote out of the event", async () => {
+  it("keeps only the hostname from an automatic quote", async () => {
     const outcome = await normalize({
       update_id: 2602,
       message: {
@@ -12851,10 +12851,10 @@ describe("normalizeUpdate", () => {
     }
     expect(outcome.event.message?.text).toBe("");
     expect(outcome.event.message?.quoteText).toBeUndefined();
-    expect(outcome.event.message?.hosts).toBeUndefined();
+    expect(outcome.event.message?.hosts).toEqual(["bit.ly"]);
     const dumped = withoutButtonText(outcome.event);
     expect(dumped).not.toContain("免费领取");
-    expect(dumped).not.toContain("bit.ly");
+    expect(dumped).not.toContain("/auto");
   });
 
   it("keeps the message text when a manual quote is also present", async () => {
@@ -12981,11 +12981,10 @@ describe("normalizeUpdate", () => {
     }
     expect(automatic.event.message?.text).toBe("今天站会");
     expect(automatic.event.message?.quoteText).toBeUndefined();
-    expect(automatic.event.message?.hosts).toBeUndefined();
+    expect(automatic.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
     const automaticDump = JSON.stringify(automatic.event);
     expect(automaticDump).not.toContain(phrase);
-    expect(automaticDump).not.toContain("bit.ly");
-    expect(automaticDump).not.toContain("tinyurl.com");
+    expect(automaticDump).not.toContain("auto54");
     expect(automaticDump).not.toContain("is.gd");
 
     const asBody = "免费领取 https://bit.ly/body54";
@@ -42274,6 +42273,72 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quoted.event)).not.toContain("bit.ly");
   });
 
+  it("reads the hostname drawn on an automatic quote", async () => {
+    const phrase = "请免费领取礼品";
+    const quoted = await normalize({
+      update_id: 80361,
+      message: {
+        message_id: 80361,
+        date: 1761955200,
+        chat: { id: -10080361, type: "supergroup" },
+        from: { id: 80361, first_name: "Ada" },
+        text: "你好",
+        quote: {
+          text: `https://bit.ly/auto80361 ${phrase}`,
+          position: 0,
+        },
+        reply_to_message: {
+          message_id: 803611,
+          date: 1761955100,
+          chat: { id: -10080361, type: "supergroup" },
+          text: "https://tinyurl.com/body80361",
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.text).toBe("你好");
+    expect(quoted.event.message?.quoteText).toBeUndefined();
+    expect(quoted.event.message?.hosts).toEqual(["bit.ly"]);
+    const quotedDump = JSON.stringify(quoted.event);
+    expect(quotedDump).not.toContain(phrase);
+    expect(quotedDump).not.toContain("auto80361");
+    expect(quotedDump).not.toContain("body80361");
+    expect(quotedDump).not.toContain("tinyurl");
+
+    const linked = await normalize({
+      update_id: 80362,
+      message: {
+        message_id: 80362,
+        date: 1761955200,
+        chat: { id: -10080362, type: "supergroup" },
+        from: { id: 80362, first_name: "Ada" },
+        text: "你好",
+        quote: {
+          text: "点这里看",
+          position: 4,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://bit.ly/ent80362",
+            },
+          ],
+        },
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.quoteText).toBeUndefined();
+    expect(linked.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(linked.event)).not.toContain("ent80362");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
@@ -42962,7 +43027,11 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(quoted.event.message?.text).toBe("你好");
-    expect(quoted.event.message?.hosts).toEqual(["tinyurl.com", "bit.ly"]);
+    expect(quoted.event.message?.hosts).toEqual([
+      "example.com",
+      "tinyurl.com",
+      "bit.ly",
+    ]);
     const quotedDump = JSON.stringify(quoted.event);
     expect(quotedDump).not.toContain(phrase);
     expect(quotedDump).not.toContain("who80141");
@@ -42972,8 +43041,8 @@ describe("normalizeUpdate", () => {
     expect(quotedDump).not.toContain("quote80141");
     expect(quotedDump).not.toContain("forwarder80141");
     expect(quotedDump).not.toContain("speaker80141");
-    expect(quotedDump).not.toContain("example.com");
     expect(quotedDump).not.toContain("is.gd");
+    expect(quotedDump).toContain("example.com");
     expect(quotedDump).toContain("tinyurl.com");
     expect(quotedDump).toContain("bit.ly");
 
