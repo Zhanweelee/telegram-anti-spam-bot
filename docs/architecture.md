@@ -303,6 +303,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 视频聊天邀请名单上画出的全名成为正文。几个人用逗号分开。用户名不进事件。见 ADR 0646。
 
+新群主画出的全名成为正文。用户名不进事件。见 ADR 0647。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。

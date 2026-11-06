@@ -195,6 +195,8 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 视频聊天邀请名单上画出的全名成为正文，短链仍走 `links`。几个人用逗号分开。用户名不进正文。见 ADR 0646。
 
+新群主画出的全名成为正文，短链仍走 `links`。用户名不进正文。见 ADR 0647。
+
 `checklist_task_regex` 默认打开。清单任务命中同一份正则时删除。任务干净，或任务自己就是标题时，仍留下。见 ADR 0538。
 
 `media_name_regex` 默认打开。说明旁边的文件名或音频标题命中同一份正则时删除。名称干净，或名称自己就是正文时，仍留下。见 ADR 0539。
@@ -227,7 +229,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `hidden_name_regex` 默认打开。隐藏转发的显示名命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0553。
 
-`member_name_regex` 默认打开。入群和视频聊天邀请画出的全名、换群主或靠近提醒的可见名字命中同一份正则时删除。入群和邀请不进用户名。这段干净，或自己就是正文时，仍按原来的服务消息规则。见 ADR 0554、ADR 0645 与 ADR 0646。
+`member_name_regex` 默认打开。入群、视频聊天邀请和新群主画出的全名，以及靠近提醒，命中同一份正则时删除。这些名字不进用户名。这段干净，或自己就是正文时，仍按原来的服务消息规则。见 ADR 0554、ADR 0645、ADR 0646 与 ADR 0647。
 
 `shared_name_regex` 默认打开。分享来的用户画出的全名命中同一份正则时删除。用户名不进这段。这段干净，或自己就是正文时，仍留下。见 ADR 0555 与 ADR 0644。
 
