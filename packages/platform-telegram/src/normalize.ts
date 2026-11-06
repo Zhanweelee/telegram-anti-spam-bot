@@ -5265,18 +5265,22 @@ function pushTitleSenderUrls(
 /**
  * 换背景的人只留主机名。
  * 壁纸、图案、纯色和内置主题都读。空对象和其它类型不读。
- * 发送者是聊天时这行不画人，不读 `from`，也不读本群群名。
+ * 壁纸、图案和纯色由聊天换时不画人，不读 `from`，也不读标题。
+ * 内置主题由聊天换时画出这个聊天的标题，空格不截断。不读 `from`。
  * 文件名仍只在壁纸和图案上留主机名。文件号和主题名不读。用户名不读。
  */
 function pushBackgroundSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (backgroundNotice(message) === undefined) {
+  const notice = backgroundNotice(message);
+  if (notice === undefined) {
     return;
   }
-  // 发送者是聊天时，这行不画人，也不画标题。占位用户的名字不读。
   if (isRecord(message.sender_chat)) {
+    if (notice === "theme") {
+      pushPlainUrls(message.sender_chat.title, urls);
+    }
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
