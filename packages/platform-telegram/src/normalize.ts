@@ -5228,9 +5228,12 @@ function pushBackgroundSenderUrls(
  * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 移入和移出画短名。名为空时改用姓。空白名挡住姓。
  * 从下标 2 起的第一个空格后面不读。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 加入、移入和移出都一样。频道、群和超级群都一样。编号和本群相同时也读。
+ * 编号和本群相同时，社区名字排在前面。用户仍按原来的名字。
  * 移入和加入要有社区对象。移出只要是对象，空对象也读。
  * 同时出现时先认移入，再认加入，再认移出。
- * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名，排在前面。
+ * 没有社区对象的移入或加入不读。社区名字仍只在移入和加入上留主机名。
  * 社区编号和移出对象上的其它字段不读。用户名不读。
  */
 function pushCommunitySenderUrls(
@@ -5239,6 +5242,11 @@ function pushCommunitySenderUrls(
 ): void {
   const notice = communityNotice(message);
   if (notice === undefined) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   if (notice === "joined") {
