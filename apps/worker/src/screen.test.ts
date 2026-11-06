@@ -8843,21 +8843,14 @@ describe("screenTelegramEvent", () => {
     });
     expect(named.message?.text).toBe("");
     expect(named.message?.giveawayNotice).toBe("created");
-    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    expect(named.message?.hosts).toBeUndefined();
     const moderator = createMemoryModerator();
     const removed = await screenTelegramEvent(named, {
       moderator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(removed.decision.action).toBe("delete");
-    expect(removed.decision.reasons).toContain("short_link");
-    expect(removed.decision.ruleIds).not.toContain("giveaway_notice");
-    expect(JSON.stringify(removed.decision.evidence)).toContain(
-      "short_link:bit.ly",
-    );
-    expect(moderator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1006107", messageId: "6107" },
-    ]);
+    expect(removed.decision.action).toBe("allow");
+    expect(moderator.deleted).toEqual([]);
     const namedDump = JSON.stringify({
       event: named,
       decision: removed.decision,
@@ -8893,16 +8886,14 @@ describe("screenTelegramEvent", () => {
       },
     });
     expect(surname.message?.giveawayNotice).toBe("completed");
-    expect(surname.message?.hosts).toEqual(["bit.ly"]);
+    expect(surname.message?.hosts).toBeUndefined();
     const surnameModerator = createMemoryModerator();
     const surnameHit = await screenTelegramEvent(surname, {
       moderator: surnameModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(surnameHit.decision.action).toBe("delete");
-    expect(surnameModerator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1006108", messageId: "6108" },
-    ]);
+    expect(surnameHit.decision.action).toBe("allow");
+    expect(surnameModerator.deleted).toEqual([]);
     const surnameDump = JSON.stringify(surname);
     expect(surnameDump).not.toContain("last6108");
     expect(surnameDump).not.toContain("secretuser6108");
@@ -8920,7 +8911,7 @@ describe("screenTelegramEvent", () => {
       giveaway_created: { prize_star_count: 1762006109 },
     });
     expect(plain.message?.giveawayNotice).toBe("created");
-    expect(plain.message?.hosts).toEqual(["example.com"]);
+    expect(plain.message?.hosts).toBeUndefined();
     const plainKept = await screenTelegramEvent(plain, {
       moderator: createMemoryModerator(),
       rateWindow: createMemoryRateWindow(),
@@ -8931,6 +8922,7 @@ describe("screenTelegramEvent", () => {
       decision: plainKept.decision,
     });
     expect(plainDump).not.toContain("ok6109");
+    expect(plainDump).not.toContain("example.com");
     expect(plainDump).not.toContain("1762006109");
 
     const keyword = await posted(6110, {
@@ -8965,21 +8957,16 @@ describe("screenTelegramEvent", () => {
       },
       true,
     );
-    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    expect(paid.message?.hosts).toBeUndefined();
     const paidModerator = createMemoryModerator();
     const paidHit = await screenTelegramEvent(paid, {
       moderator: paidModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(paidHit.decision.action).toBe("delete");
-    expect(paidHit.decision.reasons).toContain("short_link");
-    expect(paidHit.actionResults).toContainEqual({
-      actionId: "delete",
-      status: "skipped",
-      detail: "paid_post",
-    });
+    expect(paidHit.decision.action).toBe("allow");
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paidHit.decision)).not.toContain("paid6111");
+    expect(JSON.stringify(paidHit.decision)).not.toContain("bit.ly");
     expect(JSON.stringify(paidHit.decision)).not.toContain(String(stars));
 
     const blank = await posted(6112, {
@@ -9028,7 +9015,7 @@ describe("screenTelegramEvent", () => {
     });
     expect(beside.message?.text).toBe("今天站会");
     expect(beside.message?.giveawayNotice).toBe("created");
-    expect(beside.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(beside.message?.hosts).toEqual(["tinyurl.com"]);
     const besideDump = JSON.stringify(beside);
     expect(besideDump).not.toContain("only6114");
     expect(besideDump).not.toContain("room6114");
