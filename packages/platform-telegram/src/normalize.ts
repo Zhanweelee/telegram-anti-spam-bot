@@ -5322,8 +5322,8 @@ function invoiceDescriptionOpen(message: Record<string, unknown>): boolean {
 }
 
 /**
- * 联系人卡片上的 URL 行、可见名字和公司名只留主机名。
- * 名的长度大于 0 时不读姓。空白也算有名。
+ * 联系人卡片上的 URL 行、全名和公司名只留主机名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 姓名去掉空白后都是空的，标题就是原始电话。
  * 已有姓名且没有 vCard 时，只在电话会原样画出时才读。
  * 公司名是气泡副标题里最后一条以 ORG 开头的值。
@@ -5343,7 +5343,7 @@ function pushContactUrls(
       urls.push(/^https?:/i.test(value) ? value : `http://${value}`);
     }
   }
-  pushVisiblePartyUrls(contact, undefined, urls);
+  pushFormattedUserUrls(contact, urls);
   pushPlainUrls(contactPhoneDrawn(contact), urls);
   if (typeof contact.vcard === "string") {
     for (const value of vcardDrawnContacts(contact.vcard)) {
