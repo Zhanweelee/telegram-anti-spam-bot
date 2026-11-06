@@ -5067,7 +5067,8 @@ function pushLoadedReplyLine(
 
 /**
  * 没有更早的标题时，普通消息的引用条画出说明，否则画出正文。
- * 只读前 150 个码元。文字链接的起点落在这段里才读。
+ * 只读前 150 个码元。文字链接的起点必须落在画出的这段里。
+ * 正文短于 150 个码元时，以正文长度为准。
  * 原文不进正文。当前消息是富文本时也画这行。被回复的富文本另走预览。
  * 服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
  */
@@ -5081,12 +5082,21 @@ function pushReplyCaptionOrText(
   }
   if (typeof reply.caption === "string" && reply.caption.length > 0) {
     pushPlainUrls(reply.caption.slice(0, 150), urls);
-    pushTextLinks(visibleTextLinks(reply.caption_entities, 150), urls);
+    pushTextLinks(
+      visibleTextLinks(
+        reply.caption_entities,
+        drawnTextLimit(reply.caption, 150),
+      ),
+      urls,
+    );
     return;
   }
   if (typeof reply.text === "string" && reply.text.length > 0) {
     pushPlainUrls(reply.text.slice(0, 150), urls);
-    pushTextLinks(visibleTextLinks(reply.entities, 150), urls);
+    pushTextLinks(
+      visibleTextLinks(reply.entities, drawnTextLimit(reply.text, 150)),
+      urls,
+    );
   }
 }
 
@@ -5249,7 +5259,13 @@ function pushReplyChecklistTitle(
   }
   if (typeof checklist.title === "string" && checklist.title.length > 0) {
     pushPlainUrls(checklist.title.slice(0, 150), urls);
-    pushTextLinks(visibleTextLinks(checklist.title_entities, 150), urls);
+    pushTextLinks(
+      visibleTextLinks(
+        checklist.title_entities,
+        drawnTextLimit(checklist.title, 150),
+      ),
+      urls,
+    );
   }
   return true;
 }
@@ -5318,6 +5334,11 @@ function drawnDiceEmoji(dice: Record<string, unknown>): string | undefined {
 }
 
 /** 文字链接的起点落在画出的前一段里才读。 */
+/** 引用条最多画 window 个码元。正文更短时，链接起点不能超过正文。 */
+function drawnTextLimit(text: string, window: number): number {
+  return Math.min(window, text.length);
+}
+
 function visibleTextLinks(list: unknown, limit: number): unknown[] {
   if (!Array.isArray(list)) {
     return [];
