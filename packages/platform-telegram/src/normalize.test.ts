@@ -41416,6 +41416,159 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the media title drawn on an external reply", async () => {
+    const phrase = "请免费领取礼品";
+    const file = await normalize({
+      update_id: 80201,
+      message: {
+        message_id: 80201,
+        date: 1761955200,
+        chat: { id: -10080201, type: "supergroup", title: "本群" },
+        from: { id: 80201, first_name: "https://example.com/speaker80201" },
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 802011, first_name: "Ada" },
+          },
+          document: {
+            file_id: "DOC80201",
+            file_name: `https://bit.ly/file80201 ${phrase}`,
+            mime_type: "application/pdf",
+          },
+        },
+      },
+    });
+    expect(file.status).toBe("event");
+    if (file.status !== "event") {
+      return;
+    }
+    expect(file.event.message?.text).toBe("你好");
+    expect(file.event.message?.hosts).toEqual(["bit.ly"]);
+    const fileDump = JSON.stringify(file.event);
+    expect(fileDump).not.toContain(phrase);
+    expect(fileDump).not.toContain("file80201");
+    expect(fileDump).not.toContain("speaker80201");
+    expect(fileDump).not.toContain("example.com");
+    expect(fileDump).toContain("bit.ly");
+
+    const checklist = await normalize({
+      update_id: 80202,
+      message: {
+        message_id: 80202,
+        date: 1761955200,
+        chat: { id: -10080202, type: "supergroup" },
+        from: { id: 80202, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 802021, first_name: "Ada" } },
+          checklist: {
+            title: "https://bit.ly/list80202",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 0,
+                length: 4,
+                url: "https://cutt.ly/link80202",
+              },
+            ],
+            tasks: [{ id: 1, text: "https://tinyurl.com/task80202" }],
+          },
+        },
+      },
+    });
+    expect(checklist.status).toBe("event");
+    if (checklist.status !== "event") {
+      return;
+    }
+    expect(checklist.event.message?.hosts).toEqual(["bit.ly", "cutt.ly"]);
+    const checklistDump = JSON.stringify(checklist.event);
+    expect(checklistDump).not.toContain("list80202");
+    expect(checklistDump).not.toContain("link80202");
+    expect(checklistDump).not.toContain("task80202");
+    expect(checklistDump).not.toContain("tinyurl");
+
+    const invoice = await normalize({
+      update_id: 80203,
+      message: {
+        message_id: 80203,
+        date: 1761955200,
+        chat: { id: -10080203, type: "supergroup" },
+        from: { id: 80203, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 802031, first_name: "Ada" } },
+          invoice: {
+            title: "https://tinyurl.com/title80203",
+            description: "https://bit.ly/desc80203",
+            currency: "XTR",
+            total_amount: 1,
+          },
+        },
+      },
+    });
+    expect(invoice.status).toBe("event");
+    if (invoice.status !== "event") {
+      return;
+    }
+    expect(invoice.event.message?.hosts).toEqual(["bit.ly"]);
+    const invoiceDump = JSON.stringify(invoice.event);
+    expect(invoiceDump).not.toContain("desc80203");
+    expect(invoiceDump).not.toContain("title80203");
+    expect(invoiceDump).not.toContain("tinyurl");
+
+    const quoted = await normalize({
+      update_id: 80204,
+      message: {
+        message_id: 80204,
+        date: 1761955200,
+        chat: { id: -10080204, type: "supergroup" },
+        from: { id: 80204, first_name: "Ada" },
+        text: "你好",
+        quote: { text: "摘录", position: 0 },
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 802041, first_name: "Ada" } },
+          document: { file_id: "DOC80204", file_name: "https://bit.ly/file80204" },
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quoted.event)).not.toContain("file80204");
+    expect(JSON.stringify(quoted.event)).not.toContain("bit.ly");
+
+    const photo = await normalize({
+      update_id: 80205,
+      message: {
+        message_id: 80205,
+        date: 1761955200,
+        chat: { id: -10080205, type: "supergroup" },
+        from: { id: 80205, first_name: "Ada" },
+        text: "你好",
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 802051, first_name: "Ada" } },
+          photo: [{ file_id: "PH80205", width: 1, height: 1 }],
+        },
+        reply_to_message: {
+          message_id: 802051,
+          date: 1761955100,
+          chat: { id: -10080205, type: "supergroup" },
+          game: { title: "https://bit.ly/game80205" },
+        },
+      },
+    });
+    expect(photo.status).toBe("event");
+    if (photo.status !== "event") {
+      return;
+    }
+    expect(photo.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(photo.event)).not.toContain("game80205");
+    expect(JSON.stringify(photo.event)).not.toContain("bit.ly");
+  });
+
   it("reads the game or invoice title drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const game = await normalize({

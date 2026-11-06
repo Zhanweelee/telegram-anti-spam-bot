@@ -11257,6 +11257,166 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(quiet)).not.toContain("tinyurl");
   });
 
+  it("deletes a short link in an external reply media title", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            text: "你好",
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const file = await posted(80211, {
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+        document: {
+          file_id: "DOC80211",
+          file_name: "https://bit.ly/file80211",
+          mime_type: "application/pdf",
+        },
+      },
+    });
+    expect(file.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const hit = await screenTelegramEvent(file, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hit.decision.action).toBe("delete");
+    expect(JSON.stringify(hit.decision.evidence)).toContain("short_link:bit.ly");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080211", messageId: "80211" },
+    ]);
+    expect(JSON.stringify(file)).not.toContain("file80211");
+
+    const checklist = await posted(80212, {
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+        checklist: {
+          title: "https://bit.ly/list80212",
+          tasks: [{ id: 1, text: "https://tinyurl.com/task80212" }],
+        },
+      },
+    });
+    expect(checklist.message?.hosts).toEqual(["bit.ly"]);
+    const checklistModerator = createMemoryModerator();
+    const checklistHit = await screenTelegramEvent(checklist, {
+      moderator: checklistModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(checklistHit.decision.action).toBe("delete");
+    expect(checklistModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080212", messageId: "80212" },
+    ]);
+    expect(JSON.stringify(checklist)).not.toContain("list80212");
+    expect(JSON.stringify(checklist)).not.toContain("task80212");
+    expect(JSON.stringify(checklist)).not.toContain("tinyurl");
+
+    const invoice = await posted(80213, {
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+        invoice: {
+          title: "账单",
+          description: "https://bit.ly/desc80213",
+          currency: "XTR",
+          total_amount: 1,
+        },
+      },
+    });
+    expect(invoice.message?.hosts).toEqual(["bit.ly"]);
+    const invoiceModerator = createMemoryModerator();
+    const invoiceHit = await screenTelegramEvent(invoice, {
+      moderator: invoiceModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(invoiceHit.decision.action).toBe("delete");
+    expect(invoiceModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080213", messageId: "80213" },
+    ]);
+    expect(JSON.stringify(invoice)).not.toContain("desc80213");
+
+    const quoted = await posted(80214, {
+      quote: { text: "摘录", position: 0 },
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+        document: { file_id: "DOC80214", file_name: "https://bit.ly/file80214" },
+      },
+    });
+    expect(quoted.message?.hosts).toBeUndefined();
+    const quotedKept = await screenTelegramEvent(quoted, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(quotedKept.decision.action).toBe("allow");
+    expect(JSON.stringify(quoted)).not.toContain("file80214");
+    expect(JSON.stringify(quoted)).not.toContain("bit.ly");
+
+    const paid = await posted(
+      80215,
+      {
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+          document: { file_id: "DOC80215", file_name: "https://bit.ly/file80215" },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+
+    const words = await posted(80216, {
+      external_reply: {
+        origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+        document: { file_id: "DOC80216", file_name: phrase },
+      },
+    });
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await screenTelegramEvent(words, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(JSON.stringify(words)).not.toContain(phrase);
+  });
+
   it("deletes a short link in a replied game or invoice title", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
