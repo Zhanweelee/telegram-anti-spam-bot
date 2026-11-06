@@ -4953,6 +4953,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里的文字链接也读。原文不进正文。
  * 被回复的是富文本且没有说明时，画出富文本预览的前 150 个码元，不再读 text。
+ * 预览不画思考块。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -5780,6 +5781,7 @@ interface PinnedRichPreview {
 /**
  * 置顶一条富文本时，提示画出 `formatRichMessage` 的前 20 个码元。
  * 段落、标题、引用、列表、表格标题、按钮、音频名和文件名按这条预览拼接。
+ * 思考块不在这条预览里。气泡里的整篇文章仍读。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
@@ -5857,12 +5859,12 @@ function appendPinnedRichBlock(
     type === "pre" ||
     type === "footer" ||
     type === "expandable_blockquote" ||
-    type === "pullquote" ||
-    type === "thinking"
+    type === "pullquote"
   ) {
     appendPinnedRichText(block.text, preview);
     return;
   }
+  // formatRichMessage 不画思考块。气泡里的整篇文章仍由 walkBlocks 读取。
   if (type === "details") {
     appendPinnedRichText(block.summary, preview);
     return;
