@@ -41187,6 +41187,177 @@ describe("normalizeUpdate", () => {
     expect(invalidDump).not.toContain("tinyurl");
   });
 
+  it("leaves a short link in the chat title on a photo change", async () => {
+    const phrase = "请免费领取礼品";
+    const titled = await normalize({
+      update_id: 79771,
+      message: {
+        message_id: 79771,
+        date: 1761955200,
+        chat: {
+          id: -10079771,
+          type: "supergroup",
+          title: `https://ow.ly/room79771 ${phrase}`,
+        },
+        sender_chat: {
+          id: -100797710,
+          type: "channel",
+          title: `https://bit.ly/later79771 ${phrase}`,
+          username: "secretuser79771",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79771",
+          last_name: "https://cutt.ly/also79771",
+          username: "adder79771",
+        },
+        new_chat_photo: [{ file_id: "AgADphoto79771", width: 1, height: 1 }],
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("");
+    expect(titled.event.message?.photo).toBe("set");
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titledDump = JSON.stringify(titled.event);
+    expect(titledDump).not.toContain(phrase);
+    expect(titledDump).not.toContain("later79771");
+    expect(titledDump).not.toContain("skip79771");
+    expect(titledDump).not.toContain("also79771");
+    expect(titledDump).not.toContain("secretuser79771");
+    expect(titledDump).not.toContain("adder79771");
+    expect(titledDump).not.toContain("room79771");
+    expect(titledDump).not.toContain("AgADphoto79771");
+    expect(titledDump).not.toContain("tinyurl");
+    expect(titledDump).not.toContain("cutt.ly");
+    expect(titledDump).not.toContain("ow.ly");
+
+    const cleared = await normalize({
+      update_id: 79772,
+      message: {
+        message_id: 79772,
+        date: 1761955200,
+        chat: { id: -10079772, type: "group" },
+        sender_chat: {
+          id: -10079772,
+          type: "group",
+          title: "https://bit.ly/end79772",
+          username: "secretuser79772",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79772",
+          last_name: "https://cutt.ly/also79772",
+        },
+        delete_chat_photo: true,
+      },
+    });
+    expect(cleared.status).toBe("event");
+    if (cleared.status !== "event") {
+      return;
+    }
+    expect(cleared.event.message?.photo).toBe("cleared");
+    expect(cleared.event.message?.hosts).toEqual(["bit.ly"]);
+    const clearedDump = JSON.stringify(cleared.event);
+    expect(clearedDump).not.toContain("end79772");
+    expect(clearedDump).not.toContain("skip79772");
+    expect(clearedDump).not.toContain("also79772");
+    expect(clearedDump).not.toContain("secretuser79772");
+    expect(clearedDump).not.toContain("tinyurl");
+    expect(clearedDump).not.toContain("cutt.ly");
+
+    const person = await normalize({
+      update_id: 79773,
+      message: {
+        message_id: 79773,
+        date: 1761955200,
+        chat: { id: -10079773, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who79773",
+          last_name: "https://tinyurl.com/also79773",
+          username: "adder79773",
+        },
+        new_chat_photo: [{ file_id: "AgADphoto79773" }],
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.photo).toBe("set");
+    expect(person.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79773");
+    expect(personDump).not.toContain("also79773");
+    expect(personDump).not.toContain("adder79773");
+    expect(personDump).not.toContain("AgADphoto79773");
+
+    const channel = await normalize({
+      update_id: 79774,
+      message: {
+        message_id: 79774,
+        date: 1761955200,
+        chat: { id: -10079774, type: "channel", title: "机密频道" },
+        sender_chat: {
+          id: -10079774,
+          type: "channel",
+          title: "https://bit.ly/live79774",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79774",
+        },
+        new_chat_photo: [{ file_id: "AgADphoto79774" }],
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.photo).toBe("set");
+    expect(channel.event.message?.hosts).toBeUndefined();
+    const channelDump = JSON.stringify(channel.event);
+    expect(channelDump).not.toContain("live79774");
+    expect(channelDump).not.toContain("skip79774");
+    expect(channelDump).not.toContain("AgADphoto79774");
+    expect(channelDump).not.toContain("bit.ly");
+    expect(channelDump).not.toContain("tinyurl");
+
+    const empty = await normalize({
+      update_id: 79775,
+      message: {
+        message_id: 79775,
+        date: 1761955200,
+        chat: { id: -10079775, type: "supergroup" },
+        sender_chat: {
+          id: -10079775,
+          type: "supergroup",
+          title: "https://bit.ly/bad79775",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79775",
+        },
+        new_chat_photo: [],
+        delete_chat_photo: false,
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.photo).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("bad79775");
+    expect(emptyDump).not.toContain("skip79775");
+    expect(emptyDump).not.toContain("bit.ly");
+    expect(emptyDump).not.toContain("tinyurl");
+  });
+
   it("leaves a short link in the chat title on a created group", async () => {
     const phrase = "请免费领取礼品";
     const titled = await normalize({
