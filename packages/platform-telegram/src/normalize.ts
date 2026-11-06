@@ -718,7 +718,13 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
-    if (isRecord(gift)) {
+    if (!isRecord(gift)) {
+      continue;
+    }
+    if (typeof gift.text === "string") {
+      // 自定义表情必须整段落在礼物附言里。
+      lists.push(fittingEmoji(gift.entities, gift.text.length));
+    } else {
       lists.push(gift.entities);
     }
   }
