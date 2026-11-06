@@ -7016,7 +7016,7 @@ function pushChecklistSenderUrls(
 /**
  * 勾完或取消勾完时画出的那一条任务只留主机名。
  * 完成名单非空时只用第一项，否则用取消完成名单的第一项。
- * 对得上嵌套清单里的任务才读整段文字和文字链接。文字链接的起点必须落在这段文字里。其余任务、标题和清单正文不读。
+ * 对得上嵌套清单里的任务才读整段文字和文字链接。文字链接的起点必须落在这段文字里，长度必须大于 0。其余任务、标题和清单正文不读。
  * 第一项不是安全整数时不改去读另一份名单。
  */
 function pushDoneTaskUrls(
@@ -7043,8 +7043,14 @@ function pushDoneTaskUrls(
     if (!isRecord(task) || task.id !== id) {
       continue;
     }
-    // 文字链接的起点必须落在这条画出的任务文字里。
-    pushDrawnLine(task.text, task.text_entities, urls);
+    // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。
+    pushPlainUrls(task.text, urls);
+    pushTextLinks(
+      typeof task.text === "string"
+        ? drawnTextLink(task.text_entities, task.text.length)
+        : task.text_entities,
+      urls,
+    );
     return;
   }
 }
