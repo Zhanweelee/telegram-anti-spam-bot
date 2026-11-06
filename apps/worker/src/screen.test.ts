@@ -13056,6 +13056,187 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(paid)).not.toContain("paid80554");
   });
 
+  it("leaves a done task link that starts after the drawn text", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const hidden = await posted(80691, {
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [1],
+        checklist_message: {
+          checklist: {
+            tasks: [
+              {
+                id: 1,
+                text: "做",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 1,
+                    length: 1,
+                    url: `https://bit.ly/done80691 ${phrase}`,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(hidden.message?.text).toBe("");
+    expect(hidden.message?.checklistNotice).toBe("done");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify(hidden);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("done80691");
+    expect(hiddenDump).not.toContain("bit.ly");
+
+    const drawn = await posted(80692, {
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [1],
+        checklist_message: {
+          checklist: {
+            tasks: [
+              {
+                id: 1,
+                text: "做",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 0,
+                    length: 1,
+                    url: "https://bit.ly/done80692",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(drawn.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080692", messageId: "80692" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("done80692");
+
+    const kept = await posted(80693, {
+      checklist_tasks_done: {
+        marked_as_not_done_task_ids: [1],
+        checklist_message: {
+          checklist: {
+            tasks: [
+              {
+                id: 1,
+                text: "撤",
+                text_entities: [
+                  {
+                    type: "text_link",
+                    offset: 0,
+                    length: 1,
+                    url: "https://example.com/undo80693",
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(kept.message?.checklistNotice).toBe("undone");
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("undo80693");
+
+    const paid = await posted(
+      80694,
+      {
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [1],
+          checklist_message: {
+            checklist: {
+              tasks: [
+                {
+                  id: 1,
+                  text: "做",
+                  text_entities: [
+                    {
+                      type: "text_link",
+                      offset: 0,
+                      length: 1,
+                      url: "https://bit.ly/paid80694",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid80694");
+  });
+
   it("leaves an added task link that starts after the drawn text", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
