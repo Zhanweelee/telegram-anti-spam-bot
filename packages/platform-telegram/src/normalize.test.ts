@@ -41159,6 +41159,192 @@ describe("normalizeUpdate", () => {
     expect(groupDump).not.toContain("bit.ly");
   });
 
+  it("leaves a short link in the chat title on a join", async () => {
+    const phrase = "请免费领取礼品";
+    const added = await normalize({
+      update_id: 79712,
+      message: {
+        message_id: 79712,
+        date: 1761955200,
+        chat: {
+          id: -10079712,
+          type: "supergroup",
+          title: "https://ow.ly/room79712",
+        },
+        sender_chat: {
+          id: -10079712,
+          type: "supergroup",
+          title: `https://bit.ly/later79712 ${phrase}`,
+          username: "secretuser79712",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79712",
+          last_name: "https://cutt.ly/also79712",
+          username: "adder79712",
+        },
+        new_chat_members: [
+          { id: 880712, is_bot: false, first_name: "新人", username: "member79712" },
+        ],
+      },
+    });
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.notice).toBe("join");
+    expect(added.event.message?.text).toBe("新人");
+    expect(added.event.message?.hosts).toEqual(["bit.ly"]);
+    const addedDump = JSON.stringify(added.event);
+    expect(addedDump).not.toContain(phrase);
+    expect(addedDump).not.toContain("later79712");
+    expect(addedDump).not.toContain("skip79712");
+    expect(addedDump).not.toContain("also79712");
+    expect(addedDump).not.toContain("secretuser79712");
+    expect(addedDump).not.toContain("adder79712");
+    expect(addedDump).not.toContain("member79712");
+    expect(addedDump).not.toContain("room79712");
+    expect(addedDump).not.toContain("880712");
+    expect(addedDump).not.toContain("tinyurl");
+    expect(addedDump).not.toContain("cutt.ly");
+    expect(addedDump).not.toContain("ow.ly");
+
+    const other = await normalize({
+      update_id: 79713,
+      message: {
+        message_id: 79713,
+        date: 1761955200,
+        chat: { id: -10079713, type: "group" },
+        sender_chat: {
+          id: -100797130,
+          type: "channel",
+          title: "https://bit.ly/end79713",
+          username: "secretuser79713",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79713",
+          last_name: "https://cutt.ly/also79713",
+        },
+        new_chat_members: [{ id: 880713, is_bot: false, first_name: "新人" }],
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.notice).toBe("join");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("end79713");
+    expect(otherDump).not.toContain("skip79713");
+    expect(otherDump).not.toContain("also79713");
+    expect(otherDump).not.toContain("secretuser79713");
+    expect(otherDump).not.toContain("880713");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+
+    const channel = await normalize({
+      update_id: 79714,
+      message: {
+        message_id: 79714,
+        date: 1761955200,
+        chat: { id: -10079714, type: "channel" },
+        sender_chat: {
+          id: -10079714,
+          type: "channel",
+          title: "https://bit.ly/live79714",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79714",
+          last_name: "https://cutt.ly/also79714",
+        },
+        new_chat_members: [
+          {
+            id: 124,
+            is_bot: false,
+            first_name: "https://bit.ly/who79714",
+            last_name: "https://tinyurl.com/name79714",
+          },
+        ],
+      },
+    });
+    expect(channel.status).toBe("event");
+    if (channel.status !== "event") {
+      return;
+    }
+    expect(channel.event.message?.notice).toBe("join");
+    expect(channel.event.message?.text).toBe("");
+    expect(channel.event.message?.hosts).toBeUndefined();
+    const channelDump = JSON.stringify(channel.event);
+    expect(channelDump).not.toContain("live79714");
+    expect(channelDump).not.toContain("skip79714");
+    expect(channelDump).not.toContain("also79714");
+    expect(channelDump).not.toContain("who79714");
+    expect(channelDump).not.toContain("name79714");
+    expect(channelDump).not.toContain("bit.ly");
+    expect(channelDump).not.toContain("tinyurl");
+    expect(channelDump).not.toContain("cutt.ly");
+
+    const empty = await normalize({
+      update_id: 79715,
+      message: {
+        message_id: 79715,
+        date: 1761955200,
+        chat: { id: -10079715, type: "supergroup" },
+        sender_chat: {
+          id: -10079715,
+          type: "supergroup",
+          title: "https://bit.ly/empty79715",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79715",
+        },
+        new_chat_members: [],
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.notice).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("empty79715");
+    expect(emptyDump).not.toContain("skip79715");
+    expect(emptyDump).not.toContain("bit.ly");
+    expect(emptyDump).not.toContain("tinyurl");
+
+    const person = await normalize({
+      update_id: 79716,
+      message: {
+        message_id: 79716,
+        date: 1761955200,
+        chat: { id: -10079716, type: "supergroup" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who79716",
+          last_name: "https://tinyurl.com/also79716",
+          username: "secretuser79716",
+        },
+        new_chat_members: [{ id: 880716, is_bot: false, first_name: "新人" }],
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.notice).toBe("join");
+    expect(person.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79716");
+    expect(personDump).not.toContain("also79716");
+    expect(personDump).not.toContain("secretuser79716");
+    expect(personDump).not.toContain("880716");
+  });
+
   it("leaves a short link in the chat title on a video chat invite", async () => {
     const phrase = "请免费领取礼品";
     const started = await normalize({

@@ -5278,7 +5278,8 @@ function pushProximitySenderUrls(
  * 拉人进群的人画出的全名只留主机名。
  * 入群名单里至少有一个用户对象时读。空对象也读。
  * 频道里自己加入不画人，不读发送者，也不读这份名单。
- * 群和超级群仍按全名。别人拉进频道仍按全名。
+ * 发送者是聊天时，这行画聊天标题，不读 `from`。标题不截断。
+ * 群、超级群和别人拉进频道都一样。用户仍按全名。
  * 空数组、非用户对象和布尔值不读。退群不读发送者。
  * 加入的人的名字仍按原来的正文。用户编号不读。用户名不读。
  */
@@ -5287,6 +5288,11 @@ function pushJoinSenderUrls(
   urls: string[],
 ): void {
   if (serviceNotice(message) !== "join" || channelSelfJoin(message)) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);

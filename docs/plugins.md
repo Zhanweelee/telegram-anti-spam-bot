@@ -145,7 +145,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 建群提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0621。
 
-拉人进群的人画出的全名只留主机名，仍走 `links`。频道自己加入不读发送者。名字里的关键词不命中。见 ADR 0670。
+拉人进群的人画出的全名只留主机名，仍走 `links`。频道自己加入不读发送者。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0677。
 
 把人移出群的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0623。
 
