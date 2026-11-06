@@ -634,7 +634,15 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
     } else {
       lists.push(poll.question_entities);
     }
-    lists.push(poll.explanation_entities, poll.description_entities);
+    if (typeof poll.explanation === "string") {
+      // 自定义表情必须整段落在测验说明里。
+      lists.push(
+        fittingEmoji(poll.explanation_entities, poll.explanation.length),
+      );
+    } else {
+      lists.push(poll.explanation_entities);
+    }
+    lists.push(poll.description_entities);
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (!isRecord(option)) {
