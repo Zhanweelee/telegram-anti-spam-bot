@@ -479,7 +479,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 游戏附加文字上的按标识提及也算。封面文件编号不进证据。见 ADR 0570。
 
-`/rule <chatId> custom_emoji on` 删这个群里的自定义表情。默认关闭。编号不进证据。看得见的字仍参与关键词。按标识提及仍看 `text_mention`。见 ADR 0515。正文上的自定义表情后来由 ADR 0741 必须整段落在正文里。
+`/rule <chatId> custom_emoji on` 删这个群里的自定义表情。默认关闭。编号不进证据。看得见的字仍参与关键词。按标识提及仍看 `text_mention`。见 ADR 0515。正文上的自定义表情后来由 ADR 0741 必须整段落在正文里。说明上的自定义表情后来由 ADR 0742 必须整段落在说明里。
 
 投票描述上的自定义表情也算。编号不进证据。见 ADR 0571。
 

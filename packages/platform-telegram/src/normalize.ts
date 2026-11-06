@@ -620,7 +620,12 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   } else {
     lists.push(message.entities);
   }
-  lists.push(message.caption_entities);
+  if (typeof message.caption === "string") {
+    // 自定义表情必须整段落在说明里。
+    lists.push(fittingEmoji(message.caption_entities, message.caption.length));
+  } else {
+    lists.push(message.caption_entities);
+  }
   const poll = message.poll;
   if (isRecord(poll)) {
     lists.push(
@@ -5382,7 +5387,7 @@ function drawnTextLimit(text: string, window: number): number {
   return Math.min(window, text.length);
 }
 
-/** 自定义表情的起点加长度不能越过画出的正文。 */
+/** 自定义表情的起点加长度不能越过画出的这段文字。 */
 function fittingEmoji(list: unknown, limit: number): unknown[] {
   if (!Array.isArray(list)) {
     return [];
