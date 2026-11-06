@@ -1954,7 +1954,13 @@ function linkHosts(message: Record<string, unknown>): {
   const checklist = message.checklist;
   const lists = [message.entities, message.caption_entities];
   if (isRecord(poll)) {
-    lists.push(poll.question_entities);
+    const question = poll.question;
+    // 题干上的文字链接，起点必须落在题干里。
+    lists.push(
+      typeof question === "string"
+        ? visibleTextLinks(poll.question_entities, question.length)
+        : poll.question_entities,
+    );
   }
   if (isRecord(checklist)) {
     const title = checklist.title;

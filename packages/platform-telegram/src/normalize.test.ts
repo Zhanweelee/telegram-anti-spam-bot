@@ -11684,6 +11684,115 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a poll question link that starts after the question", async () => {
+    const past = await normalize({
+      update_id: 80841,
+      message: {
+        message_id: 80841,
+        date: 1761955200,
+        chat: { id: -10080841, type: "supergroup" },
+        from: { id: 80841, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          question_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/ask80841",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.pollQuestion).toBe("题");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("ask80841");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80842,
+      message: {
+        message_id: 80842,
+        date: 1761955200,
+        chat: { id: -10080842, type: "supergroup" },
+        from: { id: 80842, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "https://tinyurl.com/plain80842",
+          question_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/ask80842",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80842",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.pollQuestion).toBe(
+      "https://tinyurl.com/plain80842",
+    );
+    expect(kept.event.message?.hosts).toEqual(["cutt.ly", "tinyurl.com"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("ask80842");
+    expect(keptDump).not.toContain("late80842");
+    expect(keptDump).not.toContain("evil.example");
+
+    const body = await normalize({
+      update_id: 80843,
+      message: {
+        message_id: 80843,
+        date: 1761955200,
+        chat: { id: -10080843, type: "supergroup" },
+        from: { id: 80843, first_name: "Ada" },
+        poll: {
+          question: "题",
+          question_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/body80843",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.text).toBe("题");
+    expect(body.event.message?.pollQuestion).toBeUndefined();
+    expect(body.event.message?.hosts).toBeUndefined();
+    const bodyDump = JSON.stringify(body.event);
+    expect(bodyDump).not.toContain("body80843");
+    expect(bodyDump).not.toContain("bit.ly");
+  });
+
   it("skips an external checklist title link that starts after the title", async () => {
     const past = await normalize({
       update_id: 80821,
