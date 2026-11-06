@@ -5088,6 +5088,7 @@ function pushPhotoSenderUrls(
  * 改名的人画出的全名只留主机名。
  * 新群名是非空字符串时读。空字符串不读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 频道这行只画新名字，不读发送者。群和超级群仍按全名。
  * 新群名本身仍只留主机名，排在前面。本群群名不读。用户名不读。
  */
 function pushTitleSenderUrls(
@@ -5095,6 +5096,10 @@ function pushTitleSenderUrls(
   urls: string[],
 ): void {
   if (!renamedChat(message)) {
+    return;
+  }
+  const chat = message.chat;
+  if (isRecord(chat) && chat.type === "channel") {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
