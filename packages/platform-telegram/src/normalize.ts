@@ -4937,19 +4937,34 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 回复某一条清单任务或投票选项时，引用条上画出的那一行只留主机名。
  * 任务号对得上才读那条任务的文字和文字链接。对不上就改读清单标题。
  * 没有清单时，选项编号对得上才读选项文字。对不上就改读问题。
- * 其余任务、选项、清单正文和投票说明不读。外部回复上的清单和投票不读。
+ * 其余任务、选项、清单正文和投票说明不读。外部回复上的任务和投票不读。
  * 没有这些行时，游戏只读标题，账单只读标题。说明不读。
  * 带引用或投票本身时，这一行不改画游戏或账单标题。
  * 付款成功的账单标题仍按原来的顺序。
+ * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   const reply = message.reply_to_message;
-  if (!isRecord(reply)) {
+  if (isRecord(reply)) {
+    pushLoadedReplyLine(message, reply, urls);
     return;
   }
+  const quote = message.quote;
+  if (isRecord(quote) && typeof quote.text === "string") {
+    return;
+  }
+  pushExternalReplyPreview(message, urls);
+}
+
+/** 原文已经加载时，先画任务、选项、引用或投票，再画游戏和账单。 */
+function pushLoadedReplyLine(
+  message: Record<string, unknown>,
+  reply: Record<string, unknown>,
+  urls: string[],
+): void {
   const taskId = message.reply_to_checklist_task_id;
   if (
     typeof taskId === "number" &&
@@ -5001,6 +5016,9 @@ function pushReplyTargetUrls(
   if (isRecord(reply.poll)) {
     return;
   }
+  if (pushExternalReplyPreview(message, urls)) {
+    return;
+  }
   if (isRecord(reply.game)) {
     pushPlainUrls(reply.game.title, urls);
     return;
@@ -5009,6 +5027,60 @@ function pushReplyTargetUrls(
     return;
   }
   pushPlainUrls(reply.invoice.title, urls);
+}
+
+const externalPreviewKeys = [
+  "animation",
+  "audio",
+  "live_photo",
+  "paid_media",
+  "photo",
+  "sticker",
+  "story",
+  "video",
+  "video_note",
+  "voice",
+  "contact",
+  "dice",
+  "game",
+  "giveaway",
+  "giveaway_winners",
+  "location",
+  "poll",
+  "venue",
+] as const;
+
+/**
+ * 外部回复的媒体标题只留主机名。
+ * 清单读标题和标题上的文字链接。任务不读。
+ * 账单读说明，不读标题。
+ * 普通文件读文件名。图片、贴纸、视频和游戏不读。
+ * 这一行已经占住时返回 true，不再改读本条回复的游戏或账单。
+ */
+function pushExternalReplyPreview(
+  message: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  const external = message.external_reply;
+  if (!isRecord(external)) {
+    return false;
+  }
+  if (isRecord(external.checklist)) {
+    pushPlainUrls(external.checklist.title, urls);
+    pushTextLinks(external.checklist.title_entities, urls);
+    return true;
+  }
+  if (isRecord(external.invoice)) {
+    pushPlainUrls(external.invoice.description, urls);
+    return true;
+  }
+  if (isRecord(external.document)) {
+    pushPlainUrls(external.document.file_name, urls);
+    return true;
+  }
+  return externalPreviewKeys.some(
+    (key) => isRecord(external[key]) || Array.isArray(external[key]),
+  );
 }
 
 /**
