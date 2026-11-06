@@ -8698,24 +8698,32 @@ function giftPublisherNames(message: Record<string, unknown>): string {
 /**
  * 付款成功这行画出的名字和账单标题。
  * 私聊对方的名在前，名为空才用姓。账单标题来自被回复的账单。
- * 载荷、订单和退款不读。
+ * 退款这行画出对方全名。名和姓都去掉两端空白，名在前。空白名不挡住姓。
+ * 同时出现时先认付款成功。载荷、订单、账单标题和退款金额不读。
  */
 function pushPaymentDrawnUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (!isRecord(message.successful_payment)) {
+  if (isRecord(message.successful_payment)) {
+    const chat = message.chat;
+    if (isRecord(chat) && chat.type === "private") {
+      pushVisiblePartyUrls(chat, undefined, urls);
+    }
+    const reply = message.reply_to_message;
+    if (!isRecord(reply) || !isRecord(reply.invoice)) {
+      return;
+    }
+    pushPlainUrls(reply.invoice.title, urls);
+    return;
+  }
+  if (!isRecord(message.refunded_payment)) {
     return;
   }
   const chat = message.chat;
   if (isRecord(chat) && chat.type === "private") {
-    pushVisiblePartyUrls(chat, undefined, urls);
+    pushFormattedUserUrls(chat, urls);
   }
-  const reply = message.reply_to_message;
-  if (!isRecord(reply) || !isRecord(reply.invoice)) {
-    return;
-  }
-  pushPlainUrls(reply.invoice.title, urls);
 }
 
 /**
