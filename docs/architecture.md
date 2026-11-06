@@ -123,7 +123,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 礼物卡片可以按群删除。规则 `gift_card` 默认关闭。见 ADR 0481。
 
-置顶提示可以按群删除。规则 `pin_notice` 默认关闭。见 ADR 0482。文字预览前 20 个码元和游戏标题里的短链交给已有的链接规则。见 ADR 0653。
+置顶提示可以按群删除。规则 `pin_notice` 默认关闭。见 ADR 0482。文字、账单说明、清单标题的前 20 个码元和游戏标题里的短链交给已有的链接规则。见 ADR 0653 与 ADR 0654。
 
 抽奖创建和私下结束可以按群删除。规则 `giveaway_notice` 默认关闭。见 ADR 0483。
 
