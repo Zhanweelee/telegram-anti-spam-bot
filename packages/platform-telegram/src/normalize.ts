@@ -4896,12 +4896,19 @@ function pushSenderChatUrls(
 /**
  * 真实助推提示上的发送者只留主机名。
  * 次数不是正整数时不读。用户名不读。普通消息的发送者不读。
+ * 发送者是聊天时，这行画聊天标题，不读 `from`。标题不截断。
+ * 用户仍按可见名字。名的长度大于 0 时不读姓。空白也算有名。
  */
 function pushBoostSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   if (!addedBoost(message)) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
