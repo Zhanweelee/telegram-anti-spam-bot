@@ -4881,6 +4881,7 @@ function pushBoostSenderUrls(
  * 改自动删除计时的人画出的全名只留主机名。
  * 秒数是大于等于 0 的安全整数时读。0 也读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 频道这行不画人，不读发送者。群和超级群仍按全名。
  * 秒数不读。用户名不读。普通消息的发送者不读。
  */
 function pushAutoDeleteSenderUrls(
@@ -4888,6 +4889,10 @@ function pushAutoDeleteSenderUrls(
   urls: string[],
 ): void {
   if (!autoDeleteNotice(message)) {
+    return;
+  }
+  const chat = message.chat;
+  if (isRecord(chat) && chat.type === "channel") {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
