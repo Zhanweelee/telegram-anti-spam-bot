@@ -5255,14 +5255,21 @@ function pushCommunitySenderUrls(
  * 交群或离开的人画出的全名只留主机名。
  * 换人要有新群主对象。离开只要是对象，空对象也读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
- * 空的换人对象、布尔值不读。新群主的名字仍按原来的正文，排在前面。
- * 用户编号不读。用户名不读。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。编号和本群相同时，新群主的名字排在前面。
+ * 用户仍按全名。空的换人对象、布尔值不读。
+ * 新群主的名字仍按原来的正文。用户编号不读。用户名不读。
  */
 function pushOwnerSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   if (changedOwner(message) === undefined) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);

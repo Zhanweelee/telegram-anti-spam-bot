@@ -91,7 +91,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 动社区的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0594。
 
-交群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0595。
+交群的人，名字只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0687。
 
 拉进视频聊天的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0596。
 
@@ -167,7 +167,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改群名的人画出的全名只留主机名，仍走 `links`。频道不读发送者。群里发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0683。
 
-交群或离开的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0633。
+交群或离开的人画出的全名只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0687。
 
 拉进视频聊天的人画出的全名只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0676。
 
