@@ -5450,21 +5450,19 @@ function pushGiftSenderUrls(
 }
 
 /**
- * 拒绝建议帖的人只留主机名。
- * `suggested_post_declined` 是对象时读。空对象也读。
- * 这行画频道名或话题用户，不画消息发送者。
- * 发送者是聊天时不读 `from`，也不读这个聊天的标题。
- * 别的聊天的标题仍由通用代发规则读取。用户仍只读名。
- * 布尔值不读。说明仍按原来的正文。嵌套的原帖不读。用户名不读。
+ * 拒绝建议帖画的是频道名或话题用户，不画消息发送者。
+ * `suggested_post_declined` 是对象时，不从 `from` 留主机名，也不从发送者标题留主机名。
+ * 用户和聊天都一样。编号和本群相同也跳过。空对象也算拒绝。
+ * 别的聊天的标题仍由通用代发规则读取。
+ * 话题用户的全名仍按原来的规则。说明仍按正文。布尔值不读。用户名不读。
  */
 function pushDeclineSenderUrls(
   message: Record<string, unknown>,
-  urls: string[],
+  _urls: string[],
 ): void {
-  if (!declinedPost(message) || isRecord(message.sender_chat)) {
+  if (!declinedPost(message)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
 }
 
 /**
@@ -5521,23 +5519,22 @@ function dialogId(value: unknown): number | null {
 }
 
 /**
- * 通过、失败、付款或退款建议帖的人只留主机名。
- * 通过要有大于等于 0 的发表时间。失败要有价格对象，空对象也读。
+ * 通过、失败、付款或退款建议帖画的是频道名或话题用户，不画消息发送者。
+ * 通过要有大于等于 0 的发表时间。失败要有价格对象，空对象也算。
  * 付款只要 `XTR` 或 `TON`。退款只要删帖或退款原因。
- * 这行画频道名或话题用户，不画消息发送者。
- * 发送者是聊天时不读 `from`，也不读这个聊天的标题。
- * 别的聊天的标题仍由通用代发规则读取。用户仍只读名。
- * 空对象、负数、其它币种、其它原因和布尔值不读。
- * 同时出现时先认通过。嵌套的原帖不读。用户名不读。
+ * 这些提示不从 `from` 留主机名，也不从发送者标题留主机名。
+ * 用户和聊天都一样。编号和本群相同也跳过。
+ * 别的聊天的标题仍由通用代发规则读取。
+ * 话题用户的全名仍按原来的规则。同时出现时先认通过。
+ * 空对象、负数、其它币种、其它原因和布尔值不读。用户名不读。
  */
 function pushPostSenderUrls(
   message: Record<string, unknown>,
-  urls: string[],
+  _urls: string[],
 ): void {
-  if (suggestedPost(message) === undefined || isRecord(message.sender_chat)) {
+  if (suggestedPost(message) === undefined) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
 }
 
 /**
