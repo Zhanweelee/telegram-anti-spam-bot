@@ -87,7 +87,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改名的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0592。
 
-换背景的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0593。
+换背景的人，名字只留主机名，仍走 `links`。发送者是聊天时不读。名字里的关键词不命中。见 ADR 0673。
 
 动社区的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0594。
 
