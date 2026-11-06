@@ -41416,6 +41416,118 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the topic title drawn on a reply", async () => {
+    const phrase = "请免费领取礼品";
+    const renamed = await normalize({
+      update_id: 80241,
+      message: {
+        message_id: 80241,
+        date: 1761955200,
+        chat: { id: -10080241, type: "supergroup", title: "本群" },
+        from: { id: 80241, first_name: "https://example.com/speaker80241" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802411,
+          date: 1761955100,
+          chat: { id: -10080241, type: "supergroup" },
+          forum_topic_edited: {
+            name: `https://bit.ly/topic80241 ${phrase}`,
+            icon_custom_emoji_id: "https://tinyurl.com/icon80241",
+          },
+        },
+      },
+    });
+    expect(renamed.status).toBe("event");
+    if (renamed.status !== "event") {
+      return;
+    }
+    expect(renamed.event.message?.text).toBe("你好");
+    expect(renamed.event.message?.hosts).toEqual(["bit.ly"]);
+    const renamedDump = JSON.stringify(renamed.event);
+    expect(renamedDump).not.toContain(phrase);
+    expect(renamedDump).not.toContain("topic80241");
+    expect(renamedDump).not.toContain("icon80241");
+    expect(renamedDump).not.toContain("speaker80241");
+    expect(renamedDump).not.toContain("tinyurl");
+    expect(renamedDump).not.toContain("example.com");
+    expect(renamedDump).toContain("bit.ly");
+
+    const icon = await normalize({
+      update_id: 80242,
+      message: {
+        message_id: 80242,
+        date: 1761955200,
+        chat: { id: -10080242, type: "supergroup" },
+        from: { id: 80242, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802421,
+          date: 1761955100,
+          chat: { id: -10080242, type: "supergroup" },
+          forum_topic_edited: {
+            icon_custom_emoji_id: "https://bit.ly/icon80242",
+          },
+        },
+      },
+    });
+    expect(icon.status).toBe("event");
+    if (icon.status !== "event") {
+      return;
+    }
+    expect(icon.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(icon.event)).not.toContain("icon80242");
+    expect(JSON.stringify(icon.event)).not.toContain("bit.ly");
+
+    const created = await normalize({
+      update_id: 80243,
+      message: {
+        message_id: 80243,
+        date: 1761955200,
+        chat: { id: -10080243, type: "supergroup" },
+        from: { id: 80243, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802431,
+          date: 1761955100,
+          chat: { id: -10080243, type: "supergroup" },
+          forum_topic_created: { name: "https://bit.ly/new80243" },
+        },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(created.event)).not.toContain("new80243");
+    expect(JSON.stringify(created.event)).not.toContain("bit.ly");
+
+    const quoted = await normalize({
+      update_id: 80244,
+      message: {
+        message_id: 80244,
+        date: 1761955200,
+        chat: { id: -10080244, type: "supergroup" },
+        from: { id: 80244, first_name: "Ada" },
+        text: "你好",
+        quote: { text: "摘录", position: 0 },
+        reply_to_message: {
+          message_id: 802441,
+          date: 1761955100,
+          chat: { id: -10080244, type: "supergroup" },
+          forum_topic_edited: { name: "https://bit.ly/topic80244" },
+        },
+      },
+    });
+    expect(quoted.status).toBe("event");
+    if (quoted.status !== "event") {
+      return;
+    }
+    expect(quoted.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(quoted.event)).not.toContain("topic80244");
+    expect(JSON.stringify(quoted.event)).not.toContain("bit.ly");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
