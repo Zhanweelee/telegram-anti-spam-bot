@@ -191,7 +191,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 小程序按钮文字命中同一组模式时删除。`/rule <chatId> web_app_button_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0546。
 
-手动引用命中同一组模式时删除。`/rule <chatId> quote_text_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0547。
+手动引用命中同一组模式时删除。`/rule <chatId> quote_text_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0547。引用上的文字链接后来由 ADR 0732 不能越过正文。
 
 礼物附言命中同一组模式时删除。`/rule <chatId> gift_text_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0548。
 

@@ -11684,6 +11684,115 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a quote link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80761,
+      message: {
+        message_id: 80761,
+        date: 1761955200,
+        chat: { id: -10080761, type: "supergroup" },
+        from: { id: 80761, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "引",
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/qt80761",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.quoteText).toBe("引");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("qt80761");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80762,
+      message: {
+        message_id: 80762,
+        date: 1761955200,
+        chat: { id: -10080762, type: "supergroup" },
+        from: { id: 80762, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "https://tinyurl.com/plain80762",
+          is_manual: true,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/qt80762",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80762",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.quoteText).toBe(
+      "https://tinyurl.com/plain80762",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("qt80762");
+    expect(keptDump).not.toContain("late80762");
+    expect(keptDump).not.toContain("evil.example");
+
+    const automatic = await normalize({
+      update_id: 80763,
+      message: {
+        message_id: 80763,
+        date: 1761955200,
+        chat: { id: -10080763, type: "supergroup" },
+        from: { id: 80763, first_name: "Ada" },
+        text: "站会",
+        quote: {
+          text: "摘",
+          entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/auto80763",
+            },
+          ],
+        },
+      },
+    });
+    expect(automatic.status).toBe("event");
+    if (automatic.status !== "event") {
+      return;
+    }
+    expect(automatic.event.message?.text).toBe("站会");
+    expect(automatic.event.message?.quoteText).toBeUndefined();
+    expect(automatic.event.message?.hosts).toBeUndefined();
+    const automaticDump = JSON.stringify(automatic.event);
+    expect(automaticDump).not.toContain("auto80763");
+    expect(automaticDump).not.toContain("bit.ly");
+  });
+
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80741,
