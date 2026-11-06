@@ -4944,8 +4944,9 @@ function pushAutoDeleteSenderUrls(
 /**
  * 改价提示上画出的名字只留主机名。
  * 付费发言的星星数量大于等于 0 时读。私信开关正好是布尔值时读。
- * 发送者是频道时，这行画频道标题，不读发送者。标题里的空格不截断。
- * 其他人仍按全名。名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 发送者是聊天时，这行画这个聊天的标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。用户仍按全名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 同时出现时先认付费发言。星星数量和开关不读。用户名不读。
  */
 function pushPriceSenderUrls(
@@ -4956,7 +4957,7 @@ function pushPriceSenderUrls(
     return;
   }
   const sender = message.sender_chat;
-  if (isRecord(sender) && sender.type === "channel") {
+  if (isRecord(sender)) {
     pushPlainUrls(sender.title, urls);
     return;
   }
