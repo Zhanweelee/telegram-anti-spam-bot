@@ -642,7 +642,14 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
     } else {
       lists.push(poll.explanation_entities);
     }
-    lists.push(poll.description_entities);
+    if (typeof poll.description === "string") {
+      // 自定义表情必须整段落在投票描述里。
+      lists.push(
+        fittingEmoji(poll.description_entities, poll.description.length),
+      );
+    } else {
+      lists.push(poll.description_entities);
+    }
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (!isRecord(option)) {
