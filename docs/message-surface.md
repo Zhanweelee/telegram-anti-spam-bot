@@ -80,7 +80,7 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 `poll_option_added.option_text` 是非空字符串时，消息带 `pollNotice: "added"`。`poll_option_deleted.option_text` 满足同样条件时带 `deleted`。同时出现时先认新加。空字符串落到另一种。选项编号和原投票不进事件。选项文字仍按 ADR 0089 成为正文。空对象和布尔值不带这个标记。投票题干不带这个标记。规则 `poll_notice` 默认关闭。见 ADR 0494。
 
-`checklist_tasks_added.tasks` 里至少有一条非空文字时，消息带 `asChecklistAdded`。任务编号、完成者名字和原清单不进事件。任务文字仍按 ADR 0089 成为正文。四条起只读前三条。见 ADR 0660。后加任务上的文字链接后来由 ADR 0727 不能越过正文。空数组、只有空文字和布尔值不带这个标记。已有正文时正文不变。完成和取消完成不带这个标记。规则 `checklist_added` 默认关闭。见 ADR 0495。
+`checklist_tasks_added.tasks` 里至少有一条非空文字时，消息带 `asChecklistAdded`。任务编号、完成者名字和原清单不进事件。任务文字仍按 ADR 0089 成为正文。四条起只读前三条。见 ADR 0660。后加任务上的文字链接后来由 ADR 0727 不能越过正文。后加任务上的文字链接后来由 ADR 0776 要求长度大于 0。空数组、只有空文字和布尔值不带这个标记。已有正文时正文不变。完成和取消完成不带这个标记。规则 `checklist_added` 默认关闭。见 ADR 0495。
 
 `forum_topic_created.name` 是非空字符串时，消息带 `topicNotice: "created"`。`forum_topic_edited.name` 是非空字符串，或 `icon_custom_emoji_id` 是字符串时，带 `edited`。同时出现时先认新建。空的新建名字落到改名。图标颜色和自定义表情编号不进事件。话题名仍按 ADR 0088 成为正文。空对象和布尔值不带这个标记。`is_name_implicit` 不改变这个标记。关掉和重开不带这个标记。规则 `topic_notice` 默认关闭。见 ADR 0496。
 
@@ -340,7 +340,7 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 已有别的正文时，`suggested_post_declined.comment` 去掉空白后的前 128 字另留在 `declineComment`。关键词或默认正则命中时删除。第 129 字起不进事件。嵌套的 `suggested_post_message` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0551。
 
-已有别的正文时，`poll_option_added.option_text` 或 `poll_option_deleted.option_text` 去掉空白后的前 100 字另留在 `addedText`。没有选项时，`checklist_tasks_added` 里会画出来的任务文字用空格拼起来，前 3029 字另留在同一个字段。四条起只拼前三条。先看新选项，再看被删选项，再看新任务。关键词或默认正则命中时删除。更后面的字不进事件。选项编号、原投票、原清单和完成者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。后加或删除的选项上的文字链接后来由 ADR 0775 要求长度大于 0。
+已有别的正文时，`poll_option_added.option_text` 或 `poll_option_deleted.option_text` 去掉空白后的前 100 字另留在 `addedText`。没有选项时，`checklist_tasks_added` 里会画出来的任务文字用空格拼起来，前 3029 字另留在同一个字段。四条起只拼前三条。先看新选项，再看被删选项，再看新任务。关键词或默认正则命中时删除。更后面的字不进事件。选项编号、原投票、原清单和完成者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。后加或删除的选项上的文字链接后来由 ADR 0775 要求长度大于 0。后加任务上的文字链接后来由 ADR 0776 要求长度大于 0。
 
 已有别的正文时，`forward_origin` 为 `hidden_user` 的 `sender_user_name`，或旧字段 `forward_sender_name`，去掉空白后的前 4096 字另留在 `hiddenName`。先看现代字段，再看旧字段。关键词或默认正则命中时删除。第 4097 字起不进事件。频道标题、真实用户姓名、来源签名和外部回复不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0553。
 

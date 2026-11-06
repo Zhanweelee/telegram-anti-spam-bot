@@ -227,7 +227,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `decline_comment_regex` 默认打开。拒绝建议帖的说明命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0551。
 
-`added_text_regex` 默认打开。后加的投票选项或清单任务命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。后加或删除的选项上的文字链接后来由 ADR 0775 要求长度大于 0。
+`added_text_regex` 默认打开。后加的投票选项或清单任务命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。后加或删除的选项上的文字链接后来由 ADR 0775 要求长度大于 0。后加任务上的文字链接后来由 ADR 0776 要求长度大于 0。
 
 `hidden_name_regex` 默认打开。隐藏转发的显示名命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0553。
 
@@ -313,7 +313,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `poll_notice` 在 `packages/detectors-poll`。`message.pollNotice` 是后加或删除选项时返回 score 1。证据是 `poll:` 加这一种。选项编号和原投票不进证据。选项文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。投票题干仍不带这个标记。见 ADR 0494。
 
-`checklist_added` 在 `packages/detectors-task`。只在 `message.asChecklistAdded` 为 true 时返回 score 1。证据是 `checklist:added`。任务编号、完成者名字和原清单不进证据。任务文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种提示。完成和取消完成仍由 `checklist_notice` 决定。见 ADR 0495。后加任务上的文字链接后来由 ADR 0727 不能越过正文。
+`checklist_added` 在 `packages/detectors-task`。只在 `message.asChecklistAdded` 为 true 时返回 score 1。证据是 `checklist:added`。任务编号、完成者名字和原清单不进证据。任务文字仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这种提示。完成和取消完成仍由 `checklist_notice` 决定。见 ADR 0495。后加任务上的文字链接后来由 ADR 0727 不能越过正文。后加任务上的文字链接后来由 ADR 0776 要求长度大于 0。
 
 `topic_notice` 在 `packages/detectors-topic`。`message.topicNotice` 是新建或改名时返回 score 1。证据是 `topic:` 加这一种。图标颜色和自定义表情编号不进证据。话题名仍是正文。规则默认关闭。私聊 `/rule` 打开后删除这两种提示。关掉和重开仍由 `forum_notice` 决定。见 ADR 0496。
 
