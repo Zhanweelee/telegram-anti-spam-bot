@@ -29207,6 +29207,148 @@ describe("normalizeUpdate", () => {
     }
   });
 
+  it("keeps only the hostname from the task drawn on a checklist notice", async () => {
+    const drawn = await normalize({
+      update_id: 79505,
+      message: {
+        message_id: 79505,
+        date: 1761955200,
+        chat: { id: -10079505, type: "supergroup", title: "机密群名" },
+        from: { id: 1, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [2, 3],
+          marked_as_not_done_task_ids: [1],
+          checklist_message: {
+            message_id: 88079505,
+            text: "https://ow.ly/body79505",
+            checklist: {
+              title: "https://cutt.ly/title79505",
+              tasks: [
+                { id: 1, text: "https://tinyurl.com/open79505" },
+                {
+                  id: 2,
+                  text: "https://bit.ly/done79505",
+                  text_entities: [
+                    { type: "text_link", url: "https://is.gd/link79505" },
+                  ],
+                },
+                { id: 3, text: "https://ow.ly/next79505" },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.checklistNotice).toBe("done");
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly", "is.gd"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).not.toContain("done79505");
+    expect(drawnDump).not.toContain("link79505");
+    expect(drawnDump).not.toContain("open79505");
+    expect(drawnDump).not.toContain("next79505");
+    expect(drawnDump).not.toContain("tinyurl");
+    expect(drawnDump).not.toContain("ow.ly");
+    expect(drawnDump).not.toContain("title79505");
+    expect(drawnDump).not.toContain("cutt.ly");
+    expect(drawnDump).not.toContain("body79505");
+    expect(drawnDump).not.toContain("88079505");
+    expect(drawnDump).not.toContain("机密群名");
+
+    const undone = await normalize({
+      update_id: 79506,
+      message: {
+        message_id: 79506,
+        date: 1761955200,
+        chat: { id: -10079506, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_not_done_task_ids: [7, 8],
+          checklist_message: {
+            checklist: {
+              tasks: [
+                { id: 8, text: "https://tinyurl.com/later79506" },
+                { id: 7, text: "https://bit.ly/open79506" },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(undone.status).toBe("event");
+    if (undone.status !== "event") {
+      return;
+    }
+    expect(undone.event.message?.checklistNotice).toBe("undone");
+    expect(undone.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(undone.event)).not.toContain("open79506");
+    expect(JSON.stringify(undone.event)).not.toContain("later79506");
+    expect(JSON.stringify(undone.event)).not.toContain("tinyurl");
+
+    const blocked = await normalize({
+      update_id: 79507,
+      message: {
+        message_id: 79507,
+        date: 1761955200,
+        chat: { id: -10079507, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: ["2"],
+          marked_as_not_done_task_ids: [2],
+          checklist_message: {
+            checklist: {
+              tasks: [{ id: 2, text: "https://bit.ly/block79507" }],
+            },
+          },
+        },
+      },
+    });
+    expect(blocked.status).toBe("event");
+    if (blocked.status !== "event") {
+      return;
+    }
+    expect(blocked.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blocked.event)).not.toContain("block79507");
+    expect(JSON.stringify(blocked.event)).not.toContain("bit.ly");
+
+    const missing = await normalize({
+      update_id: 79508,
+      message: {
+        message_id: 79508,
+        date: 1761955200,
+        chat: { id: -10079508, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [4],
+          checklist_message: {
+            text: "https://bit.ly/miss79508",
+            checklist: {
+              title: "https://tinyurl.com/title79508",
+              tasks: [{ id: 9, text: "https://ow.ly/other79508" }],
+            },
+          },
+        },
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.checklistNotice).toBe("done");
+    expect(missing.event.message?.hosts).toBeUndefined();
+    const missingDump = JSON.stringify(missing.event);
+    expect(missingDump).not.toContain("miss79508");
+    expect(missingDump).not.toContain("title79508");
+    expect(missingDump).not.toContain("other79508");
+    expect(missingDump).not.toContain("bit.ly");
+    expect(missingDump).not.toContain("tinyurl");
+    expect(missingDump).not.toContain("ow.ly");
+  });
+
   it("marks a checklist notice and leaves the tasks out", async () => {
     const title = "勾完的广告事项";
     const actor = "勾任务的人";

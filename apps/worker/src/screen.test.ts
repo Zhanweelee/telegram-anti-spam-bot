@@ -13197,6 +13197,129 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(otherReason)).not.toContain("why6249");
   });
 
+  it("deletes a short link in the task drawn on a checklist notice", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(updateId: number, extra: Record<string, unknown>) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "supergroup",
+              title: "机密群名",
+            },
+            from: { id: 126, first_name: "Ada" },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79505, {
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [2, 3],
+        checklist_message: {
+          message_id: 88079505,
+          text: "https://ow.ly/body79505",
+          checklist: {
+            title: "https://tinyurl.com/title79505",
+            tasks: [
+              { id: 3, text: "https://cutt.ly/next79505" },
+              { id: 2, text: `https://bit.ly/done79505 ${phrase}` },
+            ],
+          },
+        },
+      },
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.checklistNotice).toBe("done");
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("checklist_notice");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079505", messageId: "79505" },
+    ]);
+    const namedDump = JSON.stringify({
+      event: named,
+      decision: removed.decision,
+    });
+    expect(namedDump).not.toContain("done79505");
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("next79505");
+    expect(namedDump).not.toContain("title79505");
+    expect(namedDump).not.toContain("body79505");
+    expect(namedDump).not.toContain("cutt.ly");
+    expect(namedDump).not.toContain("tinyurl");
+    expect(namedDump).not.toContain("ow.ly");
+    expect(namedDump).not.toContain("88079505");
+    expect(namedDump).not.toContain("机密群名");
+
+    const words = await posted(79506, {
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [1],
+        checklist_message: {
+          checklist: {
+            tasks: [{ id: 1, text: phrase }],
+          },
+        },
+      },
+    });
+    expect(words.message?.text).toBe("");
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await screenTelegramEvent(words, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(JSON.stringify(words)).not.toContain(phrase);
+
+    const paid = await posted(79507, {
+      is_paid_post: true,
+      checklist_tasks_done: {
+        marked_as_done_task_ids: [1],
+        checklist_message: {
+          checklist: {
+            tasks: [{ id: 1, text: "https://bit.ly/paid79507" }],
+          },
+        },
+      },
+    });
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paidHit.decision)).not.toContain("paid79507");
+  });
+
   it("deletes a short link in a checklist sender name", async () => {
     const phrase = "请免费领取礼品";
     const nested = "原清单机密";
