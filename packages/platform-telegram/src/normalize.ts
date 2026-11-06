@@ -4639,8 +4639,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         pushPollAdderUrls(option, urls);
       }
     }
-    // 文字链接的起点必须落在测验说明里。
-    pushDrawnLine(poll.explanation, poll.explanation_entities, urls);
+    // 文字链接的起点必须落在测验说明里，长度必须大于 0。
+    pushPlainUrls(poll.explanation, urls);
+    pushTextLinks(
+      typeof poll.explanation === "string"
+        ? drawnTextLink(poll.explanation_entities, poll.explanation.length)
+        : poll.explanation_entities,
+      urls,
+    );
     // 文字链接的起点必须落在这段描述里。被截掉的尾巴仍从整段描述抽取。
     pushDrawnLine(poll.description, poll.description_entities, urls);
     pushPollMedia(poll.media, urls);
