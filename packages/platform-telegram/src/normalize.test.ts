@@ -16753,8 +16753,191 @@ describe("normalizeUpdate", () => {
     }
     expect(gifted.event.message?.text).toBe("站会");
     expect(gifted.event.message?.giftText).toBe("礼");
-    expect(gifted.event.message?.asTextMention).toBe(true);
+    expect(gifted.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(gifted.event)).not.toContain("77081341");
+  });
+
+  it("skips a gift text mention that starts outside the caption", async () => {
+    const user = { id: 77081371, first_name: "隐名壬", username: "user77097" };
+    const mention = (offset: number, length: number) => [
+      { type: "text_mention", offset, length, user },
+    ];
+    const gifted = (
+      id: number,
+      field: "gift" | "unique_gift" | "gift_upgrade_sent",
+      gift: Record<string, unknown>,
+      extra: Record<string, unknown> = { text: "站会" },
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...extra,
+        [field]: gift,
+      },
+    });
+
+    const past = await normalize(
+      gifted(81371, "gift", { text: "礼", entities: mention(1, 1) }),
+    );
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.giftText).toBe("礼");
+    expect(past.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("77081371");
+
+    const empty = await normalize(
+      gifted(81372, "gift", { text: "", entities: mention(0, 1) }),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.giftText).toBeUndefined();
+    expect(empty.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("77081371");
+
+    const zero = await normalize(
+      gifted(81373, "gift", { text: "礼", entities: mention(0, 0) }),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(zero.event)).not.toContain("77081371");
+
+    const negative = await normalize(
+      gifted(81374, "gift", { text: "礼", entities: mention(-1, 1) }),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("77081371");
+
+    const clamped = await normalize(
+      gifted(81375, "gift", { text: "礼", entities: mention(0, 2) }),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.giftText).toBe("礼");
+    expect(clamped.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(clamped.event)).not.toContain("77081371");
+
+    const wide = await normalize(
+      gifted(81376, "gift", {
+        text: "礼".repeat(100),
+        entities: mention(99, 1),
+      }),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.giftText).toHaveLength(100);
+    expect(wide.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("77081371");
+
+    const beside = await normalize(
+      gifted(81377, "gift", {
+        text: "礼".repeat(129),
+        entities: mention(128, 1),
+      }),
+    );
+    expect(beside.status).toBe("event");
+    if (beside.status !== "event") {
+      return;
+    }
+    expect(beside.event.message?.text).toBe("站会");
+    expect(beside.event.message?.giftText).toHaveLength(128);
+    expect(beside.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(beside.event)).not.toContain("77081371");
+
+    const stored = await normalize(
+      gifted(
+        81378,
+        "gift",
+        { text: "礼".repeat(4097), entities: mention(4096, 1) },
+        {},
+      ),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.text).toHaveLength(4096);
+    expect(stored.event.message?.giftText).toBeUndefined();
+    expect(stored.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("77081371");
+
+    const loose = await normalize(
+      gifted(81379, "gift", { entities: mention(9, 2) }),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("77081371");
+
+    const unique = await normalize(
+      gifted(81380, "unique_gift", { text: "礼", entities: mention(1, 1) }),
+    );
+    expect(unique.status).toBe("event");
+    if (unique.status !== "event") {
+      return;
+    }
+    expect(unique.event.message?.giftText).toBe("礼");
+    expect(unique.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(unique.event)).not.toContain("77081371");
+
+    const upgraded = await normalize(
+      gifted(81381, "gift_upgrade_sent", {
+        text: "礼",
+        entities: mention(0, 1),
+      }),
+    );
+    expect(upgraded.status).toBe("event");
+    if (upgraded.status !== "event") {
+      return;
+    }
+    expect(upgraded.event.message?.giftText).toBe("礼");
+    expect(upgraded.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(upgraded.event)).not.toContain("77081371");
+
+    const played = await normalize({
+      update_id: 81382,
+      message: {
+        message_id: 81382,
+        date: 1761955200,
+        chat: { id: -10081382, type: "supergroup" },
+        from: { id: 81382, first_name: "Ada" },
+        text: "站会",
+        game: {
+          title: "游戏",
+          text: "游",
+          text_entities: mention(1, 1),
+        },
+      },
+    });
+    expect(played.status).toBe("event");
+    if (played.status !== "event") {
+      return;
+    }
+    expect(played.event.message?.text).toBe("站会");
+    expect(played.event.message?.gameText).toBe("游");
+    expect(played.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(played.event)).not.toContain("77081371");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {

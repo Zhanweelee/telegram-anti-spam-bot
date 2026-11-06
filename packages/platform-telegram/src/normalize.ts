@@ -619,7 +619,13 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
-    if (isRecord(gift)) {
+    if (!isRecord(gift)) {
+      continue;
+    }
+    if (typeof gift.text === "string") {
+      // 按标识提及的起点必须落在礼物附言里。
+      lists.push(drawnMention(gift.entities, gift.text.length));
+    } else {
       lists.push(gift.entities);
     }
   }
