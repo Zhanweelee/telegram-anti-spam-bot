@@ -4967,13 +4967,17 @@ function pushPriceSenderUrls(
 /**
  * 置顶提示上画出的发送者全名只留主机名。
  * 被置顶的原文不是这条服务消息。消息号不是大于 0 的安全整数时不读。
- * 用户名不读。普通消息的发送者不读。
+ * 发送者是聊天时，Android 画的是本群群名，不是占位用户。本群群名仍不读。
+ * 别的聊天的标题仍由通用代发规则读取。用户名不读。普通消息的发送者不读。
  */
 function pushPinSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   if (!pinnedNotice(message)) {
+    return;
+  }
+  if (isRecord(message.sender_chat)) {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
