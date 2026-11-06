@@ -205,7 +205,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `performer_regex` 默认打开。标题旁边的音频表演者命中同一份正则时删除。表演者干净，或表演者自己就是正文时，仍留下。见 ADR 0540。
 
-`game_text_regex` 和 `invoice_text_regex` 默认打开。游戏说明、附加文字和账单说明命中同一份正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0541。游戏附加文字上的文字链接后来由 ADR 0733 不能越过正文。
+`game_text_regex` 和 `invoice_text_regex` 默认打开。游戏说明、附加文字和账单说明命中同一份正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0541。游戏附加文字上的文字链接后来由 ADR 0733 不能越过正文。游戏附加文字上的文字链接后来由 ADR 0770 要求长度大于 0。
 
 `venue_address_regex` 默认打开。地点地址命中同一份正则时删除。地址干净，或地址自己就是正文时，仍留下。见 ADR 0542。
 

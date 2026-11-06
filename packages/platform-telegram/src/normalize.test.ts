@@ -12942,8 +12942,215 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(played.event.message?.text).toBe("站会");
-    expect(played.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(played.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(played.event)).not.toContain("game81583");
+    expect(JSON.stringify(played.event)).not.toContain("bit.ly");
+  });
+
+  it("skips a game text link whose length is not positive", async () => {
+    const link = (length: number, url: string) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const played = (
+      id: number,
+      text: unknown,
+      entities: Record<string, unknown>[],
+      extra: Record<string, unknown> = { text: "站会" },
+      description?: string,
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...extra,
+        game: {
+          title: "玩",
+          ...(description === undefined ? {} : { description }),
+          ...(text === undefined ? {} : { text }),
+          text_entities: entities,
+        },
+      },
+    });
+
+    const zero = await normalize(
+      played(81601, "附", [link(0, "https://bit.ly/game81601")]),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("站会");
+    expect(zero.event.message?.gameText).toBe("附");
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("game81601");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      played(81602, "附", [link(-1, "https://bit.ly/game81602")]),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("game81602");
+
+    const fraction = await normalize(
+      played(81603, "附", [link(1.5, "https://bit.ly/game81603")]),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("game81603");
+
+    const clamped = await normalize(
+      played(81604, "附", [link(2, "https://bit.ly/game81604")]),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.gameText).toBe("附");
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("game81604");
+
+    const plain = await normalize(
+      played(
+        81605,
+        "https://example.com/plain81605",
+        [link(0, "https://bit.ly/game81605")],
+        {},
+      ),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("玩");
+    expect(plain.event.message?.gameText).toBe("https://example.com/plain81605");
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).toContain("plain81605");
+    expect(plainDump).not.toContain("game81605");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      played(81606, "附", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 0,
+          language: "https://bit.ly/game81606",
+        },
+      ]),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("game81606");
+
+    const keptCode = await normalize(
+      played(81607, "附", [
+        {
+          type: "pre",
+          offset: 0,
+          length: 1,
+          language: "https://bit.ly/game81607",
+        },
+      ]),
+    );
+    expect(keptCode.status).toBe("event");
+    if (keptCode.status !== "event") {
+      return;
+    }
+    expect(keptCode.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptCode.event)).not.toContain("game81607");
+
+    const beside = await normalize(
+      played(81608, "附".repeat(4097), [
+        {
+          type: "text_link",
+          offset: 4096,
+          length: 1,
+          url: "https://bit.ly/game81608",
+        },
+      ]),
+    );
+    expect(beside.status).toBe("event");
+    if (beside.status !== "event") {
+      return;
+    }
+    expect(beside.event.message?.text).toBe("站会");
+    expect(beside.event.message?.gameText).toHaveLength(4096);
+    expect(beside.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(beside.event)).not.toContain("game81608");
+
+    const shifted = await normalize(
+      played(81609, "附", [link(0, "https://bit.ly/game81609")], { text: "站会" }, "说明"),
+    );
+    expect(shifted.status).toBe("event");
+    if (shifted.status !== "event") {
+      return;
+    }
+    expect(shifted.event.message?.gameText).toBe("说明 附");
+    expect(shifted.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(shifted.event)).not.toContain("game81609");
+
+    const keptShift = await normalize(
+      played(81610, "附", [link(1, "https://bit.ly/game81610")], { text: "站会" }, "说明"),
+    );
+    expect(keptShift.status).toBe("event");
+    if (keptShift.status !== "event") {
+      return;
+    }
+    expect(keptShift.event.message?.gameText).toBe("说明 附");
+    expect(keptShift.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptShift.event)).not.toContain("game81610");
+
+    const loose = await normalize(
+      played(81611, undefined, [link(0, "https://bit.ly/game81611")]),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(loose.event)).not.toContain("game81611");
+
+    const explained = await normalize({
+      update_id: 81612,
+      message: {
+        message_id: 81612,
+        date: 1761955200,
+        chat: { id: -10081612, type: "supergroup" },
+        from: { id: 81612, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          question: "题",
+          explanation: "解",
+          explanation_entities: [link(0, "https://bit.ly/ask81612")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      },
+    });
+    expect(explained.status).toBe("event");
+    if (explained.status !== "event") {
+      return;
+    }
+    expect(explained.event.message?.text).toBe("站会");
+    expect(explained.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(explained.event)).not.toContain("ask81612");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
