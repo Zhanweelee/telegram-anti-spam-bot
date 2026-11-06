@@ -30464,6 +30464,269 @@ describe("normalizeUpdate", () => {
     expect(zero.event.message?.text).toBe("今天站会");
   });
 
+  it("keeps only the hostname from the name drawn on a passport notice", async () => {
+    const phrase = "请免费领取礼品";
+    const papers = {
+      data: [
+        {
+          type: "email",
+          email: "https://evil.example/mail79514",
+          data: "https://cutt.ly/enc79514",
+          hash: "hash79514",
+        },
+        {
+          type: "phone_number",
+          phone_number: "+12125550199",
+          hash: "phonehash79514",
+        },
+      ],
+      credentials: {
+        data: "cred79514",
+        hash: "credhash79514",
+        secret: "secret79514",
+      },
+    };
+    const drawn = await normalize({
+      update_id: 79514,
+      message: {
+        message_id: 79514,
+        date: 1761955200,
+        chat: {
+          id: 879514,
+          type: "private",
+          first_name: "https://bit.ly/peer79514",
+          last_name: phrase,
+          username: "https://tinyurl.com/user79514",
+          title: "https://ow.ly/room79514",
+        },
+        from: {
+          id: 83,
+          first_name: "https://tinyurl.com/from79514",
+          username: "t.co",
+        },
+        text: "你好",
+        passport_data: papers,
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("你好");
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).not.toContain(phrase);
+    expect(drawnDump).not.toContain("peer79514");
+    expect(drawnDump).not.toContain("user79514");
+    expect(drawnDump).not.toContain("from79514");
+    expect(drawnDump).not.toContain("room79514");
+    expect(drawnDump).not.toContain("mail79514");
+    expect(drawnDump).not.toContain("enc79514");
+    expect(drawnDump).not.toContain("12125550199");
+    expect(drawnDump).not.toContain("cred79514");
+    expect(drawnDump).not.toContain("secret79514");
+    expect(drawnDump).not.toContain("tinyurl");
+    expect(drawnDump).not.toContain("cutt.ly");
+    expect(drawnDump).not.toContain("ow.ly");
+    expect(drawnDump).not.toContain("evil.example");
+    expect(drawnDump).not.toContain("t.co");
+
+    const spaced = await normalize({
+      update_id: 79515,
+      message: {
+        message_id: 79515,
+        date: 1761955200,
+        chat: {
+          id: 879515,
+          type: "private",
+          first_name: "Go https://bit.ly/later79515",
+          last_name: "https://tinyurl.com/last79515",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("later79515");
+    expect(JSON.stringify(spaced.event)).not.toContain("last79515");
+    expect(JSON.stringify(spaced.event)).not.toContain("tinyurl");
+
+    const blank = await normalize({
+      update_id: 79516,
+      message: {
+        message_id: 79516,
+        date: 1761955200,
+        chat: {
+          id: 879516,
+          type: "private",
+          first_name: " ",
+          last_name: "https://bit.ly/blank79516",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank79516");
+
+    const surname = await normalize({
+      update_id: 79517,
+      message: {
+        message_id: 79517,
+        date: 1761955200,
+        chat: {
+          id: 879517,
+          type: "private",
+          first_name: "",
+          last_name: "https://bit.ly/last79517",
+          username: "https://tinyurl.com/user79517",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(surname.status).toBe("event");
+    if (surname.status !== "event") {
+      return;
+    }
+    expect(surname.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(surname.event)).not.toContain("last79517");
+    expect(JSON.stringify(surname.event)).not.toContain("user79517");
+    expect(JSON.stringify(surname.event)).not.toContain("tinyurl");
+
+    const onlyLast = await normalize({
+      update_id: 79518,
+      message: {
+        message_id: 79518,
+        date: 1761955200,
+        chat: {
+          id: 879518,
+          type: "private",
+          last_name: "https://bit.ly/only79518",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(onlyLast.status).toBe("event");
+    if (onlyLast.status !== "event") {
+      return;
+    }
+    expect(onlyLast.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(onlyLast.event)).not.toContain("only79518");
+
+    const group = await normalize({
+      update_id: 79519,
+      message: {
+        message_id: 79519,
+        date: 1761955200,
+        chat: {
+          id: -10079519,
+          type: "supergroup",
+          title: "https://bit.ly/grp79519",
+          first_name: "https://bit.ly/who79519",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(group.status).toBe("event");
+    if (group.status !== "event") {
+      return;
+    }
+    expect(group.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(group.event)).not.toContain("grp79519");
+    expect(JSON.stringify(group.event)).not.toContain("who79519");
+    expect(JSON.stringify(group.event)).not.toContain("bit.ly");
+
+    const flag = await normalize({
+      update_id: 79520,
+      message: {
+        message_id: 79520,
+        date: 1761955200,
+        chat: {
+          id: 879520,
+          type: "private",
+          first_name: "https://bit.ly/flag79520",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: true,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(flag.event)).not.toContain("flag79520");
+    expect(JSON.stringify(flag.event)).not.toContain("bit.ly");
+
+    const plain = await normalize({
+      update_id: 79521,
+      message: {
+        message_id: 79521,
+        date: 1761955200,
+        chat: {
+          id: 879521,
+          type: "private",
+          first_name: "https://bit.ly/plain79521",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+      },
+    });
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("你好");
+    expect(plain.event.message?.textSha256).toBe(drawn.event.message?.textSha256);
+    expect(plain.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(plain.event)).not.toContain("plain79521");
+    expect(JSON.stringify(plain.event)).not.toContain("bit.ly");
+
+    const renamed = await normalize({
+      update_id: 79522,
+      message: {
+        message_id: 79522,
+        date: 1761955200,
+        chat: {
+          id: 879522,
+          type: "private",
+          first_name: "Ada",
+          last_name: "https://bit.ly/ada79522",
+        },
+        from: { id: 83, first_name: "Ada" },
+        text: "你好",
+        passport_data: {},
+      },
+    });
+    expect(renamed.status).toBe("event");
+    if (renamed.status !== "event") {
+      return;
+    }
+    expect(renamed.event.message?.textSha256).toBe(
+      drawn.event.message?.textSha256,
+    );
+    expect(renamed.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(renamed.event)).not.toContain("ada79522");
+  });
+
   it("keeps only the hostname from the chat title drawn on a giveaway launch", async () => {
     const stars = 424242;
     const launched = await normalize({
