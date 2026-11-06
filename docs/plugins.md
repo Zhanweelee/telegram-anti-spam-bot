@@ -55,7 +55,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `poll_option_regex` 默认打开。投票选项命中同一份正则时删除。选项干净，或选项自己就是题干时，仍留下。见 ADR 0537。
 
-投票选项上画出的添加者名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0577。
+投票选项菜单上画出的添加者短名只留主机名，仍走 `links`。从下标 2 起的空格后面不读。群标题仍整段读。名字里的关键词不命中。见 ADR 0577 与 ADR 0662。
 
 清单任务上画出的完成者名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0578。
 

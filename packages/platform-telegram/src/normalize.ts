@@ -4660,15 +4660,19 @@ function pushPollMedia(media: unknown, urls: string[]): void {
 }
 
 /**
- * 投票选项上画出的添加者名字只留主机名。
- * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
- * 没有用户对象时只读群标题。名字不进正文。
+ * 投票选项菜单上画出的添加者短名只留主机名。
+ * 有名时不读姓。从下标 2 起的第一个空格后面不画。
+ * 没有用户对象时只读群标题，标题不截断。名字不进正文。
  */
 function pushPollAdderUrls(
   option: Record<string, unknown>,
   urls: string[],
 ): void {
-  pushVisiblePartyUrls(option.added_by_user, option.added_by_chat, urls);
+  if (isRecord(option.added_by_user)) {
+    pushPlainUrls(forcedFirstName(option.added_by_user), urls);
+    return;
+  }
+  pushVisiblePartyUrls(undefined, option.added_by_chat, urls);
 }
 
 /**
