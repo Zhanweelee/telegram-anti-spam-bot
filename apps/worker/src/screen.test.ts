@@ -11257,6 +11257,240 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(quiet)).not.toContain("tinyurl");
   });
 
+  it("deletes a short link beside a quoted forward", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      extra: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            text: "你好",
+            ...(paid ? { is_paid_post: true } : {}),
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const quoted = await posted(80151, {
+      quote: { text: `${phrase} https://example.com/quote80151`, position: 0 },
+      reply_to_message: {
+        message_id: 801511,
+        date: 1761955100,
+        chat: { id: -1080151, type: "supergroup", title: "机密群" },
+        from: {
+          id: 801512,
+          first_name: "https://tinyurl.com/who80151",
+          username: "forwarder80151",
+        },
+        forward_origin: {
+          type: "channel",
+          chat: {
+            id: -100801513,
+            type: "channel",
+            title: "https://bit.ly/chan80151",
+            username: "chanuser80151",
+          },
+          author_signature: "https://is.gd/sign80151",
+        },
+      },
+    });
+    expect(quoted.message?.hosts).toEqual(["tinyurl.com", "bit.ly"]);
+    const moderator = createMemoryModerator();
+    const hit = await screenTelegramEvent(quoted, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hit.decision.action).toBe("delete");
+    expect(JSON.stringify(hit.decision.evidence)).toContain(
+      "short_link:tinyurl.com",
+    );
+    expect(JSON.stringify(hit.decision.evidence)).not.toContain("bit.ly");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080151", messageId: "80151" },
+    ]);
+    const quotedDump = JSON.stringify(quoted);
+    expect(quotedDump).not.toContain(phrase);
+    expect(quotedDump).not.toContain("who80151");
+    expect(quotedDump).not.toContain("chan80151");
+    expect(quotedDump).not.toContain("chanuser80151");
+    expect(quotedDump).not.toContain("sign80151");
+    expect(quotedDump).not.toContain("quote80151");
+    expect(quotedDump).not.toContain("forwarder80151");
+    expect(quotedDump).not.toContain("example.com");
+    expect(quotedDump).not.toContain("is.gd");
+
+    const beside = await posted(80152, {
+      quote: { text: "摘录", position: 1 },
+      reply_to_message: {
+        message_id: 801521,
+        date: 1761955100,
+        chat: { id: -1080152, type: "supergroup" },
+        sender_chat: {
+          id: -100801522,
+          type: "supergroup",
+          title: "https://tinyurl.com/room80152",
+        },
+        from: { id: 801523, first_name: "https://example.com/fake80152" },
+        forward_origin: {
+          type: "user",
+          sender_user: {
+            id: 801524,
+            first_name: "https://bit.ly/user80152",
+          },
+        },
+      },
+    });
+    expect(beside.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const besideHit = await screenTelegramEvent(beside, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(besideHit.decision.action).toBe("delete");
+    expect(JSON.stringify(besideHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(besideHit.decision.evidence)).not.toContain(
+      "tinyurl",
+    );
+    expect(JSON.stringify(beside)).not.toContain("user80152");
+    expect(JSON.stringify(beside)).not.toContain("room80152");
+    expect(JSON.stringify(beside)).not.toContain("fake80152");
+
+    const plain = await posted(80153, {
+      reply_to_message: {
+        message_id: 801531,
+        date: 1761955100,
+        chat: { id: -1080153, type: "supergroup" },
+        from: { id: 801532, first_name: "https://tinyurl.com/forwarder80153" },
+        forward_origin: {
+          type: "channel",
+          chat: {
+            id: -100801533,
+            type: "channel",
+            title: "https://bit.ly/chan80153",
+          },
+        },
+      },
+    });
+    expect(plain.message?.hosts).toEqual(["bit.ly"]);
+    const plainHit = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainHit.decision.action).toBe("delete");
+    expect(JSON.stringify(plainHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(plain)).not.toContain("chan80153");
+    expect(JSON.stringify(plain)).not.toContain("forwarder80153");
+    expect(JSON.stringify(plain)).not.toContain("tinyurl");
+
+    const quiet = await posted(80154, {
+      quote: { text: "摘录", position: 0 },
+      reply_to_message: {
+        message_id: 801541,
+        date: 1761955100,
+        chat: { id: -1080154, type: "supergroup" },
+        from: {
+          id: 801542,
+          first_name: "https://example.com/quiet80154",
+          last_name: "https://t.me/durov",
+        },
+        forward_origin: {
+          type: "channel",
+          chat: { id: -100801543, type: "channel", title: "新闻" },
+        },
+      },
+    });
+    expect(quiet.message?.hosts).toEqual(["example.com", "t.me"]);
+    expect(quiet.message?.invites).toBeUndefined();
+    const quietKept = await screenTelegramEvent(quiet, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(quietKept.decision.action).toBe("allow");
+    expect(JSON.stringify(quiet)).not.toContain("quiet80154");
+
+    const paid = await posted(
+      80155,
+      {
+        quote: { text: "摘录", position: 0 },
+        reply_to_message: {
+          message_id: 801551,
+          date: 1761955100,
+          chat: { id: -1080155, type: "supergroup" },
+          from: { id: 801552, first_name: "https://bit.ly/paid80155" },
+          forward_origin: {
+            type: "chat",
+            sender_chat: {
+              id: -100801553,
+              type: "supergroup",
+              title: "新闻",
+            },
+          },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid80155");
+
+    const words = await posted(80156, {
+      quote: { text: "摘录", position: 0 },
+      reply_to_message: {
+        message_id: 801561,
+        date: 1761955100,
+        chat: { id: -1080156, type: "supergroup" },
+        from: { id: 801562, first_name: phrase },
+        forward_origin: {
+          type: "channel",
+          chat: { id: -100801563, type: "channel", title: "新闻" },
+        },
+      },
+    });
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await screenTelegramEvent(words, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(JSON.stringify(words)).not.toContain(phrase);
+  });
+
   it("deletes a short link in an external reply name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
