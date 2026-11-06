@@ -631,7 +631,12 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   const game = message.game;
   if (isRecord(game)) {
-    lists.push(game.text_entities);
+    if (typeof game.text === "string") {
+      // 按标识提及的起点必须落在游戏附加文字里。
+      lists.push(drawnMention(game.text_entities, game.text.length));
+    } else {
+      lists.push(game.text_entities);
+    }
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {
