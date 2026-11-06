@@ -34509,12 +34509,7 @@ describe("normalizeUpdate", () => {
     }
     expect(labeled.event.message?.text).toBe("今天站会");
     expect(labeled.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
-    expect(labeled.event.message?.hosts).toEqual([
-      "bit.ly",
-      "t.me",
-      "ow.ly",
-      "tinyurl.com",
-    ]);
+    expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.memberName).toBe(
       `${visible} https://ow.ly/last88 Ada`,
@@ -34593,7 +34588,7 @@ describe("normalizeUpdate", () => {
     }
     expect(alone.event.message?.text).toBe(names);
     expect(alone.event.message?.textSha256).toBe(await sha256Hex(names));
-    expect(alone.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(alone.event.message?.hosts).toEqual(["bit.ly"]);
     expect(alone.event.message?.memberName).toBeUndefined();
     const aloneDump = JSON.stringify(alone.event);
     expect(aloneDump).not.toContain(phrase);
@@ -41407,6 +41402,153 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("skips the message sender on a proximity alert", async () => {
+    const phrase = "请免费领取礼品";
+    const person = await normalize({
+      update_id: 80051,
+      message: {
+        message_id: 80051,
+        date: 1761955200,
+        chat: {
+          id: -10080051,
+          type: "supergroup",
+          title: `https://example.com/room80051 ${phrase}`,
+          username: "roomuser80051",
+        },
+        from: {
+          id: 80051,
+          first_name: "https://bit.ly/who80051",
+          last_name: "https://tinyurl.com/also80051",
+          username: "adder80051",
+        },
+        proximity_alert_triggered: {
+          distance: 0,
+          traveler: { id: 800511, first_name: "甲" },
+          watcher: { id: 800512, first_name: "乙" },
+        },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.asProximity).toBe(true);
+    expect(person.event.message?.text).toBe("甲 乙");
+    expect(person.event.message?.hosts).toBeUndefined();
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain(phrase);
+    expect(personDump).not.toContain("who80051");
+    expect(personDump).not.toContain("also80051");
+    expect(personDump).not.toContain("room80051");
+    expect(personDump).not.toContain("adder80051");
+    expect(personDump).not.toContain("roomuser80051");
+    expect(personDump).not.toContain("bit.ly");
+    expect(personDump).not.toContain("tinyurl");
+    expect(personDump).not.toContain("example.com");
+
+    const drawn = await normalize({
+      update_id: 80052,
+      message: {
+        message_id: 80052,
+        date: 1761955200,
+        chat: { id: -10080052, type: "group", title: "本群" },
+        from: {
+          id: 80052,
+          first_name: "https://tinyurl.com/who80052",
+          last_name: "https://cutt.ly/also80052",
+          username: "adder80052",
+        },
+        proximity_alert_triggered: {
+          distance: 4,
+          traveler: {
+            id: 800521,
+            first_name: "Go https://bit.ly/near80052",
+            last_name: "Lee",
+            username: "skip80052",
+          },
+          watcher: { id: 800522, first_name: "乙" },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("Go https://bit.ly/near80052 Lee 乙");
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).toContain("near80052");
+    expect(drawnDump).not.toContain("who80052");
+    expect(drawnDump).not.toContain("also80052");
+    expect(drawnDump).not.toContain("adder80052");
+    expect(drawnDump).not.toContain("skip80052");
+    expect(drawnDump).not.toContain("tinyurl");
+    expect(drawnDump).not.toContain("cutt.ly");
+
+    const other = await normalize({
+      update_id: 80053,
+      message: {
+        message_id: 80053,
+        date: 1761955200,
+        chat: { id: -10080053, type: "supergroup", title: "本群" },
+        sender_chat: {
+          id: -100800530,
+          type: "channel",
+          title: "https://bit.ly/other80053",
+          username: "other80053",
+        },
+        from: {
+          id: 80053,
+          is_bot: true,
+          first_name: "https://tinyurl.com/who80053",
+        },
+        proximity_alert_triggered: {
+          distance: 8,
+          traveler: { id: 800531, first_name: "甲" },
+          watcher: { id: 800532, first_name: "乙" },
+        },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("other80053");
+    expect(otherDump).not.toContain("who80053");
+    expect(otherDump).not.toContain("tinyurl");
+
+    const blank = await normalize({
+      update_id: 80054,
+      message: {
+        message_id: 80054,
+        date: 1761955200,
+        chat: { id: -10080054, type: "supergroup" },
+        from: {
+          id: 80054,
+          first_name: "   ",
+          last_name: "https://bit.ly/last80054",
+          username: "adder80054",
+        },
+        proximity_alert_triggered: {
+          distance: 1,
+          traveler: { id: 800541, first_name: "甲" },
+          watcher: { id: 800542, first_name: "乙" },
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    const blankDump = JSON.stringify(blank.event);
+    expect(blankDump).not.toContain("last80054");
+    expect(blankDump).not.toContain("adder80054");
+    expect(blankDump).not.toContain("bit.ly");
+  });
+
   it("reads the chat title when a chat sets a built-in theme", async () => {
     const phrase = "请免费领取礼品";
     const themed = await normalize({
@@ -42750,11 +42892,12 @@ describe("normalizeUpdate", () => {
     if (person.status !== "event") {
       return;
     }
-    expect(person.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(person.event.message?.hosts).toBeUndefined();
     const personDump = JSON.stringify(person.event);
     expect(personDump).not.toContain("who79874");
     expect(personDump).not.toContain("also79874");
     expect(personDump).not.toContain("adder79874");
+    expect(personDump).not.toContain("bit.ly");
     expect(personDump).not.toContain("tinyurl");
 
     const quiet = await normalize({
@@ -47205,7 +47348,7 @@ describe("normalizeUpdate", () => {
     expect(near.event.message?.text).toBe("触发79307 旁观");
     expect(near.event.message?.asCallInvite).toBeUndefined();
     expect(near.event.message?.asProximity).toBe(true);
-    expect(near.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(near.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(near.event)).not.toContain("skiplast79307");
     expect(JSON.stringify(near.event)).not.toContain("tinyurl");
     expect(JSON.stringify(near.event)).not.toContain("near79307");
@@ -47433,7 +47576,7 @@ describe("normalizeUpdate", () => {
     expect(near.event.message?.call).toBeUndefined();
     expect(near.event.message?.asProximity).toBe(true);
     expect(near.event.message?.text).toBe("触发 旁观");
-    expect(near.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(near.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(near.event)).not.toContain("skiplast79318");
     expect(JSON.stringify(near.event)).not.toContain("tinyurl");
     expect(JSON.stringify(near.event)).not.toContain("near79318");
@@ -49037,7 +49180,7 @@ describe("normalizeUpdate", () => {
     expect(drawn.event.message?.text).toBe(names);
     expect(drawn.event.message?.textSha256).toBe(await sha256Hex(names));
     expect(drawn.event.message?.asProximity).toBe(true);
-    expect(drawn.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
     expect(drawn.event.message?.invites).toEqual(["t.me"]);
     expect(drawn.event.message?.memberName).toBeUndefined();
     const dumped = JSON.stringify(drawn.event);

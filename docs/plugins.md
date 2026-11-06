@@ -95,7 +95,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 拉进视频聊天的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0596。
 
-靠近提醒上操作的人，名字只留主机名，仍走 `links`。发送者是聊天时不读占位名字，也不读这个聊天的标题。名字里的关键词不命中。见 ADR 0689。
+靠近提醒不读消息发送者。触发者和设置者的全名仍走 `links`。名字里的关键词不命中发送者。见 ADR 0697。
 
 拉人进群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0598。
 
@@ -185,7 +185,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 清单任务上的完成者全名只留主机名，仍走 `links`。名字里的关键词不命中。名字不进正文。见 ADR 0641。
 
-靠近提醒上画出的两个人的全名成为正文，短链仍走 `links`。用户名不进正文。操作的人仍只读名。见 ADR 0642。
+靠近提醒上画出的两个人的全名成为正文，短链仍走 `links`。用户名不进正文。消息发送者不读。见 ADR 0697。
 
 新建受管 bot 上画出的全名成为正文，短链仍走 `links`。用户名不进正文。见 ADR 0643。
 
