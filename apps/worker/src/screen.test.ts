@@ -12521,6 +12521,132 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(flag)).not.toContain("flag6234");
   });
 
+  it("deletes a short link in the topic user drawn on a declined post", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(updateId: number, extra: Record<string, unknown>) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: -(1_000_000 + updateId),
+              type: "channel",
+              title: "机密频道",
+            },
+            from: { id: 125, first_name: "Ada" },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const named = await posted(79490, {
+      from: { id: 125, first_name: "Ada", last_name: "https://ow.ly/skip79490" },
+      direct_messages_topic: {
+        topic_id: 79490,
+        user: {
+          id: 126,
+          first_name: "   ",
+          last_name: "https://bit.ly/last79490",
+          username: "secretuser79490",
+        },
+      },
+      reply_to_message: {
+        message_id: 1,
+        date: 1761955200,
+        chat: { id: -1079490, type: "channel" },
+        from: { id: 9, first_name: "Mod" },
+        direct_messages_topic: {
+          topic_id: 79490,
+          user: { id: 126, first_name: "Ada" },
+        },
+      },
+      suggested_post_declined: {},
+    });
+    expect(named.message?.text).toBe("");
+    expect(named.message?.asPostDeclined).toBe(true);
+    expect(named.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const removed = await screenTelegramEvent(named, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removed.decision.action).toBe("delete");
+    expect(removed.decision.reasons).toContain("short_link");
+    expect(removed.decision.ruleIds).not.toContain("post_declined");
+    expect(JSON.stringify(removed.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079490", messageId: "79490" },
+    ]);
+    const namedDump = JSON.stringify({ event: named, decision: removed.decision });
+    expect(namedDump).not.toContain("last79490");
+    expect(namedDump).not.toContain("secretuser79490");
+    expect(namedDump).not.toContain("skip79490");
+    expect(namedDump).not.toContain("ow.ly");
+
+    const keyword = await posted(79491, {
+      direct_messages_topic: {
+        topic_id: 79491,
+        user: { id: 126, first_name: "   ", last_name: phrase },
+      },
+      reply_to_message: {
+        message_id: 1,
+        date: 1761955200,
+        chat: { id: -1079491, type: "channel" },
+        from: { id: 9, first_name: "Mod" },
+        direct_messages_topic: {
+          topic_id: 79491,
+          user: { id: 126, first_name: "Ada" },
+        },
+      },
+      suggested_post_declined: {},
+    });
+    expect(keyword.message?.hosts).toBeUndefined();
+    const keywordHit = await screenTelegramEvent(keyword, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keywordHit.decision.action).toBe("allow");
+    expect(JSON.stringify(keyword)).not.toContain(phrase);
+
+    const same = await posted(79492, {
+      direct_messages_topic: {
+        topic_id: 79492,
+        user: { id: 126, last_name: "https://bit.ly/same79492" },
+      },
+      reply_to_message: {
+        message_id: 1,
+        date: 1761955200,
+        chat: { id: -1079492, type: "channel" },
+        from: { id: 126, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79492,
+          user: { id: 126, first_name: "Ada" },
+        },
+      },
+      suggested_post_declined: {},
+    });
+    expect(same.message?.hosts).toBeUndefined();
+    const sameHit = await screenTelegramEvent(same, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(sameHit.decision.action).toBe("allow");
+    expect(JSON.stringify(same)).not.toContain("same79492");
+  });
+
   it("deletes a short link in a post notice sender name", async () => {
     const phrase = "请免费领取礼品";
     const nested = "原帖机密";
