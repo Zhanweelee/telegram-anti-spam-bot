@@ -4504,8 +4504,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
     }
     // 文字链接的起点必须落在测验说明里。
     pushDrawnLine(poll.explanation, poll.explanation_entities, urls);
-    pushPlainUrls(poll.description, urls);
-    pushTextLinks(poll.description_entities, urls);
+    // 文字链接的起点必须落在这段描述里。被截掉的尾巴仍从整段描述抽取。
+    pushDrawnLine(poll.description, poll.description_entities, urls);
     pushPollMedia(poll.media, urls);
     pushPollMedia(poll.explanation_media, urls);
     if (Array.isArray(poll.options)) {
