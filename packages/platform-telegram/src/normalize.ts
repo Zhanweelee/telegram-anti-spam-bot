@@ -704,7 +704,17 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks)) {
-    pushTaskMentionLists(drawnAddedTasks(addedTasks.tasks), lists);
+    for (const task of drawnAddedTasks(addedTasks.tasks)) {
+      if (!isRecord(task)) {
+        continue;
+      }
+      if (typeof task.text === "string") {
+        // 自定义表情必须整段落在这条后加的任务里。
+        lists.push(fittingEmoji(task.text_entities, task.text.length));
+      } else {
+        lists.push(task.text_entities);
+      }
+    }
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
