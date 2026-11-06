@@ -217,7 +217,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `web_app_button_regex` 默认打开。小程序按钮文字命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0546。
 
-`quote_text_regex` 默认打开。手动引用命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0547。引用上的文字链接后来由 ADR 0732 不能越过正文。
+`quote_text_regex` 默认打开。手动引用命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0547。引用上的文字链接后来由 ADR 0732 不能越过正文。引用上的文字链接后来由 ADR 0768 要求长度大于 0。
 
 `gift_text_regex` 默认打开。礼物附言命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0548。礼物附言上的文字链接后来由 ADR 0734 不能越过正文。
 

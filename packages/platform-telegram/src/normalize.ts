@@ -2130,8 +2130,8 @@ function linkHosts(message: Record<string, unknown>): {
     typeof quote.text === "string" &&
     quote.text.length > 0
   ) {
-    // 手动引用自己就是正文时，文字链接的起点仍必须落在摘录里。
-    lists.push(visibleTextLinks(quote.entities, quote.text.length));
+    // 手动引用自己就是正文时，文字链接的起点必须落在摘录里，长度必须大于 0。
+    lists.push(drawnTextLink(quote.entities, quote.text.length));
   }
   for (const list of lists) {
     if (!Array.isArray(list)) {
@@ -4750,8 +4750,9 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushSenderChatUrls(message, urls);
   const quote = message.quote;
   if (isRecord(quote) && typeof quote.text === "string") {
-    // 文字链接的起点必须落在这段引用里。
-    pushDrawnLine(quote.text, quote.entities, urls);
+    // 文字链接的起点必须落在这段引用里，长度必须大于 0。
+    pushPlainUrls(quote.text, urls);
+    pushTextLinks(drawnTextLink(quote.entities, quote.text.length), urls);
   }
   pushReplyTargetUrls(message, urls);
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
