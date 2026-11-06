@@ -38647,7 +38647,11 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(titled.event.message?.text).toBe("你好");
-    expect(titled.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(titled.event.message?.hosts).toEqual([
+      "bit.ly",
+      "tinyurl.com",
+      "rb.gy",
+    ]);
     expect(JSON.stringify(titled.event)).not.toContain("payer79152");
     expect(JSON.stringify(titled.event)).not.toContain("title79152");
     expect(JSON.stringify(titled.event)).not.toContain("desc79152");
@@ -38655,7 +38659,7 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(titled.event)).not.toContain("who79152");
     expect(JSON.stringify(titled.event)).not.toContain("is.gd");
     expect(JSON.stringify(titled.event)).not.toContain("ow.ly");
-    expect(JSON.stringify(titled.event)).not.toContain("rb.gy");
+    expect(JSON.stringify(titled.event)).toContain("rb.gy");
 
     const grouped = await normalize({
       update_id: 79153,
@@ -41405,6 +41409,328 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("skip79913");
     expect(quietDump).not.toContain("bit.ly");
     expect(quietDump).not.toContain("tinyurl");
+  });
+
+  it("reads the reply header name", async () => {
+    const phrase = "请免费领取礼品";
+    const named = await normalize({
+      update_id: 80101,
+      message: {
+        message_id: 80101,
+        date: 1761955200,
+        chat: { id: -10080101, type: "supergroup", title: "本群" },
+        from: {
+          id: 80101,
+          first_name: "https://tinyurl.com/speaker80101",
+          username: "speaker80101",
+        },
+        text: "你好",
+        reply_to_message: {
+          message_id: 801011,
+          date: 1761955100,
+          chat: { id: -10080101, type: "supergroup", title: "本群" },
+          from: {
+            id: 801012,
+            first_name: `https://bit.ly/who80101 ${phrase}`,
+            last_name: "https://tinyurl.com/also80101",
+            username: "replied80101",
+          },
+          text: "https://example.com/body80101",
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("你好");
+    expect(named.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("who80101");
+    expect(namedDump).not.toContain("also80101");
+    expect(namedDump).not.toContain("replied80101");
+    expect(namedDump).not.toContain("speaker80101");
+    expect(namedDump).not.toContain("body80101");
+    expect(namedDump).not.toContain("example.com");
+    expect(namedDump).toContain("bit.ly");
+    expect(namedDump).toContain("tinyurl.com");
+
+    const blank = await normalize({
+      update_id: 80102,
+      message: {
+        message_id: 80102,
+        date: 1761955200,
+        chat: { id: -10080102, type: "supergroup", title: "本群" },
+        from: { id: 80102, first_name: "Ada", username: "speaker80102" },
+        reply_to_message: {
+          message_id: 801021,
+          date: 1761955100,
+          chat: { id: -10080102, type: "supergroup", title: "本群" },
+          from: {
+            id: 801022,
+            first_name: "   ",
+            last_name: "https://bit.ly/last80102",
+            username: "replied80102",
+          },
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    const blankDump = JSON.stringify(blank.event);
+    expect(blankDump).not.toContain("last80102");
+    expect(blankDump).not.toContain("replied80102");
+
+    const chatSender = await normalize({
+      update_id: 80103,
+      message: {
+        message_id: 80103,
+        date: 1761955200,
+        chat: { id: -10080103, type: "supergroup", title: "本群" },
+        from: { id: 80103, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801031,
+          date: 1761955100,
+          chat: {
+            id: -10080103,
+            type: "supergroup",
+            title: "https://example.com/room80103",
+          },
+          sender_chat: {
+            id: -10080103,
+            type: "supergroup",
+            title: "https://bit.ly/title80103",
+            username: "secret80103",
+          },
+          from: {
+            id: 801032,
+            is_bot: true,
+            first_name: "https://tinyurl.com/who80103",
+            username: "adder80103",
+          },
+        },
+      },
+    });
+    expect(chatSender.status).toBe("event");
+    if (chatSender.status !== "event") {
+      return;
+    }
+    expect(chatSender.event.message?.hosts).toEqual(["bit.ly"]);
+    const chatDump = JSON.stringify(chatSender.event);
+    expect(chatDump).not.toContain("title80103");
+    expect(chatDump).not.toContain("who80103");
+    expect(chatDump).not.toContain("secret80103");
+    expect(chatDump).not.toContain("room80103");
+    expect(chatDump).not.toContain("tinyurl");
+    expect(chatDump).not.toContain("example.com");
+
+    const forwarded = await normalize({
+      update_id: 80104,
+      message: {
+        message_id: 80104,
+        date: 1761955200,
+        chat: { id: -10080104, type: "supergroup", title: "本群" },
+        from: { id: 80104, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801041,
+          date: 1761955100,
+          chat: { id: -10080104, type: "supergroup", title: "本群" },
+          from: {
+            id: 801042,
+            first_name: "https://tinyurl.com/who80104",
+            username: "adder80104",
+          },
+          forward_origin: {
+            type: "user",
+            sender_user: {
+              id: 801043,
+              first_name: "   ",
+              last_name: "https://bit.ly/fwd80104",
+              username: "origin80104",
+            },
+          },
+        },
+      },
+    });
+    expect(forwarded.status).toBe("event");
+    if (forwarded.status !== "event") {
+      return;
+    }
+    expect(forwarded.event.message?.hosts).toEqual(["bit.ly"]);
+    const forwardedDump = JSON.stringify(forwarded.event);
+    expect(forwardedDump).not.toContain("fwd80104");
+    expect(forwardedDump).not.toContain("who80104");
+    expect(forwardedDump).not.toContain("origin80104");
+    expect(forwardedDump).not.toContain("tinyurl");
+
+    const channelOrigin = await normalize({
+      update_id: 80105,
+      message: {
+        message_id: 80105,
+        date: 1761955200,
+        chat: { id: -10080105, type: "supergroup", title: "本群" },
+        from: { id: 80105, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801051,
+          date: 1761955100,
+          chat: { id: -10080105, type: "supergroup", title: "本群" },
+          from: { id: 801052, first_name: "https://tinyurl.com/who80105" },
+          forward_origin: {
+            type: "channel",
+            chat: {
+              id: -100801053,
+              type: "channel",
+              title: "https://bit.ly/chan80105",
+              username: "chanuser80105",
+            },
+            author_signature: "https://example.com/sign80105",
+          },
+        },
+      },
+    });
+    expect(channelOrigin.status).toBe("event");
+    if (channelOrigin.status !== "event") {
+      return;
+    }
+    expect(channelOrigin.event.message?.hosts).toEqual(["bit.ly"]);
+    const channelDump = JSON.stringify(channelOrigin.event);
+    expect(channelDump).not.toContain("chan80105");
+    expect(channelDump).not.toContain("chanuser80105");
+    expect(channelDump).not.toContain("sign80105");
+    expect(channelDump).not.toContain("who80105");
+    expect(channelDump).not.toContain("tinyurl");
+    expect(channelDump).not.toContain("example.com");
+
+    const hidden = await normalize({
+      update_id: 80106,
+      message: {
+        message_id: 80106,
+        date: 1761955200,
+        chat: { id: -10080106, type: "supergroup", title: "本群" },
+        from: { id: 80106, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801061,
+          date: 1761955100,
+          chat: { id: -10080106, type: "supergroup", title: "本群" },
+          from: { id: 801062, first_name: "https://tinyurl.com/who80106" },
+          forward_origin: {
+            type: "hidden_user",
+            sender_user_name: "https://bit.ly/hide80106",
+          },
+        },
+      },
+    });
+    expect(hidden.status).toBe("event");
+    if (hidden.status !== "event") {
+      return;
+    }
+    expect(hidden.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(hidden.event.message?.text).toBe("");
+    const hiddenDump = JSON.stringify(hidden.event);
+    expect(hiddenDump).not.toContain("hide80106");
+    expect(hiddenDump).not.toContain("who80106");
+    expect(hiddenDump).not.toContain("tinyurl");
+
+    const channelPost = await normalize({
+      update_id: 80107,
+      message: {
+        message_id: 80107,
+        date: 1761955200,
+        chat: { id: -10080107, type: "supergroup", title: "本群" },
+        from: { id: 80107, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801071,
+          date: 1761955100,
+          chat: {
+            id: -100801072,
+            type: "channel",
+            title: "https://bit.ly/post80107",
+            username: "postuser80107",
+          },
+        },
+      },
+    });
+    expect(channelPost.status).toBe("event");
+    if (channelPost.status !== "event") {
+      return;
+    }
+    expect(channelPost.event.message?.hosts).toEqual(["bit.ly"]);
+    const channelPostDump = JSON.stringify(channelPost.event);
+    expect(channelPostDump).not.toContain("post80107");
+    expect(channelPostDump).not.toContain("postuser80107");
+
+    const groupOnly = await normalize({
+      update_id: 80108,
+      message: {
+        message_id: 80108,
+        date: 1761955200,
+        chat: { id: -10080108, type: "supergroup", title: "本群" },
+        from: { id: 80108, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801081,
+          date: 1761955100,
+          chat: {
+            id: -10080108,
+            type: "supergroup",
+            title: "https://bit.ly/group80108",
+          },
+        },
+      },
+    });
+    expect(groupOnly.status).toBe("event");
+    if (groupOnly.status !== "event") {
+      return;
+    }
+    expect(groupOnly.event.message?.hosts).toBeUndefined();
+    const groupDump = JSON.stringify(groupOnly.event);
+    expect(groupDump).not.toContain("group80108");
+    expect(groupDump).not.toContain("bit.ly");
+
+    const external = await normalize({
+      update_id: 80109,
+      message: {
+        message_id: 80109,
+        date: 1761955200,
+        chat: { id: -10080109, type: "supergroup", title: "本群" },
+        from: { id: 80109, first_name: "Ada" },
+        reply_to_message: {
+          message_id: 801091,
+          date: 1761955100,
+          chat: { id: -10080109, type: "supergroup", title: "本群" },
+          from: {
+            id: 801092,
+            first_name: "https://bit.ly/who80109",
+            username: "replied80109",
+          },
+        },
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: {
+              id: 801093,
+              first_name: "https://tinyurl.com/ext80109",
+              username: "extuser80109",
+            },
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.hosts).toBeUndefined();
+    const externalDump = JSON.stringify(external.event);
+    expect(externalDump).not.toContain("who80109");
+    expect(externalDump).not.toContain("ext80109");
+    expect(externalDump).not.toContain("replied80109");
+    expect(externalDump).not.toContain("extuser80109");
+    expect(externalDump).not.toContain("bit.ly");
+    expect(externalDump).not.toContain("tinyurl");
   });
 
   it("skips the message sender on a suggested post", async () => {

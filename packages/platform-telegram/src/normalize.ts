@@ -4633,6 +4633,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(businessBotDrawnName(message), urls);
   pushPaymentDrawnUrls(message, urls);
   pushPassportPeerUrls(message, urls);
+  pushReplyHeaderUrls(message, urls);
   const declined = message.suggested_post_declined;
   if (isRecord(declined)) {
     pushPlainUrls(declined.comment, urls);
@@ -4929,6 +4930,97 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
   if (typeof signature === "string" && signature.length > 0) {
     pushPlainUrls(signature, urls);
   }
+}
+
+/**
+ * 回复抬头画出的名字只留主机名。
+ * 被回复的消息是转发时，先画转发来源的名字，不画转发者。
+ * 用户画全名。名为空时只画姓。空格不截断。
+ * 聊天画标题，不截断。编号和本群相同也读。
+ * 没有发送者时，只有频道帖改读频道标题。
+ * 原文、说明、签名、用户名和外部回复不读。
+ * 有外部回复时，这行改画外部来源，仍不读。
+ */
+function pushReplyHeaderUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (isRecord(message.external_reply)) {
+    return;
+  }
+  const reply = message.reply_to_message;
+  if (!isRecord(reply) || pushReplyForwardName(reply, urls)) {
+    return;
+  }
+  if (isRecord(reply.sender_chat)) {
+    pushPlainUrls(reply.sender_chat.title, urls);
+    return;
+  }
+  if (isRecord(reply.from)) {
+    pushFormattedUserUrls(reply.from, urls);
+    return;
+  }
+  const chat = reply.chat;
+  if (isRecord(chat) && chat.type === "channel") {
+    pushPlainUrls(chat.title, urls);
+  }
+}
+
+/**
+ * 回复里的转发来源会画在抬头上。
+ * 画得出来就不再读转发者。来源缺了才改读转发者。
+ * 用户画全名。聊天和频道只画标题。隐藏显示名整段留下。
+ * 签名和用户名不读。
+ */
+function pushReplyForwardName(
+  reply: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  const origin = reply.forward_origin;
+  if (isRecord(origin)) {
+    if (origin.type === "user" && isRecord(origin.sender_user)) {
+      pushFormattedUserUrls(origin.sender_user, urls);
+      return true;
+    }
+    if (
+      origin.type === "hidden_user" &&
+      typeof origin.sender_user_name === "string"
+    ) {
+      pushPlainUrls(origin.sender_user_name, urls);
+      return true;
+    }
+    if (
+      origin.type === "chat" &&
+      isRecord(origin.sender_chat) &&
+      typeof origin.sender_chat.title === "string"
+    ) {
+      pushPlainUrls(origin.sender_chat.title, urls);
+      return true;
+    }
+    if (
+      origin.type === "channel" &&
+      isRecord(origin.chat) &&
+      typeof origin.chat.title === "string"
+    ) {
+      pushPlainUrls(origin.chat.title, urls);
+      return true;
+    }
+    return false;
+  }
+  if (typeof reply.forward_sender_name === "string") {
+    pushPlainUrls(reply.forward_sender_name, urls);
+    return true;
+  }
+  if (isRecord(reply.forward_from)) {
+    pushFormattedUserUrls(reply.forward_from, urls);
+    return true;
+  }
+  const chat = reply.forward_from_chat;
+  if (isRecord(chat) && typeof chat.title === "string") {
+    pushPlainUrls(chat.title, urls);
+    return true;
+  }
+  return false;
 }
 
 /**
