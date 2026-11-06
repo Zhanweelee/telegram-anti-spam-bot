@@ -4652,15 +4652,20 @@ function pushPollAdderUrls(
 }
 
 /**
- * 清单任务上画出的完成者名字只留主机名。
- * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
- * 没有用户对象时只读群标题。名字不进正文。嵌套原清单不读。
+ * 清单任务上画出的完成者全名只留主机名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 有用户对象时不读群标题。没有用户时只读群标题。
+ * 用户名不读。名字不进正文。嵌套原清单不读。
  */
 function pushTaskCompleterUrls(
   task: Record<string, unknown>,
   urls: string[],
 ): void {
-  pushVisiblePartyUrls(task.completed_by_user, task.completed_by_chat, urls);
+  if (isRecord(task.completed_by_user)) {
+    pushFormattedUserUrls(task.completed_by_user, urls);
+    return;
+  }
+  pushVisiblePartyUrls(undefined, task.completed_by_chat, urls);
 }
 
 function pushVisiblePartyUrls(
@@ -5152,7 +5157,7 @@ function pushChecklistSenderUrls(
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 空字符串、空数组和布尔值不读。投票选项不读。
  * 任务文字仍按原来的正文。勾完的人按全名。
- * 任务上的完成者仍按原来的主机名。
+ * 任务上的完成者按全名，主机名排在前面。
  * 嵌套原清单不读。用户名不读。
  */
 function pushAddedSenderUrls(

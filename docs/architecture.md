@@ -291,6 +291,8 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 公开抽奖结果上的中奖者全名也只留主机名。名字不进事件。见 ADR 0640。
 
+清单任务上的完成者全名也只留主机名。名字不进事件。见 ADR 0641。
+
 富文本里的电话和银行卡可以按群删除。规则 `rich_phone` 和 `rich_card` 默认关闭。见 ADR 0501。
 
 富文本里的邮箱可以按群删除。规则 `rich_email` 默认关闭。见 ADR 0502。
