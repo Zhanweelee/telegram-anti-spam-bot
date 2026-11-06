@@ -43001,6 +43001,133 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(file.event)).not.toContain("bit.ly");
   });
 
+  it("skips a rich thinking block on the drawn preview", async () => {
+    const phrase = "请免费领取礼品";
+    const pinned = await normalize({
+      update_id: 80481,
+      message: {
+        message_id: 80481,
+        date: 1761955200,
+        chat: { id: -10080481, type: "supergroup" },
+        from: { id: 80481, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804811,
+          date: 1761955100,
+          chat: { id: -10080481, type: "supergroup" },
+          text: `https://tinyurl.com/text80481 ${phrase}`,
+          rich_message: {
+            blocks: [
+              { type: "thinking", text: "https://evil.example/hid80481" },
+              { type: "paragraph", text: "https://bit.ly/drawn80481" },
+            ],
+          },
+        },
+      },
+    });
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(pinned.event.message?.hosts).toEqual(["bit.ly"]);
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain(phrase);
+    expect(pinnedDump).not.toContain("drawn80481");
+    expect(pinnedDump).not.toContain("hid80481");
+    expect(pinnedDump).not.toContain("evil.example");
+    expect(pinnedDump).not.toContain("text80481");
+    expect(pinnedDump).not.toContain("tinyurl");
+
+    const replied = await normalize({
+      update_id: 80482,
+      message: {
+        message_id: 80482,
+        date: 1761955200,
+        chat: { id: -10080482, type: "supergroup" },
+        from: { id: 80482, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 804821,
+          date: 1761955100,
+          chat: { id: -10080482, type: "supergroup" },
+          text: `https://tinyurl.com/text80482 ${phrase}`,
+          rich_message: {
+            blocks: [
+              { type: "thinking", text: "https://evil.example/hid80482" },
+              { type: "paragraph", text: "https://bit.ly/drawn80482" },
+            ],
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain(phrase);
+    expect(repliedDump).not.toContain("drawn80482");
+    expect(repliedDump).not.toContain("hid80482");
+    expect(repliedDump).not.toContain("evil.example");
+    expect(repliedDump).not.toContain("text80482");
+    expect(repliedDump).not.toContain("tinyurl");
+
+    const only = await normalize({
+      update_id: 80483,
+      message: {
+        message_id: 80483,
+        date: 1761955200,
+        chat: { id: -10080483, type: "supergroup" },
+        from: { id: 80483, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 804831,
+          date: 1761955100,
+          chat: { id: -10080483, type: "supergroup" },
+          text: "https://bit.ly/text80483",
+          rich_message: {
+            blocks: [
+              { type: "thinking", text: "https://evil.example/hid80483" },
+            ],
+          },
+        },
+      },
+    });
+    expect(only.status).toBe("event");
+    if (only.status !== "event") {
+      return;
+    }
+    expect(only.event.message?.hosts).toBeUndefined();
+    const onlyDump = JSON.stringify(only.event);
+    expect(onlyDump).not.toContain("hid80483");
+    expect(onlyDump).not.toContain("evil.example");
+    expect(onlyDump).not.toContain("text80483");
+    expect(onlyDump).not.toContain("bit.ly");
+
+    const bubble = await normalize({
+      update_id: 80484,
+      message: {
+        message_id: 80484,
+        date: 1761955200,
+        chat: { id: -10080484, type: "supergroup" },
+        from: { id: 80484, first_name: "Ada" },
+        rich_message: {
+          blocks: [{ type: "thinking", text: "https://bit.ly/think80484" }],
+        },
+      },
+    });
+    expect(bubble.status).toBe("event");
+    if (bubble.status !== "event") {
+      return;
+    }
+    expect(bubble.event.message?.text).toBe("https://bit.ly/think80484");
+    expect(bubble.event.message?.hosts).toEqual(["bit.ly"]);
+  });
+
   it("reads the hostname drawn on a reply under a rich message", async () => {
     const phrase = "请免费领取礼品";
     const replied = await normalize({
