@@ -4942,6 +4942,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 带引用或投票本身时，这一行不改画游戏或账单标题。
  * 付款成功的账单标题仍按原来的顺序。
  * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
+ * 本条回复是普通文件且没有说明时，引用条画文件名的前 150 个码元。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -5023,10 +5024,34 @@ function pushLoadedReplyLine(
     pushPlainUrls(reply.game.title, urls);
     return;
   }
-  if (isRecord(message.successful_payment) || !isRecord(reply.invoice)) {
+  if (isRecord(reply.invoice)) {
+    if (!isRecord(message.successful_payment)) {
+      pushPlainUrls(reply.invoice.title, urls);
+    }
     return;
   }
-  pushPlainUrls(reply.invoice.title, urls);
+  pushReplyDocumentName(reply, urls);
+}
+
+/** 没有说明的普通文件，引用条只画文件名的前 150 个码元。 */
+function pushReplyDocumentName(
+  reply: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (typeof reply.caption === "string" && reply.caption.length > 0) {
+    return;
+  }
+  if (typeof reply.text === "string" && reply.text.length > 0) {
+    return;
+  }
+  if (!isRecord(reply.document)) {
+    return;
+  }
+  const name = reply.document.file_name;
+  if (typeof name !== "string") {
+    return;
+  }
+  pushPlainUrls(name.slice(0, 150), urls);
 }
 
 const externalPreviewKeys = [

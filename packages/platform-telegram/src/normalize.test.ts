@@ -41416,6 +41416,127 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("reads the document name drawn on a reply", async () => {
+    const phrase = "请免费领取礼品";
+    const file = await normalize({
+      update_id: 80221,
+      message: {
+        message_id: 80221,
+        date: 1761955200,
+        chat: { id: -10080221, type: "supergroup", title: "本群" },
+        from: { id: 80221, first_name: "https://example.com/speaker80221" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802211,
+          date: 1761955100,
+          chat: { id: -10080221, type: "supergroup" },
+          document: {
+            file_id: "DOC80221",
+            file_name: `https://bit.ly/file80221 ${phrase}`,
+            mime_type: "application/pdf",
+          },
+        },
+      },
+    });
+    expect(file.status).toBe("event");
+    if (file.status !== "event") {
+      return;
+    }
+    expect(file.event.message?.text).toBe("你好");
+    expect(file.event.message?.hosts).toEqual(["bit.ly"]);
+    const fileDump = JSON.stringify(file.event);
+    expect(fileDump).not.toContain(phrase);
+    expect(fileDump).not.toContain("file80221");
+    expect(fileDump).not.toContain("speaker80221");
+    expect(fileDump).not.toContain("example.com");
+    expect(fileDump).toContain("bit.ly");
+
+    const caption = await normalize({
+      update_id: 80222,
+      message: {
+        message_id: 80222,
+        date: 1761955200,
+        chat: { id: -10080222, type: "supergroup" },
+        from: { id: 80222, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802221,
+          date: 1761955100,
+          chat: { id: -10080222, type: "supergroup" },
+          caption: "https://tinyurl.com/cap80222",
+          document: {
+            file_id: "DOC80222",
+            file_name: "https://bit.ly/file80222",
+          },
+        },
+      },
+    });
+    expect(caption.status).toBe("event");
+    if (caption.status !== "event") {
+      return;
+    }
+    expect(caption.event.message?.hosts).toBeUndefined();
+    const captionDump = JSON.stringify(caption.event);
+    expect(captionDump).not.toContain("cap80222");
+    expect(captionDump).not.toContain("file80222");
+    expect(captionDump).not.toContain("bit.ly");
+    expect(captionDump).not.toContain("tinyurl");
+
+    const late = await normalize({
+      update_id: 80223,
+      message: {
+        message_id: 80223,
+        date: 1761955200,
+        chat: { id: -10080223, type: "supergroup" },
+        from: { id: 80223, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802231,
+          date: 1761955100,
+          chat: { id: -10080223, type: "supergroup" },
+          document: {
+            file_id: "DOC80223",
+            file_name: `${"a".repeat(150)} https://bit.ly/late80223`,
+          },
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(late.event)).not.toContain("late80223");
+    expect(JSON.stringify(late.event)).not.toContain("bit.ly");
+
+    const animation = await normalize({
+      update_id: 80224,
+      message: {
+        message_id: 80224,
+        date: 1761955200,
+        chat: { id: -10080224, type: "supergroup" },
+        from: { id: 80224, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 802241,
+          date: 1761955100,
+          chat: { id: -10080224, type: "supergroup" },
+          animation: {
+            file_id: "AN80224",
+            file_name: "https://bit.ly/anim80224",
+          },
+        },
+      },
+    });
+    expect(animation.status).toBe("event");
+    if (animation.status !== "event") {
+      return;
+    }
+    expect(animation.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(animation.event)).not.toContain("anim80224");
+    expect(JSON.stringify(animation.event)).not.toContain("bit.ly");
+  });
+
   it("reads the media title drawn on an external reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
