@@ -4947,6 +4947,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 动图、视频、音频和图片占住这一行时，不读附带的文件名。
  * 没有说明的贴纸画表情加固定字样。只读表情的前 150 个码元。包名不读。
  * 外部回复的贴纸只画固定字样，不读那张贴纸的表情。
+ * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。任务不读。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  */
 function pushReplyTargetUrls(
@@ -5036,6 +5037,9 @@ function pushLoadedReplyLine(
     if (!isRecord(message.successful_payment)) {
       pushPlainUrls(reply.invoice.title, urls);
     }
+    return;
+  }
+  if (pushReplyChecklistTitle(reply, urls)) {
     return;
   }
   if (pushReplyStickerAlt(reply, urls)) {
@@ -5142,6 +5146,47 @@ function pushReplyStickerAlt(
   }
   pushStickerAlt(reply, urls);
   return true;
+}
+
+/**
+ * 没有任务号时，已加载的清单回复画出标题。
+ * Android 这行就是标题本身，只取前 150 个码元。
+ * 空标题仍占住这一行。有说明时改画说明。任务不读。
+ */
+function pushReplyChecklistTitle(
+  reply: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  if (typeof reply.caption === "string" && reply.caption.length > 0) {
+    return false;
+  }
+  if (typeof reply.text === "string" && reply.text.length > 0) {
+    return false;
+  }
+  const checklist = reply.checklist;
+  if (!isRecord(checklist)) {
+    return false;
+  }
+  if (typeof checklist.title === "string" && checklist.title.length > 0) {
+    pushPlainUrls(checklist.title.slice(0, 150), urls);
+    pushTextLinks(visibleTextLinks(checklist.title_entities, 150), urls);
+  }
+  return true;
+}
+
+/** 文字链接的起点落在画出的前一段里才读。 */
+function visibleTextLinks(list: unknown, limit: number): unknown[] {
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.filter(
+    (entity) =>
+      isRecord(entity) &&
+      typeof entity.offset === "number" &&
+      Number.isSafeInteger(entity.offset) &&
+      entity.offset >= 0 &&
+      entity.offset < limit,
+  );
 }
 
 const externalPreviewKeys = [
