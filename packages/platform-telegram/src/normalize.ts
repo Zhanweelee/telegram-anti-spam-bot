@@ -5066,6 +5066,7 @@ function pushGiveawayChatTitleUrls(
  * 换头像或删头像的人画出的全名只留主机名。
  * 新头像至少有一个尺寸对象时读。删头像正好是 true 时读。
  * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 频道这行不画人，不读发送者。群和超级群仍按全名。
  * 同时出现时先认换头像。空数组和 false 不读。文件号和尺寸不读。
  * 普通图片的发送者不读。
  */
@@ -5074,6 +5075,10 @@ function pushPhotoSenderUrls(
   urls: string[],
 ): void {
   if (photoNotice(message) === undefined) {
+    return;
+  }
+  const chat = message.chat;
+  if (isRecord(chat) && chat.type === "channel") {
     return;
   }
   pushFormattedUserUrls(message.from, urls);
