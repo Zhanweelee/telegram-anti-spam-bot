@@ -628,11 +628,13 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   const poll = message.poll;
   if (isRecord(poll)) {
-    lists.push(
-      poll.question_entities,
-      poll.explanation_entities,
-      poll.description_entities,
-    );
+    if (typeof poll.question === "string") {
+      // 自定义表情必须整段落在题干里。
+      lists.push(fittingEmoji(poll.question_entities, poll.question.length));
+    } else {
+      lists.push(poll.question_entities);
+    }
+    lists.push(poll.explanation_entities, poll.description_entities);
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
         if (isRecord(option)) {
