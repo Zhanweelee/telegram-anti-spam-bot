@@ -4938,14 +4938,15 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 用户画全名。名为空时只画姓。空格不截断。
  * 聊天画标题，不截断。编号和本群相同也读。
  * 没有发送者时，只有频道帖改读频道标题。
- * 原文、说明、签名、用户名和外部回复不读。
- * 有外部回复时，这行改画外部来源，仍不读。
+ * 原文、说明、签名和用户名不读。
+ * 有外部回复时，这行改画外部来源，本条回复不再读。
  */
 function pushReplyHeaderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
   if (isRecord(message.external_reply)) {
+    pushExternalReplyName(message, urls);
     return;
   }
   const reply = message.reply_to_message;
@@ -4964,6 +4965,46 @@ function pushReplyHeaderUrls(
   if (isRecord(chat) && chat.type === "channel") {
     pushPlainUrls(chat.title, urls);
   }
+}
+
+/**
+ * 外部回复的引用条画出外部来源，再画另一个聊天的标题。
+ * 用户画全名。隐藏显示名整段留下。群和频道只画标题。
+ * 编号和本群相同的聊天标题不另读。签名、用户名和预览不读。
+ */
+function pushExternalReplyName(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const external = message.external_reply;
+  if (!isRecord(external)) {
+    return;
+  }
+  const origin = external.origin;
+  if (isRecord(origin)) {
+    if (origin.type === "user") {
+      pushFormattedUserUrls(origin.sender_user, urls);
+    } else if (
+      origin.type === "hidden_user" &&
+      typeof origin.sender_user_name === "string"
+    ) {
+      pushPlainUrls(origin.sender_user_name, urls);
+    } else if (origin.type === "chat" && isRecord(origin.sender_chat)) {
+      pushPlainUrls(origin.sender_chat.title, urls);
+    } else if (origin.type === "channel" && isRecord(origin.chat)) {
+      pushPlainUrls(origin.chat.title, urls);
+    }
+  }
+  const chat = external.chat;
+  if (!isRecord(chat)) {
+    return;
+  }
+  const here = nestedId(message.chat);
+  const there = nestedId(chat);
+  if (here !== null && there !== null && here === there) {
+    return;
+  }
+  pushPlainUrls(chat.title, urls);
 }
 
 /**
