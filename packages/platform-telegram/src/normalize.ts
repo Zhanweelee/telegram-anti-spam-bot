@@ -1959,7 +1959,14 @@ function linkHosts(message: Record<string, unknown>): {
   } else {
     lists.push(message.entities);
   }
-  lists.push(message.caption_entities);
+  if (typeof message.caption === "string") {
+    // 说明上的文字链接，起点必须落在说明里。
+    lists.push(
+      visibleTextLinks(message.caption_entities, message.caption.length),
+    );
+  } else {
+    lists.push(message.caption_entities);
+  }
   if (isRecord(poll)) {
     const question = poll.question;
     // 题干上的文字链接，起点必须落在题干里。

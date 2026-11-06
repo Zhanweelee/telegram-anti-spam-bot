@@ -11750,6 +11750,159 @@ describe("normalizeUpdate", () => {
     expect(keptDump).not.toContain("evil.example");
   });
 
+  it("skips a caption text link that starts after the drawn caption", async () => {
+    const past = await normalize({
+      update_id: 80881,
+      message: {
+        message_id: 80881,
+        date: 1761955200,
+        chat: { id: -10080881, type: "supergroup" },
+        from: { id: 80881, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80881", file_unique_id: "uniq80881" }],
+        caption: "文",
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 1,
+            length: 1,
+            url: "https://bit.ly/cap80881",
+          },
+        ],
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("文");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("cap80881");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80882,
+      message: {
+        message_id: 80882,
+        date: 1761955200,
+        chat: { id: -10080882, type: "supergroup" },
+        from: { id: 80882, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80882", file_unique_id: "uniq80882" }],
+        caption: "https://tinyurl.com/plain80882",
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 4,
+            url: "https://cutt.ly/cap80882",
+          },
+          {
+            type: "text_link",
+            offset: 99,
+            length: 1,
+            url: "https://evil.example/late80882",
+          },
+        ],
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("https://tinyurl.com/plain80882");
+    expect(kept.event.message?.hosts).toEqual(["cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).toContain("plain80882");
+    expect(keptDump).not.toContain("cap80882");
+    expect(keptDump).not.toContain("late80882");
+    expect(keptDump).not.toContain("evil.example");
+
+    const drawnLate = "文".repeat(151);
+    const late = await normalize({
+      update_id: 80883,
+      message: {
+        message_id: 80883,
+        date: 1761955200,
+        chat: { id: -10080883, type: "supergroup" },
+        from: { id: 80883, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80883", file_unique_id: "uniq80883" }],
+        caption: drawnLate,
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 150,
+            length: 1,
+            url: "https://bit.ly/cap80883",
+          },
+        ],
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.text).toBe(drawnLate);
+    expect(late.event.message?.hosts).toEqual(["bit.ly"]);
+    const lateDump = JSON.stringify(late.event);
+    expect(lateDump).not.toContain("cap80883");
+
+    const empty = await normalize({
+      update_id: 80884,
+      message: {
+        message_id: 80884,
+        date: 1761955200,
+        chat: { id: -10080884, type: "supergroup" },
+        from: { id: 80884, first_name: "Ada" },
+        photo: [{ file_id: "AgAD80884", file_unique_id: "uniq80884" }],
+        caption: "",
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 0,
+            length: 1,
+            url: "https://bit.ly/cap80884",
+          },
+        ],
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("");
+    expect(empty.event.message?.hosts).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("cap80884");
+    expect(emptyDump).not.toContain("bit.ly");
+
+    const open = await normalize({
+      update_id: 80885,
+      message: {
+        message_id: 80885,
+        date: 1761955200,
+        chat: { id: -10080885, type: "supergroup" },
+        from: { id: 80885, first_name: "Ada" },
+        text: "文",
+        caption_entities: [
+          {
+            type: "text_link",
+            offset: 5,
+            length: 1,
+            url: "https://bit.ly/cap80885",
+          },
+        ],
+      },
+    });
+    expect(open.status).toBe("event");
+    if (open.status !== "event") {
+      return;
+    }
+    expect(open.event.message?.text).toBe("文");
+    expect(open.event.message?.hosts).toEqual(["bit.ly"]);
+    const openDump = JSON.stringify(open.event);
+    expect(openDump).not.toContain("cap80885");
+  });
+
   it("skips a poll question link that starts after the question", async () => {
     const past = await normalize({
       update_id: 80841,
