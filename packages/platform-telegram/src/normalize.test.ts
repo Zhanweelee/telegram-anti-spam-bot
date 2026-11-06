@@ -32253,6 +32253,137 @@ describe("normalizeUpdate", () => {
     expect(placeDump).not.toContain("ow.ly");
   });
 
+  it("reads the hostname drawn on a text link in a pin preview", async () => {
+    const phrase = "点这里看这条置顶";
+    const named = await normalize({
+      update_id: 80421,
+      message: {
+        message_id: 80421,
+        date: 1761955200,
+        chat: { id: -10080421, type: "supergroup" },
+        from: { id: 80421, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804211,
+          date: 1761955100,
+          chat: { id: -10080421, type: "supergroup" },
+          text: phrase,
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 3,
+              url: "https://bit.ly/ent80421",
+            },
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(named.event.message?.hosts).toEqual(["bit.ly"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("ent80421");
+
+    const late = await normalize({
+      update_id: 80422,
+      message: {
+        message_id: 80422,
+        date: 1761955200,
+        chat: { id: -10080422, type: "supergroup" },
+        from: { id: 80422, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804221,
+          date: 1761955100,
+          chat: { id: -10080422, type: "supergroup" },
+          text: "甲".repeat(20),
+          entities: [
+            {
+              type: "text_link",
+              offset: 20,
+              length: 4,
+              url: "https://bit.ly/late80422",
+            },
+          ],
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(late.event)).not.toContain("late80422");
+    expect(JSON.stringify(late.event)).not.toContain("bit.ly");
+
+    const short = await normalize({
+      update_id: 80423,
+      message: {
+        message_id: 80423,
+        date: 1761955200,
+        chat: { id: -10080423, type: "supergroup" },
+        from: { id: 80423, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804231,
+          date: 1761955100,
+          chat: { id: -10080423, type: "supergroup" },
+          text: "链接",
+          entities: [
+            {
+              type: "text_link",
+              offset: 2,
+              length: 2,
+              url: "https://bit.ly/short80423",
+            },
+          ],
+        },
+      },
+    });
+    expect(short.status).toBe("event");
+    if (short.status !== "event") {
+      return;
+    }
+    expect(short.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(short.event)).not.toContain("short80423");
+    expect(JSON.stringify(short.event)).not.toContain("bit.ly");
+
+    const list = await normalize({
+      update_id: 80424,
+      message: {
+        message_id: 80424,
+        date: 1761955200,
+        chat: { id: -10080424, type: "supergroup" },
+        from: { id: 80424, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804241,
+          date: 1761955100,
+          chat: { id: -10080424, type: "supergroup" },
+          text: phrase,
+          checklist: { title: "你好", tasks: [] },
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 2,
+              url: "https://bit.ly/list80424",
+            },
+          ],
+        },
+      },
+    });
+    expect(list.status).toBe("event");
+    if (list.status !== "event") {
+      return;
+    }
+    expect(list.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(list.event)).not.toContain("list80424");
+    expect(JSON.stringify(list.event)).not.toContain("bit.ly");
+  });
+
   it("reads the hostname drawn on a pinned rich preview", async () => {
     const phrase = "请免费领取礼品";
     const named = await normalize({
