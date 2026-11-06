@@ -5587,6 +5587,8 @@ function pushLeftMemberUrls(member: unknown, urls: string[]): void {
  * 把人移出群的人画出的全名只留主机名。
  * `left_chat_member` 是对象时读。空对象也读。
  * 布尔值不读。离开的人仍按原来的主机名，排在前面。
+ * 发送者是聊天时，这行画聊天标题，不读 `from`。标题不截断。
+ * 频道、群和超级群都一样。用户仍按全名。
  * 入群仍按拉人的人。用户名和用户编号不读。
  */
 function pushLeaveSenderUrls(
@@ -5594,6 +5596,11 @@ function pushLeaveSenderUrls(
   urls: string[],
 ): void {
   if (serviceNotice(message) !== "leave") {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
