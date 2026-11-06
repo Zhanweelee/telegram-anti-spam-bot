@@ -13056,6 +13056,173 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(paid)).not.toContain("paid80554");
   });
 
+  it("leaves an external checklist title link that starts after the title", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const hidden = await posted(80831, {
+      text: "你好",
+      external_reply: {
+        origin: {
+          type: "user",
+          sender_user: { id: 808311, first_name: "Ada" },
+        },
+        checklist: {
+          title: "单",
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: `https://bit.ly/list80831 ${phrase}`,
+            },
+          ],
+        },
+      },
+    });
+    expect(hidden.message?.text).toBe("你好");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify(hidden);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("list80831");
+    expect(hiddenDump).not.toContain("bit.ly");
+
+    const drawn = await posted(80832, {
+      text: "你好",
+      external_reply: {
+        origin: {
+          type: "user",
+          sender_user: { id: 808321, first_name: "Ada" },
+        },
+        checklist: {
+          title: "单",
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://bit.ly/list80832",
+            },
+          ],
+        },
+      },
+    });
+    expect(drawn.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080832", messageId: "80832" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("list80832");
+
+    const kept = await posted(80833, {
+      text: "你好",
+      external_reply: {
+        origin: {
+          type: "user",
+          sender_user: { id: 808331, first_name: "Ada" },
+        },
+        checklist: {
+          title: "单",
+          title_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://example.com/list80833",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("list80833");
+
+    const paid = await posted(
+      80834,
+      {
+        text: "你好",
+        external_reply: {
+          origin: {
+            type: "user",
+            sender_user: { id: 808341, first_name: "Ada" },
+          },
+          checklist: {
+            title: "单",
+            title_entities: [
+              {
+                type: "text_link",
+                offset: 0,
+                length: 1,
+                url: "https://bit.ly/paid80834",
+              },
+            ],
+          },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid80834");
+  });
+
   it("leaves a gift text link that starts after the drawn text", async () => {
     const phrase = "请免费领取礼品";
     async function posted(

@@ -5391,7 +5391,7 @@ const externalPreviewKeys = [
 
 /**
  * 外部回复的媒体标题只留主机名。
- * 清单读标题和标题上的文字链接。任务不读。
+ * 清单读标题。标题上的文字链接，起点必须落在标题里。任务不读。
  * 账单读说明，不读标题。
  * 普通文件读文件名。动图、图片、视频和游戏只占这一行，不读附带的文件名。
  * 贴纸只画固定字样。这一行的表情取自当前消息，不读外部贴纸的表情。
@@ -5407,8 +5407,12 @@ function pushExternalReplyPreview(
     return false;
   }
   if (isRecord(external.checklist)) {
-    pushPlainUrls(external.checklist.title, urls);
-    pushTextLinks(external.checklist.title_entities, urls);
+    // 文字链接的起点必须落在这段标题里。
+    pushDrawnLine(
+      external.checklist.title,
+      external.checklist.title_entities,
+      urls,
+    );
     return true;
   }
   if (isRecord(external.invoice)) {
