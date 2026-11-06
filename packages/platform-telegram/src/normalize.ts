@@ -4562,6 +4562,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushAutoDeleteSenderUrls(message, urls);
   pushPriceSenderUrls(message, urls);
   pushPinSenderUrls(message, urls);
+  pushPinnedPreviewUrls(message, urls);
   pushCreatedGroupSenderUrls(message, urls);
   pushCallSenderUrls(message, urls);
   pushForumSenderUrls(message, urls);
@@ -4880,6 +4881,50 @@ function pushPinSenderUrls(
     return;
   }
   pushFormattedUserUrls(message.from, urls);
+}
+
+/**
+ * 置顶提示上画出的原文预览只留主机名。
+ * 文字消息只画前 20 个 UTF-16 码元。图片、视频、文件等固定说法不画原文。
+ * 游戏只画标题。预览不进正文。第 21 个字起、说明和被置顶的人不读。
+ */
+function pushPinnedPreviewUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!pinnedNotice(message)) {
+    return;
+  }
+  const pinned = message.pinned_message;
+  if (!isRecord(pinned) || pinnedPreviewMedia(pinned)) {
+    return;
+  }
+  if (isRecord(pinned.game)) {
+    pushPlainUrls(pinned.game.title, urls);
+    return;
+  }
+  if (typeof pinned.text !== "string" || pinned.text.length === 0) {
+    return;
+  }
+  pushPlainUrls(pinned.text.slice(0, 20), urls);
+}
+
+/** 这些媒体在置顶提示里用固定说法，不把原文画出来。 */
+function pinnedPreviewMedia(pinned: Record<string, unknown>): boolean {
+  return (
+    isRecord(pinned.audio) ||
+    isRecord(pinned.video) ||
+    isRecord(pinned.animation) ||
+    isRecord(pinned.voice) ||
+    isRecord(pinned.video_note) ||
+    isRecord(pinned.sticker) ||
+    isRecord(pinned.document) ||
+    isRecord(pinned.location) ||
+    isRecord(pinned.contact) ||
+    isRecord(pinned.poll) ||
+    isRecord(pinned.paid_media) ||
+    (Array.isArray(pinned.photo) && pinned.photo.length > 0)
+  );
 }
 
 /**
