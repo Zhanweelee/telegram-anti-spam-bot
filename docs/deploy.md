@@ -79,7 +79,7 @@ Workers AI 也先不要绑。默认规则 `llm_hint` 是关闭的。要打开时
 
 `/verifyfail <chatId> [stay|kick|ban|reset]` 决定这个群验证到期后怎么处理。不设置时成员留下。`kick` 移出，以后还能再加入。`ban` 封禁。`stay` 或 `reset` 回到留下。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群。配了之后写进 `runtime-captcha-fail` 键。定时清理和过期后点按钮都读这份记录。见 ADR 0009 和 ADR 0465。
 
-`/allowhost <chatId> [add|remove <host>|reset]` 让这个群放行一台主机。不添加时短链、邀请和裸 IP 仍删除。带路径或端口的值不写入。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，一个群最多 32 台。配了之后写进 `runtime-allow-host` 键。见 ADR 0466。正文上的文字链接后来由 ADR 0737 不能越过正文。说明上的文字链接后来由 ADR 0738 不能越过说明。
+`/allowhost <chatId> [add|remove <host>|reset]` 让这个群放行一台主机。不添加时短链、邀请和裸 IP 仍删除。带路径或端口的值不写入。没配 `POLICY_KV` 时记在 isolate 内存里，最多 256 个群，一个群最多 32 台。配了之后写进 `runtime-allow-host` 键。见 ADR 0466。正文上的文字链接后来由 ADR 0737 不能越过正文。说明上的文字链接后来由 ADR 0738 不能越过说明。手动引用自己就是正文时，文字链接后来由 ADR 0739 不能越过摘录。
 
 `/allowhost <chatId> skip <count>` 跳过前面的主机再往下列。不写 `skip` 时仍从第一台开始。见 ADR 0524。
 
