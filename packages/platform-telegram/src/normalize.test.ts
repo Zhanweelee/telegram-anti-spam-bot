@@ -41412,6 +41412,227 @@ describe("normalizeUpdate", () => {
     expect(quietDump).not.toContain("tinyurl");
   });
 
+  it("skips the sender name when a unique gift is bought through an offer", async () => {
+    const phrase = "请免费领取礼品";
+    const offered = await normalize({
+      update_id: 79923,
+      message: {
+        message_id: 79923,
+        date: 1761955200,
+        chat: {
+          id: -10079923,
+          type: "supergroup",
+          title: `https://example.com/room79923 ${phrase}`,
+        },
+        sender_chat: {
+          id: -10079923,
+          type: "supergroup",
+          title: `https://bit.ly/gift79923 ${phrase}`,
+          username: "secretuser79923",
+        },
+        from: {
+          id: 79923,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79923",
+          last_name: "https://cutt.ly/also79923",
+          username: "adder79923",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名", name: "Slug79923" },
+          origin: "offer",
+        },
+      },
+    });
+    expect(offered.status).toBe("event");
+    if (offered.status !== "event") {
+      return;
+    }
+    expect(offered.event.message?.text).toBe("收藏名");
+    expect(offered.event.message?.gift).toBe("unique");
+    expect(offered.event.message?.hosts).toBeUndefined();
+    const offeredDump = JSON.stringify(offered.event);
+    expect(offeredDump).not.toContain(phrase);
+    expect(offeredDump).not.toContain("gift79923");
+    expect(offeredDump).not.toContain("skip79923");
+    expect(offeredDump).not.toContain("also79923");
+    expect(offeredDump).not.toContain("room79923");
+    expect(offeredDump).not.toContain("secretuser79923");
+    expect(offeredDump).not.toContain("adder79923");
+    expect(offeredDump).not.toContain("Slug79923");
+    expect(offeredDump).not.toContain("bit.ly");
+    expect(offeredDump).not.toContain("tinyurl");
+    expect(offeredDump).not.toContain("cutt.ly");
+    expect(offeredDump).not.toContain("example.com");
+
+    const other = await normalize({
+      update_id: 79924,
+      message: {
+        message_id: 79924,
+        date: 1761955200,
+        chat: { id: -10079924, type: "group", title: "本群" },
+        sender_chat: {
+          id: -100799240,
+          type: "channel",
+          title: "https://bit.ly/gift79924",
+          username: "secretuser79924",
+        },
+        from: {
+          id: 79924,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79924",
+          last_name: "https://cutt.ly/also79924",
+          username: "adder79924",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名" },
+          origin: "offer",
+        },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.gift).toBe("unique");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("gift79924");
+    expect(otherDump).not.toContain("skip79924");
+    expect(otherDump).not.toContain("also79924");
+    expect(otherDump).not.toContain("secretuser79924");
+    expect(otherDump).not.toContain("adder79924");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+
+    const person = await normalize({
+      update_id: 79925,
+      message: {
+        message_id: 79925,
+        date: 1761955200,
+        chat: { id: 79925, type: "private" },
+        from: {
+          id: 79925,
+          first_name: "https://bit.ly/who79925",
+          last_name: "https://tinyurl.com/also79925",
+          username: "adder79925",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名" },
+          origin: "offer",
+        },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.gift).toBe("unique");
+    expect(person.event.message?.hosts).toBeUndefined();
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79925");
+    expect(personDump).not.toContain("also79925");
+    expect(personDump).not.toContain("adder79925");
+    expect(personDump).not.toContain("bit.ly");
+    expect(personDump).not.toContain("tinyurl");
+
+    const moved = await normalize({
+      update_id: 79926,
+      message: {
+        message_id: 79926,
+        date: 1761955200,
+        chat: { id: -10079926, type: "channel", title: "本群" },
+        sender_chat: {
+          id: -10079926,
+          type: "channel",
+          title: "https://bit.ly/gift79926",
+          username: "secretuser79926",
+        },
+        from: {
+          id: 79926,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79926",
+          username: "adder79926",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名" },
+          origin: "transfer",
+        },
+      },
+    });
+    expect(moved.status).toBe("event");
+    if (moved.status !== "event") {
+      return;
+    }
+    expect(moved.event.message?.gift).toBe("unique");
+    expect(moved.event.message?.hosts).toEqual(["bit.ly"]);
+    const movedDump = JSON.stringify(moved.event);
+    expect(movedDump).not.toContain("gift79926");
+    expect(movedDump).not.toContain("skip79926");
+    expect(movedDump).not.toContain("secretuser79926");
+    expect(movedDump).not.toContain("adder79926");
+    expect(movedDump).not.toContain("tinyurl");
+
+    const resale = await normalize({
+      update_id: 79927,
+      message: {
+        message_id: 79927,
+        date: 1761955200,
+        chat: { id: 79927, type: "private" },
+        from: {
+          id: 79927,
+          first_name: "https://bit.ly/who79927",
+          last_name: "https://tinyurl.com/also79927",
+          username: "adder79927",
+        },
+        unique_gift: {
+          gift: { base_name: "收藏名" },
+          origin: "resale",
+        },
+      },
+    });
+    expect(resale.status).toBe("event");
+    if (resale.status !== "event") {
+      return;
+    }
+    expect(resale.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const resaleDump = JSON.stringify(resale.event);
+    expect(resaleDump).not.toContain("who79927");
+    expect(resaleDump).not.toContain("also79927");
+    expect(resaleDump).not.toContain("adder79927");
+
+    const card = await normalize({
+      update_id: 79928,
+      message: {
+        message_id: 79928,
+        date: 1761955200,
+        chat: { id: -10079928, type: "supergroup", title: "本群" },
+        sender_chat: {
+          id: -10079928,
+          type: "supergroup",
+          title: "https://bit.ly/gift79928",
+        },
+        from: {
+          id: 79928,
+          is_bot: true,
+          first_name: "https://tinyurl.com/skip79928",
+        },
+        gift: { gift: { id: "gid79928" } },
+        unique_gift: { gift: { base_name: "收藏名" }, origin: "offer" },
+      },
+    });
+    expect(card.status).toBe("event");
+    if (card.status !== "event") {
+      return;
+    }
+    expect(card.event.message?.gift).toBe("card");
+    expect(card.event.message?.hosts).toEqual(["bit.ly"]);
+    const cardDump = JSON.stringify(card.event);
+    expect(cardDump).not.toContain("gift79928");
+    expect(cardDump).not.toContain("skip79928");
+    expect(cardDump).not.toContain("tinyurl");
+    expect(cardDump).not.toContain("gid79928");
+  });
+
   it("leaves a short link in the chat title when a chat sends a gift", async () => {
     const phrase = "请免费领取礼品";
     const card = await normalize({
