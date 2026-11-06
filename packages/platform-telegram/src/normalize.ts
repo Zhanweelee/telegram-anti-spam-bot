@@ -651,7 +651,15 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   }
   for (const field of ["poll_option_added", "poll_option_deleted"]) {
     const value = message[field];
-    if (isRecord(value)) {
+    if (!isRecord(value)) {
+      continue;
+    }
+    if (typeof value.option_text === "string") {
+      // 自定义表情必须整段落在这条后加或删掉的选项里。
+      lists.push(
+        fittingEmoji(value.option_text_entities, value.option_text.length),
+      );
+    } else {
       lists.push(value.option_text_entities);
     }
   }
