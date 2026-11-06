@@ -40928,6 +40928,124 @@ describe("normalizeUpdate", () => {
     expect(bodyDump).not.toContain("cutt.ly");
   });
 
+  it("leaves a short link in the channel title on a price change", async () => {
+    const phrase = "请免费领取礼品";
+    const stars = 880650;
+    const titled = await normalize({
+      update_id: 79650,
+      message: {
+        message_id: 79650,
+        date: 1761955200,
+        chat: {
+          id: -10079650,
+          type: "channel",
+          title: "https://ow.ly/room79650",
+        },
+        sender_chat: {
+          id: -10079650,
+          type: "channel",
+          title: `https://bit.ly/later79650 ${phrase}`,
+          username: "secretuser79650",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79650",
+          last_name: "https://cutt.ly/also79650",
+          username: "adder79650",
+        },
+        direct_message_price_changed: {
+          are_direct_messages_enabled: false,
+          direct_message_star_count: stars,
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("");
+    expect(titled.event.message?.priceNotice).toBe("direct");
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titledDump = JSON.stringify(titled.event);
+    expect(titledDump).not.toContain(phrase);
+    expect(titledDump).not.toContain("later79650");
+    expect(titledDump).not.toContain("skip79650");
+    expect(titledDump).not.toContain("also79650");
+    expect(titledDump).not.toContain("secretuser79650");
+    expect(titledDump).not.toContain("adder79650");
+    expect(titledDump).not.toContain("room79650");
+    expect(titledDump).not.toContain("tinyurl");
+    expect(titledDump).not.toContain("cutt.ly");
+    expect(titledDump).not.toContain("ow.ly");
+    expect(titledDump).not.toContain(String(stars));
+
+    const other = await normalize({
+      update_id: 79651,
+      message: {
+        message_id: 79651,
+        date: 1761955200,
+        chat: { id: -10079651, type: "supergroup" },
+        sender_chat: {
+          id: -100796510,
+          type: "channel",
+          title: "https://bit.ly/chan79651",
+          username: "secretuser79651",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79651",
+          last_name: "https://cutt.ly/also79651",
+        },
+        paid_message_price_changed: { paid_message_star_count: 880651 },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.priceNotice).toBe("paid");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("chan79651");
+    expect(otherDump).not.toContain("skip79651");
+    expect(otherDump).not.toContain("also79651");
+    expect(otherDump).not.toContain("secretuser79651");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+    expect(otherDump).not.toContain("880651");
+
+    const person = await normalize({
+      update_id: 79652,
+      message: {
+        message_id: 79652,
+        date: 1761955200,
+        chat: { id: -10079652, type: "supergroup" },
+        sender_chat: {
+          id: -10079652,
+          type: "supergroup",
+          title: "https://bit.ly/group79652",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/who79652",
+          last_name: "https://cutt.ly/also79652",
+        },
+        paid_message_price_changed: { paid_message_star_count: 1 },
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.priceNotice).toBe("paid");
+    expect(person.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79652");
+    expect(personDump).not.toContain("also79652");
+    expect(personDump).not.toContain("group79652");
+    expect(personDump).not.toContain("bit.ly");
+  });
+
   it("keeps only the hostname from the full name drawn for a checklist completer", async () => {
     const phrase = "请免费领取礼品";
     const code = "DONE79234";
