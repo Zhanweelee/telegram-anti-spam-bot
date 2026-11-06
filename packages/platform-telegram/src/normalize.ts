@@ -4943,6 +4943,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 付款成功的账单标题仍按原来的顺序。
  * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
  * 本条回复是普通文件且没有说明时，引用条画文件名的前 150 个码元。
+ * 动图、视频、音频、贴纸和图片占住这一行时，不读附带的文件名。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  */
 function pushReplyTargetUrls(
@@ -5054,7 +5055,7 @@ function pushReplyTopicTitle(
   return true;
 }
 
-/** 没有说明的普通文件，引用条只画文件名的前 150 个码元。 */
+/** 没有说明的普通文件，引用条只画文件名的前 150 个码元。固定字样占住这一行时不读附带的文件名。 */
 function pushReplyDocumentName(
   reply: Record<string, unknown>,
   urls: string[],
@@ -5065,6 +5066,9 @@ function pushReplyDocumentName(
   if (typeof reply.text === "string" && reply.text.length > 0) {
     return;
   }
+  if (labeledReplyMedia(reply)) {
+    return;
+  }
   if (!isRecord(reply.document)) {
     return;
   }
@@ -5073,6 +5077,13 @@ function pushReplyDocumentName(
     return;
   }
   pushPlainUrls(name.slice(0, 150), urls);
+}
+
+/** 动图、视频、音频、贴纸、图片和其余固定字样占住引用条，不画文件名。 */
+function labeledReplyMedia(value: Record<string, unknown>): boolean {
+  return externalPreviewKeys.some(
+    (key) => isRecord(value[key]) || Array.isArray(value[key]),
+  );
 }
 
 const externalPreviewKeys = [
@@ -5100,7 +5111,7 @@ const externalPreviewKeys = [
  * 外部回复的媒体标题只留主机名。
  * 清单读标题和标题上的文字链接。任务不读。
  * 账单读说明，不读标题。
- * 普通文件读文件名。图片、贴纸、视频和游戏不读。
+ * 普通文件读文件名。动图、图片、贴纸、视频和游戏只占这一行，不读附带的文件名。
  * 这一行已经占住时返回 true，不再改读本条回复的游戏或账单。
  */
 function pushExternalReplyPreview(
@@ -5120,13 +5131,14 @@ function pushExternalReplyPreview(
     pushPlainUrls(external.invoice.description, urls);
     return true;
   }
+  if (labeledReplyMedia(external)) {
+    return true;
+  }
   if (isRecord(external.document)) {
     pushPlainUrls(external.document.file_name, urls);
     return true;
   }
-  return externalPreviewKeys.some(
-    (key) => isRecord(external[key]) || Array.isArray(external[key]),
-  );
+  return false;
 }
 
 /**
