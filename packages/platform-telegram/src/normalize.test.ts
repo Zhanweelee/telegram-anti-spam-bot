@@ -16075,8 +16075,167 @@ describe("normalizeUpdate", () => {
     }
     expect(described.event.message?.text).toBe("题");
     expect(described.event.message?.pollDescription).toBe("述");
-    expect(described.event.message?.asTextMention).toBe(true);
+    expect(described.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(described.event)).not.toContain("77081261");
+  });
+
+  it("skips a poll description text mention that starts outside the description", async () => {
+    const user = { id: 77081281, first_name: "隐名戊", username: "user77089" };
+    const poll = (id: number, fields: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        poll: {
+          id: `poll${id}`,
+          question: "题",
+          options: [{ text: "甲" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+          ...fields,
+        },
+      },
+    });
+    const mention = (offset: number, length: number) => [
+      { type: "text_mention", offset, length, user },
+    ];
+
+    const past = await normalize(
+      poll(81281, {
+        description: "述",
+        description_entities: mention(1, 1),
+      }),
+    );
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("题");
+    expect(past.event.message?.pollDescription).toBe("述");
+    expect(past.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("77081281");
+
+    const empty = await normalize(
+      poll(81282, {
+        description: "",
+        description_entities: mention(0, 1),
+      }),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.pollDescription).toBeUndefined();
+    expect(empty.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("77081281");
+
+    const zero = await normalize(
+      poll(81283, {
+        description: "述",
+        description_entities: mention(0, 0),
+      }),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(zero.event)).not.toContain("77081281");
+
+    const negative = await normalize(
+      poll(81284, {
+        description: "述",
+        description_entities: mention(-1, 1),
+      }),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("77081281");
+
+    const clamped = await normalize(
+      poll(81285, {
+        description: "述",
+        description_entities: mention(0, 2),
+      }),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.pollDescription).toBe("述");
+    expect(clamped.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(clamped.event)).not.toContain("77081281");
+
+    const wide = await normalize(
+      poll(81286, {
+        description: "述".repeat(151),
+        description_entities: mention(150, 1),
+      }),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.pollDescription).toHaveLength(151);
+    expect(wide.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("77081281");
+
+    const stored = await normalize(
+      poll(81287, {
+        description: "述".repeat(1025),
+        description_entities: mention(1024, 1),
+      }),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.pollDescription).toHaveLength(1024);
+    expect(stored.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("77081281");
+
+    const loose = await normalize(
+      poll(81288, { description_entities: mention(9, 2) }),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("题");
+    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("77081281");
+
+    const titled = await normalize({
+      update_id: 81289,
+      message: {
+        message_id: 81289,
+        date: 1761955200,
+        chat: { id: -10081289, type: "supergroup" },
+        from: { id: 81289, first_name: "Ada" },
+        text: "站会",
+        checklist: {
+          title: "单",
+          title_entities: mention(1, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("站会");
+    expect(titled.event.message?.checklistTitle).toBe("单");
+    expect(titled.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(titled.event)).not.toContain("77081281");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
