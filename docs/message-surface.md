@@ -340,7 +340,7 @@ Webhook 已经能校验 Telegram 的 `secret_token`，并把普通消息、编�
 
 已有别的正文时，`suggested_post_declined.comment` 去掉空白后的前 128 字另留在 `declineComment`。关键词或默认正则命中时删除。第 129 字起不进事件。嵌套的 `suggested_post_message` 不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0551。
 
-已有别的正文时，`poll_option_added.option_text` 或 `poll_option_deleted.option_text` 去掉空白后的前 100 字另留在 `addedText`。没有选项时，`checklist_tasks_added` 里会画出来的任务文字用空格拼起来，前 3029 字另留在同一个字段。四条起只拼前三条。先看新选项，再看被删选项，再看新任务。关键词或默认正则命中时删除。更后面的字不进事件。选项编号、原投票、原清单和完成者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。
+已有别的正文时，`poll_option_added.option_text` 或 `poll_option_deleted.option_text` 去掉空白后的前 100 字另留在 `addedText`。没有选项时，`checklist_tasks_added` 里会画出来的任务文字用空格拼起来，前 3029 字另留在同一个字段。四条起只拼前三条。先看新选项，再看被删选项，再看新任务。关键词或默认正则命中时删除。更后面的字不进事件。选项编号、原投票、原清单和完成者不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0552。后加或删除的选项上的文字链接后来由 ADR 0731 不能越过正文。后加或删除的选项上的文字链接后来由 ADR 0775 要求长度大于 0。
 
 已有别的正文时，`forward_origin` 为 `hidden_user` 的 `sender_user_name`，或旧字段 `forward_sender_name`，去掉空白后的前 4096 字另留在 `hiddenName`。先看现代字段，再看旧字段。关键词或默认正则命中时删除。第 4097 字起不进事件。频道标题、真实用户姓名、来源签名和外部回复不进这个字段。这段自己就是正文时不设这个字段。见 ADR 0553。
 
