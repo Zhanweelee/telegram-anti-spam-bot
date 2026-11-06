@@ -13056,6 +13056,182 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(paid)).not.toContain("paid80554");
   });
 
+  it("deletes a short link drawn after a rich voice note", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const pinned = await posted(80591, {
+      pinned_message: {
+        message_id: 88080591,
+        text: `https://tinyurl.com/text80591 ${phrase}`,
+        rich_message: {
+          blocks: [
+            {
+              type: "voice_note",
+              voice_note: {
+                file_id: "VOICE80591",
+                file_unique_id: "U80591",
+                duration: 3,
+              },
+              caption: { text: `https://evil.example/cap80591 ${phrase}` },
+            },
+            { type: "paragraph", text: `https://bit.ly/ok80591 ${phrase}` },
+          ],
+        },
+      },
+    });
+    expect(pinned.message?.text).toBe("");
+    expect(pinned.message?.asPin).toBe(true);
+    expect(pinned.message?.hosts).toEqual(["bit.ly"]);
+    const pinModerator = createMemoryModerator();
+    const pinRemoved = await screenTelegramEvent(pinned, {
+      moderator: pinModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pinRemoved.decision.action).toBe("delete");
+    expect(JSON.stringify(pinRemoved.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(pinModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080591", messageId: "80591" },
+    ]);
+    const pinDump = JSON.stringify({
+      event: pinned,
+      decision: pinRemoved.decision,
+    });
+    expect(pinDump).not.toContain(phrase);
+    expect(pinDump).not.toContain("ok80591");
+    expect(pinDump).not.toContain("cap80591");
+    expect(pinDump).not.toContain("evil.example");
+    expect(pinDump).not.toContain("text80591");
+    expect(pinDump).not.toContain("tinyurl");
+    expect(pinDump).not.toContain("VOICE80591");
+    expect(pinDump).not.toContain("88080591");
+
+    const kept = await posted(80592, {
+      pinned_message: {
+        message_id: 1,
+        rich_message: {
+          blocks: [
+            {
+              type: "voice_note",
+              voice_note: {
+                file_id: "VOICE80592",
+                file_unique_id: "U80592",
+                duration: 1,
+              },
+            },
+            { type: "paragraph", text: "http://example.com/a80592" },
+          ],
+        },
+      },
+    });
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("a80592");
+
+    const paid = await posted(
+      80593,
+      {
+        text: "你好",
+        reply_to_message: {
+          message_id: 1,
+          rich_message: {
+            blocks: [
+              {
+                type: "voice_note",
+                voice_note: {
+                  file_id: "VOICE80593",
+                  file_unique_id: "U80593",
+                  duration: 1,
+                },
+              },
+              { type: "paragraph", text: "http://bit.ly/paid80593" },
+            ],
+          },
+        },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid80593");
+
+    const animation = await posted(80594, {
+      pinned_message: {
+        message_id: 1,
+        rich_message: {
+          blocks: [
+            {
+              type: "animation",
+              animation: {
+                file_id: "ANIM80594",
+                file_unique_id: "A80594",
+                width: 1,
+                height: 1,
+                duration: 1,
+              },
+            },
+            { type: "paragraph", text: "https://bit.ly/anim80594" },
+          ],
+        },
+      },
+    });
+    expect(animation.message?.hosts).toBeUndefined();
+    const animationHit = await screenTelegramEvent(animation, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(animationHit.decision.action).toBe("allow");
+    expect(JSON.stringify(animation)).not.toContain("anim80594");
+  });
+
   it("leaves a reply link that starts after the drawn text", async () => {
     const phrase = "请免费领取礼品";
     async function posted(

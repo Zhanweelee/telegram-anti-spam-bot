@@ -5806,6 +5806,7 @@ interface PinnedRichPreview {
  * 有复选框时用勾选框代替圆点。没勾上的框多占一个码元。
  * 有序列表没写标签时，a、A、i、I 按字母或罗马数字占位。
  * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
+ * 语音不在这条预览里。说明也不画。后面的块仍读。
  * 表格格子、地图说明和公式正文不在这 20 个码元里。
  */
 function pushPinnedRichPreview(
@@ -5916,6 +5917,10 @@ function appendPinnedRichBlock(
     appendPinnedRichButtons(block.buttons, preview);
     return;
   }
+  // formatRichBlock 不画语音。说明也不画。气泡里的整篇文章仍不读语音文件。
+  if (type === "voice_note") {
+    return;
+  }
   if (
     type === "photo" ||
     type === "video" ||
@@ -5923,8 +5928,7 @@ function appendPinnedRichBlock(
     type === "collage" ||
     type === "slideshow" ||
     type === "map" ||
-    type === "mathematical_expression" ||
-    type === "voice_note"
+    type === "mathematical_expression"
   ) {
     fillPinnedRichPreview(preview);
   }

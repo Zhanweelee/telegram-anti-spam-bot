@@ -43788,6 +43788,160 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(checklist.event)).not.toContain("task80564");
   });
 
+  it("reads the hostname drawn after a rich voice note", async () => {
+    const pinned = await normalize({
+      update_id: 80581,
+      message: {
+        message_id: 80581,
+        date: 1761955200,
+        chat: { id: -10080581, type: "supergroup" },
+        from: { id: 80581, first_name: "Ada" },
+        pinned_message: {
+          message_id: 805811,
+          date: 1761955100,
+          chat: { id: -10080581, type: "supergroup" },
+          text: "https://tinyurl.com/text80581",
+          rich_message: {
+            blocks: [
+              {
+                type: "voice_note",
+                voice_note: {
+                  file_id: "VOICE80581",
+                  file_unique_id: "U80581",
+                  duration: 3,
+                },
+                caption: { text: "https://evil.example/cap80581" },
+              },
+              { type: "paragraph", text: "https://bit.ly/ok80581" },
+            ],
+          },
+        },
+      },
+    });
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(pinned.event.message?.hosts).toEqual(["bit.ly"]);
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain("ok80581");
+    expect(pinnedDump).not.toContain("cap80581");
+    expect(pinnedDump).not.toContain("evil.example");
+    expect(pinnedDump).not.toContain("text80581");
+    expect(pinnedDump).not.toContain("tinyurl");
+    expect(pinnedDump).not.toContain("VOICE80581");
+
+    const spaced = await normalize({
+      update_id: 80582,
+      message: {
+        message_id: 80582,
+        date: 1761955200,
+        chat: { id: -10080582, type: "supergroup" },
+        from: { id: 80582, first_name: "Ada" },
+        pinned_message: {
+          message_id: 805821,
+          date: 1761955100,
+          chat: { id: -10080582, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "xxx" },
+              {
+                type: "voice_note",
+                voice_note: {
+                  file_id: "VOICE80582",
+                  file_unique_id: "U80582",
+                  duration: 1,
+                },
+              },
+              { type: "paragraph", text: "https://bit.ly/edge80582" },
+            ],
+          },
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.l"]);
+    expect(JSON.stringify(spaced.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(spaced.event)).not.toContain("edge80582");
+
+    const replied = await normalize({
+      update_id: 80583,
+      message: {
+        message_id: 80583,
+        date: 1761955200,
+        chat: { id: -10080583, type: "supergroup" },
+        from: { id: 80583, first_name: "Ada" },
+        text: "你好",
+        reply_to_message: {
+          message_id: 805831,
+          date: 1761955100,
+          chat: { id: -10080583, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "voice_note",
+                voice_note: {
+                  file_id: "VOICE80583",
+                  file_unique_id: "U80583",
+                  duration: 2,
+                },
+              },
+              { type: "paragraph", text: "https://bit.ly/reply80583" },
+            ],
+          },
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(replied.event)).not.toContain("reply80583");
+
+    const animation = await normalize({
+      update_id: 80584,
+      message: {
+        message_id: 80584,
+        date: 1761955200,
+        chat: { id: -10080584, type: "supergroup" },
+        from: { id: 80584, first_name: "Ada" },
+        pinned_message: {
+          message_id: 805841,
+          date: 1761955100,
+          chat: { id: -10080584, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "animation",
+                animation: {
+                  file_id: "ANIM80584",
+                  file_unique_id: "A80584",
+                  width: 1,
+                  height: 1,
+                  duration: 1,
+                },
+              },
+              { type: "paragraph", text: "https://bit.ly/anim80584" },
+            ],
+          },
+        },
+      },
+    });
+    expect(animation.status).toBe("event");
+    if (animation.status !== "event") {
+      return;
+    }
+    expect(animation.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(animation.event)).not.toContain("anim80584");
+  });
+
   it("reads the hostname drawn on a reply under a rich message", async () => {
     const phrase = "请免费领取礼品";
     const replied = await normalize({
