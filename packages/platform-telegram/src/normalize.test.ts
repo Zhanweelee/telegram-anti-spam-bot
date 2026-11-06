@@ -15545,6 +15545,210 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(loose.event)).not.toContain("77081201");
   });
 
+  it("skips a caption text mention that starts outside the caption", async () => {
+    const user = { id: 77081221, first_name: "隐名乙", username: "user77083" };
+    const past = await normalize({
+      update_id: 81221,
+      message: {
+        message_id: 81221,
+        date: 1761955200,
+        chat: { id: -10081221, type: "supergroup" },
+        from: { id: 81221, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81221", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          { type: "text_mention", offset: 1, length: 1, user },
+        ],
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("图");
+    expect(past.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("77081221");
+
+    const empty = await normalize({
+      update_id: 81222,
+      message: {
+        message_id: 81222,
+        date: 1761955200,
+        chat: { id: -10081222, type: "supergroup" },
+        from: { id: 81222, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81222", width: 1, height: 1 }],
+        caption: "",
+        caption_entities: [
+          { type: "text_mention", offset: 0, length: 1, user },
+        ],
+      },
+    });
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("77081221");
+
+    const zero = await normalize({
+      update_id: 81223,
+      message: {
+        message_id: 81223,
+        date: 1761955200,
+        chat: { id: -10081223, type: "supergroup" },
+        from: { id: 81223, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81223", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          { type: "text_mention", offset: 0, length: 0, user },
+        ],
+      },
+    });
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(zero.event)).not.toContain("77081221");
+
+    const negative = await normalize({
+      update_id: 81224,
+      message: {
+        message_id: 81224,
+        date: 1761955200,
+        chat: { id: -10081224, type: "supergroup" },
+        from: { id: 81224, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81224", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          { type: "text_mention", offset: -1, length: 1, user },
+        ],
+      },
+    });
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("77081221");
+
+    const clamped = await normalize({
+      update_id: 81225,
+      message: {
+        message_id: 81225,
+        date: 1761955200,
+        chat: { id: -10081225, type: "supergroup" },
+        from: { id: 81225, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81225", width: 1, height: 1 }],
+        caption: "图",
+        caption_entities: [
+          { type: "text_mention", offset: 0, length: 2, user },
+        ],
+      },
+    });
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.text).toBe("图");
+    expect(clamped.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(clamped.event)).not.toContain("77081221");
+
+    const wide = await normalize({
+      update_id: 81226,
+      message: {
+        message_id: 81226,
+        date: 1761955200,
+        chat: { id: -10081226, type: "supergroup" },
+        from: { id: 81226, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81226", width: 1, height: 1 }],
+        caption: "图".repeat(151),
+        caption_entities: [
+          { type: "text_mention", offset: 150, length: 1, user },
+        ],
+      },
+    });
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.text).toHaveLength(151);
+    expect(wide.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("77081221");
+
+    const stored = await normalize({
+      update_id: 81227,
+      message: {
+        message_id: 81227,
+        date: 1761955200,
+        chat: { id: -10081227, type: "supergroup" },
+        from: { id: 81227, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81227", width: 1, height: 1 }],
+        caption: "图".repeat(4097),
+        caption_entities: [
+          { type: "text_mention", offset: 4096, length: 1, user },
+        ],
+      },
+    });
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.text).toHaveLength(4096);
+    expect(stored.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("77081221");
+
+    const loose = await normalize({
+      update_id: 81228,
+      message: {
+        message_id: 81228,
+        date: 1761955200,
+        chat: { id: -10081228, type: "supergroup" },
+        from: { id: 81228, first_name: "Ada" },
+        photo: [{ file_id: "AgAD81228", width: 1, height: 1 }],
+        caption_entities: [
+          { type: "text_mention", offset: 9, length: 2, user },
+        ],
+      },
+    });
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("77081221");
+
+    const question = await normalize({
+      update_id: 81229,
+      message: {
+        message_id: 81229,
+        date: 1761955200,
+        chat: { id: -10081229, type: "supergroup" },
+        from: { id: 81229, first_name: "Ada" },
+        poll: {
+          id: "poll81229",
+          question: "题",
+          question_entities: [
+            { type: "text_mention", offset: 1, length: 1, user },
+          ],
+          options: [{ text: "甲" }],
+          total_voter_count: 0,
+          is_closed: false,
+          is_anonymous: true,
+          type: "regular",
+          allows_multiple_answers: false,
+        },
+      },
+    });
+    expect(question.status).toBe("event");
+    if (question.status !== "event") {
+      return;
+    }
+    expect(question.event.message?.text).toBe("题");
+    expect(question.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(question.event)).not.toContain("77081221");
+  });
+
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80741,
