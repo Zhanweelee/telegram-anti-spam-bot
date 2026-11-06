@@ -690,7 +690,13 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
     }
     if (Array.isArray(checklist.tasks)) {
       for (const task of checklist.tasks) {
-        if (isRecord(task)) {
+        if (!isRecord(task)) {
+          continue;
+        }
+        if (typeof task.text === "string") {
+          // 自定义表情必须整段落在这条任务里。
+          lists.push(fittingEmoji(task.text_entities, task.text.length));
+        } else {
           lists.push(task.text_entities);
         }
       }
