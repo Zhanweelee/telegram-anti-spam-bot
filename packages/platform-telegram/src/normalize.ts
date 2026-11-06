@@ -4634,8 +4634,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         if (!isRecord(option)) {
           continue;
         }
-        // 文字链接的起点必须落在这条选项文字里。
-        pushDrawnLine(option.text, option.text_entities, urls);
+        // 文字链接的起点必须落在这条选项文字里，长度必须大于 0。
+        pushPlainUrls(option.text, urls);
+        pushTextLinks(
+          typeof option.text === "string"
+            ? drawnTextLink(option.text_entities, option.text.length)
+            : option.text_entities,
+          urls,
+        );
         pushPollAdderUrls(option, urls);
       }
     }
