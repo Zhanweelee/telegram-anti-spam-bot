@@ -4476,8 +4476,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
         if (!isRecord(option)) {
           continue;
         }
-        pushPlainUrls(option.text, urls);
-        pushTextLinks(option.text_entities, urls);
+        // 文字链接的起点必须落在这条选项文字里。
+        pushDrawnLine(option.text, option.text_entities, urls);
         pushPollAdderUrls(option, urls);
       }
     }

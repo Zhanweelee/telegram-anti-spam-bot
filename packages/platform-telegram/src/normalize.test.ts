@@ -11684,6 +11684,92 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a poll option link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80701,
+      message: {
+        message_id: 80701,
+        date: 1761955200,
+        chat: { id: -10080701, type: "supergroup" },
+        from: { id: 80701, first_name: "Ada" },
+        poll: {
+          question: "站会",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 1,
+                  length: 1,
+                  url: "https://bit.ly/opt80701",
+                },
+              ],
+            },
+            {
+              text: "https://cutt.ly/other80701",
+              voter_count: 0,
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.pollOption).toBe("甲 https://cutt.ly/other80701");
+    expect(past.event.message?.hosts).toEqual(["cutt.ly"]);
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("opt80701");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80702,
+      message: {
+        message_id: 80702,
+        date: 1761955200,
+        chat: { id: -10080702, type: "supergroup" },
+        from: { id: 80702, first_name: "Ada" },
+        poll: {
+          question: "站会",
+          options: [
+            {
+              text: "https://tinyurl.com/plain80702",
+              voter_count: 0,
+              text_entities: [
+                {
+                  type: "text_link",
+                  offset: 0,
+                  length: 4,
+                  url: "https://cutt.ly/opt80702",
+                },
+                {
+                  type: "text_link",
+                  offset: 99,
+                  length: 1,
+                  url: "https://evil.example/late80702",
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("opt80702");
+    expect(keptDump).not.toContain("late80702");
+    expect(keptDump).not.toContain("evil.example");
+  });
+
   it("skips a done task link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80681,
