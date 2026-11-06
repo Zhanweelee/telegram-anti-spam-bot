@@ -29547,6 +29547,162 @@ describe("screenTelegramEvent", () => {
     expect(dumped).not.toContain(String(count));
   });
 
+  it("drops a short link after the first space in a poll option sender name", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      from: Record<string, unknown>,
+      extra: Record<string, unknown> = {},
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -(1_000_000 + updateId), type: "supergroup" },
+            from,
+            poll_option_added: { option_text: "选项" },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const cut = await posted(79543, {
+      id: 127,
+      first_name: `Go https://bit.ly/later79543 ${phrase}`,
+      last_name: "https://tinyurl.com/skiplast79543",
+      username: "secretuser79543",
+    });
+    expect(cut.message?.text).toBe("选项");
+    expect(cut.message?.pollNotice).toBe("added");
+    expect(cut.message?.hosts).toBeUndefined();
+    const cutKept = await screenTelegramEvent(cut, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(cutKept.decision.action).toBe("allow");
+    const cutDump = JSON.stringify({ event: cut, decision: cutKept.decision });
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("later79543");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79543");
+    expect(cutDump).not.toContain("secretuser79543");
+
+    const early = await posted(79544, {
+      id: 127,
+      first_name: "A https://bit.ly/keep79544",
+    });
+    expect(early.message?.hosts).toEqual(["bit.ly"]);
+    const earlyModerator = createMemoryModerator();
+    const earlyHit = await screenTelegramEvent(early, {
+      moderator: earlyModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(earlyHit.decision.action).toBe("delete");
+    expect(earlyHit.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(earlyHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(earlyModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079544", messageId: "79544" },
+    ]);
+    expect(JSON.stringify(early)).not.toContain("keep79544");
+
+    const paid = await posted(
+      79545,
+      { id: 127, first_name: "https://bit.ly/paid79545" },
+      { is_paid_post: true },
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(skipped.decision)).not.toContain("paid79545");
+
+    const removed = await posted(
+      79546,
+      { id: 127, first_name: "https://t.me/+code79546" },
+      {
+        poll_option_added: undefined,
+        poll_option_deleted: { option_text: "删掉的选项" },
+      },
+    );
+    expect(removed.message?.pollNotice).toBe("deleted");
+    expect(removed.message?.text).toBe("删掉的选项");
+    expect(removed.message?.hosts).toEqual(["t.me"]);
+    expect(removed.message?.invites).toEqual(["t.me"]);
+    const removedHit = await screenTelegramEvent(removed, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(removedHit.decision.action).toBe("delete");
+    expect(JSON.stringify(removedHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(removed)).not.toContain("code79546");
+
+    const plain = await posted(79547, {
+      id: 127,
+      first_name: "https://example.com/ok79547",
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plain)).not.toContain("ok79547");
+
+    const pub = await posted(79548, {
+      id: 127,
+      first_name: "https://t.me/durov",
+    });
+    expect(pub.message?.hosts).toEqual(["t.me"]);
+    expect(pub.message?.invites).toBeUndefined();
+    const pubKept = await screenTelegramEvent(pub, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pubKept.decision.action).toBe("allow");
+
+    const optionFirst = await posted(
+      79549,
+      { id: 127, first_name: "Go https://bit.ly/later79549" },
+      { poll_option_added: { option_text: "https://cutt.ly/opt79549" } },
+    );
+    expect(optionFirst.message?.text).toBe("https://cutt.ly/opt79549");
+    expect(optionFirst.message?.hosts).toEqual(["cutt.ly"]);
+    const optionHit = await screenTelegramEvent(optionFirst, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(optionHit.decision.action).toBe("delete");
+    expect(JSON.stringify(optionHit.decision.evidence)).toContain(
+      "short_link:cutt.ly",
+    );
+    expect(JSON.stringify(optionHit.decision.evidence)).not.toContain("bit.ly");
+    expect(JSON.stringify(optionFirst)).not.toContain("later79549");
+  });
+
   it("drops a short link after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(

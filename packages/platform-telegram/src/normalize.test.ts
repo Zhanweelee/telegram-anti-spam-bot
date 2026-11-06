@@ -30464,6 +30464,163 @@ describe("normalizeUpdate", () => {
     expect(zero.event.message?.text).toBe("今天站会");
   });
 
+  it("drops the part after the first space in a poll option sender name", async () => {
+    const phrase = "请免费领取礼品";
+    const cut = await normalize({
+      update_id: 79537,
+      message: {
+        message_id: 79537,
+        date: 1761955200,
+        chat: {
+          id: -10079537,
+          type: "supergroup",
+          title: "https://ow.ly/room79537",
+        },
+        from: {
+          id: 127,
+          first_name: `Go https://bit.ly/later79537 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79537",
+          username: "secretuser79537",
+        },
+        poll_option_added: {
+          option_persistent_id: "pid79537",
+          option_text: "选项",
+          poll_message: { text: "https://cutt.ly/nested79537" },
+        },
+      },
+    });
+    expect(cut.status).toBe("event");
+    if (cut.status !== "event") {
+      return;
+    }
+    expect(cut.event.message?.text).toBe("选项");
+    expect(cut.event.message?.textSha256).toBe(await sha256Hex("选项"));
+    expect(cut.event.message?.pollNotice).toBe("added");
+    expect(cut.event.message?.hosts).toBeUndefined();
+    const cutDump = JSON.stringify(cut.event);
+    expect(cutDump).not.toContain("later79537");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79537");
+    expect(cutDump).not.toContain("tinyurl");
+    expect(cutDump).not.toContain("secretuser79537");
+    expect(cutDump).not.toContain("room79537");
+    expect(cutDump).not.toContain("ow.ly");
+    expect(cutDump).not.toContain("pid79537");
+    expect(cutDump).not.toContain("nested79537");
+    expect(cutDump).not.toContain("cutt.ly");
+    expect(cutDump).not.toContain(phrase);
+
+    const early = await normalize({
+      update_id: 79538,
+      message: {
+        message_id: 79538,
+        date: 1761955200,
+        chat: { id: -10079538, type: "supergroup" },
+        from: {
+          id: 127,
+          first_name: "A https://bit.ly/keep79538",
+          last_name: "https://tinyurl.com/skiplast79538",
+        },
+        poll_option_added: { option_text: "选项" },
+      },
+    });
+    expect(early.status).toBe("event");
+    if (early.status !== "event") {
+      return;
+    }
+    expect(early.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(early.event)).not.toContain("keep79538");
+    expect(JSON.stringify(early.event)).not.toContain("skiplast79538");
+
+    const lastCut = await normalize({
+      update_id: 79539,
+      message: {
+        message_id: 79539,
+        date: 1761955200,
+        chat: { id: -10079539, type: "supergroup" },
+        from: {
+          id: 127,
+          first_name: "",
+          last_name: "Go https://bit.ly/last79539",
+        },
+        poll_option_deleted: { option_text: "删掉的选项" },
+      },
+    });
+    expect(lastCut.status).toBe("event");
+    if (lastCut.status !== "event") {
+      return;
+    }
+    expect(lastCut.event.message?.text).toBe("删掉的选项");
+    expect(lastCut.event.message?.pollNotice).toBe("deleted");
+    expect(lastCut.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(lastCut.event)).not.toContain("last79539");
+    expect(JSON.stringify(lastCut.event)).not.toContain("bit.ly");
+
+    const lastOnly = await normalize({
+      update_id: 79540,
+      message: {
+        message_id: 79540,
+        date: 1761955200,
+        chat: { id: -10079540, type: "supergroup" },
+        from: {
+          id: 127,
+          first_name: "",
+          last_name: "https://bit.ly/only79540",
+        },
+        poll_option_added: { option_text: "选项" },
+      },
+    });
+    expect(lastOnly.status).toBe("event");
+    if (lastOnly.status !== "event") {
+      return;
+    }
+    expect(lastOnly.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(lastOnly.event)).not.toContain("only79540");
+
+    const blank = await normalize({
+      update_id: 79541,
+      message: {
+        message_id: 79541,
+        date: 1761955200,
+        chat: { id: -10079541, type: "supergroup" },
+        from: {
+          id: 127,
+          first_name: " ",
+          last_name: "https://bit.ly/blank79541",
+        },
+        poll_option_deleted: { option_text: "删掉的选项" },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank79541");
+
+    const optionFirst = await normalize({
+      update_id: 79542,
+      message: {
+        message_id: 79542,
+        date: 1761955200,
+        chat: { id: -10079542, type: "supergroup" },
+        from: {
+          id: 127,
+          first_name: "Go https://bit.ly/later79542",
+        },
+        poll_option_added: { option_text: "https://cutt.ly/opt79542" },
+      },
+    });
+    expect(optionFirst.status).toBe("event");
+    if (optionFirst.status !== "event") {
+      return;
+    }
+    expect(optionFirst.event.message?.text).toBe("https://cutt.ly/opt79542");
+    expect(optionFirst.event.message?.hosts).toEqual(["cutt.ly"]);
+    expect(JSON.stringify(optionFirst.event)).not.toContain("later79542");
+    expect(JSON.stringify(optionFirst.event)).not.toContain("bit.ly");
+  });
+
   it("drops the part after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     const cut = await normalize({
