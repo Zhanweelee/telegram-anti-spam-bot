@@ -5058,7 +5058,7 @@ function pushLoadedReplyLine(
 /**
  * 没有更早的标题时，普通消息的引用条画出说明，否则画出正文。
  * 只读前 150 个码元。文字链接的起点落在这段里才读。
- * 原文不进正文。服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
+ * 原文不进正文。富文本也画这行。服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
  */
 function pushReplyCaptionOrText(
   message: Record<string, unknown>,
@@ -5079,12 +5079,15 @@ function pushReplyCaptionOrText(
   }
 }
 
-/** 普通气泡才画引用条。服务公告走另一块，不画被回复的说明或正文。 */
+/** 普通气泡才画引用条。富文本也是普通气泡。服务公告走另一块，不画被回复的说明或正文。 */
 function drawsContentReplyBar(message: Record<string, unknown>): boolean {
   if (typeof message.text === "string" && message.text.length > 0) {
     return true;
   }
   if (typeof message.caption === "string" && message.caption.length > 0) {
+    return true;
+  }
+  if (isRecord(message.rich_message)) {
     return true;
   }
   const mediaKeys = [

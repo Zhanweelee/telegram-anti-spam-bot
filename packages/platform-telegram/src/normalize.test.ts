@@ -42339,6 +42339,97 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(linked.event)).not.toContain("ent80362");
   });
 
+  it("reads the hostname drawn on a reply under a rich message", async () => {
+    const phrase = "请免费领取礼品";
+    const replied = await normalize({
+      update_id: 80381,
+      message: {
+        message_id: 80381,
+        date: 1761955200,
+        chat: { id: -10080381, type: "supergroup" },
+        from: { id: 80381, first_name: "Ada" },
+        rich_message: {
+          blocks: [{ type: "paragraph", text: "你好" }],
+        },
+        reply_to_message: {
+          message_id: 803811,
+          date: 1761955100,
+          chat: { id: -10080381, type: "supergroup" },
+          text: `https://bit.ly/body80381 ${phrase}`,
+        },
+      },
+    });
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("你好");
+    expect(replied.event.message?.textSha256).toBe(await sha256Hex("你好"));
+    expect(replied.event.message?.hosts).toEqual(["bit.ly"]);
+    const repliedDump = JSON.stringify(replied.event);
+    expect(repliedDump).not.toContain(phrase);
+    expect(repliedDump).not.toContain("body80381");
+
+    const linked = await normalize({
+      update_id: 80382,
+      message: {
+        message_id: 80382,
+        date: 1761955200,
+        chat: { id: -10080382, type: "supergroup" },
+        from: { id: 80382, first_name: "Ada" },
+        rich_message: {
+          blocks: [{ type: "paragraph", text: "你好" }],
+        },
+        reply_to_message: {
+          message_id: 803821,
+          date: 1761955100,
+          chat: { id: -10080382, type: "supergroup" },
+          text: "点这里看",
+          entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://bit.ly/ent80382",
+            },
+          ],
+        },
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(linked.event)).not.toContain("ent80382");
+
+    const late = await normalize({
+      update_id: 80383,
+      message: {
+        message_id: 80383,
+        date: 1761955200,
+        chat: { id: -10080383, type: "supergroup" },
+        from: { id: 80383, first_name: "Ada" },
+        rich_message: {
+          blocks: [{ type: "paragraph", text: "你好" }],
+        },
+        reply_to_message: {
+          message_id: 803831,
+          date: 1761955100,
+          chat: { id: -10080383, type: "supergroup" },
+          text: `${"甲".repeat(150)}https://bit.ly/late80383`,
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(late.event)).not.toContain("late80383");
+    expect(JSON.stringify(late.event)).not.toContain("bit.ly");
+  });
+
   it("reads the document name drawn on a reply", async () => {
     const phrase = "请免费领取礼品";
     const file = await normalize({
