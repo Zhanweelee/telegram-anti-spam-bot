@@ -11684,6 +11684,142 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a done task link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80681,
+      message: {
+        message_id: 80681,
+        date: 1761955200,
+        chat: { id: -10080681, type: "supergroup" },
+        from: { id: 80681, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [1, 2],
+          checklist_message: {
+            checklist: {
+              title: "https://cutt.ly/title80681",
+              tasks: [
+                {
+                  id: 1,
+                  text: "做",
+                  text_entities: [
+                    {
+                      type: "text_link",
+                      offset: 1,
+                      length: 1,
+                      url: "https://bit.ly/done80681",
+                    },
+                  ],
+                },
+                { id: 2, text: "https://tinyurl.com/other80681" },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("");
+    expect(past.event.message?.checklistNotice).toBe("done");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("done80681");
+    expect(pastDump).not.toContain("other80681");
+    expect(pastDump).not.toContain("title80681");
+    expect(pastDump).not.toContain("bit.ly");
+    expect(pastDump).not.toContain("tinyurl");
+    expect(pastDump).not.toContain("cutt.ly");
+
+    const kept = await normalize({
+      update_id: 80682,
+      message: {
+        message_id: 80682,
+        date: 1761955200,
+        chat: { id: -10080682, type: "supergroup" },
+        from: { id: 80682, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_done_task_ids: [1],
+          checklist_message: {
+            checklist: {
+              tasks: [
+                {
+                  id: 1,
+                  text: "https://tinyurl.com/plain80682",
+                  text_entities: [
+                    {
+                      type: "text_link",
+                      offset: 0,
+                      length: 4,
+                      url: "https://cutt.ly/done80682",
+                    },
+                    {
+                      type: "text_link",
+                      offset: 99,
+                      length: 1,
+                      url: "https://evil.example/late80682",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("");
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("plain80682");
+    expect(keptDump).not.toContain("done80682");
+    expect(keptDump).not.toContain("late80682");
+    expect(keptDump).not.toContain("evil.example");
+
+    const undone = await normalize({
+      update_id: 80683,
+      message: {
+        message_id: 80683,
+        date: 1761955200,
+        chat: { id: -10080683, type: "supergroup" },
+        from: { id: 80683, first_name: "Ada" },
+        checklist_tasks_done: {
+          marked_as_not_done_task_ids: [4],
+          checklist_message: {
+            checklist: {
+              tasks: [
+                {
+                  id: 4,
+                  text: "撤",
+                  text_entities: [
+                    {
+                      type: "text_link",
+                      offset: 1,
+                      length: 1,
+                      url: "https://bit.ly/undo80683",
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    expect(undone.status).toBe("event");
+    if (undone.status !== "event") {
+      return;
+    }
+    expect(undone.event.message?.checklistNotice).toBe("undone");
+    expect(undone.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(undone.event)).not.toContain("undo80683");
+    expect(JSON.stringify(undone.event)).not.toContain("bit.ly");
+  });
+
   it("skips an added task link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80661,
@@ -29474,7 +29610,12 @@ describe("normalizeUpdate", () => {
                   id: 2,
                   text: "https://bit.ly/done79505",
                   text_entities: [
-                    { type: "text_link", url: "https://is.gd/link79505" },
+                    {
+                      type: "text_link",
+                      offset: 0,
+                      length: 4,
+                      url: "https://is.gd/link79505",
+                    },
                   ],
                 },
                 { id: 3, text: "https://ow.ly/next79505" },
