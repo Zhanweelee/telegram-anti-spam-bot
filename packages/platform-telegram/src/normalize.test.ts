@@ -16234,8 +16234,218 @@ describe("normalizeUpdate", () => {
     }
     expect(titled.event.message?.text).toBe("站会");
     expect(titled.event.message?.checklistTitle).toBe("单");
-    expect(titled.event.message?.asTextMention).toBe(true);
+    expect(titled.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(titled.event)).not.toContain("77081281");
+  });
+
+  it("skips a checklist title text mention that starts outside the title", async () => {
+    const user = { id: 77081301, first_name: "隐名己", username: "user77091" };
+    const mention = (offset: number, length: number) => [
+      { type: "text_mention", offset, length, user },
+    ];
+    const listed = (
+      id: number,
+      checklist: Record<string, unknown>,
+      extra: Record<string, unknown> = {},
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...extra,
+        checklist,
+      },
+    });
+
+    const past = await normalize(
+      listed(
+        81301,
+        {
+          title: "单",
+          title_entities: mention(1, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.checklistTitle).toBe("单");
+    expect(past.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("77081301");
+
+    const empty = await normalize(
+      listed(
+        81302,
+        {
+          title: "",
+          title_entities: mention(0, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.checklistTitle).toBeUndefined();
+    expect(empty.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("77081301");
+
+    const zero = await normalize(
+      listed(
+        81303,
+        {
+          title: "单",
+          title_entities: mention(0, 0),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(zero.event)).not.toContain("77081301");
+
+    const negative = await normalize(
+      listed(
+        81304,
+        {
+          title: "单",
+          title_entities: mention(-1, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("77081301");
+
+    const clamped = await normalize(
+      listed(
+        81305,
+        {
+          title: "单",
+          title_entities: mention(0, 2),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.checklistTitle).toBe("单");
+    expect(clamped.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(clamped.event)).not.toContain("77081301");
+
+    const wide = await normalize(
+      listed(
+        81306,
+        {
+          title: "单".repeat(151),
+          title_entities: mention(150, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.checklistTitle).toHaveLength(151);
+    expect(wide.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(wide.event)).not.toContain("77081301");
+
+    const beside = await normalize(
+      listed(
+        81307,
+        {
+          title: "单".repeat(256),
+          title_entities: mention(255, 1),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(beside.status).toBe("event");
+    if (beside.status !== "event") {
+      return;
+    }
+    expect(beside.event.message?.text).toBe("站会");
+    expect(beside.event.message?.checklistTitle).toHaveLength(255);
+    expect(beside.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(beside.event)).not.toContain("77081301");
+
+    const stored = await normalize(
+      listed(81308, {
+        title: "单".repeat(4097),
+        title_entities: mention(4096, 1),
+        tasks: [{ id: 1, text: "甲" }],
+      }),
+    );
+    expect(stored.status).toBe("event");
+    if (stored.status !== "event") {
+      return;
+    }
+    expect(stored.event.message?.text).toHaveLength(4096);
+    expect(stored.event.message?.checklistTitle).toBeUndefined();
+    expect(stored.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(stored.event)).not.toContain("77081301");
+
+    const loose = await normalize(
+      listed(
+        81309,
+        {
+          title_entities: mention(9, 2),
+          tasks: [{ id: 1, text: "甲" }],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(loose.event)).not.toContain("77081301");
+
+    const tasked = await normalize(
+      listed(
+        81310,
+        {
+          title: "单",
+          tasks: [
+            { id: 1, text: "务", text_entities: mention(1, 1) },
+          ],
+        },
+        { text: "站会" },
+      ),
+    );
+    expect(tasked.status).toBe("event");
+    if (tasked.status !== "event") {
+      return;
+    }
+    expect(tasked.event.message?.text).toBe("站会");
+    expect(tasked.event.message?.checklistTitle).toBe("单");
+    expect(tasked.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(tasked.event)).not.toContain("77081301");
   });
 
   it("skips an added or deleted poll option link that starts after the drawn text", async () => {
