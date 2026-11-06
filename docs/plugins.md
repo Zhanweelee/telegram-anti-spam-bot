@@ -145,7 +145,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 建群提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0621。
 
-拉人进群的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0622。
+拉人进群的人画出的全名只留主机名，仍走 `links`。频道自己加入不读发送者。名字里的关键词不命中。见 ADR 0670。
 
 把人移出群的人画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0623。
 
@@ -191,7 +191,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 分享给 bot 的用户画出的全名成为正文，短链仍走 `links`。几个人用逗号分开。用户名不进正文。见 ADR 0644。
 
-入群名单上画出的全名成为正文，短链仍走 `links`。几个人用逗号分开。用户名不进正文。见 ADR 0645。
+入群名单上画出的全名成为正文，短链仍走 `links`。频道自己加入不读这份名单。几个人用逗号分开。用户名不进正文。见 ADR 0670。
 
 视频聊天邀请名单上画出的全名成为正文，短链仍走 `links`。几个人用逗号分开。用户名不进正文。见 ADR 0646。
 
