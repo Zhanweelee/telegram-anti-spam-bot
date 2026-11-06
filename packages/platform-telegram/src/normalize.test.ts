@@ -28155,9 +28155,10 @@ describe("normalizeUpdate", () => {
     }
     expect(made.event.message?.topicNotice).toBe("created");
     expect(made.event.message?.text).toBe(created);
-    expect(made.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(made.event.message?.hosts).toBeUndefined();
     const dumped = JSON.stringify(made.event);
     expect(dumped).not.toContain("from104");
+    expect(dumped).not.toContain("tinyurl");
     expect(dumped).not.toContain(actor);
     expect(dumped).not.toContain(emoji);
     expect(dumped).not.toContain(String(color));
@@ -28223,8 +28224,9 @@ describe("normalizeUpdate", () => {
     expect(both.event.message?.topicNotice).toBe("created");
     expect(both.event.message?.text).toBe(created);
     expect(both.event.message?.topicName).toBe(edited);
-    expect(both.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(both.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(both.event)).not.toContain("both104");
+    expect(JSON.stringify(both.event)).not.toContain("bit.ly");
 
     const blankCreated = await normalize({
       update_id: 4684,
@@ -40132,8 +40134,9 @@ describe("normalizeUpdate", () => {
     expect(created.event.message?.forumNotice).toBeUndefined();
     expect(created.event.message?.topicNotice).toBe("created");
     expect(created.event.message?.text).toBe("https://bit.ly/made79219");
-    expect(created.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(created.event.message?.hosts).toEqual(["bit.ly"]);
     expect(JSON.stringify(created.event)).not.toContain("skiplast79219");
+    expect(JSON.stringify(created.event)).not.toContain("tinyurl");
     expect(JSON.stringify(created.event)).not.toContain("ow.ly");
     expect(JSON.stringify(created.event)).not.toContain("host79219");
 
@@ -40285,9 +40288,10 @@ describe("normalizeUpdate", () => {
     }
     expect(created.event.message?.topicNotice).toBe("created");
     expect(created.event.message?.text).toBe("新话题");
-    expect(created.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(created.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(created.event)).not.toContain("skiplast79227");
     expect(JSON.stringify(created.event)).not.toContain("tinyurl");
+    expect(JSON.stringify(created.event)).not.toContain("bit.ly");
     expect(JSON.stringify(created.event)).not.toContain("made79227");
 
     const both = await normalize({
@@ -40341,6 +40345,101 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(quiet.event)).not.toContain("plainlast79229");
     expect(JSON.stringify(quiet.event)).not.toContain("tinyurl");
     expect(JSON.stringify(quiet.event)).not.toContain("ow.ly");
+  });
+
+  it("leaves a short link in the name of the person who created a topic", async () => {
+    const phrase = "请免费领取礼品";
+    const created = await normalize({
+      update_id: 79598,
+      message: {
+        message_id: 79598,
+        date: 1761955200,
+        chat: {
+          id: -10079598,
+          type: "supergroup",
+          title: "https://ow.ly/room79598",
+        },
+        from: {
+          id: 880098,
+          first_name: `https://bit.ly/later79598 ${phrase}`,
+          last_name: "https://tinyurl.com/skiplast79598",
+          username: "secretuser79598",
+        },
+        forum_topic_created: {
+          name: "新话题",
+          icon_color: 7959801,
+          icon_custom_emoji_id: "emoji79598",
+        },
+      },
+    });
+    expect(created.status).toBe("event");
+    if (created.status !== "event") {
+      return;
+    }
+    expect(created.event.message?.text).toBe("新话题");
+    expect(created.event.message?.textSha256).toBe(await sha256Hex("新话题"));
+    expect(created.event.message?.topicNotice).toBe("created");
+    expect(created.event.message?.hosts).toBeUndefined();
+    const createdDump = JSON.stringify(created.event);
+    expect(createdDump).not.toContain(phrase);
+    expect(createdDump).not.toContain("later79598");
+    expect(createdDump).not.toContain("bit.ly");
+    expect(createdDump).not.toContain("skiplast79598");
+    expect(createdDump).not.toContain("secretuser79598");
+    expect(createdDump).not.toContain("room79598");
+    expect(createdDump).not.toContain("emoji79598");
+    expect(createdDump).not.toContain("7959801");
+
+    const titled = await normalize({
+      update_id: 79599,
+      message: {
+        message_id: 79599,
+        date: 1761955200,
+        chat: { id: -10079599, type: "supergroup" },
+        from: {
+          id: 131,
+          first_name: "https://cutt.ly/ada79599",
+          last_name: "https://tinyurl.com/also79599",
+        },
+        forum_topic_created: { name: "https://bit.ly/name79599" },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.topicNotice).toBe("created");
+    expect(titled.event.message?.text).toBe("https://bit.ly/name79599");
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titledDump = JSON.stringify(titled.event);
+    expect(titledDump).not.toContain("ada79599");
+    expect(titledDump).not.toContain("also79599");
+    expect(titledDump).not.toContain("cutt.ly");
+    expect(titledDump).not.toContain("tinyurl");
+
+    const renamed = await normalize({
+      update_id: 79600,
+      message: {
+        message_id: 79600,
+        date: 1761955200,
+        chat: { id: -10079600, type: "supergroup" },
+        from: {
+          id: 132,
+          first_name: "https://bit.ly/edit79600",
+          last_name: "https://tinyurl.com/also79600",
+        },
+        forum_topic_created: { name: "" },
+        forum_topic_edited: { name: "改过" },
+      },
+    });
+    expect(renamed.status).toBe("event");
+    if (renamed.status !== "event") {
+      return;
+    }
+    expect(renamed.event.message?.topicNotice).toBe("edited");
+    expect(renamed.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    expect(JSON.stringify(renamed.event)).not.toContain("edit79600");
+    expect(JSON.stringify(renamed.event)).not.toContain("also79600");
   });
 
   it("keeps only the hostname from the full name drawn for a checklist completer", async () => {
