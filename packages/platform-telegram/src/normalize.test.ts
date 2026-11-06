@@ -41046,6 +41046,119 @@ describe("normalizeUpdate", () => {
     expect(personDump).not.toContain("bit.ly");
   });
 
+  it("leaves a short link in the channel title on a topic change", async () => {
+    const phrase = "请免费领取礼品";
+    const edited = await normalize({
+      update_id: 79660,
+      message: {
+        message_id: 79660,
+        date: 1761955200,
+        chat: {
+          id: -10079660,
+          type: "supergroup",
+          title: "https://ow.ly/room79660",
+        },
+        sender_chat: {
+          id: -100796600,
+          type: "channel",
+          title: `https://bit.ly/later79660 ${phrase}`,
+          username: "secretuser79660",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79660",
+          last_name: "https://cutt.ly/also79660",
+          username: "adder79660",
+        },
+        forum_topic_edited: { name: "日程" },
+      },
+    });
+    expect(edited.status).toBe("event");
+    if (edited.status !== "event") {
+      return;
+    }
+    expect(edited.event.message?.text).toBe("日程");
+    expect(edited.event.message?.topicNotice).toBe("edited");
+    expect(edited.event.message?.hosts).toEqual(["bit.ly"]);
+    const editedDump = JSON.stringify(edited.event);
+    expect(editedDump).not.toContain(phrase);
+    expect(editedDump).not.toContain("later79660");
+    expect(editedDump).not.toContain("skip79660");
+    expect(editedDump).not.toContain("also79660");
+    expect(editedDump).not.toContain("secretuser79660");
+    expect(editedDump).not.toContain("adder79660");
+    expect(editedDump).not.toContain("room79660");
+    expect(editedDump).not.toContain("tinyurl");
+    expect(editedDump).not.toContain("cutt.ly");
+    expect(editedDump).not.toContain("ow.ly");
+
+    const closed = await normalize({
+      update_id: 79661,
+      message: {
+        message_id: 79661,
+        date: 1761955200,
+        chat: { id: -10079661, type: "supergroup" },
+        sender_chat: {
+          id: -10079661,
+          type: "channel",
+          title: "https://bit.ly/close79661",
+          username: "secretuser79661",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79661",
+          last_name: "https://cutt.ly/also79661",
+        },
+        forum_topic_closed: {},
+      },
+    });
+    expect(closed.status).toBe("event");
+    if (closed.status !== "event") {
+      return;
+    }
+    expect(closed.event.message?.text).toBe("");
+    expect(closed.event.message?.forumNotice).toBe("closed");
+    expect(closed.event.message?.hosts).toEqual(["bit.ly"]);
+    const closedDump = JSON.stringify(closed.event);
+    expect(closedDump).not.toContain("close79661");
+    expect(closedDump).not.toContain("skip79661");
+    expect(closedDump).not.toContain("also79661");
+    expect(closedDump).not.toContain("secretuser79661");
+    expect(closedDump).not.toContain("tinyurl");
+    expect(closedDump).not.toContain("cutt.ly");
+
+    const group = await normalize({
+      update_id: 79662,
+      message: {
+        message_id: 79662,
+        date: 1761955200,
+        chat: { id: -10079662, type: "supergroup" },
+        sender_chat: {
+          id: -10079662,
+          type: "supergroup",
+          title: "https://bit.ly/group79662",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/who79662",
+          last_name: "https://cutt.ly/also79662",
+        },
+        forum_topic_edited: { name: "日程" },
+      },
+    });
+    expect(group.status).toBe("event");
+    if (group.status !== "event") {
+      return;
+    }
+    expect(group.event.message?.topicNotice).toBe("edited");
+    expect(group.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const groupDump = JSON.stringify(group.event);
+    expect(groupDump).not.toContain("who79662");
+    expect(groupDump).not.toContain("also79662");
+    expect(groupDump).not.toContain("group79662");
+    expect(groupDump).not.toContain("bit.ly");
+  });
+
   it("keeps only the hostname from the full name drawn for a checklist completer", async () => {
     const phrase = "请免费领取礼品";
     const code = "DONE79234";

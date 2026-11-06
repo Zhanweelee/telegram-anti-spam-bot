@@ -5076,7 +5076,8 @@ function pushCallSenderUrls(
  * 关掉、重开、隐藏或重新显示话题的人画出的全名只留主机名。
  * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 这四个对象本身没有字段，空对象也读。布尔值不读。
- * 话题名、图标和话题号不读。用户名不读。普通消息的发送者不读。
+ * 发送者是频道时，这行画频道标题，不读发送者。标题里的空格不截断。
+ * 其他人仍按全名。话题名、图标和话题号不读。用户名不读。普通消息的发送者不读。
  * 新建和改名仍按原来的名。
  */
 function pushForumSenderUrls(
@@ -5084,6 +5085,11 @@ function pushForumSenderUrls(
   urls: string[],
 ): void {
   if (forumService(message) === undefined) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender) && sender.type === "channel") {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
@@ -5515,7 +5521,8 @@ function pushPollSenderUrls(
  * 改名或只换图标的人画出的全名只留主机名。
  * 新建这行不画人，不读发送者。
  * 改名的名字长度大于 0，或图标编号是字符串时读。
- * 名和姓都去掉两端空白。名为空时只画姓。空格不截断。
+ * 发送者是频道时，这行画频道标题，不读发送者。标题里的空格不截断。
+ * 其他人仍按全名。名和姓都去掉两端空白。名为空时只画姓。空格不截断。
  * 同时出现时先认新建。空的新建名字落到改名。
  * 空对象和布尔值不读。话题名仍按原来的正文。
  * 图标颜色和自定义表情编号不读。用户名不读。
@@ -5525,6 +5532,11 @@ function pushTopicSenderUrls(
   urls: string[],
 ): void {
   if (changedTopic(message) !== "edited") {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender) && sender.type === "channel") {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
