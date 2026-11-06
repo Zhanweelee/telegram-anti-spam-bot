@@ -73,7 +73,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 改价的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0585。
 
-置顶的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0586。
+置顶的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0586。文字预览前 20 个码元和游戏标题也只留主机名。见 ADR 0653。
 
 建群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0587。
 
@@ -141,7 +141,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 已知用户转发抬头画出的全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0619。
 
-置顶提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0620。
+置顶提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0620。文字预览前 20 个码元和游戏标题也只留主机名。见 ADR 0653。
 
 建群提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0621。
 
@@ -287,7 +287,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `gift_card` 在 `packages/detectors-gift`。`message.gift` 是普通礼物、独特礼物或升级购买时返回 score 1。证据是 `gift:` 加这一种。星星数量、编号和发布者名字不进证据。规则默认关闭。私聊 `/rule` 打开后删除这三种卡片。见 ADR 0481。
 
-`pin_notice` 在 `packages/detectors-pin`。只在 `message.asPin` 为 true 时返回 score 1。证据是 `pin:notice`。被置顶的原文和消息号不进证据。规则默认关闭。私聊 `/rule` 打开后删除置顶提示。置顶本身还在。见 ADR 0482。
+`pin_notice` 在 `packages/detectors-pin`。只在 `message.asPin` 为 true 时返回 score 1。证据是 `pin:notice`。被置顶的原文和消息号不进证据。规则默认关闭。私聊 `/rule` 打开后删除置顶提示。置顶本身还在。见 ADR 0482。文字预览前 20 个码元和游戏标题里的短链仍走 `links`。见 ADR 0653。
 
 `giveaway_notice` 在 `packages/detectors-giveaway-notice`。`message.giveawayNotice` 是创建或私下结束时返回 score 1。证据是 `giveaway:` 加这一种。星星数量、中奖人数和奖品原文不进证据。规则默认关闭。私聊 `/rule` 打开后删除这两种公告。见 ADR 0483。
 

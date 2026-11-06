@@ -261,7 +261,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 `/rule <chatId> gift_card on` 删这个群里的普通礼物、独特礼物和升级购买。默认关闭。星星数量不进证据。附言里的关键词仍删除。见 ADR 0481。
 
-`/rule <chatId> pin_notice on` 删这个群里的置顶提示。默认关闭。被置顶的原文不进证据。置顶本身还在。见 ADR 0482。
+`/rule <chatId> pin_notice on` 删这个群里的置顶提示。默认关闭。被置顶的原文不进证据。置顶本身还在。见 ADR 0482。文字预览前 20 个码元和游戏标题里的短链也会删除。见 ADR 0653。
 
 `/rule <chatId> giveaway_notice on` 删这个群里的抽奖创建公告和没有公开中奖者的结束公告。默认关闭。奖品原文不进证据。抽奖本身不取消。见 ADR 0483。
 
@@ -319,7 +319,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 改价的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。名字、用户名和星星数量不进事件。`example.com` 仍留下。见 ADR 0585。
 
-置顶的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。名字、用户名和被置顶的原文不进事件。`example.com` 仍留下。见 ADR 0586。
+置顶的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。名字、用户名和被置顶的原文不进事件。`example.com` 仍留下。见 ADR 0586。文字预览前 20 个码元和游戏标题也一样。见 ADR 0653。
 
 建群的人，名字里的短链、邀请或裸 IP 会删掉这条提示。证据只有主机名。名字和用户名不进事件。`example.com` 仍留下。见 ADR 0587。
 
@@ -387,7 +387,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 已知用户转发抬头画出的全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0619。
 
-置顶提示上画出的发送者全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0620。
+置顶提示上画出的发送者全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0620。文字预览前 20 个码元和游戏标题也一样。见 ADR 0653。
 
 建群提示上画出的发送者全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0621。
 

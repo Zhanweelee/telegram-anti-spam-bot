@@ -30422,6 +30422,115 @@ describe("normalizeUpdate", () => {
     expect(empty.event.message?.text).toBe("今天站会");
   });
 
+  it("keeps only the hostname from the text drawn on a pin", async () => {
+    const drawn = await normalize({
+      update_id: 79495,
+      message: {
+        message_id: 79495,
+        date: 1761955200,
+        chat: { id: -10079495, type: "supergroup", title: "机密群名" },
+        from: { id: 1, first_name: "Ada" },
+        pinned_message: {
+          message_id: 88079495,
+          date: 1761955100,
+          chat: { id: -10079495, type: "supergroup" },
+          from: { id: 2, first_name: "https://tinyurl.com/who79495" },
+          text: "https://bit.ly/pin79495 后面不画",
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.asPin).toBe(true);
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).not.toContain("pin79495");
+    expect(drawnDump).not.toContain("后面不画");
+    expect(drawnDump).not.toContain("who79495");
+    expect(drawnDump).not.toContain("tinyurl");
+    expect(drawnDump).not.toContain("from79495");
+    expect(drawnDump).not.toContain("ow.ly");
+    expect(drawnDump).not.toContain("88079495");
+    expect(drawnDump).not.toContain("机密群名");
+
+    const later = await normalize({
+      update_id: 79496,
+      message: {
+        message_id: 79496,
+        date: 1761955200,
+        chat: { id: -10079496, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        pinned_message: {
+          message_id: 1,
+          text: `${"...................."}https://bit.ly/late79496`,
+        },
+      },
+    });
+    expect(later.status).toBe("event");
+    if (later.status !== "event") {
+      return;
+    }
+    expect(later.event.message?.asPin).toBe(true);
+    expect(later.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(later.event)).not.toContain("late79496");
+    expect(JSON.stringify(later.event)).not.toContain("bit.ly");
+
+    const photo = await normalize({
+      update_id: 79497,
+      message: {
+        message_id: 79497,
+        date: 1761955200,
+        chat: { id: -10079497, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        pinned_message: {
+          message_id: 1,
+          text: "https://bit.ly/photo79497",
+          photo: [{ file_id: "p", width: 1, height: 1 }],
+        },
+      },
+    });
+    expect(photo.status).toBe("event");
+    if (photo.status !== "event") {
+      return;
+    }
+    expect(photo.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(photo.event)).not.toContain("photo79497");
+    expect(JSON.stringify(photo.event)).not.toContain("bit.ly");
+
+    const game = await normalize({
+      update_id: 79498,
+      message: {
+        message_id: 79498,
+        date: 1761955200,
+        chat: { id: -10079498, type: "supergroup" },
+        from: { id: 1, first_name: "Ada" },
+        pinned_message: {
+          message_id: 1,
+          text: "https://tinyurl.com/body79498",
+          game: {
+            title: "https://bit.ly/game79498",
+            description: "https://ow.ly/desc79498",
+          },
+        },
+      },
+    });
+    expect(game.status).toBe("event");
+    if (game.status !== "event") {
+      return;
+    }
+    expect(game.event.message?.text).toBe("");
+    expect(game.event.message?.hosts).toEqual(["bit.ly"]);
+    const gameDump = JSON.stringify(game.event);
+    expect(gameDump).not.toContain("game79498");
+    expect(gameDump).not.toContain("body79498");
+    expect(gameDump).not.toContain("tinyurl");
+    expect(gameDump).not.toContain("desc79498");
+    expect(gameDump).not.toContain("ow.ly");
+  });
+
   it("marks a pin and leaves the pinned text out", async () => {
     const pinnedText = "置顶广告正文";
     const pinnedId = 90182;
@@ -30437,7 +30546,7 @@ describe("normalizeUpdate", () => {
           date: 1761955100,
           chat: { id: -100499480, type: "supergroup" },
           from: { id: 97, first_name: "置顶的人" },
-          text: `${pinnedText} https://bit.ly/pin450`,
+          text: `${"置顶广告正文今天开会讨论方案并且记下要点"} https://bit.ly/pin450`,
         },
       },
     });
@@ -37445,7 +37554,7 @@ describe("normalizeUpdate", () => {
         },
         pinned_message: {
           message_id: 88079176,
-          text: "https://rb.gy/nest79176",
+          text: `${"...................."}https://rb.gy/nest79176`,
           from: {
             id: 97,
             first_name: "https://is.gd/inner79176",
@@ -37494,7 +37603,10 @@ describe("normalizeUpdate", () => {
           last_name: "https://bit.ly/blank79177",
           username: "cutt.ly",
         },
-        pinned_message: { message_id: 1, text: "https://tinyurl.com/nest79177" },
+        pinned_message: {
+          message_id: 1,
+          text: `${"...................."}https://tinyurl.com/nest79177`,
+        },
       },
     });
     expect(blank.status).toBe("event");
