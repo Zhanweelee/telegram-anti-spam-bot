@@ -4938,6 +4938,9 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 任务号对得上才读那条任务的文字和文字链接。对不上就改读清单标题。
  * 没有清单时，选项编号对得上才读选项文字。对不上就改读问题。
  * 其余任务、选项、清单正文和投票说明不读。外部回复上的清单和投票不读。
+ * 没有这些行时，游戏只读标题，账单只读标题。说明不读。
+ * 带引用或投票本身时，这一行不改画游戏或账单标题。
+ * 付款成功的账单标题仍按原来的顺序。
  */
 function pushReplyTargetUrls(
   message: Record<string, unknown>,
@@ -4971,26 +4974,41 @@ function pushReplyTargetUrls(
   }
   const optionId = message.reply_to_poll_option_id;
   if (
-    typeof optionId !== "string" ||
-    optionId.length === 0 ||
-    optionId.length > 256 ||
-    !isRecord(reply.poll)
+    typeof optionId === "string" &&
+    optionId.length > 0 &&
+    optionId.length <= 256 &&
+    isRecord(reply.poll)
   ) {
+    const options = reply.poll.options;
+    if (Array.isArray(options)) {
+      for (const option of options) {
+        if (!isRecord(option) || option.persistent_id !== optionId) {
+          continue;
+        }
+        pushPlainUrls(option.text, urls);
+        pushTextLinks(option.text_entities, urls);
+        return;
+      }
+    }
+    pushPlainUrls(reply.poll.question, urls);
+    pushTextLinks(reply.poll.question_entities, urls);
     return;
   }
-  const options = reply.poll.options;
-  if (Array.isArray(options)) {
-    for (const option of options) {
-      if (!isRecord(option) || option.persistent_id !== optionId) {
-        continue;
-      }
-      pushPlainUrls(option.text, urls);
-      pushTextLinks(option.text_entities, urls);
-      return;
-    }
+  const quote = message.quote;
+  if (isRecord(quote) && typeof quote.text === "string") {
+    return;
   }
-  pushPlainUrls(reply.poll.question, urls);
-  pushTextLinks(reply.poll.question_entities, urls);
+  if (isRecord(reply.poll)) {
+    return;
+  }
+  if (isRecord(reply.game)) {
+    pushPlainUrls(reply.game.title, urls);
+    return;
+  }
+  if (isRecord(message.successful_payment) || !isRecord(reply.invoice)) {
+    return;
+  }
+  pushPlainUrls(reply.invoice.title, urls);
 }
 
 /**
