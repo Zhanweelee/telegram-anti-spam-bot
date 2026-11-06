@@ -11684,6 +11684,109 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips an added or deleted poll option link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80741,
+      message: {
+        message_id: 80741,
+        date: 1761955200,
+        chat: { id: -10080741, type: "supergroup" },
+        from: { id: 80741, first_name: "Ada" },
+        poll_option_added: {
+          option_text: "说",
+          option_text_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/opt80741",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("说");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("opt80741");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80742,
+      message: {
+        message_id: 80742,
+        date: 1761955200,
+        chat: { id: -10080742, type: "supergroup" },
+        from: { id: 80742, first_name: "Ada" },
+        text: "站会",
+        poll_option_added: {
+          option_text: "https://tinyurl.com/plain80742",
+          option_text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/opt80742",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80742",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.addedText).toBe(
+      "https://tinyurl.com/plain80742",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("opt80742");
+    expect(keptDump).not.toContain("late80742");
+    expect(keptDump).not.toContain("evil.example");
+
+    const removed = await normalize({
+      update_id: 80743,
+      message: {
+        message_id: 80743,
+        date: 1761955200,
+        chat: { id: -10080743, type: "supergroup" },
+        from: { id: 80743, first_name: "Ada" },
+        poll_option_deleted: {
+          option_text: "删",
+          option_text_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/del80743",
+            },
+          ],
+        },
+      },
+    });
+    expect(removed.status).toBe("event");
+    if (removed.status !== "event") {
+      return;
+    }
+    expect(removed.event.message?.text).toBe("删");
+    expect(removed.event.message?.hosts).toBeUndefined();
+    const removedDump = JSON.stringify(removed.event);
+    expect(removedDump).not.toContain("del80743");
+    expect(removedDump).not.toContain("bit.ly");
+  });
+
   it("skips a poll explanation link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80721,
