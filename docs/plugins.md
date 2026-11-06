@@ -209,7 +209,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 `venue_address_regex` 默认打开。地点地址命中同一份正则时删除。地址干净，或地址自己就是正文时，仍留下。见 ADR 0542。
 
-`poll_explanation_regex` 默认打开。测验说明命中同一份正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0543。
+`poll_explanation_regex` 默认打开。测验说明命中同一份正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。
 
 `poll_question_regex`、`prize_text_regex` 和 `checklist_title_regex` 默认打开。题干、奖品说明或清单标题命中同一份正则时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0544。
 

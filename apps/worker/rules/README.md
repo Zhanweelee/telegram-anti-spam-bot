@@ -180,7 +180,7 @@ Worker 每次检测先读缓存端口。未命中才读这两个文件，不读 
 
 `venue_address_regex` 在地点地址命中默认正则时删除。地址干净，或地址自己就是正文时，仍留下。见 ADR 0542。
 
-`poll_explanation_regex` 在测验说明命中默认正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0543。
+`poll_explanation_regex` 在测验说明命中默认正则时删除。说明干净，或说明自己就是正文时，仍留下。见 ADR 0543。测验说明上的文字链接后来由 ADR 0730 不能越过正文。
 
 `poll_question_regex` 在投票题干命中默认正则时删除。`prize_text_regex` 在奖品说明命中时删除。`checklist_title_regex` 在清单标题命中时删除。这段干净，或自己就是正文时，仍留下。见 ADR 0544。
 
