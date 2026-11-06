@@ -423,6 +423,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 频道私信话题标题上的用户全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。发言人不是这个用户时不读。`example.com` 仍留下。见 ADR 0637。
 
+入群申请名单上的申请人全名含短链、邀请或裸 IP 时会拒绝这条申请。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0638。
+
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 
 `/rule <chatId> rich_email on` 删这个群里的富文本邮箱。默认关闭。地址不进证据。看得见的字仍参与关键词。电话和银行卡仍看各自的规则。见 ADR 0502。

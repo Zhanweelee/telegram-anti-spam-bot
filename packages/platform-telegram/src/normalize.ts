@@ -1505,16 +1505,16 @@ async function joinRequestEvent(
 }
 
 /**
- * 入群申请上画出的名字只留主机名。
- * 名的长度大于 0 时不读姓。空白也算有名。用户名不读。
- * 群名、邀请链接和用户编号不读。名字不进简介。
+ * 入群申请名单上画出的申请人全名只留主机名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 用户名不读。群名、邀请链接和用户编号不读。名字不进简介。
  */
 function requestNameLinks(user: unknown): {
   hosts: string[];
   invites: string[];
 } {
   const urls: string[] = [];
-  pushVisiblePartyUrls(user, undefined, urls);
+  pushFormattedUserUrls(user, urls);
   return collectLinkHosts(urls);
 }
 
