@@ -2106,10 +2106,10 @@ function linkHosts(message: Record<string, unknown>): {
   }
   if (isRecord(poll)) {
     const question = poll.question;
-    // 题干上的文字链接，起点必须落在题干里。
+    // 题干上的文字链接，起点必须落在题干里，长度必须大于 0。
     lists.push(
       typeof question === "string"
-        ? visibleTextLinks(poll.question_entities, question.length)
+        ? drawnTextLink(poll.question_entities, question.length)
         : poll.question_entities,
     );
   }
