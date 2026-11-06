@@ -1215,6 +1215,20 @@ function uniqueUpgrade(message: Record<string, unknown>): boolean {
   );
 }
 
+/**
+ * 转账和转售画对话。私聊是对方的全名，群和频道是群名。
+ * 礼物所属的另一边不在这条更新上。
+ */
+function uniqueDialog(message: Record<string, unknown>): boolean {
+  if (giftRecord(message.gift)) {
+    return false;
+  }
+  const info = message.unique_gift;
+  return (
+    isRecord(info) && (info.origin === "transfer" || info.origin === "resale")
+  );
+}
+
 function backgroundNotice(
   message: Record<string, unknown>,
 ): "wallpaper" | "pattern" | "fill" | "theme" | undefined {
@@ -4794,6 +4808,27 @@ function pushVisiblePartyUrls(
  * 客户端用全名画出的用户。名和姓都去掉两端空白。
  * 名为空时只画姓。空格不截断。用户名不读。
  */
+/**
+ * 转账和转售画出的对话。私聊读全名。群、超级群和频道读群名，不截断。
+ * 用户名不读。私聊的 `title` 不读。
+ */
+function pushDialogUrls(chat: unknown, urls: string[]): void {
+  if (!isRecord(chat)) {
+    return;
+  }
+  if (chat.type === "private") {
+    pushFormattedUserUrls(chat, urls);
+    return;
+  }
+  if (
+    chat.type === "group" ||
+    chat.type === "supergroup" ||
+    chat.type === "channel"
+  ) {
+    pushPlainUrls(chat.title, urls);
+  }
+}
+
 function pushFormattedUserUrls(user: unknown, urls: string[]): void {
   if (!isRecord(user)) {
     return;
@@ -5384,7 +5419,8 @@ function pushJoinSenderUrls(
  * 频道、群和超级群都一样。编号和本群相同时也读。用户仍按全名。
  * 购买报价成交不画人。`origin` 正好是 `offer` 时不读 `from`，也不读标题。
  * 升级和事后升级画私聊对方的全名，不读 `from`，也不读发送者标题。
- * 群和频道不读群名。别的聊天的标题仍由通用代发规则读取。转账和转售仍读发送者。
+ * 群和频道的升级不读群名。转账和转售画对话：私聊读全名，群和频道读群名。
+ * 群名不截断。别的聊天的标题仍由通用代发规则读取。
  * 空的外层对象、布尔值和只有附言的对象不读。
  * 附言、收藏名和发布者用户名仍按原来的方式。用户名不读。
  */
@@ -5400,6 +5436,10 @@ function pushGiftSenderUrls(
     if (isRecord(chat) && chat.type === "private") {
       pushFormattedUserUrls(chat, urls);
     }
+    return;
+  }
+  if (uniqueDialog(message)) {
+    pushDialogUrls(message.chat, urls);
     return;
   }
   const sender = message.sender_chat;
