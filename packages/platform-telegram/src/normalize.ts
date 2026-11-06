@@ -4550,6 +4550,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPlainUrls(message.sender_tag, urls);
   pushPlainUrls(businessBotDrawnName(message), urls);
   pushPaymentDrawnUrls(message, urls);
+  pushPassportPeerUrls(message, urls);
   const declined = message.suggested_post_declined;
   if (isRecord(declined)) {
     pushPlainUrls(declined.comment, urls);
@@ -8940,6 +8941,25 @@ function giftPublisherNames(message: Record<string, unknown>): string {
  * 退款这行画出对方全名。名和姓都去掉两端空白，名在前。空白名不挡住姓。
  * 同时出现时先认付款成功。载荷、订单、账单标题和退款金额不读。
  */
+/**
+ * 护照这行画出的私聊对方的名只留主机名。
+ * 名的长度大于 0 就只用名，空白也算。名缺了或是空字符串才用姓。
+ * 证件、电话、邮箱和用户名不读。群里不读。名字不进正文。
+ */
+function pushPassportPeerUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!isRecord(message.passport_data)) {
+    return;
+  }
+  const chat = message.chat;
+  if (!isRecord(chat) || chat.type !== "private") {
+    return;
+  }
+  pushVisiblePartyUrls(chat, undefined, urls);
+}
+
 function pushPaymentDrawnUrls(
   message: Record<string, unknown>,
   urls: string[],
