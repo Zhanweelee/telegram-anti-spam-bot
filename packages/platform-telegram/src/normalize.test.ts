@@ -30925,6 +30925,217 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(titled.event)).not.toContain("secretchan79566");
   });
 
+  it("drops the part after the first space in a poll option adder name", async () => {
+    const phrase = "请免费领取礼品";
+    const cut = await normalize({
+      update_id: 79574,
+      message: {
+        message_id: 79574,
+        date: 1761955200,
+        chat: {
+          id: -10079574,
+          type: "supergroup",
+          title: "https://ow.ly/room79574",
+        },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_user: {
+                id: 880074,
+                first_name: `Go https://bit.ly/later79574 ${phrase}`,
+                last_name: "https://tinyurl.com/skiplast79574",
+                username: "secretuser79574",
+              },
+              added_by_chat: {
+                id: -100880074,
+                title: "https://cutt.ly/chat79574",
+                username: "chatuser79574",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(cut.status).toBe("event");
+    if (cut.status !== "event") {
+      return;
+    }
+    expect(cut.event.message?.text).toBe("今天站会");
+    expect(cut.event.message?.textSha256).toBe(await sha256Hex("今天站会"));
+    expect(cut.event.message?.hosts).toBeUndefined();
+    const cutDump = JSON.stringify(cut.event);
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("later79574");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79574");
+    expect(cutDump).not.toContain("secretuser79574");
+    expect(cutDump).not.toContain("room79574");
+    expect(cutDump).not.toContain("chat79574");
+    expect(cutDump).not.toContain("chatuser79574");
+    expect(cutDump).not.toContain("880074");
+
+    const early = await normalize({
+      update_id: 79575,
+      message: {
+        message_id: 79575,
+        date: 1761955200,
+        chat: { id: -10079575, type: "supergroup" },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_user: {
+                id: 130,
+                first_name: "A https://bit.ly/keep79575",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(early.status).toBe("event");
+    if (early.status !== "event") {
+      return;
+    }
+    expect(early.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(early.event)).not.toContain("keep79575");
+
+    const lastCut = await normalize({
+      update_id: 79576,
+      message: {
+        message_id: 79576,
+        date: 1761955200,
+        chat: { id: -10079576, type: "supergroup" },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_user: {
+                id: 130,
+                first_name: "",
+                last_name: "Go https://bit.ly/last79576",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(lastCut.status).toBe("event");
+    if (lastCut.status !== "event") {
+      return;
+    }
+    expect(lastCut.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(lastCut.event)).not.toContain("last79576");
+    expect(JSON.stringify(lastCut.event)).not.toContain("bit.ly");
+
+    const lastOnly = await normalize({
+      update_id: 79577,
+      message: {
+        message_id: 79577,
+        date: 1761955200,
+        chat: { id: -10079577, type: "supergroup" },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_user: {
+                id: 130,
+                first_name: "",
+                last_name: "https://bit.ly/lastonly79577",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(lastOnly.status).toBe("event");
+    if (lastOnly.status !== "event") {
+      return;
+    }
+    expect(lastOnly.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(lastOnly.event)).not.toContain("lastonly79577");
+
+    const blank = await normalize({
+      update_id: 79578,
+      message: {
+        message_id: 79578,
+        date: 1761955200,
+        chat: { id: -10079578, type: "supergroup" },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_user: {
+                id: 130,
+                first_name: " ",
+                last_name: "https://bit.ly/blank79578",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(blank.event)).not.toContain("blank79578");
+
+    const titled = await normalize({
+      update_id: 79579,
+      message: {
+        message_id: 79579,
+        date: 1761955200,
+        chat: { id: -10079579, type: "supergroup" },
+        from: { id: 130, first_name: "Ada" },
+        text: "今天站会",
+        poll: {
+          question: "选一个",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              added_by_chat: {
+                id: -100880079,
+                title: "Go https://bit.ly/title79579",
+                username: "secretchan79579",
+              },
+            },
+          ],
+        },
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(titled.event)).not.toContain("title79579");
+    expect(JSON.stringify(titled.event)).not.toContain("secretchan79579");
+  });
+
   it("drops the part after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     const cut = await normalize({

@@ -30050,6 +30050,179 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(titled)).not.toContain("title79573");
   });
 
+  it("drops a short link after the first space in a poll option adder name", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      option: Record<string, unknown>,
+      extra: Record<string, unknown> = {},
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -(1_000_000 + updateId), type: "supergroup" },
+            from: { id: 130, first_name: "Ada" },
+            text: "今天站会",
+            poll: {
+              question: "选一个",
+              options: [
+                {
+                  text: "甲",
+                  voter_count: 0,
+                  ...option,
+                },
+              ],
+            },
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const cut = await posted(79580, {
+      added_by_user: {
+        id: 880080,
+        first_name: `Go https://bit.ly/later79580 ${phrase}`,
+        last_name: "https://tinyurl.com/skiplast79580",
+        username: "secretuser79580",
+      },
+    });
+    expect(cut.message?.text).toBe("今天站会");
+    expect(cut.message?.hosts).toBeUndefined();
+    const cutKept = await screenTelegramEvent(cut, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(cutKept.decision.action).toBe("allow");
+    const cutDump = JSON.stringify({ event: cut, decision: cutKept.decision });
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("later79580");
+    expect(cutDump).not.toContain("skiplast79580");
+    expect(cutDump).not.toContain("secretuser79580");
+    expect(cutDump).not.toContain("880080");
+
+    const early = await posted(79581, {
+      added_by_user: {
+        id: 880081,
+        first_name: "A https://bit.ly/keep79581",
+      },
+    });
+    expect(early.message?.hosts).toEqual(["bit.ly"]);
+    const earlyModerator = createMemoryModerator();
+    const earlyHit = await screenTelegramEvent(early, {
+      moderator: earlyModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(earlyHit.decision.action).toBe("delete");
+    expect(JSON.stringify(earlyHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(earlyModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079581", messageId: "79581" },
+    ]);
+    expect(JSON.stringify(early)).not.toContain("keep79581");
+
+    const paidModerator = createMemoryModerator();
+    const paid = await posted(
+      79582,
+      {
+        added_by_user: {
+          id: 880082,
+          first_name: "A https://bit.ly/paid79582",
+        },
+      },
+      { is_paid_post: true },
+    );
+    const skipped = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(skipped.decision)).not.toContain("paid79582");
+
+    const invite = await posted(79583, {
+      added_by_user: {
+        id: 880083,
+        first_name: "https://t.me/+code79583",
+      },
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    expect(invite.message?.invites).toEqual(["t.me"]);
+    const inviteHit = await screenTelegramEvent(invite, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+    expect(JSON.stringify(invite)).not.toContain("code79583");
+
+    const plain = await posted(79584, {
+      added_by_user: {
+        id: 880084,
+        first_name: "https://example.com/ok79584",
+      },
+    });
+    expect(plain.message?.hosts).toEqual(["example.com"]);
+    const plainKept = await screenTelegramEvent(plain, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(plainKept.decision.action).toBe("allow");
+    expect(JSON.stringify(plain)).not.toContain("ok79584");
+
+    const pub = await posted(79585, {
+      added_by_user: {
+        id: 880085,
+        first_name: "https://t.me/durov",
+      },
+    });
+    expect(pub.message?.hosts).toEqual(["t.me"]);
+    expect(pub.message?.invites).toBeUndefined();
+    const pubKept = await screenTelegramEvent(pub, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pubKept.decision.action).toBe("allow");
+
+    const titled = await posted(79586, {
+      added_by_chat: {
+        id: -100880086,
+        title: "Go https://bit.ly/title79586",
+        username: "secretchan79586",
+      },
+    });
+    expect(titled.message?.hosts).toEqual(["bit.ly"]);
+    const titledHit = await screenTelegramEvent(titled, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(titledHit.decision.action).toBe("delete");
+    expect(JSON.stringify(titledHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(titled)).not.toContain("title79586");
+    expect(JSON.stringify(titled)).not.toContain("secretchan79586");
+  });
+
   it("drops a short link after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
