@@ -95,7 +95,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 拉进视频聊天的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0596。
 
-靠近提醒上操作的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0597。
+靠近提醒上操作的人，名字只留主机名，仍走 `links`。发送者是聊天时不读占位名字，也不读这个聊天的标题。名字里的关键词不命中。见 ADR 0689。
 
 拉人进群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0598。
 
