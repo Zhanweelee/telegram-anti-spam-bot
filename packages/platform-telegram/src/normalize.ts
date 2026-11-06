@@ -4601,8 +4601,8 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (!isRecord(value)) {
       continue;
     }
-    pushPlainUrls(value.text, urls);
-    pushTextLinks(value.entities, urls);
+    // 文字链接的起点必须落在这段附言里。
+    pushDrawnLine(value.text, value.entities, urls);
   }
   pushPlainUrls(uniqueGiftLabelSource(message), urls);
   pushPlainUrls(giftPublisherNames(message), urls);
