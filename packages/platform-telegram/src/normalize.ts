@@ -581,7 +581,14 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   const checklist = message.checklist;
   if (isRecord(checklist)) {
-    lists.push(checklist.title_entities);
+    if (typeof checklist.title === "string") {
+      // 按标识提及的起点必须落在清单标题里。
+      lists.push(
+        drawnMention(checklist.title_entities, checklist.title.length),
+      );
+    } else {
+      lists.push(checklist.title_entities);
+    }
     pushTaskMentionLists(checklist.tasks, lists);
   }
   const addedTasks = message.checklist_tasks_added;
