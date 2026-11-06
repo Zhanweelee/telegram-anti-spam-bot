@@ -11684,6 +11684,109 @@ describe("normalizeUpdate", () => {
     expect(dumped).not.toContain("4242");
   });
 
+  it("skips a game text link that starts after the drawn text", async () => {
+    const past = await normalize({
+      update_id: 80781,
+      message: {
+        message_id: 80781,
+        date: 1761955200,
+        chat: { id: -10080781, type: "supergroup" },
+        from: { id: 80781, first_name: "Ada" },
+        game: {
+          title: "站会",
+          text: "说",
+          text_entities: [
+            {
+              type: "text_link",
+              offset: 1,
+              length: 1,
+              url: "https://bit.ly/game80781",
+            },
+          ],
+        },
+      },
+    });
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.text).toBe("站会");
+    expect(past.event.message?.gameText).toBe("说");
+    expect(past.event.message?.hosts).toBeUndefined();
+    const pastDump = JSON.stringify(past.event);
+    expect(pastDump).not.toContain("game80781");
+    expect(pastDump).not.toContain("bit.ly");
+
+    const kept = await normalize({
+      update_id: 80782,
+      message: {
+        message_id: 80782,
+        date: 1761955200,
+        chat: { id: -10080782, type: "supergroup" },
+        from: { id: 80782, first_name: "Ada" },
+        game: {
+          title: "站会",
+          text: "https://tinyurl.com/plain80782",
+          text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 4,
+              url: "https://cutt.ly/game80782",
+            },
+            {
+              type: "text_link",
+              offset: 99,
+              length: 1,
+              url: "https://evil.example/late80782",
+            },
+          ],
+        },
+      },
+    });
+    expect(kept.status).toBe("event");
+    if (kept.status !== "event") {
+      return;
+    }
+    expect(kept.event.message?.text).toBe("站会");
+    expect(kept.event.message?.gameText).toBe(
+      "https://tinyurl.com/plain80782",
+    );
+    expect(kept.event.message?.hosts).toEqual(["tinyurl.com", "cutt.ly"]);
+    const keptDump = JSON.stringify(kept.event);
+    expect(keptDump).not.toContain("game80782");
+    expect(keptDump).not.toContain("late80782");
+    expect(keptDump).not.toContain("evil.example");
+
+    const untyped = await normalize({
+      update_id: 80783,
+      message: {
+        message_id: 80783,
+        date: 1761955200,
+        chat: { id: -10080783, type: "supergroup" },
+        from: { id: 80783, first_name: "Ada" },
+        game: {
+          title: "站会",
+          text_entities: [
+            {
+              type: "text_link",
+              offset: 0,
+              length: 1,
+              url: "https://bit.ly/open80783",
+            },
+          ],
+        },
+      },
+    });
+    expect(untyped.status).toBe("event");
+    if (untyped.status !== "event") {
+      return;
+    }
+    expect(untyped.event.message?.text).toBe("站会");
+    expect(untyped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(untyped.event)).not.toContain("open80783");
+  });
+
   it("skips a quote link that starts after the drawn text", async () => {
     const past = await normalize({
       update_id: 80761,
