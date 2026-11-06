@@ -637,7 +637,13 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
     lists.push(poll.explanation_entities, poll.description_entities);
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
-        if (isRecord(option)) {
+        if (!isRecord(option)) {
+          continue;
+        }
+        if (typeof option.text === "string") {
+          // 自定义表情必须整段落在这条选项里。
+          lists.push(fittingEmoji(option.text_entities, option.text.length));
+        } else {
           lists.push(option.text_entities);
         }
       }
