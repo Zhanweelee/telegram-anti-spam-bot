@@ -4990,13 +4990,11 @@ function pushLoadedReplyLine(
         if (!isRecord(task) || task.id !== taskId) {
           continue;
         }
-        pushPlainUrls(task.text, urls);
-        pushTextLinks(task.text_entities, urls);
+        pushDrawnLine(task.text, task.text_entities, urls);
         return;
       }
     }
-    pushPlainUrls(reply.checklist.title, urls);
-    pushTextLinks(reply.checklist.title_entities, urls);
+    pushDrawnLine(reply.checklist.title, reply.checklist.title_entities, urls);
     return;
   }
   const optionId = message.reply_to_poll_option_id;
@@ -5012,13 +5010,11 @@ function pushLoadedReplyLine(
         if (!isRecord(option) || option.persistent_id !== optionId) {
           continue;
         }
-        pushPlainUrls(option.text, urls);
-        pushTextLinks(option.text_entities, urls);
+        pushDrawnLine(option.text, option.text_entities, urls);
         return;
       }
     }
-    pushPlainUrls(reply.poll.question, urls);
-    pushTextLinks(reply.poll.question_entities, urls);
+    pushDrawnLine(reply.poll.question, reply.poll.question_entities, urls);
     return;
   }
   const quote = message.quote;
@@ -5331,6 +5327,19 @@ function drawnDiceEmoji(dice: Record<string, unknown>): string | undefined {
     return undefined;
   }
   return drawn.slice(0, 150);
+}
+
+/**
+ * 任务、标题、选项和问题整段画在引用条上。
+ * 文字链接的起点不能超过这段文字。原文不进正文。
+ */
+function pushDrawnLine(text: unknown, entities: unknown, urls: string[]): void {
+  pushPlainUrls(text, urls);
+  if (typeof text !== "string") {
+    pushTextLinks(entities, urls);
+    return;
+  }
+  pushTextLinks(visibleTextLinks(entities, text.length), urls);
 }
 
 /** 文字链接的起点落在画出的前一段里才读。 */
