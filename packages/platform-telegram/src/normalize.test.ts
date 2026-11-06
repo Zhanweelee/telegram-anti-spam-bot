@@ -30536,7 +30536,7 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.sharedName).toBe(
-      `${visible} https://ow.ly/last288 user288`,
+      `${visible} https://ow.ly/last288`,
     );
     const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
@@ -30586,7 +30586,7 @@ describe("normalizeUpdate", () => {
     expect(ordinaryDump).not.toContain("bit.ly");
     expect(ordinaryDump).not.toContain("288002");
 
-    const names = "Ada https://bit.ly/body288 skip288";
+    const names = "Ada, https://bit.ly/body288";
     const alone = await normalize({
       update_id: 79013,
       message: {
@@ -42144,6 +42144,140 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(named.event)).not.toContain("user79411");
     expect(JSON.stringify(named.event)).not.toContain("bit.ly");
     expect(JSON.stringify(named.event)).not.toContain("930411");
+  });
+
+  it("keeps only the hostname from the full name drawn for a shared user", async () => {
+    const hello = "今天站会";
+    const drawn = await normalize({
+      update_id: 79422,
+      message: {
+        message_id: 79422,
+        date: 1761955200,
+        chat: {
+          id: -10079422,
+          type: "private",
+          first_name: "https://example.com/room79422",
+          title: "https://cutt.ly/title79422",
+        },
+        from: {
+          id: 288,
+          first_name: "https://ow.ly/from79422",
+          last_name: "https://is.gd/skiplast79422",
+          username: "secretuser79422",
+        },
+        users_shared: {
+          request_id: 88079422,
+          users: [
+            {
+              user_id: 930422,
+              first_name: "触发",
+              last_name: "https://bit.ly/last79422",
+              username: "https://tinyurl.com/user79422",
+              photo: [{ file_id: "AgAD79422secret" }],
+            },
+            {
+              user_id: 930423,
+              first_name: "   ",
+              last_name: "https://t.me/+code79422",
+              username: "skip79422",
+            },
+          ],
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    const names = "触发 https://bit.ly/last79422, https://t.me/+code79422";
+    expect(drawn.event.message?.text).toBe(names);
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly", "t.me"]);
+    expect(drawn.event.message?.invites).toEqual(["t.me"]);
+    expect(drawn.event.message?.sharedName).toBeUndefined();
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain("user79422");
+    expect(dumped).not.toContain("tinyurl");
+    expect(dumped).not.toContain("skip79422");
+    expect(dumped).not.toContain("skiplast79422");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("from79422");
+    expect(dumped).not.toContain("secretuser79422");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("title79422");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("room79422");
+    expect(dumped).not.toContain("example.com");
+    expect(dumped).not.toContain("930422");
+    expect(dumped).not.toContain("930423");
+    expect(dumped).not.toContain("88079422");
+    expect(dumped).not.toContain("AgAD79422secret");
+
+    const spaced = await normalize({
+      update_id: 79423,
+      message: {
+        message_id: 79423,
+        date: 1761955200,
+        chat: { id: -10079423, type: "private" },
+        from: { id: 288, first_name: "Ada" },
+        text: hello,
+        users_shared: {
+          request_id: 88079423,
+          users: [
+            {
+              user_id: 930424,
+              first_name: "Go https://bit.ly/later79423",
+              last_name: "https://tinyurl.com/last79423",
+              username: "https://ow.ly/user79423",
+            },
+          ],
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe(hello);
+    expect(spaced.event.message?.textSha256).toBe(await sha256Hex(hello));
+    expect(spaced.event.message?.sharedName).toBe(
+      "Go https://bit.ly/later79423 https://tinyurl.com/last79423",
+    );
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedDump = withoutButtonText(spaced.event);
+    expect(spacedDump).not.toContain("later79423");
+    expect(spacedDump).not.toContain("last79423");
+    expect(spacedDump).not.toContain("user79423");
+    expect(spacedDump).not.toContain("ow.ly");
+    expect(spacedDump).not.toContain("930424");
+    expect(spacedDump).not.toContain("88079423");
+
+    const named = await normalize({
+      update_id: 79424,
+      message: {
+        message_id: 79424,
+        date: 1761955200,
+        chat: { id: -10079424, type: "private" },
+        from: { id: 288, first_name: "Ada" },
+        users_shared: {
+          request_id: 88079424,
+          users: [
+            { user_id: 930425, username: "https://bit.ly/user79424" },
+          ],
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("");
+    expect(named.event.message?.hosts).toBeUndefined();
+    expect(named.event.message?.sharedName).toBeUndefined();
+    expect(JSON.stringify(named.event)).not.toContain("user79424");
+    expect(JSON.stringify(named.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(named.event)).not.toContain("930425");
+    expect(JSON.stringify(named.event)).not.toContain("88079424");
   });
 
   it("marks a dice without keeping the face or the emoji", async () => {

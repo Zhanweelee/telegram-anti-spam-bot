@@ -7560,15 +7560,17 @@ function sharedUserNames(message: Record<string, unknown>): string {
 
 function sharedUserNameSource(message: Record<string, unknown>): string {
   const shared = message.users_shared;
-  if (!isRecord(shared)) {
+  if (!isRecord(shared) || !Array.isArray(shared.users)) {
     return "";
   }
   const parts: string[] = [];
-  pushUserLabels(shared.users, parts);
+  for (const user of shared.users) {
+    pushDrawnFullName(user, parts);
+  }
   if (parts.length === 0) {
     return "";
   }
-  return parts.join(" ");
+  return parts.join(", ");
 }
 
 function managedBotNames(message: Record<string, unknown>): string {
@@ -7746,7 +7748,7 @@ function besideMemberName(
   return clipped(source, MAX_TEXT);
 }
 
-/** 已有别的正文时，分享来的用户名字另留最多 4096 字。这段自己就是正文时不重复。请求编号、用户编号、头像、发送者姓名和聊天标题不进这个字段。 */
+/** 已有别的正文时，分享来的用户画出的全名另留最多 4096 字。用户名不进。几个人用逗号分开。这段自己就是正文时不重复。请求编号、用户编号、头像、发送者姓名和聊天标题不进这个字段。 */
 function besideSharedName(
   message: Record<string, unknown>,
   text: string,
