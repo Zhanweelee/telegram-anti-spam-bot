@@ -5704,7 +5704,7 @@ function pushPinSenderUrls(
 /**
  * 置顶提示上画出的原文预览只留主机名。
  * 文字消息只画前 20 个 UTF-16 码元。账单画说明，清单画标题，同样只取前 20 个。
- * 图片、视频、文件、地点等固定说法不画原文。游戏只画标题。
+ * 富文本画预览的前 20 个码元。图片、视频、文件、地点等固定说法不画原文。游戏只画标题。
  * 预览不进正文。第 21 个字起、账单标题、任务和被置顶的人不读。
  */
 function pushPinnedPreviewUrls(
@@ -5715,7 +5715,13 @@ function pushPinnedPreviewUrls(
     return;
   }
   const pinned = message.pinned_message;
-  if (!isRecord(pinned) || pinnedPreviewMedia(pinned)) {
+  if (!isRecord(pinned)) {
+    return;
+  }
+  if (pushPinnedRichPreview(pinned, urls)) {
+    return;
+  }
+  if (pinnedPreviewMedia(pinned)) {
     return;
   }
   if (isRecord(pinned.game)) {
@@ -5727,6 +5733,303 @@ function pushPinnedPreviewUrls(
     return;
   }
   pushPlainUrls(drawn.slice(0, 20), urls);
+}
+
+const PIN_RICH_PREVIEW = 20;
+
+interface PinnedRichPreview {
+  text: string;
+  urls: string[];
+}
+
+/**
+ * 置顶一条富文本时，提示画出 `formatRichMessage` 的前 20 个码元。
+ * 段落、标题、引用、列表、表格标题、按钮、音频名和文件名按这条预览拼接。
+ * 图片、视频、动图、拼图、幻灯片、地图和公式是固定说法，占满剩下的预览。
+ * 表格格子、地图说明和公式正文不在这 20 个码元里。
+ */
+function pushPinnedRichPreview(
+  pinned: Record<string, unknown>,
+  urls: string[],
+): boolean {
+  if (!isRecord(pinned.rich_message)) {
+    return false;
+  }
+  const preview: PinnedRichPreview = { text: "", urls: [] };
+  const rich = pinned.rich_message;
+  if (Array.isArray(rich.blocks)) {
+    appendPinnedRichBlocks(rich.blocks, preview);
+  }
+  pushPlainUrls(preview.text.slice(0, PIN_RICH_PREVIEW), urls);
+  for (const found of preview.urls) {
+    urls.push(found);
+  }
+  return true;
+}
+
+function pinnedRichOpen(preview: PinnedRichPreview): boolean {
+  return preview.text.length < PIN_RICH_PREVIEW;
+}
+
+function fillPinnedRichPreview(preview: PinnedRichPreview): void {
+  if (preview.text.length < PIN_RICH_PREVIEW) {
+    preview.text += " ".repeat(PIN_RICH_PREVIEW - preview.text.length);
+  }
+}
+
+function appendPinnedSeparator(preview: PinnedRichPreview): boolean {
+  preview.text += "  ";
+  if (pinnedRichOpen(preview)) {
+    return true;
+  }
+  preview.text = preview.text.slice(0, PIN_RICH_PREVIEW);
+  return false;
+}
+
+function appendPinnedRichBlocks(
+  blocks: unknown[],
+  preview: PinnedRichPreview,
+): void {
+  let started = false;
+  for (const block of blocks) {
+    if (!pinnedRichOpen(preview) || !isRecord(block)) {
+      continue;
+    }
+    if (started && !appendPinnedSeparator(preview)) {
+      return;
+    }
+    started = true;
+    appendPinnedRichBlock(block, preview);
+  }
+}
+
+function appendPinnedRichBlock(
+  block: Record<string, unknown>,
+  preview: PinnedRichPreview,
+): void {
+  const type = block.type;
+  if (
+    type === "paragraph" ||
+    type === "heading" ||
+    type === "pre" ||
+    type === "footer" ||
+    type === "expandable_blockquote" ||
+    type === "pullquote" ||
+    type === "thinking"
+  ) {
+    appendPinnedRichText(block.text, preview);
+    return;
+  }
+  if (type === "details") {
+    appendPinnedRichText(block.summary, preview);
+    return;
+  }
+  if (type === "blockquote" && Array.isArray(block.blocks)) {
+    appendPinnedRichBlocks(block.blocks, preview);
+    return;
+  }
+  if (type === "list" && Array.isArray(block.items)) {
+    appendPinnedRichList(block.items, preview);
+    return;
+  }
+  if (type === "table") {
+    appendPinnedRichMarked(block.caption, "\u229E ", preview);
+    return;
+  }
+  if (type === "audio") {
+    appendPinnedRichAudio(block.audio, preview);
+    return;
+  }
+  if (type === "document") {
+    appendPinnedRichDocument(block.document, preview);
+    return;
+  }
+  if (type === "buttons" && Array.isArray(block.buttons)) {
+    appendPinnedRichButtons(block.buttons, preview);
+    return;
+  }
+  if (
+    type === "photo" ||
+    type === "video" ||
+    type === "animation" ||
+    type === "collage" ||
+    type === "slideshow" ||
+    type === "map" ||
+    type === "mathematical_expression" ||
+    type === "voice_note"
+  ) {
+    fillPinnedRichPreview(preview);
+  }
+}
+
+function appendPinnedRichMarked(
+  value: unknown,
+  mark: string,
+  preview: PinnedRichPreview,
+): void {
+  const room = PIN_RICH_PREVIEW - preview.text.length;
+  preview.text += mark.slice(0, room);
+  if (!pinnedRichOpen(preview)) {
+    return;
+  }
+  const at = preview.text.length;
+  appendPinnedRichText(value, preview);
+  if (preview.text.length === at) {
+    fillPinnedRichPreview(preview);
+  }
+}
+
+function appendPinnedRichAudio(
+  value: unknown,
+  preview: PinnedRichPreview,
+): void {
+  if (!isRecord(value)) {
+    fillPinnedRichPreview(preview);
+    return;
+  }
+  const title = typeof value.title === "string" ? value.title : "";
+  const performer = typeof value.performer === "string" ? value.performer : "";
+  const file = typeof value.file_name === "string" ? value.file_name : "";
+  let drawn = "";
+  if (title.length > 0 && performer.length > 0) {
+    drawn = `${performer} \u2013 ${title}`;
+  } else if (title.length > 0) {
+    drawn = title;
+  } else {
+    drawn = file;
+  }
+  if (drawn.length === 0) {
+    fillPinnedRichPreview(preview);
+    return;
+  }
+  appendPinnedRichText(`\u{1F3B5} ${drawn}`, preview);
+}
+
+function appendPinnedRichDocument(
+  value: unknown,
+  preview: PinnedRichPreview,
+): void {
+  const name =
+    isRecord(value) && typeof value.file_name === "string"
+      ? value.file_name
+      : "";
+  if (name.length === 0) {
+    fillPinnedRichPreview(preview);
+    return;
+  }
+  appendPinnedRichText(`\u{1F4CE} ${name}`, preview);
+}
+
+function appendPinnedRichList(
+  items: unknown[],
+  preview: PinnedRichPreview,
+): void {
+  let started = false;
+  for (const item of items) {
+    if (!pinnedRichOpen(preview) || !isRecord(item)) {
+      continue;
+    }
+    if (started && !appendPinnedSeparator(preview)) {
+      return;
+    }
+    started = true;
+    const label = typeof item.label === "string" ? item.label : "";
+    if (typeof item.value === "number") {
+      const marker = label.length > 0 ? label : String(item.value);
+      appendPinnedRichText(`${marker}. `, preview);
+    } else {
+      appendPinnedRichText(`• ${label}`, preview);
+    }
+    if (Array.isArray(item.blocks)) {
+      appendPinnedRichBlocks(item.blocks, preview);
+    }
+  }
+}
+
+function appendPinnedRichButtons(
+  buttons: unknown[],
+  preview: PinnedRichPreview,
+): void {
+  let started = false;
+  for (const button of buttons) {
+    if (!pinnedRichOpen(preview)) {
+      return;
+    }
+    if (started && !appendPinnedSeparator(preview)) {
+      return;
+    }
+    started = true;
+    appendPinnedRichButton(button, preview);
+  }
+}
+
+function appendPinnedRichButton(
+  value: unknown,
+  preview: PinnedRichPreview,
+): void {
+  if (!isRecord(value) || !pinnedRichOpen(preview)) {
+    return;
+  }
+  const at = preview.text.length;
+  const count = preview.urls.length;
+  if (typeof value.url === "string") {
+    preview.urls.push(value.url);
+  }
+  appendPinnedRichText(value.text, preview);
+  if (preview.text.length === at) {
+    preview.urls.splice(count);
+  }
+}
+
+function appendPinnedRichText(
+  value: unknown,
+  preview: PinnedRichPreview,
+): void {
+  if (!pinnedRichOpen(preview)) {
+    return;
+  }
+  if (typeof value === "string") {
+    preview.text += value.slice(0, PIN_RICH_PREVIEW - preview.text.length);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      appendPinnedRichText(item, preview);
+      if (!pinnedRichOpen(preview)) {
+        return;
+      }
+    }
+    return;
+  }
+  if (!isRecord(value)) {
+    return;
+  }
+  if (value.type === "url" && typeof value.url === "string") {
+    const at = preview.text.length;
+    const count = preview.urls.length;
+    preview.urls.push(value.url);
+    if ("text" in value) {
+      appendPinnedRichText(value.text, preview);
+    }
+    if (preview.text.length === at) {
+      preview.urls.splice(count);
+    }
+    return;
+  }
+  if (value.type === "mathematical_expression") {
+    return;
+  }
+  if (value.type === "custom_emoji") {
+    appendPinnedRichText(value.alternative_text, preview);
+    return;
+  }
+  if (value.type === "button") {
+    appendPinnedRichButton(value.button, preview);
+    return;
+  }
+  if ("text" in value) {
+    appendPinnedRichText(value.text, preview);
+  }
 }
 
 /**

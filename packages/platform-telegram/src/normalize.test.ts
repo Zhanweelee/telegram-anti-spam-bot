@@ -32253,6 +32253,298 @@ describe("normalizeUpdate", () => {
     expect(placeDump).not.toContain("ow.ly");
   });
 
+  it("reads the hostname drawn on a pinned rich preview", async () => {
+    const phrase = "请免费领取礼品";
+    const named = await normalize({
+      update_id: 80401,
+      message: {
+        message_id: 80401,
+        date: 1761955200,
+        chat: { id: -10080401, type: "supergroup" },
+        from: { id: 80401, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804011,
+          date: 1761955100,
+          chat: { id: -10080401, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: `https://bit.ly/rich80401 ${phrase}`,
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("");
+    expect(named.event.message?.textSha256).toBe(await sha256Hex(""));
+    expect(named.event.message?.hosts).toEqual(["bit.ly"]);
+    const namedDump = JSON.stringify(named.event);
+    expect(namedDump).not.toContain(phrase);
+    expect(namedDump).not.toContain("rich80401");
+
+    const linked = await normalize({
+      update_id: 80402,
+      message: {
+        message_id: 80402,
+        date: 1761955200,
+        chat: { id: -10080402, type: "supergroup" },
+        from: { id: 80402, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804021,
+          date: 1761955100,
+          chat: { id: -10080402, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: {
+                  type: "url",
+                  text: "点这里看",
+                  url: "https://bit.ly/ent80402",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(linked.status).toBe("event");
+    if (linked.status !== "event") {
+      return;
+    }
+    expect(linked.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(linked.event)).not.toContain("ent80402");
+
+    const late = await normalize({
+      update_id: 80403,
+      message: {
+        message_id: 80403,
+        date: 1761955200,
+        chat: { id: -10080403, type: "supergroup" },
+        from: { id: 80403, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804031,
+          date: 1761955100,
+          chat: { id: -10080403, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: `${"甲".repeat(20)}https://bit.ly/late80403`,
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(late.status).toBe("event");
+    if (late.status !== "event") {
+      return;
+    }
+    expect(late.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(late.event)).not.toContain("late80403");
+    expect(JSON.stringify(late.event)).not.toContain("bit.ly");
+
+    const cells = await normalize({
+      update_id: 80404,
+      message: {
+        message_id: 80404,
+        date: 1761955200,
+        chat: { id: -10080404, type: "supergroup" },
+        from: { id: 80404, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804041,
+          date: 1761955100,
+          chat: { id: -10080404, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "table",
+                caption: "你好",
+                cells: [[{ text: "https://bit.ly/cell80404" }]],
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(cells.status).toBe("event");
+    if (cells.status !== "event") {
+      return;
+    }
+    expect(cells.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(cells.event)).not.toContain("cell80404");
+    expect(JSON.stringify(cells.event)).not.toContain("bit.ly");
+
+    const file = await normalize({
+      update_id: 80405,
+      message: {
+        message_id: 80405,
+        date: 1761955200,
+        chat: { id: -10080405, type: "supergroup" },
+        from: { id: 80405, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804051,
+          date: 1761955100,
+          chat: { id: -10080405, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "document",
+                document: {
+                  file_id: "DOC80405",
+                  file_name: "https://bit.ly/file80405",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(file.status).toBe("event");
+    if (file.status !== "event") {
+      return;
+    }
+    expect(file.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(file.event)).not.toContain("file80405");
+
+    const music = await normalize({
+      update_id: 80406,
+      message: {
+        message_id: 80406,
+        date: 1761955200,
+        chat: { id: -10080406, type: "supergroup" },
+        from: { id: 80406, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804061,
+          date: 1761955100,
+          chat: { id: -10080406, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "audio",
+                audio: {
+                  file_id: "AUD80406",
+                  duration: 1,
+                  title: "song",
+                  performer: "ada",
+                  file_name: "https://bit.ly/song80406",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(music.status).toBe("event");
+    if (music.status !== "event") {
+      return;
+    }
+    expect(music.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(music.event)).not.toContain("song80406");
+    expect(JSON.stringify(music.event)).not.toContain("bit.ly");
+
+    const track = await normalize({
+      update_id: 80407,
+      message: {
+        message_id: 80407,
+        date: 1761955200,
+        chat: { id: -10080407, type: "supergroup" },
+        from: { id: 80407, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804071,
+          date: 1761955100,
+          chat: { id: -10080407, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "audio",
+                audio: {
+                  file_id: "AUD80407",
+                  duration: 1,
+                  file_name: "https://bit.ly/track80407",
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    expect(track.status).toBe("event");
+    if (track.status !== "event") {
+      return;
+    }
+    expect(track.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(track.event)).not.toContain("track80407");
+
+    const picture = await normalize({
+      update_id: 80408,
+      message: {
+        message_id: 80408,
+        date: 1761955200,
+        chat: { id: -10080408, type: "supergroup" },
+        from: { id: 80408, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804081,
+          date: 1761955100,
+          chat: { id: -10080408, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              { type: "photo", caption: "https://bit.ly/pic80408" },
+              { type: "paragraph", text: "https://is.gd/later80408" },
+            ],
+          },
+        },
+      },
+    });
+    expect(picture.status).toBe("event");
+    if (picture.status !== "event") {
+      return;
+    }
+    expect(picture.event.message?.hosts).toBeUndefined();
+    const pictureDump = JSON.stringify(picture.event);
+    expect(pictureDump).not.toContain("pic80408");
+    expect(pictureDump).not.toContain("later80408");
+    expect(pictureDump).not.toContain("bit.ly");
+    expect(pictureDump).not.toContain("is.gd");
+
+    const body = await normalize({
+      update_id: 80409,
+      message: {
+        message_id: 80409,
+        date: 1761955200,
+        chat: { id: -10080409, type: "supergroup" },
+        from: { id: 80409, first_name: "Ada" },
+        pinned_message: {
+          message_id: 804091,
+          date: 1761955100,
+          chat: { id: -10080409, type: "supergroup" },
+          text: "https://tinyurl.com/text80409",
+          rich_message: {
+            blocks: [
+              { type: "paragraph", text: "https://bit.ly/rich80409" },
+            ],
+          },
+        },
+      },
+    });
+    expect(body.status).toBe("event");
+    if (body.status !== "event") {
+      return;
+    }
+    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
+    const bodyDump = JSON.stringify(body.event);
+    expect(bodyDump).not.toContain("text80409");
+    expect(bodyDump).not.toContain("tinyurl");
+    expect(bodyDump).not.toContain("rich80409");
+  });
+
   it("marks a pin and leaves the pinned text out", async () => {
     const pinnedText = "置顶广告正文";
     const pinnedId = 90182;
