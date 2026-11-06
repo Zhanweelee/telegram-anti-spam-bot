@@ -556,11 +556,13 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   const poll = message.poll;
   if (isRecord(poll)) {
-    lists.push(
-      poll.question_entities,
-      poll.explanation_entities,
-      poll.description_entities,
-    );
+    if (typeof poll.question === "string") {
+      // 按标识提及的起点必须落在题干里。
+      lists.push(drawnMention(poll.question_entities, poll.question.length));
+    } else {
+      lists.push(poll.question_entities);
+    }
+    lists.push(poll.explanation_entities, poll.description_entities);
   }
   const checklist = message.checklist;
   if (isRecord(checklist)) {
