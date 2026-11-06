@@ -605,7 +605,17 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks)) {
-    pushTaskMentionLists(drawnAddedTasks(addedTasks.tasks), lists);
+    for (const task of drawnAddedTasks(addedTasks.tasks)) {
+      if (!isRecord(task)) {
+        continue;
+      }
+      if (typeof task.text === "string") {
+        // 按标识提及的起点必须落在这条后加的任务里。
+        lists.push(drawnMention(task.text_entities, task.text.length));
+      } else {
+        lists.push(task.text_entities);
+      }
+    }
   }
   for (const field of ["gift", "unique_gift", "gift_upgrade_sent"]) {
     const gift = message[field];
@@ -646,18 +656,6 @@ function drawnAddedTasks(tasks: unknown): unknown[] {
     return tasks.slice(0, 3);
   }
   return tasks;
-}
-
-/** 清单任务上的实体列表。投票选项和手动引用不读。 */
-function pushTaskMentionLists(tasks: unknown, lists: unknown[]): void {
-  if (!Array.isArray(tasks)) {
-    return;
-  }
-  for (const task of tasks) {
-    if (isRecord(task)) {
-      lists.push(task.text_entities);
-    }
-  }
 }
 
 function customEmojiMark(message: Record<string, unknown>): boolean {
