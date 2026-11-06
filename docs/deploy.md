@@ -209,7 +209,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 分享来的用户名字命中同一组模式时删除。`/rule <chatId> shared_name_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0555。
 
-新建受管 bot 的可见名字命中同一组模式时删除。`/rule <chatId> managed_name_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0556。
+新建受管 bot 画出的全名命中同一组模式时删除。用户名不进这段。`/rule <chatId> managed_name_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0556 与 ADR 0643。
 
 允许发消息带上的小程序名字命中同一组模式时删除。`/rule <chatId> access_name_regex off` 回到只看关键词和短链。这段自己就是正文时仍要打开 `regex_hint`。见 ADR 0557。
 
@@ -432,6 +432,8 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 清单任务上的完成者全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0641。
 
 靠近提醒上画出的两个人的全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。用户名不进事件。操作的人仍只读名。`example.com` 仍留下。见 ADR 0642。
+
+新建受管 bot 上画出的全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。用户名不进事件。`example.com` 仍留下。见 ADR 0643。
 
 `/rule <chatId> rich_phone on` 和 `/rule <chatId> rich_card on` 分别删这个群里的富文本电话和银行卡。默认关闭。号码不进证据。看得见的字仍参与关键词。见 ADR 0501。
 

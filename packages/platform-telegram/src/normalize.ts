@@ -7545,8 +7545,8 @@ function memberNameSource(message: Record<string, unknown>): string {
   }
   const proximity = message.proximity_alert_triggered;
   if (isRecord(proximity)) {
-    pushProximityNames(proximity.traveler, parts);
-    pushProximityNames(proximity.watcher, parts);
+    pushDrawnFullName(proximity.traveler, parts);
+    pushDrawnFullName(proximity.watcher, parts);
   }
   if (parts.length === 0) {
     return "";
@@ -7581,7 +7581,7 @@ function managedBotNameSource(message: Record<string, unknown>): string {
     return "";
   }
   const parts: string[] = [];
-  pushUserLabels([created.bot], parts);
+  pushDrawnFullName(created.bot, parts);
   if (parts.length === 0) {
     return "";
   }
@@ -7602,10 +7602,10 @@ function writeAccessNameSource(message: Record<string, unknown>): string {
 }
 
 /**
- * 靠近提醒上画出的全名。名和姓都去掉两端空白，名在前。
+ * 客户端画出的全名。名和姓都去掉两端空白，名在前。
  * 空白名不挡住姓。空格不截断。用户名不进这行。
  */
-function pushProximityNames(user: unknown, parts: string[]): void {
+function pushDrawnFullName(user: unknown, parts: string[]): void {
   if (!isRecord(user)) {
     return;
   }
@@ -7758,7 +7758,7 @@ function besideSharedName(
   return clipped(source, MAX_TEXT);
 }
 
-/** 已有别的正文时，新建受管 bot 的可见名字另留最多 4096 字。这段自己就是正文时不重复。bot 编号、令牌、创建者姓名和聊天标题不进这个字段。 */
+/** 已有别的正文时，新建受管 bot 画出的全名另留最多 4096 字。用户名不进。这段自己就是正文时不重复。bot 编号、令牌、创建者姓名和聊天标题不进这个字段。 */
 function besideManagedName(
   message: Record<string, unknown>,
   text: string,

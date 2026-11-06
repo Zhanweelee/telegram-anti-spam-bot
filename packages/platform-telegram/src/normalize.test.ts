@@ -30662,7 +30662,7 @@ describe("normalizeUpdate", () => {
     expect(labeled.event.message?.hosts).toEqual(["bit.ly", "t.me", "ow.ly"]);
     expect(labeled.event.message?.invites).toEqual(["t.me"]);
     expect(labeled.event.message?.managedName).toBe(
-      `${visible} https://ow.ly/last289 user289`,
+      `${visible} https://ow.ly/last289`,
     );
     const labeledDump = withoutButtonText(labeled.event);
     expect(labeledDump).not.toContain(phrase);
@@ -30714,7 +30714,7 @@ describe("normalizeUpdate", () => {
     expect(ordinaryDump).not.toContain("bit.ly");
     expect(ordinaryDump).not.toContain("289002");
 
-    const names = "Ada https://bit.ly/body289 skip289";
+    const names = "Ada https://bit.ly/body289";
     const alone = await normalize({
       update_id: 79016,
       message: {
@@ -42024,6 +42024,126 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(named.event)).not.toContain("skiplast79398");
     expect(JSON.stringify(named.event)).not.toContain("is.gd");
     expect(JSON.stringify(named.event)).not.toContain("88079398");
+  });
+
+  it("keeps only the hostname from the full name drawn for a managed bot", async () => {
+    const hello = "今天站会";
+    const drawn = await normalize({
+      update_id: 79409,
+      message: {
+        message_id: 79409,
+        date: 1761955200,
+        chat: {
+          id: -10079409,
+          type: "private",
+          first_name: "https://example.com/room79409",
+          title: "https://cutt.ly/title79409",
+        },
+        from: {
+          id: 93,
+          first_name: "https://ow.ly/from79409",
+          last_name: "https://is.gd/skiplast79409",
+          username: "secretuser79409",
+        },
+        managed_bot_created: {
+          bot: {
+            id: 930409,
+            is_bot: true,
+            first_name: "   ",
+            last_name: "https://bit.ly/last79409",
+            username: "https://tinyurl.com/user79409",
+            language_code: "zh",
+            token: "123456:SECRET79409",
+          },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    const names = "https://bit.ly/last79409";
+    expect(drawn.event.message?.text).toBe(names);
+    expect(drawn.event.message?.textSha256).toBe(await sha256Hex(names));
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(drawn.event.message?.managedName).toBeUndefined();
+    const dumped = JSON.stringify(drawn.event);
+    expect(dumped).not.toContain("user79409");
+    expect(dumped).not.toContain("tinyurl");
+    expect(dumped).not.toContain("skiplast79409");
+    expect(dumped).not.toContain("is.gd");
+    expect(dumped).not.toContain("from79409");
+    expect(dumped).not.toContain("secretuser79409");
+    expect(dumped).not.toContain("ow.ly");
+    expect(dumped).not.toContain("title79409");
+    expect(dumped).not.toContain("cutt.ly");
+    expect(dumped).not.toContain("room79409");
+    expect(dumped).not.toContain("example.com");
+    expect(dumped).not.toContain("930409");
+    expect(dumped).not.toContain("SECRET79409");
+
+    const spaced = await normalize({
+      update_id: 79410,
+      message: {
+        message_id: 79410,
+        date: 1761955200,
+        chat: { id: -10079410, type: "private" },
+        from: { id: 93, first_name: "Ada" },
+        text: hello,
+        managed_bot_created: {
+          bot: {
+            id: 930410,
+            is_bot: true,
+            first_name: "Go https://bit.ly/later79410",
+            last_name: "https://tinyurl.com/last79410",
+            username: "https://ow.ly/user79410",
+          },
+        },
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe(hello);
+    expect(spaced.event.message?.textSha256).toBe(await sha256Hex(hello));
+    expect(spaced.event.message?.managedName).toBe(
+      "Go https://bit.ly/later79410 https://tinyurl.com/last79410",
+    );
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedDump = withoutButtonText(spaced.event);
+    expect(spacedDump).not.toContain("later79410");
+    expect(spacedDump).not.toContain("last79410");
+    expect(spacedDump).not.toContain("user79410");
+    expect(spacedDump).not.toContain("ow.ly");
+    expect(spacedDump).not.toContain("930410");
+
+    const named = await normalize({
+      update_id: 79411,
+      message: {
+        message_id: 79411,
+        date: 1761955200,
+        chat: { id: -10079411, type: "private" },
+        from: { id: 93, first_name: "Ada" },
+        managed_bot_created: {
+          bot: {
+            id: 930411,
+            is_bot: true,
+            username: "https://bit.ly/user79411",
+          },
+        },
+      },
+    });
+    expect(named.status).toBe("event");
+    if (named.status !== "event") {
+      return;
+    }
+    expect(named.event.message?.text).toBe("");
+    expect(named.event.message?.hosts).toBeUndefined();
+    expect(named.event.message?.managedName).toBeUndefined();
+    expect(JSON.stringify(named.event)).not.toContain("user79411");
+    expect(JSON.stringify(named.event)).not.toContain("bit.ly");
+    expect(JSON.stringify(named.event)).not.toContain("930411");
   });
 
   it("marks a dice without keeping the face or the emoji", async () => {
