@@ -5437,8 +5437,10 @@ function pushAddedSenderUrls(
 }
 
 /**
- * 加选项或删选项的人只留主机名。
+ * 加选项或删选项的人画出的短名只留主机名。
  * 选项文字长度大于 0 时读。空白也算。
+ * 名为空时改用姓。空白名挡住姓。
+ * 从下标 2 起的第一个空格后面不读。
  * 同时出现时先认新加。空字符串落到另一种。
  * 空对象和布尔值不读。选项文字仍按原来的正文。
  * 嵌套原投票不读。用户名不读。
@@ -5447,10 +5449,10 @@ function pushPollSenderUrls(
   message: Record<string, unknown>,
   urls: string[],
 ): void {
-  if (changedPoll(message) === undefined) {
+  if (changedPoll(message) === undefined || !isRecord(message.from)) {
     return;
   }
-  pushVisiblePartyUrls(message.from, undefined, urls);
+  pushPlainUrls(forcedFirstName(message.from), urls);
 }
 
 /**
