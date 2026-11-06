@@ -12097,6 +12097,115 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(words)).not.toContain(phrase);
   });
 
+  it("deletes a short link in an automatic quote", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: {
+              id: chatId,
+              type: "supergroup",
+              title: "机密群",
+            },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const quoted = await posted(80371, {
+      text: "你好",
+      quote: { text: "https://bit.ly/auto80371", position: 0 },
+      reply_to_message: {
+        message_id: 803711,
+        date: 1761955100,
+        chat: { id: -1080371, type: "supergroup" },
+        text: "https://tinyurl.com/body80371",
+      },
+    });
+    expect(quoted.message?.text).toBe("你好");
+    expect(quoted.message?.quoteText).toBeUndefined();
+    expect(quoted.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const hit = await screenTelegramEvent(quoted, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hit.decision.action).toBe("delete");
+    expect(JSON.stringify(hit.decision.evidence)).toContain("short_link:bit.ly");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1080371", messageId: "80371" },
+    ]);
+    expect(JSON.stringify(quoted)).not.toContain("auto80371");
+    expect(JSON.stringify(quoted)).not.toContain("tinyurl");
+
+    const named = await posted(80372, {
+      text: "你好",
+      quote: { text: "https://example.com/auto80372", position: 0 },
+    });
+    expect(named.message?.hosts).toEqual(["example.com"]);
+    const namedKept = await screenTelegramEvent(named, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(namedKept.decision.action).toBe("allow");
+    expect(JSON.stringify(named)).not.toContain("auto80372");
+
+    const paid = await posted(
+      80373,
+      {
+        text: "你好",
+        quote: { text: "https://bit.ly/auto80373", position: 0 },
+      },
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+
+    const words = await posted(80374, {
+      text: "你好",
+      quote: { text: phrase, position: 0 },
+    });
+    expect(words.message?.quoteText).toBeUndefined();
+    expect(words.message?.hosts).toBeUndefined();
+    const wordsKept = await screenTelegramEvent(words, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(wordsKept.decision.action).toBe("allow");
+    expect(JSON.stringify(words)).not.toContain(phrase);
+  });
+
   it("deletes a short link in a replied document name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
@@ -12844,7 +12953,11 @@ describe("screenTelegramEvent", () => {
         },
       },
     });
-    expect(quoted.message?.hosts).toEqual(["tinyurl.com", "bit.ly"]);
+    expect(quoted.message?.hosts).toEqual([
+      "example.com",
+      "tinyurl.com",
+      "bit.ly",
+    ]);
     const moderator = createMemoryModerator();
     const hit = await screenTelegramEvent(quoted, {
       moderator,
@@ -12866,7 +12979,7 @@ describe("screenTelegramEvent", () => {
     expect(quotedDump).not.toContain("sign80151");
     expect(quotedDump).not.toContain("quote80151");
     expect(quotedDump).not.toContain("forwarder80151");
-    expect(quotedDump).not.toContain("example.com");
+    expect(quotedDump).toContain("example.com");
     expect(quotedDump).not.toContain("is.gd");
 
     const beside = await posted(80152, {

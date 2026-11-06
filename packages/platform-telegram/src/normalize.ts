@@ -4585,7 +4585,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushForwardPartyUrls(message, urls);
   pushSenderChatUrls(message, urls);
   const quote = message.quote;
-  if (isRecord(quote) && quote.is_manual === true) {
+  if (isRecord(quote) && typeof quote.text === "string") {
     pushPlainUrls(quote.text, urls);
     pushTextLinks(quote.entities, urls);
   }
