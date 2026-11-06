@@ -137,7 +137,7 @@ Self-host 的 `RuleSource` 是 `apps/worker/rules/default.json` 和 `chats.json`
 
 建议帖提示可以按群删除。规则 `post_notice` 默认关闭。见 ADR 0488。
 
-清单完成提示可以按群删除。规则 `checklist_notice` 默认关闭。见 ADR 0489。
+清单完成提示可以按群删除。规则 `checklist_notice` 默认关闭。见 ADR 0489。对上的第一条任务里的短链交给已有的链接规则。见 ADR 0655。
 
 群升级成超级群之后，原来的开关、关键词和白名单会抄到新编号。见 ADR 0490。
 

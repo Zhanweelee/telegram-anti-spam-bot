@@ -4605,6 +4605,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushPostSenderUrls(message, urls);
   pushPostTopicUrls(message, urls);
   pushChecklistSenderUrls(message, urls);
+  pushDoneTaskUrls(message, urls);
   pushAddedSenderUrls(message, urls);
   pushPollSenderUrls(message, urls);
   pushTopicSenderUrls(message, urls);
@@ -5313,6 +5314,61 @@ function pushChecklistSenderUrls(
     return;
   }
   pushFormattedUserUrls(message.from, urls);
+}
+
+/**
+ * 勾完或取消勾完时画出的那一条任务只留主机名。
+ * 完成名单非空时只用第一项，否则用取消完成名单的第一项。
+ * 对得上嵌套清单里的任务才读整段文字和文字链接。其余任务、标题和清单正文不读。
+ * 第一项不是安全整数时不改去读另一份名单。
+ */
+function pushDoneTaskUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  const done = message.checklist_tasks_done;
+  if (!isRecord(done)) {
+    return;
+  }
+  const id = drawnTaskId(done);
+  if (id === null) {
+    return;
+  }
+  const nested = done.checklist_message;
+  if (!isRecord(nested) || !isRecord(nested.checklist)) {
+    return;
+  }
+  const tasks = nested.checklist.tasks;
+  if (!Array.isArray(tasks)) {
+    return;
+  }
+  for (const task of tasks) {
+    if (!isRecord(task) || task.id !== id) {
+      continue;
+    }
+    pushPlainUrls(task.text, urls);
+    pushTextLinks(task.text_entities, urls);
+    return;
+  }
+}
+
+/** 完成名单非空时锁定第一项，不再看取消完成名单。 */
+function drawnTaskId(done: Record<string, unknown>): number | null {
+  for (const key of [
+    "marked_as_done_task_ids",
+    "marked_as_not_done_task_ids",
+  ]) {
+    const list = done[key];
+    if (!Array.isArray(list) || list.length === 0) {
+      continue;
+    }
+    const id = list[0];
+    if (typeof id !== "number" || !Number.isSafeInteger(id)) {
+      return null;
+    }
+    return id;
+  }
+  return null;
 }
 
 /**
