@@ -7535,7 +7535,7 @@ function memberNameSource(message: Record<string, unknown>): string {
   pushJoinedFullNames(message.new_chat_members, parts);
   const invited = message.video_chat_participants_invited;
   if (isRecord(invited)) {
-    pushUserLabels(invited.users, parts);
+    pushJoinedFullNames(invited.users, parts);
   }
   for (const field of ["chat_owner_changed", "chat_owner_left"]) {
     const value = message[field];
@@ -7604,8 +7604,8 @@ function writeAccessNameSource(message: Record<string, unknown>): string {
 }
 
 /**
- * 入群名单上画出的全名。每个人名和姓去掉两端空白，名在前。
- * 几个人用逗号分开。用户名不进这行。
+ * 名单上画出的全名。每个人名和姓去掉两端空白，名在前。
+ * 几个人用逗号分开。用户名不进这行。入群和视频聊天邀请共用。
  */
 function pushJoinedFullNames(value: unknown, parts: string[]): void {
   if (!Array.isArray(value)) {
@@ -7754,7 +7754,7 @@ function besideHiddenName(
   return clipped(source, MAX_TEXT);
 }
 
-/** 已有别的正文时，入群画出的全名、邀请、换群主和靠近提醒另留最多 4096 字。入群名单不进用户名，几个人用逗号分开。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
+/** 已有别的正文时，入群和视频聊天邀请画出的全名、换群主和靠近提醒另留最多 4096 字。入群和邀请不进用户名，几个人用逗号分开。这段自己就是正文时不重复。退群的人、发送者姓名、编号和距离不进这个字段。 */
 function besideMemberName(
   message: Record<string, unknown>,
   text: string,
