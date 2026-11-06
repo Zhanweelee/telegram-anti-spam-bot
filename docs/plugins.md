@@ -75,7 +75,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 置顶的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0586。文字预览前 20 个码元和游戏标题也只留主机名。见 ADR 0653。
 
-建群的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0587。
+建群的人，名字只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0681。
 
 开视频聊天的人，名字只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0588。
 
@@ -143,7 +143,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 置顶提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0620。文字预览前 20 个码元和游戏标题也只留主机名。见 ADR 0653。
 
-建群提示上画出的发送者全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0621。
+建群提示上画出的发送者全名只留主机名，仍走 `links`。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0681。
 
 拉人进群的人画出的全名只留主机名，仍走 `links`。频道自己加入不读发送者。发送者是聊天时只读聊天标题。名字里的关键词不命中。见 ADR 0677。
 

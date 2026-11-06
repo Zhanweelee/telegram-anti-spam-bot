@@ -41187,6 +41187,173 @@ describe("normalizeUpdate", () => {
     expect(invalidDump).not.toContain("tinyurl");
   });
 
+  it("leaves a short link in the chat title on a created group", async () => {
+    const phrase = "请免费领取礼品";
+    const titled = await normalize({
+      update_id: 79759,
+      message: {
+        message_id: 79759,
+        date: 1761955200,
+        chat: {
+          id: -10079759,
+          type: "group",
+          title: `https://ow.ly/room79759 ${phrase}`,
+        },
+        sender_chat: {
+          id: -100797590,
+          type: "channel",
+          title: `https://bit.ly/later79759 ${phrase}`,
+          username: "secretuser79759",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79759",
+          last_name: "https://cutt.ly/also79759",
+          username: "adder79759",
+        },
+        group_chat_created: true,
+      },
+    });
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.text).toBe("");
+    expect(titled.event.message?.asGroupCreated).toBe(true);
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    const titledDump = JSON.stringify(titled.event);
+    expect(titledDump).not.toContain(phrase);
+    expect(titledDump).not.toContain("later79759");
+    expect(titledDump).not.toContain("skip79759");
+    expect(titledDump).not.toContain("also79759");
+    expect(titledDump).not.toContain("secretuser79759");
+    expect(titledDump).not.toContain("adder79759");
+    expect(titledDump).not.toContain("room79759");
+    expect(titledDump).not.toContain("tinyurl");
+    expect(titledDump).not.toContain("cutt.ly");
+    expect(titledDump).not.toContain("ow.ly");
+
+    const same = await normalize({
+      update_id: 79760,
+      message: {
+        message_id: 79760,
+        date: 1761955200,
+        chat: { id: -10079760, type: "group" },
+        sender_chat: {
+          id: -10079760,
+          type: "group",
+          title: "https://bit.ly/end79760",
+          username: "secretuser79760",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79760",
+          last_name: "https://cutt.ly/also79760",
+        },
+        group_chat_created: true,
+      },
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.asGroupCreated).toBe(true);
+    expect(same.event.message?.hosts).toEqual(["bit.ly"]);
+    const sameDump = JSON.stringify(same.event);
+    expect(sameDump).not.toContain("end79760");
+    expect(sameDump).not.toContain("skip79760");
+    expect(sameDump).not.toContain("also79760");
+    expect(sameDump).not.toContain("secretuser79760");
+    expect(sameDump).not.toContain("tinyurl");
+    expect(sameDump).not.toContain("cutt.ly");
+
+    const person = await normalize({
+      update_id: 79761,
+      message: {
+        message_id: 79761,
+        date: 1761955200,
+        chat: { id: -10079761, type: "group" },
+        from: {
+          id: 124,
+          first_name: "https://bit.ly/who79761",
+          last_name: "https://tinyurl.com/also79761",
+          username: "adder79761",
+        },
+        group_chat_created: true,
+      },
+    });
+    expect(person.status).toBe("event");
+    if (person.status !== "event") {
+      return;
+    }
+    expect(person.event.message?.asGroupCreated).toBe(true);
+    expect(person.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const personDump = JSON.stringify(person.event);
+    expect(personDump).not.toContain("who79761");
+    expect(personDump).not.toContain("also79761");
+    expect(personDump).not.toContain("adder79761");
+
+    const flag = await normalize({
+      update_id: 79762,
+      message: {
+        message_id: 79762,
+        date: 1761955200,
+        chat: { id: -10079762, type: "group" },
+        sender_chat: {
+          id: -10079762,
+          type: "group",
+          title: "https://bit.ly/bad79762",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79762",
+        },
+        group_chat_created: false,
+      },
+    });
+    expect(flag.status).toBe("event");
+    if (flag.status !== "event") {
+      return;
+    }
+    expect(flag.event.message?.asGroupCreated).toBeUndefined();
+    expect(flag.event.message?.hosts).toBeUndefined();
+    const flagDump = JSON.stringify(flag.event);
+    expect(flagDump).not.toContain("bad79762");
+    expect(flagDump).not.toContain("skip79762");
+    expect(flagDump).not.toContain("bit.ly");
+    expect(flagDump).not.toContain("tinyurl");
+
+    const mega = await normalize({
+      update_id: 79763,
+      message: {
+        message_id: 79763,
+        date: 1761955200,
+        chat: { id: -10079763, type: "supergroup" },
+        sender_chat: {
+          id: -10079763,
+          type: "supergroup",
+          title: "https://bit.ly/mega79763",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79763",
+        },
+        supergroup_chat_created: true,
+      },
+    });
+    expect(mega.status).toBe("event");
+    if (mega.status !== "event") {
+      return;
+    }
+    expect(mega.event.message?.asGroupCreated).toBeUndefined();
+    expect(mega.event.message?.hosts).toBeUndefined();
+    const megaDump = JSON.stringify(mega.event);
+    expect(megaDump).not.toContain("mega79763");
+    expect(megaDump).not.toContain("skip79763");
+    expect(megaDump).not.toContain("bit.ly");
+    expect(megaDump).not.toContain("tinyurl");
+  });
+
   it("leaves a short link in the channel title on a topic change", async () => {
     const phrase = "请免费领取礼品";
     const edited = await normalize({

@@ -5051,6 +5051,8 @@ function pinnedPreviewMedia(pinned: Record<string, unknown>): boolean {
 /**
  * 建群提示上画出的发送者全名只留主机名。
  * 只有普通群的 group_chat_created 正好是 true 时读。
+ * 发送者是聊天时画这个聊天的标题，不读 `from`。标题不截断。
+ * 用户仍按全名。名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
  * 超级群和频道创建不读。用户名不读。普通消息的发送者不读。
  */
 function pushCreatedGroupSenderUrls(
@@ -5058,6 +5060,11 @@ function pushCreatedGroupSenderUrls(
   urls: string[],
 ): void {
   if (!createdGroup(message)) {
+    return;
+  }
+  const sender = message.sender_chat;
+  if (isRecord(sender)) {
+    pushPlainUrls(sender.title, urls);
     return;
   }
   pushFormattedUserUrls(message.from, urls);
