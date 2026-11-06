@@ -133,7 +133,7 @@ export function createKeywordDetector(config: z.input<typeof configSchema>) {
 
 名片副标题里原样画出的电话和邮箱只留主机名，仍走 `links`。原文里的关键词不命中。见 ADR 0615。
 
-客座回复抬头上 bot 自己的短名只留主机名，仍走 `links`。短名里的关键词不命中。见 ADR 0616。
+客座回复抬头上 bot 自己的短名只留主机名，仍走 `links`。短名里的关键词不命中。见 ADR 0616。召唤者同样按短名。见 ADR 0661。
 
 商业账号代发时，时间戳旁的 bot 全名只留主机名，仍走 `links`。名字里的关键词不命中。见 ADR 0617。
 

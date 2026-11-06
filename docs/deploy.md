@@ -379,7 +379,7 @@ curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
 
 名片副标题里原样画出的电话或邮箱含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。原文不进事件。`example.com` 在关掉名片规则后仍留下。见 ADR 0615。
 
-客座回复抬头上 bot 自己的短名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0616。
+客座回复抬头上 bot 自己的短名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0616。召唤者同样按短名。见 ADR 0661。
 
 商业账号代发时，时间戳旁的 bot 全名含短链、邀请或裸 IP 时会删除这条消息。证据只有主机名。名字不进事件。`example.com` 仍留下。见 ADR 0617。
 

@@ -29891,6 +29891,165 @@ describe("screenTelegramEvent", () => {
     expect(JSON.stringify(buried)).not.toContain(phrase);
   });
 
+  it("drops a short link after the first space in a guest caller name", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      caller: Record<string, unknown>,
+      extra: Record<string, unknown> = {},
+    ) {
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: -(1_000_000 + updateId), type: "supergroup" },
+            from: { id: 129, first_name: "Ada" },
+            text: "今天站会",
+            ...caller,
+            ...extra,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const cut = await posted(79567, {
+      guest_bot_caller_user: {
+        id: 129,
+        first_name: `Go https://bit.ly/later79567 ${phrase}`,
+        last_name: "https://tinyurl.com/skiplast79567",
+      },
+    });
+    expect(cut.message?.text).toBe("今天站会");
+    expect(cut.message?.hosts).toBeUndefined();
+    const cutKept = await screenTelegramEvent(cut, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(cutKept.decision.action).toBe("allow");
+    const cutDump = JSON.stringify({ event: cut, decision: cutKept.decision });
+    expect(cutDump).not.toContain(phrase);
+    expect(cutDump).not.toContain("later79567");
+    expect(cutDump).not.toContain("bit.ly");
+    expect(cutDump).not.toContain("skiplast79567");
+
+    const early = await posted(79568, {
+      guest_bot_caller_user: {
+        id: 129,
+        first_name: "A https://bit.ly/keep79568",
+      },
+    });
+    expect(early.message?.hosts).toEqual(["bit.ly"]);
+    const earlyModerator = createMemoryModerator();
+    const earlyHit = await screenTelegramEvent(early, {
+      moderator: earlyModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(earlyHit.decision.action).toBe("delete");
+    expect(earlyHit.decision.reasons).toContain("short_link");
+    expect(JSON.stringify(earlyHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(earlyModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1079568", messageId: "79568" },
+    ]);
+
+    const paid = await posted(
+      79569,
+      {
+        guest_bot_caller_user: {
+          id: 129,
+          first_name: "https://bit.ly/paid79569",
+        },
+      },
+      { is_paid_post: true },
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const skipped = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(skipped.decision.action).toBe("delete");
+    expect(skipped.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+
+    const invite = await posted(79570, {
+      guest_bot_caller_user: {
+        id: 129,
+        first_name: "https://t.me/+code79570",
+      },
+    });
+    expect(invite.message?.hosts).toEqual(["t.me"]);
+    const inviteHit = await screenTelegramEvent(invite, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(inviteHit.decision.action).toBe("delete");
+    expect(inviteHit.decision.reasons).toContain("invite");
+    expect(JSON.stringify(inviteHit.decision.evidence)).toContain(
+      "invite:t.me",
+    );
+
+    const example = await posted(79571, {
+      guest_bot_caller_user: {
+        id: 129,
+        first_name: "https://example.com/page79571",
+      },
+    });
+    expect(example.message?.hosts).toEqual(["example.com"]);
+    const exampleKept = await screenTelegramEvent(example, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(exampleKept.decision.action).toBe("allow");
+
+    const pub = await posted(79572, {
+      guest_bot_caller_user: {
+        id: 129,
+        first_name: "https://t.me/durov",
+      },
+    });
+    expect(pub.message?.hosts).toEqual(["t.me"]);
+    expect(pub.message?.invites).toBeUndefined();
+    const pubKept = await screenTelegramEvent(pub, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(pubKept.decision.action).toBe("allow");
+
+    const titled = await posted(79573, {
+      guest_bot_caller_chat: {
+        id: -100880073,
+        type: "channel",
+        title: "Go https://bit.ly/title79573",
+      },
+    });
+    expect(titled.message?.hosts).toEqual(["bit.ly"]);
+    const titledHit = await screenTelegramEvent(titled, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(titledHit.decision.action).toBe("delete");
+    expect(JSON.stringify(titledHit.decision.evidence)).toContain(
+      "short_link:bit.ly",
+    );
+    expect(JSON.stringify(titled)).not.toContain("title79573");
+  });
+
   it("drops a short link after the first space in a community add or remove name", async () => {
     const phrase = "请免费领取礼品";
     async function posted(
@@ -30910,7 +31069,7 @@ describe("screenTelegramEvent", () => {
           guest_bot_caller_user: {
             id: 89230,
             is_bot: false,
-            first_name: `${phrase} https://bit.ly/ad903`,
+            first_name: "https://bit.ly/ad903",
             last_name: "https://tinyurl.com/last903",
             username: "cutt.ly",
           },
