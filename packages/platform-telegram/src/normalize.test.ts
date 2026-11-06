@@ -41159,6 +41159,131 @@ describe("normalizeUpdate", () => {
     expect(groupDump).not.toContain("bit.ly");
   });
 
+  it("skips the sender name when a chat sets the background", async () => {
+    const phrase = "请免费领取礼品";
+    const same = await normalize({
+      update_id: 79670,
+      message: {
+        message_id: 79670,
+        date: 1761955200,
+        chat: {
+          id: -10079670,
+          type: "channel",
+          title: "https://ow.ly/room79670",
+        },
+        sender_chat: {
+          id: -10079670,
+          type: "channel",
+          title: `https://bit.ly/later79670 ${phrase}`,
+          username: "secretuser79670",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79670",
+          last_name: "https://cutt.ly/also79670",
+          username: "adder79670",
+        },
+        chat_background_set: {
+          type: {
+            type: "wallpaper",
+            document: { file_id: "file79670", file_unique_id: "uniq79670" },
+          },
+        },
+      },
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.background).toBe("wallpaper");
+    expect(same.event.message?.hosts).toBeUndefined();
+    const sameDump = JSON.stringify(same.event);
+    expect(sameDump).not.toContain(phrase);
+    expect(sameDump).not.toContain("later79670");
+    expect(sameDump).not.toContain("skip79670");
+    expect(sameDump).not.toContain("also79670");
+    expect(sameDump).not.toContain("secretuser79670");
+    expect(sameDump).not.toContain("adder79670");
+    expect(sameDump).not.toContain("room79670");
+    expect(sameDump).not.toContain("tinyurl");
+    expect(sameDump).not.toContain("cutt.ly");
+    expect(sameDump).not.toContain("ow.ly");
+    expect(sameDump).not.toContain("bit.ly");
+
+    const other = await normalize({
+      update_id: 79671,
+      message: {
+        message_id: 79671,
+        date: 1761955200,
+        chat: { id: -10079671, type: "supergroup" },
+        sender_chat: {
+          id: -100796710,
+          type: "channel",
+          title: "https://bit.ly/wall79671",
+          username: "secretuser79671",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/skip79671",
+          last_name: "https://cutt.ly/also79671",
+        },
+        chat_background_set: {
+          type: { type: "pattern", document: { file_name: "图案79671" } },
+        },
+      },
+    });
+    expect(other.status).toBe("event");
+    if (other.status !== "event") {
+      return;
+    }
+    expect(other.event.message?.background).toBe("pattern");
+    expect(other.event.message?.hosts).toEqual(["bit.ly"]);
+    const otherDump = JSON.stringify(other.event);
+    expect(otherDump).not.toContain("wall79671");
+    expect(otherDump).not.toContain("skip79671");
+    expect(otherDump).not.toContain("also79671");
+    expect(otherDump).not.toContain("secretuser79671");
+    expect(otherDump).not.toContain("tinyurl");
+    expect(otherDump).not.toContain("cutt.ly");
+    expect(otherDump).not.toContain("图案79671");
+
+    const group = await normalize({
+      update_id: 79672,
+      message: {
+        message_id: 79672,
+        date: 1761955200,
+        chat: { id: -10079672, type: "supergroup" },
+        sender_chat: {
+          id: -10079672,
+          type: "supergroup",
+          title: "https://bit.ly/group79672",
+        },
+        from: {
+          id: 124,
+          first_name: "https://tinyurl.com/who79672",
+          last_name: "https://cutt.ly/also79672",
+        },
+        chat_background_set: {
+          type: { type: "chat_theme", theme_name: "主题79672" },
+        },
+      },
+    });
+    expect(group.status).toBe("event");
+    if (group.status !== "event") {
+      return;
+    }
+    expect(group.event.message?.background).toBe("theme");
+    expect(group.event.message?.hosts).toBeUndefined();
+    const groupDump = JSON.stringify(group.event);
+    expect(groupDump).not.toContain("who79672");
+    expect(groupDump).not.toContain("also79672");
+    expect(groupDump).not.toContain("group79672");
+    expect(groupDump).not.toContain("主题79672");
+    expect(groupDump).not.toContain("bit.ly");
+    expect(groupDump).not.toContain("tinyurl");
+    expect(groupDump).not.toContain("cutt.ly");
+  });
+
   it("keeps only the hostname from the full name drawn for a checklist completer", async () => {
     const phrase = "请免费领取礼品";
     const code = "DONE79234";
