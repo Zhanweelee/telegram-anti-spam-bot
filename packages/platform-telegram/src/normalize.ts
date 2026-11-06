@@ -4647,8 +4647,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         : poll.explanation_entities,
       urls,
     );
-    // 文字链接的起点必须落在这段描述里。被截掉的尾巴仍从整段描述抽取。
-    pushDrawnLine(poll.description, poll.description_entities, urls);
+    // 文字链接的起点必须落在这段描述里，长度必须大于 0。被截掉的尾巴仍从整段描述抽取。
+    pushPlainUrls(poll.description, urls);
+    pushTextLinks(
+      typeof poll.description === "string"
+        ? drawnTextLink(poll.description_entities, poll.description.length)
+        : poll.description_entities,
+      urls,
+    );
     pushPollMedia(poll.media, urls);
     pushPollMedia(poll.explanation_media, urls);
     if (Array.isArray(poll.options)) {
