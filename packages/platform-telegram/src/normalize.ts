@@ -4600,6 +4600,7 @@ function sideUrls(message: Record<string, unknown>): string[] {
   pushJoinSenderUrls(message, urls);
   pushGiftSenderUrls(message, urls);
   pushDeclineSenderUrls(message, urls);
+  pushDeclineTopicUrls(message, urls);
   pushPostSenderUrls(message, urls);
   pushPostTopicUrls(message, urls);
   pushChecklistSenderUrls(message, urls);
@@ -5117,6 +5118,59 @@ function pushDeclineSenderUrls(
     return;
   }
   pushVisiblePartyUrls(message.from, undefined, urls);
+}
+
+/**
+ * 拒绝建议帖上画出的话题用户全名只留主机名。
+ * 被回复的人不是这个话题用户时才画。没有回复，或两人编号相同，画的是频道名。
+ * 名和姓都去掉两端空白，名在前。空白名不挡住姓。空格不截断。
+ * 两边编号都要是安全整数。缺一边不读。用户名、话题号和频道标题不读。
+ */
+function pushDeclineTopicUrls(
+  message: Record<string, unknown>,
+  urls: string[],
+): void {
+  if (!declinedUserDrawn(message)) {
+    return;
+  }
+  const topic = message.direct_messages_topic;
+  if (!isRecord(topic)) {
+    return;
+  }
+  pushFormattedUserUrls(topic.user, urls);
+}
+
+/** 回复的发言人不是回复上的话题用户时，拒绝这行画出本条话题用户。 */
+function declinedUserDrawn(message: Record<string, unknown>): boolean {
+  if (!declinedPost(message)) {
+    return false;
+  }
+  const reply = message.reply_to_message;
+  if (!isRecord(reply)) {
+    return false;
+  }
+  const fromId = dialogId(reply.from);
+  const topicId = dialogId(replyTopicUser(reply));
+  return fromId !== null && topicId !== null && fromId !== topicId;
+}
+
+function replyTopicUser(reply: Record<string, unknown>): unknown {
+  const topic = reply.direct_messages_topic;
+  if (!isRecord(topic)) {
+    return undefined;
+  }
+  return topic.user;
+}
+
+function dialogId(value: unknown): number | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const id = value.id;
+  if (typeof id !== "number" || !Number.isSafeInteger(id)) {
+    return null;
+  }
+  return id;
 }
 
 /**

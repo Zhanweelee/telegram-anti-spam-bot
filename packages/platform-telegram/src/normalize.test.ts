@@ -42891,6 +42891,180 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(approved.event)).not.toContain("kept79482");
   });
 
+  it("keeps only the hostname from the topic user drawn on a declined post", async () => {
+    const drawn = await normalize({
+      update_id: 79490,
+      message: {
+        message_id: 79490,
+        date: 1761955200,
+        chat: {
+          id: -10079490,
+          type: "channel",
+          title: "https://example.com/room79490",
+        },
+        from: { id: 1, first_name: "Ada", last_name: "https://ow.ly/from79490" },
+        direct_messages_topic: {
+          topic_id: 79490,
+          user: {
+            id: 2,
+            first_name: "   ",
+            last_name: "https://bit.ly/last79490",
+            username: "https://tinyurl.com/user79490",
+          },
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955200,
+          chat: { id: -10079490, type: "channel" },
+          from: { id: 9, first_name: "Mod" },
+          text: "https://cutt.ly/reply79490",
+          direct_messages_topic: {
+            topic_id: 79490,
+            user: { id: 2, first_name: "Ada" },
+          },
+        },
+        suggested_post_declined: {
+          suggested_post_message: { text: "https://ow.ly/nest79490" },
+        },
+      },
+    });
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("");
+    expect(drawn.event.message?.asPostDeclined).toBe(true);
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).not.toContain("last79490");
+    expect(drawnDump).not.toContain("user79490");
+    expect(drawnDump).not.toContain("tinyurl");
+    expect(drawnDump).not.toContain("from79490");
+    expect(drawnDump).not.toContain("ow.ly");
+    expect(drawnDump).not.toContain("reply79490");
+    expect(drawnDump).not.toContain("cutt.ly");
+    expect(drawnDump).not.toContain("nest79490");
+    expect(drawnDump).not.toContain("room79490");
+    expect(drawnDump).not.toContain("example.com");
+
+    const same = await normalize({
+      update_id: 79491,
+      message: {
+        message_id: 79491,
+        date: 1761955200,
+        chat: { id: -10079491, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79491,
+          user: { id: 2, last_name: "https://bit.ly/same79491" },
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955200,
+          chat: { id: -10079491, type: "channel" },
+          from: { id: 2, first_name: "Ada" },
+          direct_messages_topic: {
+            topic_id: 79491,
+            user: { id: 2, first_name: "Ada" },
+          },
+        },
+        suggested_post_declined: {},
+      },
+    });
+    expect(same.status).toBe("event");
+    if (same.status !== "event") {
+      return;
+    }
+    expect(same.event.message?.asPostDeclined).toBe(true);
+    expect(same.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(same.event)).not.toContain("same79491");
+
+    const alone = await normalize({
+      update_id: 79492,
+      message: {
+        message_id: 79492,
+        date: 1761955200,
+        chat: { id: -10079492, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79492,
+          user: { id: 2, last_name: "https://bit.ly/alone79492" },
+        },
+        suggested_post_declined: {},
+      },
+    });
+    expect(alone.status).toBe("event");
+    if (alone.status !== "event") {
+      return;
+    }
+    expect(alone.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(alone.event)).not.toContain("alone79492");
+
+    const spaced = await normalize({
+      update_id: 79493,
+      message: {
+        message_id: 79493,
+        date: 1761955200,
+        chat: { id: -10079493, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79493,
+          user: {
+            id: 2,
+            first_name: "Go https://bit.ly/later79493",
+            last_name: "https://tinyurl.com/last79493",
+          },
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955200,
+          chat: { id: -10079493, type: "channel" },
+          from: { id: 9, first_name: "Mod" },
+          direct_messages_topic: {
+            topic_id: 79493,
+            user: { id: 2, first_name: "Ada" },
+          },
+        },
+        suggested_post_declined: {},
+      },
+    });
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.hosts).toEqual(["bit.ly", "tinyurl.com"]);
+    const spacedDump = JSON.stringify(spaced.event);
+    expect(spacedDump).not.toContain("later79493");
+    expect(spacedDump).not.toContain("last79493");
+
+    const missing = await normalize({
+      update_id: 79494,
+      message: {
+        message_id: 79494,
+        date: 1761955200,
+        chat: { id: -10079494, type: "channel" },
+        from: { id: 1, first_name: "Ada" },
+        direct_messages_topic: {
+          topic_id: 79494,
+          user: { id: 2, last_name: "https://bit.ly/miss79494" },
+        },
+        reply_to_message: {
+          message_id: 1,
+          date: 1761955200,
+          chat: { id: -10079494, type: "channel" },
+          from: { id: 9, first_name: "Mod" },
+        },
+        suggested_post_declined: {},
+      },
+    });
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(missing.event)).not.toContain("miss79494");
+  });
+
   it("keeps only the hostname from the full name drawn on a refund", async () => {
     const drawn = await normalize({
       update_id: 79477,
