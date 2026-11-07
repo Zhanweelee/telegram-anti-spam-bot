@@ -19447,7 +19447,7 @@ describe("normalizeUpdate", () => {
     if (caption.status !== "event") {
       return;
     }
-    expect(caption.event.message?.asCustomEmoji).toBe(true);
+    expect(caption.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(caption.event)).not.toContain("emoji82554");
 
     const mentioned = await normalize(
@@ -19637,6 +19637,93 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(loose.event)).not.toContain("emoji80946");
   });
 
+  it("skips a caption emoji when the caption is not a string", async () => {
+    const asked = (id: number, extra: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        photo: [{ file_id: `AgAD${id}`, width: 1, height: 1 }],
+        ...extra,
+      },
+    });
+    const emoji = (id: string) => [
+      { type: "custom_emoji", offset: 0, length: 1, custom_emoji_id: id },
+    ];
+
+    const numbered = await normalize(
+      asked(82571, { caption: 1, caption_entities: emoji("emoji82571") }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(numbered.event)).not.toContain("emoji82571");
+
+    const flagged = await normalize(
+      asked(82572, { caption: false, caption_entities: emoji("emoji82572") }),
+    );
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("emoji82572");
+
+    const drawn = await normalize(
+      asked(82573, { caption: "图", caption_entities: emoji("emoji82573") }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("emoji82573");
+
+    const question = await normalize(
+      asked(82574, {
+        poll: {
+          question: 1,
+          options: [{ text: "甲" }],
+          question_entities: emoji("emoji82574"),
+        },
+      }),
+    );
+    expect(question.status).toBe("event");
+    if (question.status !== "event") {
+      return;
+    }
+    expect(question.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(question.event)).not.toContain("emoji82574");
+
+    const mentioned = await normalize(
+      asked(82575, {
+        caption: 1,
+        caption_entities: [
+          {
+            type: "text_mention",
+            offset: 0,
+            length: 1,
+            user: { id: 77082575, first_name: "隐" },
+          },
+        ],
+      }),
+    );
+    expect(mentioned.status).toBe("event");
+    if (mentioned.status !== "event") {
+      return;
+    }
+    expect(mentioned.event.message?.asTextMention).toBeUndefined();
+    expect(mentioned.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(mentioned.event)).not.toContain("77082575");
+  });
+
   it("skips a caption custom emoji that does not fit inside the caption", async () => {
     const past = await normalize({
       update_id: 80961,
@@ -19776,7 +19863,7 @@ describe("normalizeUpdate", () => {
     if (loose.status !== "event") {
       return;
     }
-    expect(loose.event.message?.asCustomEmoji).toBe(true);
+    expect(loose.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(loose.event)).not.toContain("emoji80965");
   });
 
