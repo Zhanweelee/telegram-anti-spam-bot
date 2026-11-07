@@ -831,11 +831,15 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "video") {
-    // 文件名和缩略图不进正文。这两处里的自定义表情不读。
+    // 文件名、缩略图和类型不进正文。这三处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
       if (key === "video" && isRecord(nested)) {
         for (const [innerKey, inner] of Object.entries(nested)) {
-          if (innerKey === "file_name" || innerKey === "thumbnail") {
+          if (
+            innerKey === "file_name" ||
+            innerKey === "thumbnail" ||
+            innerKey === "mime_type"
+          ) {
             continue;
           }
           if (richCustomEmoji(inner)) {
