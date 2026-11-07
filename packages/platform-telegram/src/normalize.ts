@@ -557,12 +557,10 @@ function textMentionMark(message: Record<string, unknown>): boolean {
       lists.push(drawnMention(poll.question_entities, poll.question.length));
     }
     if (typeof poll.explanation === "string") {
-      // 按标识提及的起点必须落在测验说明里。
+      // 按标识提及的起点必须落在测验说明里。说明不是字符串时不读。
       lists.push(
         drawnMention(poll.explanation_entities, poll.explanation.length),
       );
-    } else {
-      lists.push(poll.explanation_entities);
     }
     if (typeof poll.description === "string") {
       // 按标识提及的起点必须落在投票描述里。
