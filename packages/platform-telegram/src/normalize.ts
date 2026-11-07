@@ -4645,14 +4645,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         pushPollAdderUrls(option, urls);
       }
     }
-    // 文字链接的起点必须落在测验说明里，长度必须大于 0。
+    // 文字链接的起点必须落在测验说明里，长度必须大于 0。说明不是字符串时不读。
     pushPlainUrls(poll.explanation, urls);
-    pushTextLinks(
-      typeof poll.explanation === "string"
-        ? drawnTextLink(poll.explanation_entities, poll.explanation.length)
-        : poll.explanation_entities,
-      urls,
-    );
+    if (typeof poll.explanation === "string") {
+      pushTextLinks(
+        drawnTextLink(poll.explanation_entities, poll.explanation.length),
+        urls,
+      );
+    }
     // 文字链接的起点必须落在这段描述里，长度必须大于 0。被截掉的尾巴仍从整段描述抽取。
     pushPlainUrls(poll.description, urls);
     pushTextLinks(

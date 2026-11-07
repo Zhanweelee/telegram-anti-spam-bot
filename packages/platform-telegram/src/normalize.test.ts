@@ -13332,8 +13332,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("ask81640");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("ask81640");
+    expect(looseDump).not.toContain("bit.ly");
 
     const described = await normalize({
       update_id: 81641,
@@ -17471,8 +17473,112 @@ describe("normalizeUpdate", () => {
     if (explanation.status !== "event") {
       return;
     }
-    expect(explanation.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(explanation.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(explanation.event)).not.toContain("exp82175");
+    expect(JSON.stringify(explanation.event)).not.toContain("bit.ly");
+  });
+
+  it("skips an explanation link when the explanation is not a string", async () => {
+    const link = (url: string, length = 1) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...message,
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82191, {
+        text: "站会",
+        poll: {
+          question: "题",
+          explanation: 1,
+          explanation_entities: [link("https://bit.ly/ask82191")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.hosts).toBeUndefined();
+    const numberedDump = JSON.stringify(numbered.event);
+    expect(numberedDump).not.toContain("ask82191");
+    expect(numberedDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(82192, {
+        text: "站会",
+        poll: {
+          question: "题",
+          explanation: false,
+          explanation_entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 1,
+              language: "https://cutt.ly/ask82192",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("ask82192");
+    expect(JSON.stringify(coded.event)).not.toContain("cutt.ly");
+
+    const drawn = await normalize(
+      asked(82193, {
+        text: "站会",
+        poll: {
+          question: "题",
+          explanation: "文",
+          explanation_entities: [link("https://tinyurl.com/ask82193")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.pollExplanation).toBe("文");
+    expect(drawn.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(drawn.event)).not.toContain("ask82193");
+
+    const described = await normalize(
+      asked(82194, {
+        text: "站会",
+        poll: {
+          question: "题",
+          description: 1,
+          description_entities: [link("https://bit.ly/desc82194")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(described.status).toBe("event");
+    if (described.status !== "event") {
+      return;
+    }
+    expect(described.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(described.event)).not.toContain("desc82194");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
