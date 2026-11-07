@@ -695,12 +695,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
       continue;
     }
     if (typeof value.option_text === "string") {
-      // 自定义表情必须整段落在这条后加或删掉的选项里。
+      // 自定义表情必须整段落在这条后加或删掉的选项里。选项文字不是字符串时不读。
       lists.push(
         fittingEmoji(value.option_text_entities, value.option_text.length),
       );
-    } else {
-      lists.push(value.option_text_entities);
     }
   }
   const checklist = message.checklist;
