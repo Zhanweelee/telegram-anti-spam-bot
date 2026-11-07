@@ -652,10 +652,8 @@ function drawnAddedTasks(tasks: unknown): unknown[] {
 function customEmojiMark(message: Record<string, unknown>): boolean {
   const lists: unknown[] = [];
   if (typeof message.text === "string") {
-    // 自定义表情必须整段落在正文里。
+    // 自定义表情必须整段落在正文里。正文不是字符串时不读。
     lists.push(fittingEmoji(message.entities, message.text.length));
-  } else {
-    lists.push(message.entities);
   }
   if (typeof message.caption === "string") {
     // 自定义表情必须整段落在说明里。
