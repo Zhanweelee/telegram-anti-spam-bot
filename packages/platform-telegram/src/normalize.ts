@@ -547,10 +547,8 @@ function textMentionMark(message: Record<string, unknown>): boolean {
     lists.push(drawnMention(message.entities, message.text.length));
   }
   if (typeof message.caption === "string") {
-    // 按标识提及的起点必须落在说明里。
+    // 按标识提及的起点必须落在说明里。说明不是字符串时不读。
     lists.push(drawnMention(message.caption_entities, message.caption.length));
-  } else {
-    lists.push(message.caption_entities);
   }
   const poll = message.poll;
   if (isRecord(poll)) {
