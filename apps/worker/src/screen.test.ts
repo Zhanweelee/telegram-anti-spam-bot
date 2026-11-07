@@ -76253,4 +76253,124 @@ describe("screenTelegramEvent", () => {
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("paid81894");
   });
+
+  it("leaves a reply option link whose length is not positive", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const link = (length: number, url: string) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const replied = (length: number, url: string) => ({
+      text: "站会",
+      reply_to_poll_option_id: "opt",
+      reply_to_message: {
+        message_id: 1,
+        date: 1761955100,
+        chat: { id: -(1_000_000 + 1), type: "supergroup" },
+        poll: {
+          question: "问",
+          options: [
+            {
+              text: "甲",
+              voter_count: 0,
+              persistent_id: "opt",
+              text_entities: [link(length, url)],
+            },
+          ],
+        },
+      },
+    });
+
+    const hidden = await posted(
+      81921,
+      replied(0, `https://bit.ly/option81921 ${phrase}`),
+    );
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify(hidden);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("option81921");
+    expect(hiddenDump).not.toContain("bit.ly");
+
+    const drawn = await posted(81922, replied(2, "https://bit.ly/option81922"));
+    expect(drawn.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("short_link");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1081922", messageId: "81922" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("option81922");
+
+    const kept = await posted(
+      81923,
+      replied(1, "https://example.com/option81923"),
+    );
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("option81923");
+
+    const paid = await posted(
+      81924,
+      replied(1, "https://bit.ly/paid81924"),
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid81924");
+  });
 });
