@@ -80749,7 +80749,7 @@ describe("screenTelegramEvent", () => {
         },
       ],
     });
-    expect(tasked.message?.asCustomEmoji).toBe(true);
+    expect(tasked.message?.asCustomEmoji).toBeUndefined();
     const taskedModerator = createMemoryModerator();
     const taskedHit = await screenTelegramEvent(tasked, {
       source: rule(),
@@ -80757,11 +80757,8 @@ describe("screenTelegramEvent", () => {
       moderator: taskedModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(taskedHit.decision.action).toBe("delete");
-    expect(taskedHit.decision.reasons).toContain("custom_emoji");
-    expect(taskedModerator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1082703", messageId: "82703" },
-    ]);
+    expect(taskedHit.decision.action).toBe("allow");
+    expect(taskedModerator.deleted).toEqual([]);
     expect(JSON.stringify(tasked)).not.toContain("emoji82703");
 
     const paid = await posted(
@@ -80789,5 +80786,158 @@ describe("screenTelegramEvent", () => {
     });
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("emoji82704");
+  });
+
+  it("leaves a checklist task emoji when the task text is not a string", async () => {
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "custom_emoji",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["custom_emoji"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            text: "站会",
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const emoji = (id: string) => ({
+      type: "custom_emoji",
+      offset: 0,
+      length: 1,
+      custom_emoji_id: id,
+    });
+
+    const hidden = await posted(82721, {
+      checklist: {
+        title: "清",
+        tasks: [
+          { id: 1, text: 1, text_entities: [emoji("emoji82721")] },
+          { id: 2, text: "乙" },
+        ],
+      },
+    });
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.asCustomEmoji).toBeUndefined();
+    const hiddenModerator = createMemoryModerator();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: hiddenModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    expect(hiddenModerator.deleted).toEqual([]);
+    expect(JSON.stringify(hidden)).not.toContain("emoji82721");
+
+    const drawn = await posted(82722, {
+      checklist: {
+        title: "清",
+        tasks: [{ id: 1, text: "务", text_entities: [emoji("emoji82722")] }],
+      },
+    });
+    expect(drawn.message?.text).toBe("站会");
+    expect(drawn.message?.checklistTask).toBe("务");
+    expect(drawn.message?.asCustomEmoji).toBe(true);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("custom_emoji");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082722", messageId: "82722" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("emoji82722");
+
+    const added = await posted(82723, {
+      checklist_tasks_added: {
+        tasks: [{ id: 1, text: 1, text_entities: [emoji("emoji82723")] }],
+      },
+    });
+    expect(added.message?.asCustomEmoji).toBe(true);
+    const addedModerator = createMemoryModerator();
+    const addedHit = await screenTelegramEvent(added, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: addedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(addedHit.decision.action).toBe("delete");
+    expect(addedHit.decision.reasons).toContain("custom_emoji");
+    expect(addedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082723", messageId: "82723" },
+    ]);
+    expect(JSON.stringify(added)).not.toContain("emoji82723");
+
+    const paid = await posted(
+      82724,
+      {
+        checklist: {
+          title: "清",
+          tasks: [{ id: 1, text: "务", text_entities: [emoji("emoji82724")] }],
+        },
+      },
+      true,
+    );
+    expect(paid.message?.asCustomEmoji).toBe(true);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("emoji82724");
   });
 });
