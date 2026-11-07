@@ -794,6 +794,18 @@ function richCustomEmoji(value: unknown): boolean {
     }
     return false;
   }
+  if (value.type === "pre") {
+    // 语言标签不进正文。标签里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "language") {
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
