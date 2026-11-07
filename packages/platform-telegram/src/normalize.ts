@@ -5151,7 +5151,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
 /**
  * 回复某一条清单任务或投票选项时，引用条上画出的那一行只留主机名。
  * 任务号对得上才读那条任务的文字和文字链接。文字链接的长度必须大于 0。对不上就改读清单标题，标题上的文字链接长度也必须大于 0。
- * 没有清单时，选项编号对得上才读选项文字。对不上就改读问题。
+ * 没有清单时，选项编号对得上才读选项文字。文字链接的长度必须大于 0。对不上就改读问题。
  * 其余任务、选项、清单正文和投票说明不读。外部回复上的任务和投票不读。
  * 没有这些行时，游戏只读标题，账单只读标题。说明不读。
  * 带引用或投票本身时，这一行不改画游戏或账单标题。
@@ -5240,7 +5240,14 @@ function pushLoadedReplyLine(
         if (!isRecord(option) || option.persistent_id !== optionId) {
           continue;
         }
-        pushDrawnLine(option.text, option.text_entities, urls);
+        // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。
+        pushPlainUrls(option.text, urls);
+        pushTextLinks(
+          typeof option.text === "string"
+            ? drawnTextLink(option.text_entities, option.text.length)
+            : option.text_entities,
+          urls,
+        );
         return;
       }
     }
