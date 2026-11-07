@@ -5161,7 +5161,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 动图、视频、音频和图片占住这一行时，不读附带的文件名。
  * 没有说明的贴纸画表情加固定字样。只读表情的前 150 个码元。包名不读。
  * 外部回复的贴纸只画固定字样，不读那张贴纸的表情。
- * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。任务不读。
+ * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。文字链接的长度必须大于 0。任务不读。
  * 骰子画出表情。去掉变体选择符后再留主机名。点数不读。外部回复也读这张骰子的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
  * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里的文字链接也读。原文不进正文。
@@ -5484,6 +5484,7 @@ function pushReplyStickerAlt(
 /**
  * 没有任务号时，已加载的清单回复画出标题。
  * Android 这行就是标题本身，只取前 150 个码元。
+ * 文字链接的起点必须落在这 150 个码元里，长度必须大于 0。
  * 空标题仍占住这一行。有说明时改画说明。任务不读。
  */
 function pushReplyChecklistTitle(
@@ -5502,8 +5503,9 @@ function pushReplyChecklistTitle(
   }
   if (typeof checklist.title === "string" && checklist.title.length > 0) {
     pushPlainUrls(checklist.title.slice(0, 150), urls);
+    // 文字链接的起点必须落在画出的前 150 个码元里，长度必须大于 0。
     pushTextLinks(
-      visibleTextLinks(
+      drawnTextLink(
         checklist.title_entities,
         drawnTextLimit(checklist.title, 150),
       ),
