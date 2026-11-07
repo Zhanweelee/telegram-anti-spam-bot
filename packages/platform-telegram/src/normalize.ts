@@ -5164,7 +5164,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 没有任务号时，已加载的清单回复画出标题。只读前 150 个码元。文字链接的长度必须大于 0。任务不读。
  * 骰子画出表情。去掉变体选择符后再留主机名。点数不读。外部回复也读这张骰子的表情。
  * 回复改过名字的话题时，这一行改画新名字。图标编号不读。新建话题不画名字。
- * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里的文字链接也读。原文不进正文。
+ * 更早的标题都没有时，画出说明或正文的前 150 个码元。起点落在这段里、长度大于 0 的文字链接也读。原文不进正文。
  * 被回复的是富文本且没有说明时，画出富文本预览的前 150 个码元，不再读 text。
  * 预览不画思考块。
  */
@@ -5310,7 +5310,7 @@ function pushLoadedReplyLine(
 
 /**
  * 没有更早的标题时，普通消息的引用条画出说明，否则画出正文。
- * 只读前 150 个码元。文字链接的起点必须落在画出的这段里。
+ * 只读前 150 个码元。文字链接的起点必须落在画出的这段里，长度必须大于 0。
  * 正文短于 150 个码元时，以正文长度为准。
  * 原文不进正文。当前消息是富文本时也画这行。被回复的富文本另走预览。
  * 服务公告不画这行。有引用、投票或更早的媒体标题时不走到这里。
@@ -5325,19 +5325,18 @@ function pushReplyCaptionOrText(
   }
   if (typeof reply.caption === "string" && reply.caption.length > 0) {
     pushPlainUrls(reply.caption.slice(0, 150), urls);
+    // 文字链接的起点必须落在画出的前 150 个码元里，长度必须大于 0。
     pushTextLinks(
-      visibleTextLinks(
-        reply.caption_entities,
-        drawnTextLimit(reply.caption, 150),
-      ),
+      drawnTextLink(reply.caption_entities, drawnTextLimit(reply.caption, 150)),
       urls,
     );
     return;
   }
   if (typeof reply.text === "string" && reply.text.length > 0) {
     pushPlainUrls(reply.text.slice(0, 150), urls);
+    // 文字链接的起点必须落在画出的前 150 个码元里，长度必须大于 0。
     pushTextLinks(
-      visibleTextLinks(reply.entities, drawnTextLimit(reply.text, 150)),
+      drawnTextLink(reply.entities, drawnTextLimit(reply.text, 150)),
       urls,
     );
   }
