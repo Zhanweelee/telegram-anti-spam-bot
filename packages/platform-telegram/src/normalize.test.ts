@@ -18391,7 +18391,7 @@ describe("normalizeUpdate", () => {
     if (mentioned.status !== "event") {
       return;
     }
-    expect(mentioned.event.message?.asTextMention).toBe(true);
+    expect(mentioned.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(mentioned.event)).not.toContain("77082334");
   });
 
@@ -22190,8 +22190,110 @@ describe("normalizeUpdate", () => {
     if (loose.status !== "event") {
       return;
     }
-    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(loose.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(loose.event)).not.toContain("77081201");
+  });
+
+  it("skips a message text mention when the text is not a string", async () => {
+    const user = (id: number) => ({ id, first_name: "隐" });
+    const photo = (id: number) => [
+      { file_id: `AgAD${id}`, file_unique_id: `uniq${id}` },
+    ];
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        photo: photo(id),
+        ...message,
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82351, {
+        text: 1,
+        entities: [
+          { type: "text_mention", offset: 0, length: 2, user: user(77082351) },
+        ],
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(numbered.event)).not.toContain("77082351");
+
+    const flagged = await normalize(
+      asked(82352, {
+        text: false,
+        entities: [
+          { type: "text_mention", offset: 0, length: 1, user: user(77082352) },
+        ],
+      }),
+    );
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("77082352");
+
+    const drawn = await normalize(
+      asked(82353, {
+        text: "点",
+        entities: [
+          { type: "text_mention", offset: 0, length: 1, user: user(77082353) },
+        ],
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("点");
+    expect(drawn.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("77082353");
+
+    const captioned = await normalize(
+      asked(82354, {
+        text: "站会",
+        caption: 1,
+        caption_entities: [
+          { type: "text_mention", offset: 0, length: 2, user: user(77082354) },
+        ],
+      }),
+    );
+    expect(captioned.status).toBe("event");
+    if (captioned.status !== "event") {
+      return;
+    }
+    expect(captioned.event.message?.text).toBe("站会");
+    expect(captioned.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(captioned.event)).not.toContain("77082354");
+
+    const emoji = await normalize(
+      asked(82355, {
+        text: 1,
+        entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji82355",
+          },
+        ],
+      }),
+    );
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("emoji82355");
   });
 
   it("skips a caption text mention that starts outside the caption", async () => {

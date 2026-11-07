@@ -543,10 +543,8 @@ function hiddenSecret(value: unknown): boolean {
 function textMentionMark(message: Record<string, unknown>): boolean {
   const lists: unknown[] = [];
   if (typeof message.text === "string") {
-    // 按标识提及的起点必须落在正文里。
+    // 按标识提及的起点必须落在正文里。正文不是字符串时不读。
     lists.push(drawnMention(message.entities, message.text.length));
-  } else {
-    lists.push(message.entities);
   }
   if (typeof message.caption === "string") {
     // 按标识提及的起点必须落在说明里。
