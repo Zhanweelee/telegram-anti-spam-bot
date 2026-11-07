@@ -553,10 +553,8 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   const poll = message.poll;
   if (isRecord(poll)) {
     if (typeof poll.question === "string") {
-      // 按标识提及的起点必须落在题干里。
+      // 按标识提及的起点必须落在题干里。题干不是字符串时不读。
       lists.push(drawnMention(poll.question_entities, poll.question.length));
-    } else {
-      lists.push(poll.question_entities);
     }
     if (typeof poll.explanation === "string") {
       // 按标识提及的起点必须落在测验说明里。
