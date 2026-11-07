@@ -6060,8 +6060,8 @@ function pushPinSenderUrls(
 
 /**
  * 置顶提示上画出的原文预览只留主机名。
- * 文字消息只画前 20 个 UTF-16 码元，起点落在这 20 个码元里的文字链接也画。
- * 账单画说明。清单画标题，标题上同样位置的文字链接也画。任务不画。
+ * 文字消息只画前 20 个 UTF-16 码元。起点落在这 20 个码元里、长度大于 0 的文字链接也画。
+ * 账单画说明。清单画标题，标题上同样位置的文字链接也画，长度也必须大于 0。任务不画。
  * 富文本画预览的前 20 个码元。
  * 图片、视频、文件、地点等固定说法不画原文。游戏只画标题。
  * 预览不进正文。第 21 个字起、账单标题、任务和被置顶的人不读。
@@ -6102,14 +6102,14 @@ function pushPinnedPreviewUrls(
   pushPinnedTextLinks(links, preview.length, urls);
 }
 
-/** 置顶预览上，起点落在画出的那段里的文字链接只留主机名。 */
+/** 置顶预览上，起点落在画出的那段里、长度大于 0 的文字链接只留主机名。代码块语言不读。 */
 function pushPinnedTextLinks(
   list: unknown,
   limit: number,
   urls: string[],
 ): void {
   pushTextLinks(
-    visibleTextLinks(list, limit).filter(
+    drawnTextLink(list, limit).filter(
       (entity) => isRecord(entity) && entity.type === "text_link",
     ),
     urls,
