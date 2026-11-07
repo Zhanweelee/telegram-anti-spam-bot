@@ -79064,7 +79064,7 @@ describe("screenTelegramEvent", () => {
         },
       ],
     });
-    expect(tasked.message?.asTextMention).toBe(true);
+    expect(tasked.message?.asTextMention).toBeUndefined();
     const taskedModerator = createMemoryModerator();
     const taskedHit = await screenTelegramEvent(tasked, {
       source: rule(),
@@ -79072,11 +79072,8 @@ describe("screenTelegramEvent", () => {
       moderator: taskedModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(taskedHit.decision.action).toBe("delete");
-    expect(taskedHit.decision.reasons).toContain("text_mention");
-    expect(taskedModerator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1082463", messageId: "82463" },
-    ]);
+    expect(taskedHit.decision.action).toBe("allow");
+    expect(taskedModerator.deleted).toEqual([]);
     expect(JSON.stringify(tasked)).not.toContain("77082463");
 
     const paid = await posted(
@@ -79104,5 +79101,147 @@ describe("screenTelegramEvent", () => {
     });
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("77082464");
+  });
+
+  it("leaves a checklist task mention when the task text is not a string", async () => {
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "text_mention",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["text_mention"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            text: "站会",
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const mention = (id: number) => ({
+      type: "text_mention",
+      offset: 0,
+      length: 1,
+      user: { id, first_name: "隐" },
+    });
+    const task = (text: unknown, id: number) => ({
+      checklist: {
+        title: "单",
+        tasks: [{ id: 1, text, text_entities: [mention(id)] }],
+      },
+    });
+
+    const hidden = await posted(82481, task(1, 77082481));
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.asTextMention).toBeUndefined();
+    const hiddenModerator = createMemoryModerator();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: hiddenModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    expect(hiddenModerator.deleted).toEqual([]);
+    expect(JSON.stringify(hidden)).not.toContain("77082481");
+
+    const drawn = await posted(82482, task("务", 77082482));
+    expect(drawn.message?.text).toBe("站会");
+    expect(drawn.message?.asTextMention).toBe(true);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("text_mention");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082482", messageId: "82482" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("77082482");
+
+    const added = await posted(82483, {
+      checklist_tasks_added: {
+        tasks: [
+          {
+            id: 1,
+            text: 1,
+            text_entities: [mention(77082483)],
+          },
+        ],
+      },
+    });
+    expect(added.message?.asTextMention).toBe(true);
+    const addedModerator = createMemoryModerator();
+    const addedHit = await screenTelegramEvent(added, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: addedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(addedHit.decision.action).toBe("delete");
+    expect(addedHit.decision.reasons).toContain("text_mention");
+    expect(addedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082483", messageId: "82483" },
+    ]);
+    expect(JSON.stringify(added)).not.toContain("77082483");
+
+    const paid = await posted(82484, task("务", 77082484), true);
+    expect(paid.message?.asTextMention).toBe(true);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("77082484");
   });
 });

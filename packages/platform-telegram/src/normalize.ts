@@ -583,10 +583,8 @@ function textMentionMark(message: Record<string, unknown>): boolean {
           continue;
         }
         if (typeof task.text === "string") {
-          // 按标识提及的起点必须落在这条任务里。
+          // 按标识提及的起点必须落在这条任务里。任务文字不是字符串时不读。
           lists.push(drawnMention(task.text_entities, task.text.length));
-        } else {
-          lists.push(task.text_entities);
         }
       }
     }
