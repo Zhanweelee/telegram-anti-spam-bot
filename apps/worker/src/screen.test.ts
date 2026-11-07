@@ -80023,7 +80023,7 @@ describe("screenTelegramEvent", () => {
       explanation: 1,
       explanation_entities: [emoji("emoji82603")],
     });
-    expect(explained.message?.asCustomEmoji).toBe(true);
+    expect(explained.message?.asCustomEmoji).toBeUndefined();
     const explainedModerator = createMemoryModerator();
     const explainedHit = await screenTelegramEvent(explained, {
       source: rule(),
@@ -80031,11 +80031,8 @@ describe("screenTelegramEvent", () => {
       moderator: explainedModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(explainedHit.decision.action).toBe("delete");
-    expect(explainedHit.decision.reasons).toContain("custom_emoji");
-    expect(explainedModerator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1082603", messageId: "82603" },
-    ]);
+    expect(explainedHit.decision.action).toBe("allow");
+    expect(explainedModerator.deleted).toEqual([]);
     expect(JSON.stringify(explained)).not.toContain("emoji82603");
 
     const paid = await posted(
@@ -80059,5 +80056,150 @@ describe("screenTelegramEvent", () => {
     });
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("emoji82604");
+  });
+
+  it("leaves a poll explanation emoji when the explanation is not a string", async () => {
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "custom_emoji",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["custom_emoji"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    async function posted(
+      updateId: number,
+      poll: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            text: "站会",
+            ...(paid ? { is_paid_post: true } : {}),
+            poll: {
+              question: "题",
+              options: [{ text: "甲", voter_count: 0 }],
+              ...poll,
+            },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const emoji = (id: string) => ({
+      type: "custom_emoji",
+      offset: 0,
+      length: 1,
+      custom_emoji_id: id,
+    });
+
+    const hidden = await posted(82621, {
+      explanation: 1,
+      explanation_entities: [emoji("emoji82621")],
+    });
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.asCustomEmoji).toBeUndefined();
+    const hiddenModerator = createMemoryModerator();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: hiddenModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    expect(hiddenModerator.deleted).toEqual([]);
+    expect(JSON.stringify(hidden)).not.toContain("emoji82621");
+
+    const drawn = await posted(82622, {
+      explanation: "解",
+      explanation_entities: [emoji("emoji82622")],
+    });
+    expect(drawn.message?.text).toBe("站会");
+    expect(drawn.message?.pollExplanation).toBe("解");
+    expect(drawn.message?.asCustomEmoji).toBe(true);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("custom_emoji");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082622", messageId: "82622" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("emoji82622");
+
+    const described = await posted(82623, {
+      explanation: "解",
+      description: 1,
+      description_entities: [emoji("emoji82623")],
+    });
+    expect(described.message?.asCustomEmoji).toBe(true);
+    const describedModerator = createMemoryModerator();
+    const describedHit = await screenTelegramEvent(described, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: describedModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(describedHit.decision.action).toBe("delete");
+    expect(describedHit.decision.reasons).toContain("custom_emoji");
+    expect(describedModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082623", messageId: "82623" },
+    ]);
+    expect(JSON.stringify(described)).not.toContain("emoji82623");
+
+    const paid = await posted(
+      82624,
+      { explanation: "解", explanation_entities: [emoji("emoji82624")] },
+      true,
+    );
+    expect(paid.message?.asCustomEmoji).toBe(true);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("emoji82624");
   });
 });

@@ -666,12 +666,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
       lists.push(fittingEmoji(poll.question_entities, poll.question.length));
     }
     if (typeof poll.explanation === "string") {
-      // 自定义表情必须整段落在测验说明里。
+      // 自定义表情必须整段落在测验说明里。说明不是字符串时不读。
       lists.push(
         fittingEmoji(poll.explanation_entities, poll.explanation.length),
       );
-    } else {
-      lists.push(poll.explanation_entities);
     }
     if (typeof poll.description === "string") {
       // 自定义表情必须整段落在投票描述里。
