@@ -704,12 +704,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   const checklist = message.checklist;
   if (isRecord(checklist)) {
     if (typeof checklist.title === "string") {
-      // 自定义表情必须整段落在清单标题里。
+      // 自定义表情必须整段落在清单标题里。标题不是字符串时不读。
       lists.push(
         fittingEmoji(checklist.title_entities, checklist.title.length),
       );
-    } else {
-      lists.push(checklist.title_entities);
     }
     if (Array.isArray(checklist.tasks)) {
       for (const task of checklist.tasks) {
