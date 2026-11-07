@@ -807,14 +807,15 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "audio") {
-    // 文件名、标题和表演者不进正文。这三处里的自定义表情不读。
+    // 文件名、标题、表演者和类型不进正文。这四处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
       if (key === "audio" && isRecord(nested)) {
         for (const [innerKey, inner] of Object.entries(nested)) {
           if (
             innerKey === "file_name" ||
             innerKey === "title" ||
-            innerKey === "performer"
+            innerKey === "performer" ||
+            innerKey === "mime_type"
           ) {
             continue;
           }
