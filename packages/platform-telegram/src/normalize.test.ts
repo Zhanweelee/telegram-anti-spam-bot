@@ -18296,8 +18296,103 @@ describe("normalizeUpdate", () => {
     if (body.status !== "event") {
       return;
     }
-    expect(body.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(body.event)).not.toContain("text82314");
+    expect(body.event.message?.hosts).toBeUndefined();
+    const bodyDump = JSON.stringify(body.event);
+    expect(bodyDump).not.toContain("text82314");
+    expect(bodyDump).not.toContain("bit.ly");
+  });
+
+  it("skips a message text link when the text is not a string", async () => {
+    const link = (url: string, length = 1) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const photo = (id: number) => [
+      { file_id: `AgAD${id}`, file_unique_id: `uniq${id}` },
+    ];
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        photo: photo(id),
+        ...message,
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82331, {
+        text: 1,
+        entities: [link("https://bit.ly/text82331")],
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.hosts).toBeUndefined();
+    const numberedDump = JSON.stringify(numbered.event);
+    expect(numberedDump).not.toContain("text82331");
+    expect(numberedDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(82332, {
+        text: false,
+        entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 1,
+            language: "https://cutt.ly/text82332",
+          },
+        ],
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("text82332");
+    expect(JSON.stringify(coded.event)).not.toContain("cutt.ly");
+
+    const drawn = await normalize(
+      asked(82333, {
+        text: "文",
+        entities: [link("https://tinyurl.com/text82333")],
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("文");
+    expect(drawn.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(drawn.event)).not.toContain("text82333");
+
+    const mentioned = await normalize(
+      asked(82334, {
+        text: 1,
+        entities: [
+          {
+            type: "text_mention",
+            offset: 0,
+            length: 2,
+            user: { id: 77082334, first_name: "隐" },
+          },
+        ],
+      }),
+    );
+    expect(mentioned.status).toBe("event");
+    if (mentioned.status !== "event") {
+      return;
+    }
+    expect(mentioned.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(mentioned.event)).not.toContain("77082334");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
