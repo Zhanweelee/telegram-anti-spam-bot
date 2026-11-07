@@ -728,10 +728,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
         continue;
       }
       if (typeof task.text === "string") {
-        // 自定义表情必须整段落在这条后加的任务里。
+        // 自定义表情必须整段落在这条后加的任务里。任务文字不是字符串时不读。
         lists.push(fittingEmoji(task.text_entities, task.text.length));
-      } else {
-        lists.push(task.text_entities);
       }
     }
   }
