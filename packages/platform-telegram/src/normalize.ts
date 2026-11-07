@@ -662,10 +662,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   const poll = message.poll;
   if (isRecord(poll)) {
     if (typeof poll.question === "string") {
-      // 自定义表情必须整段落在题干里。
+      // 自定义表情必须整段落在题干里。题干不是字符串时不读。
       lists.push(fittingEmoji(poll.question_entities, poll.question.length));
-    } else {
-      lists.push(poll.question_entities);
     }
     if (typeof poll.explanation === "string") {
       // 自定义表情必须整段落在测验说明里。
