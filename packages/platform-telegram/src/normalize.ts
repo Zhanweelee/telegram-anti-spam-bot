@@ -9330,8 +9330,8 @@ function richText(value: unknown, urls: string[]): string {
   if (!isRecord(value)) {
     return "";
   }
-  if (value.type === "url" && typeof value.url === "string") {
-    urls.push(value.url);
+  if (value.type === "url") {
+    return pushRichUrl(value, urls);
   }
   if (value.type === "button") {
     return richButton(value.button, urls);
@@ -9349,8 +9349,47 @@ function richText(value: unknown, urls: string[]): string {
   return "";
 }
 
+/** 链接地址只在可见文字画出来时才读。空字符串不算画出来。公式是固定说法。 */
+function pushRichUrl(value: Record<string, unknown>, urls: string[]): string {
+  const nested: string[] = [];
+  const drawn = "text" in value ? richText(value.text, nested) : "";
+  if (
+    typeof value.url === "string" &&
+    (drawn.length > 0 || richDrawsFixed(value.text))
+  ) {
+    urls.push(value.url);
+  }
+  for (const found of nested) {
+    urls.push(found);
+  }
+  return drawn;
+}
+
+/** 行内公式会画成固定说法，源码不进正文。 */
+function richDrawsFixed(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((item) => richDrawsFixed(item));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  if (value.type === "mathematical_expression") {
+    return true;
+  }
+  if ("text" in value) {
+    return richDrawsFixed(value.text);
+  }
+  return false;
+}
+
 function richButton(value: unknown, urls: string[]): string {
   if (!isRecord(value)) {
+    return "";
+  }
+  const nested: string[] = [];
+  const label = richText(value.text, nested);
+  // 没画出来的按钮点不到。公式是固定说法，空标签不是。
+  if (label.length === 0 && !richDrawsFixed(value.text)) {
     return "";
   }
   if (typeof value.url === "string") {
@@ -9374,7 +9413,10 @@ function richButton(value: unknown, urls: string[]): string {
     urls.push(app.url);
   }
   pushSwitchInlineQueries(value, urls);
-  return richText(value.text, urls);
+  for (const found of nested) {
+    urls.push(found);
+  }
+  return label;
 }
 
 function messageText(

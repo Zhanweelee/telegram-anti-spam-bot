@@ -16858,6 +16858,183 @@ describe("normalizeUpdate", () => {
     expect(richDump).not.toContain("tinyurl");
   });
 
+  it("skips a rich link whose visible text length is not positive", async () => {
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...message,
+      },
+    });
+
+    const empty = await normalize(
+      asked(82111, {
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: [
+                {
+                  type: "url",
+                  text: "",
+                  url: "https://bit.ly/rich82111",
+                },
+                " https://example.com/plain82111",
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe(" https://example.com/plain82111");
+    expect(empty.event.message?.hosts).toEqual(["example.com"]);
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("rich82111");
+    expect(emptyDump).not.toContain("bit.ly");
+
+    const bold = await normalize(
+      asked(82112, {
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "url",
+                text: { type: "bold", text: "" },
+                url: "https://bit.ly/rich82112",
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(bold.status).toBe("event");
+    if (bold.status !== "event") {
+      return;
+    }
+    expect(bold.event.message?.text).toBe("");
+    expect(bold.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(bold.event)).not.toContain("rich82112");
+
+    const drawn = await normalize(
+      asked(82113, {
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "url",
+                text: { type: "bold", text: "点" },
+                url: "https://bit.ly/rich82113",
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("点");
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(drawn.event)).not.toContain("rich82113");
+
+    const buttons = await normalize(
+      asked(82114, {
+        rich_message: {
+          blocks: [
+            {
+              type: "buttons",
+              buttons: [
+                { text: "", url: "https://bit.ly/rich82114" },
+                { text: "看", url: "https://tinyurl.com/btn82114" },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    expect(buttons.status).toBe("event");
+    if (buttons.status !== "event") {
+      return;
+    }
+    expect(buttons.event.message?.text).toBe("看");
+    expect(buttons.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const buttonDump = JSON.stringify(buttons.event);
+    expect(buttonDump).not.toContain("rich82114");
+    expect(buttonDump).not.toContain("btn82114");
+    expect(buttonDump).not.toContain("bit.ly");
+
+    const formula = await normalize(
+      asked(82115, {
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "url",
+                text: {
+                  type: "mathematical_expression",
+                  expression: "https://example.com/fx82115",
+                },
+                url: "https://bit.ly/rich82115",
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(formula.status).toBe("event");
+    if (formula.status !== "event") {
+      return;
+    }
+    expect(formula.event.message?.text).toBe("");
+    expect(formula.event.message?.hosts).toEqual(["bit.ly", "example.com"]);
+    const formulaDump = JSON.stringify(formula.event);
+    expect(formulaDump).not.toContain("rich82115");
+    expect(formulaDump).not.toContain("fx82115");
+
+    const pinned = await normalize(
+      asked(82116, {
+        pinned_message: {
+          message_id: 821160,
+          date: 1761955100,
+          chat: { id: -10082116, type: "supergroup" },
+          rich_message: {
+            blocks: [
+              {
+                type: "paragraph",
+                text: {
+                  type: "url",
+                  text: "",
+                  url: "https://bit.ly/pin82116",
+                },
+              },
+            ],
+          },
+        },
+      }),
+    );
+    expect(pinned.status).toBe("event");
+    if (pinned.status !== "event") {
+      return;
+    }
+    expect(pinned.event.message?.asPin).toBe(true);
+    expect(pinned.event.message?.text).toBe("");
+    expect(pinned.event.message?.hosts).toBeUndefined();
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain("pin82116");
+    expect(pinnedDump).not.toContain("bit.ly");
+  });
+
   it("skips a caption text link that starts after the drawn caption", async () => {
     const past = await normalize({
       update_id: 80881,
