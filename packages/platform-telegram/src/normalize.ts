@@ -785,9 +785,10 @@ function richCustomEmoji(value: unknown): boolean {
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
-    typeof value.alternative_text === "string"
+    typeof value.alternative_text === "string" &&
+    value.alternative_text.length > 0
   ) {
-    // 替代文字不是字符串时，这个节点没有可以落点的文字。
+    // 替代文字长度大于 0 才画得出来。空字符串和不是字符串时不读。
     return true;
   }
   for (const nested of Object.values(value)) {
