@@ -2093,10 +2093,8 @@ function linkHosts(message: Record<string, unknown>): {
   const checklist = message.checklist;
   const lists: unknown[] = [];
   if (typeof message.text === "string") {
-    // 正文上的文字链接，起点必须落在正文里，长度必须大于 0。
+    // 正文上的文字链接，起点必须落在正文里，长度必须大于 0。正文不是字符串时不读。
     lists.push(drawnTextLink(message.entities, message.text.length));
-  } else {
-    lists.push(message.entities);
   }
   if (typeof message.caption === "string") {
     // 说明上的文字链接，起点必须落在说明里，长度必须大于 0。说明不是字符串时不读。
