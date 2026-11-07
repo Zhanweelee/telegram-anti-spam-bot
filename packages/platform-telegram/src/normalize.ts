@@ -683,10 +683,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
           continue;
         }
         if (typeof option.text === "string") {
-          // 自定义表情必须整段落在这条选项里。
+          // 自定义表情必须整段落在这条选项里。选项文字不是字符串时不读。
           lists.push(fittingEmoji(option.text_entities, option.text.length));
-        } else {
-          lists.push(option.text_entities);
         }
       }
     }
