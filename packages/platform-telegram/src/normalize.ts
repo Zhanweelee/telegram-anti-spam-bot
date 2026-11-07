@@ -5156,7 +5156,7 @@ function pushChatOriginSignature(signature: unknown, urls: string[]): void {
  * 没有这些行时，游戏只读标题，账单只读标题。说明不读。
  * 带引用或投票本身时，这一行不改画游戏或账单标题。
  * 付款成功的账单标题仍按原来的顺序。
- * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，账单读说明。
+ * 外部回复带着媒体时，这一行改画那份媒体的标题。文件读文件名，清单读标题，标题上的文字链接长度必须大于 0。账单读说明。
  * 本条回复是普通文件且没有说明时，引用条画文件名的前 150 个码元。
  * 动图、视频、音频和图片占住这一行时，不读附带的文件名。
  * 没有说明的贴纸画表情加固定字样。只读表情的前 150 个码元。包名不读。
@@ -5577,8 +5577,8 @@ function drawnDiceEmoji(dice: Record<string, unknown>): string | undefined {
 }
 
 /**
- * 任务、标题、选项和问题整段画在引用条上。
- * 文字链接的起点不能超过这段文字。原文不进正文。
+ * 外部回复的清单标题整段画在引用条上。
+ * 文字链接的起点必须落在这段标题里，长度必须大于 0。原文不进正文。
  */
 function pushDrawnLine(text: unknown, entities: unknown, urls: string[]): void {
   pushPlainUrls(text, urls);
@@ -5586,7 +5586,7 @@ function pushDrawnLine(text: unknown, entities: unknown, urls: string[]): void {
     pushTextLinks(entities, urls);
     return;
   }
-  pushTextLinks(visibleTextLinks(entities, text.length), urls);
+  pushTextLinks(drawnTextLink(entities, text.length), urls);
 }
 
 /** 文字链接的起点落在画出的前一段里才读。 */
@@ -5696,7 +5696,7 @@ const externalPreviewKeys = [
 
 /**
  * 外部回复的媒体标题只留主机名。
- * 清单读标题。标题上的文字链接，起点必须落在标题里。任务不读。
+ * 清单读标题。标题上的文字链接，起点必须落在标题里，长度必须大于 0。任务不读。
  * 账单读说明，不读标题。
  * 普通文件读文件名。动图、图片、视频和游戏只占这一行，不读附带的文件名。
  * 贴纸只画固定字样。这一行的表情取自当前消息，不读外部贴纸的表情。
@@ -5712,7 +5712,7 @@ function pushExternalReplyPreview(
     return false;
   }
   if (isRecord(external.checklist)) {
-    // 文字链接的起点必须落在这段标题里。
+    // 文字链接的起点必须落在这段标题里，长度必须大于 0。
     pushDrawnLine(
       external.checklist.title,
       external.checklist.title_entities,
