@@ -14996,8 +14996,233 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(reply.event.message?.text).toBe("站会");
-    expect(reply.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(reply.event)).not.toContain("reply81824");
+    expect(reply.event.message?.hosts).toBeUndefined();
+    const replyDump = JSON.stringify(reply.event);
+    expect(replyDump).not.toContain("reply81824");
+    expect(replyDump).not.toContain("bit.ly");
+  });
+
+  it("skips a reply task link whose length is not positive", async () => {
+    const link = (length: number, url: string) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (
+      id: number,
+      task: Record<string, unknown>,
+      taskId = 1,
+      tasks?: Record<string, unknown>[],
+      title: Record<string, unknown> = { title: "单" },
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        reply_to_checklist_task_id: taskId,
+        reply_to_message: {
+          message_id: id * 10,
+          date: 1761955100,
+          chat: { id: -10000000 - id, type: "supergroup" },
+          checklist: {
+            ...title,
+            tasks: tasks ?? [task],
+          },
+        },
+      },
+    });
+    const one = (
+      text: unknown,
+      entities: Record<string, unknown>[],
+      id = 1,
+    ): Record<string, unknown> => ({
+      id,
+      ...(text === undefined ? {} : { text }),
+      text_entities: entities,
+    });
+
+    const zero = await normalize(
+      asked(81841, one("做", [link(0, "https://bit.ly/reply81841")])),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("站会");
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("reply81841");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      asked(81842, one("做", [link(-1, "https://bit.ly/reply81842")])),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("reply81842");
+
+    const fraction = await normalize(
+      asked(81843, one("做", [link(1.5, "https://bit.ly/reply81843")])),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("reply81843");
+
+    const clamped = await normalize(
+      asked(81844, one("做", [link(2, "https://bit.ly/reply81844")])),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.text).toBe("站会");
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("reply81844");
+
+    const plain = await normalize(
+      asked(
+        81845,
+        one("https://example.com/plain81845", [
+          link(0, "https://bit.ly/reply81845"),
+        ]),
+      ),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("站会");
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).not.toContain("plain81845");
+    expect(plainDump).not.toContain("reply81845");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(
+        81846,
+        one("做", [
+          {
+            type: "pre",
+            offset: 0,
+            length: 0,
+            language: "https://bit.ly/reply81846",
+          },
+        ]),
+      ),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("reply81846");
+
+    const keptCode = await normalize(
+      asked(
+        81847,
+        one("做", [
+          {
+            type: "pre",
+            offset: 0,
+            length: 1,
+            language: "https://bit.ly/reply81847",
+          },
+        ]),
+      ),
+    );
+    expect(keptCode.status).toBe("event");
+    if (keptCode.status !== "event") {
+      return;
+    }
+    expect(keptCode.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptCode.event)).not.toContain("reply81847");
+
+    const far = await normalize(
+      asked(
+        81848,
+        one("做".repeat(4097), [
+          {
+            type: "text_link",
+            offset: 4096,
+            length: 1,
+            url: "https://bit.ly/reply81848",
+          },
+        ]),
+      ),
+    );
+    expect(far.status).toBe("event");
+    if (far.status !== "event") {
+      return;
+    }
+    expect(far.event.message?.text).toBe("站会");
+    expect(far.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(far.event)).not.toContain("reply81848");
+
+    const matched = await normalize(
+      asked(
+        81849,
+        one("乙", [link(1, "https://bit.ly/reply81849")], 2),
+        2,
+        [
+          one("甲", [link(1, "https://tinyurl.com/other81849")]),
+          one("乙", [link(1, "https://bit.ly/reply81849")], 2),
+        ],
+      ),
+    );
+    expect(matched.status).toBe("event");
+    if (matched.status !== "event") {
+      return;
+    }
+    expect(matched.event.message?.hosts).toEqual(["bit.ly"]);
+    const matchedDump = JSON.stringify(matched.event);
+    expect(matchedDump).not.toContain("reply81849");
+    expect(matchedDump).not.toContain("other81849");
+    expect(matchedDump).not.toContain("tinyurl");
+
+    const loose = await normalize(
+      asked(81850, one(undefined, [link(0, "https://bit.ly/reply81850")])),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(loose.event)).not.toContain("reply81850");
+
+    const title = await normalize(
+      asked(
+        81851,
+        one("做", []),
+        9,
+        [one("做", [link(2, "https://tinyurl.com/task81851")])],
+        {
+          title: "题",
+          title_entities: [link(0, "https://bit.ly/title81851")],
+        },
+      ),
+    );
+    expect(title.status).toBe("event");
+    if (title.status !== "event") {
+      return;
+    }
+    expect(title.event.message?.text).toBe("站会");
+    expect(title.event.message?.hosts).toEqual(["bit.ly"]);
+    const titleDump = JSON.stringify(title.event);
+    expect(titleDump).not.toContain("title81851");
+    expect(titleDump).not.toContain("task81851");
+    expect(titleDump).not.toContain("tinyurl");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
