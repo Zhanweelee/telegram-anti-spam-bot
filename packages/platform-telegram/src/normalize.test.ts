@@ -17035,6 +17035,123 @@ describe("normalizeUpdate", () => {
     expect(pinnedDump).not.toContain("bit.ly");
   });
 
+  it("skips an inline button link whose text length is not positive", async () => {
+    const asked = (
+      id: number,
+      extra: Record<string, unknown>,
+      keyboard: unknown[],
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...extra,
+        reply_markup: { inline_keyboard: [keyboard] },
+      },
+    });
+
+    const empty = await normalize(
+      asked(
+        82131,
+        { text: "站会" },
+        [{ text: "", url: "https://bit.ly/btn82131" }],
+      ),
+    );
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("站会");
+    expect(empty.event.message?.buttonText).toBeUndefined();
+    expect(empty.event.message?.hosts).toBeUndefined();
+    const emptyDump = JSON.stringify(empty.event);
+    expect(emptyDump).not.toContain("btn82131");
+    expect(emptyDump).not.toContain("bit.ly");
+
+    const missing = await normalize(
+      asked(82132, { text: "站会" }, [{ url: "https://bit.ly/btn82132" }]),
+    );
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(missing.event)).not.toContain("btn82132");
+
+    const copied = await normalize(
+      asked(
+        82133,
+        {},
+        [
+          {
+            text: "",
+            copy_text: { text: "https://bit.ly/copy82133" },
+            login_url: {
+              url: "https://tinyurl.com/login82133",
+              forward_text: "https://cutt.ly/fwd82133",
+            },
+            web_app: { url: "https://example.com/app82133" },
+            switch_inline_query: "https://t.me/+code82133",
+          },
+        ],
+      ),
+    );
+    expect(copied.status).toBe("event");
+    if (copied.status !== "event") {
+      return;
+    }
+    expect(copied.event.message?.text).toBe("");
+    expect(copied.event.message?.hosts).toBeUndefined();
+    const copiedDump = JSON.stringify(copied.event);
+    expect(copiedDump).not.toContain("copy82133");
+    expect(copiedDump).not.toContain("login82133");
+    expect(copiedDump).not.toContain("fwd82133");
+    expect(copiedDump).not.toContain("app82133");
+    expect(copiedDump).not.toContain("code82133");
+    expect(copiedDump).not.toContain("bit.ly");
+    expect(copiedDump).not.toContain("tinyurl");
+    expect(copiedDump).not.toContain("cutt.ly");
+    expect(copiedDump).not.toContain("t.me");
+
+    const drawn = await normalize(
+      asked(
+        82134,
+        { text: "站会" },
+        [
+          {
+            text: "点",
+            url: "https://bit.ly/btn82134",
+            callback_data: "https://tinyurl.com/cb82134",
+          },
+        ],
+      ),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.buttonText).toBe("点");
+    expect(drawn.event.message?.hosts).toEqual(["bit.ly"]);
+    const drawnDump = JSON.stringify(drawn.event);
+    expect(drawnDump).not.toContain("btn82134");
+    expect(drawnDump).not.toContain("cb82134");
+    expect(drawnDump).not.toContain("tinyurl");
+
+    const blank = await normalize(
+      asked(82135, {}, [{ text: " ", url: "https://bit.ly/btn82135" }]),
+    );
+    expect(blank.status).toBe("event");
+    if (blank.status !== "event") {
+      return;
+    }
+    expect(blank.event.message?.text).toBe(" ");
+    expect(blank.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(blank.event)).not.toContain("btn82135");
+  });
+
   it("skips a caption text link that starts after the drawn caption", async () => {
     const past = await normalize({
       update_id: 80881,

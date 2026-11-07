@@ -77071,4 +77071,100 @@ describe("screenTelegramEvent", () => {
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("paid82124");
   });
+
+  it("leaves an inline button link whose text length is not positive", async () => {
+    const phrase = "请免费领取礼品";
+    async function posted(
+      updateId: number,
+      keyboard: unknown[],
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            text: "站会",
+            ...(paid ? { is_paid_post: true } : {}),
+            reply_markup: { inline_keyboard: [keyboard] },
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+
+    const hidden = await posted(82141, [
+      { text: "", url: `https://bit.ly/btn82141 ${phrase}` },
+    ]);
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.hosts).toBeUndefined();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    const hiddenDump = JSON.stringify(hidden);
+    expect(hiddenDump).not.toContain(phrase);
+    expect(hiddenDump).not.toContain("btn82141");
+    expect(hiddenDump).not.toContain("bit.ly");
+
+    const drawn = await posted(82142, [
+      { text: "点", url: "https://bit.ly/btn82142" },
+    ]);
+    expect(drawn.message?.text).toBe("站会");
+    expect(drawn.message?.hosts).toEqual(["bit.ly"]);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("short_link");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082142", messageId: "82142" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("btn82142");
+
+    const kept = await posted(82143, [
+      { text: "点", url: "https://example.com/btn82143" },
+    ]);
+    expect(kept.message?.hosts).toEqual(["example.com"]);
+    const keptHit = await screenTelegramEvent(kept, {
+      moderator: createMemoryModerator(),
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(keptHit.decision.action).toBe("allow");
+    expect(JSON.stringify(kept)).not.toContain("btn82143");
+
+    const paid = await posted(
+      82144,
+      [{ text: "点", url: "https://bit.ly/paid82144" }],
+      true,
+    );
+    expect(paid.message?.hosts).toEqual(["bit.ly"]);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("paid82144");
+  });
 });

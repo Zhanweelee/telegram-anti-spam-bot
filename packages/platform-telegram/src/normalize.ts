@@ -7621,10 +7621,12 @@ function buttonUrls(message: Record<string, unknown>): unknown[] {
       if (!isRecord(button)) {
         continue;
       }
-      if (typeof button.text === "string") {
-        for (const url of urlsInText(button.text)) {
-          urls.push(url);
-        }
+      // 文字长度大于 0 才画出来。空文字和缺文字的按钮点不到。
+      if (typeof button.text !== "string" || button.text.length === 0) {
+        continue;
+      }
+      for (const url of urlsInText(button.text)) {
+        urls.push(url);
       }
       if (typeof button.url === "string") {
         urls.push(button.url);
