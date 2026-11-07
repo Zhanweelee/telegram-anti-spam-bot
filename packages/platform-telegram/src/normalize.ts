@@ -871,11 +871,11 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "document") {
-    // 文件名不进正文。文件名里的自定义表情不读。
+    // 文件名和类型不进正文。这两处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
       if (key === "document" && isRecord(nested)) {
         for (const [innerKey, inner] of Object.entries(nested)) {
-          if (innerKey === "file_name") {
+          if (innerKey === "file_name" || innerKey === "mime_type") {
             continue;
           }
           if (richCustomEmoji(inner)) {
