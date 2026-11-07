@@ -945,11 +945,15 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "sticker") {
-    // 缩略图和包名不进正文。这两处里的自定义表情不读。
+    // 缩略图、包名和高级动画不进正文。这三处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
       if (key === "sticker" && isRecord(nested)) {
         for (const [innerKey, inner] of Object.entries(nested)) {
-          if (innerKey === "thumbnail" || innerKey === "set_name") {
+          if (
+            innerKey === "thumbnail" ||
+            innerKey === "set_name" ||
+            innerKey === "premium_animation"
+          ) {
             continue;
           }
           if (richCustomEmoji(inner)) {
