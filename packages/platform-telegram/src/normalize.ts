@@ -753,10 +753,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   const quote = message.quote;
   if (isRecord(quote) && quote.is_manual === true) {
     if (typeof quote.text === "string") {
-      // 自定义表情必须整段落在手动引用里。
+      // 自定义表情必须整段落在手动引用里。摘录不是字符串时不读。
       lists.push(fittingEmoji(quote.entities, quote.text.length));
-    } else {
-      lists.push(quote.entities);
     }
   }
   for (const list of lists) {
