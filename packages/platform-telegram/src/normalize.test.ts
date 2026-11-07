@@ -15695,11 +15695,259 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(question.event.message?.text).toBe("站会");
-    expect(question.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(question.event.message?.hosts).toBeUndefined();
     const questionDump = JSON.stringify(question.event);
+    expect(questionDump).not.toContain("bit.ly");
     expect(questionDump).not.toContain("question81911");
     expect(questionDump).not.toContain("option81911");
     expect(questionDump).not.toContain("tinyurl");
+  });
+
+  it("skips a reply question link whose length is not positive", async () => {
+    const link = (
+      length: number,
+      url: string,
+      offset = 0,
+    ): Record<string, unknown> => ({
+      type: "text_link",
+      offset,
+      length,
+      url,
+    });
+    const asked = (
+      id: number,
+      question: Record<string, unknown>,
+      options: Record<string, unknown>[] | null = [
+        { text: "甲", voter_count: 0, persistent_id: "opt" },
+      ],
+      optionId = "missing",
+    ) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        reply_to_poll_option_id: optionId,
+        reply_to_message: {
+          message_id: id * 10,
+          date: 1761955100,
+          chat: { id: -10000000 - id, type: "supergroup" },
+          poll: {
+            ...question,
+            ...(options === null ? {} : { options }),
+          },
+        },
+      },
+    });
+
+    const zero = await normalize(
+      asked(81931, {
+        question: "问",
+        question_entities: [link(0, "https://bit.ly/question81931")],
+      }),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("站会");
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("question81931");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      asked(81932, {
+        question: "问",
+        question_entities: [link(-1, "https://bit.ly/question81932")],
+      }),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("question81932");
+
+    const fraction = await normalize(
+      asked(81933, {
+        question: "问",
+        question_entities: [link(1.5, "https://bit.ly/question81933")],
+      }),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("question81933");
+
+    const clamped = await normalize(
+      asked(81934, {
+        question: "问",
+        question_entities: [link(2, "https://bit.ly/question81934")],
+      }),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.text).toBe("站会");
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("question81934");
+
+    const plain = await normalize(
+      asked(81935, {
+        question: "https://example.com/plain81935",
+        question_entities: [link(0, "https://bit.ly/question81935")],
+      }),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.text).toBe("站会");
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).not.toContain("plain81935");
+    expect(plainDump).not.toContain("question81935");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(81936, {
+        question: "问",
+        question_entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 0,
+            language: "https://bit.ly/question81936",
+          },
+        ],
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("question81936");
+
+    const keptCode = await normalize(
+      asked(81937, {
+        question: "问",
+        question_entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 1,
+            language: "https://bit.ly/question81937",
+          },
+        ],
+      }),
+    );
+    expect(keptCode.status).toBe("event");
+    if (keptCode.status !== "event") {
+      return;
+    }
+    expect(keptCode.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(keptCode.event)).not.toContain("question81937");
+
+    const wide = await normalize(
+      asked(81938, {
+        question: "问".repeat(151),
+        question_entities: [link(1, "https://bit.ly/question81938", 150)],
+      }),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.text).toBe("站会");
+    expect(wide.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(wide.event)).not.toContain("question81938");
+
+    const matched = await normalize(
+      asked(
+        81939,
+        {
+          question: "问",
+          question_entities: [link(2, "https://bit.ly/question81939")],
+        },
+        [{ text: "甲", voter_count: 0, persistent_id: "opt" }],
+        "opt",
+      ),
+    );
+    expect(matched.status).toBe("event");
+    if (matched.status !== "event") {
+      return;
+    }
+    expect(matched.event.message?.text).toBe("站会");
+    expect(matched.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(matched.event)).not.toContain("question81939");
+    expect(JSON.stringify(matched.event)).not.toContain("bit.ly");
+
+    const missing = await normalize(
+      asked(
+        81940,
+        {
+          question: "问",
+          question_entities: [link(0, "https://bit.ly/question81940")],
+        },
+        null,
+      ),
+    );
+    expect(missing.status).toBe("event");
+    if (missing.status !== "event") {
+      return;
+    }
+    expect(missing.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(missing.event)).not.toContain("question81940");
+    expect(JSON.stringify(missing.event)).not.toContain("bit.ly");
+
+    const loose = await normalize(
+      asked(81941, {
+        question_entities: [link(0, "https://bit.ly/question81941")],
+      }),
+    );
+    expect(loose.status).toBe("event");
+    if (loose.status !== "event") {
+      return;
+    }
+    expect(loose.event.message?.text).toBe("站会");
+    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(loose.event)).not.toContain("question81941");
+
+    const external = await normalize({
+      update_id: 81942,
+      message: {
+        message_id: 81942,
+        date: 1761955200,
+        chat: { id: -10081942, type: "supergroup" },
+        from: { id: 81942, first_name: "Ada" },
+        text: "站会",
+        external_reply: {
+          origin: { type: "user", sender_user: { id: 1, first_name: "Ada" } },
+          checklist: {
+            title: "题",
+            title_entities: [link(0, "https://bit.ly/list81942")],
+            tasks: [{ id: 1, text: "https://tinyurl.com/task81942" }],
+          },
+        },
+      },
+    });
+    expect(external.status).toBe("event");
+    if (external.status !== "event") {
+      return;
+    }
+    expect(external.event.message?.text).toBe("站会");
+    expect(external.event.message?.hosts).toEqual(["bit.ly"]);
+    const externalDump = JSON.stringify(external.event);
+    expect(externalDump).not.toContain("list81942");
+    expect(externalDump).not.toContain("task81942");
+    expect(externalDump).not.toContain("tinyurl");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
