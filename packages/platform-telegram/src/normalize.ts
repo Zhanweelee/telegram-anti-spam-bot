@@ -977,9 +977,9 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "map") {
-    // 坐标不进正文。坐标里的自定义表情不读。
+    // 坐标和缩放不进正文。这两处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
-      if (key === "location") {
+      if (key === "location" || key === "zoom") {
         continue;
       }
       if (richCustomEmoji(nested)) {
