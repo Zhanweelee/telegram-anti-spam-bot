@@ -2106,12 +2106,10 @@ function linkHosts(message: Record<string, unknown>): {
   }
   if (isRecord(poll)) {
     const question = poll.question;
-    // 题干上的文字链接，起点必须落在题干里，长度必须大于 0。
-    lists.push(
-      typeof question === "string"
-        ? drawnTextLink(poll.question_entities, question.length)
-        : poll.question_entities,
-    );
+    // 题干上的文字链接，起点必须落在题干里，长度必须大于 0。题干不是字符串时不读。
+    if (typeof question === "string") {
+      lists.push(drawnTextLink(poll.question_entities, question.length));
+    }
   }
   if (isRecord(checklist)) {
     const title = checklist.title;
@@ -5251,17 +5249,14 @@ function pushLoadedReplyLine(
         return;
       }
     }
-    // 文字链接的起点必须落在这段画出的问题里，长度必须大于 0。
+    // 文字链接的起点必须落在这段画出的问题里，长度必须大于 0。问题不是字符串时不读。
     pushPlainUrls(reply.poll.question, urls);
-    pushTextLinks(
-      typeof reply.poll.question === "string"
-        ? drawnTextLink(
-            reply.poll.question_entities,
-            reply.poll.question.length,
-          )
-        : reply.poll.question_entities,
-      urls,
-    );
+    if (typeof reply.poll.question === "string") {
+      pushTextLinks(
+        drawnTextLink(reply.poll.question_entities, reply.poll.question.length),
+        urls,
+      );
+    }
     return;
   }
   const quote = message.quote;

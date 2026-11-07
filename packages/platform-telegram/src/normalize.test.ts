@@ -12244,8 +12244,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("ask81490");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("ask81490");
+    expect(looseDump).not.toContain("bit.ly");
 
     const titled = await normalize({
       update_id: 81491,
@@ -15935,8 +15937,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("question81941");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("question81941");
+    expect(looseDump).not.toContain("bit.ly");
 
     const external = await normalize({
       update_id: 81942,
@@ -17682,8 +17686,139 @@ describe("normalizeUpdate", () => {
     if (question.status !== "event") {
       return;
     }
-    expect(question.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(question.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(question.event)).not.toContain("ask82214");
+    expect(JSON.stringify(question.event)).not.toContain("bit.ly");
+  });
+
+  it("skips a question link when the question is not a string", async () => {
+    const link = (url: string, length = 1) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...message,
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82231, {
+        text: "站会",
+        poll: {
+          question: 1,
+          question_entities: [link("https://bit.ly/ask82231")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.hosts).toBeUndefined();
+    const numberedDump = JSON.stringify(numbered.event);
+    expect(numberedDump).not.toContain("ask82231");
+    expect(numberedDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(82232, {
+        text: "站会",
+        poll: {
+          question: false,
+          question_entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 1,
+              language: "https://cutt.ly/ask82232",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("ask82232");
+    expect(JSON.stringify(coded.event)).not.toContain("cutt.ly");
+
+    const drawn = await normalize(
+      asked(82233, {
+        text: "站会",
+        poll: {
+          question: "文",
+          question_entities: [link("https://tinyurl.com/ask82233")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.pollQuestion).toBe("文");
+    expect(drawn.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(drawn.event)).not.toContain("ask82233");
+
+    const replied = await normalize(
+      asked(82234, {
+        text: "回",
+        reply_to_poll_option_id: "missing",
+        reply_to_message: {
+          message_id: 822340,
+          date: 1761955100,
+          chat: { id: -10082234, type: "supergroup" },
+          poll: {
+            question: 1,
+            question_entities: [link("https://bit.ly/reply82234")],
+            options: [
+              {
+                text: "甲",
+                voter_count: 0,
+                persistent_id: "other",
+              },
+            ],
+          },
+        },
+      }),
+    );
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("回");
+    expect(replied.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(replied.event)).not.toContain("reply82234");
+    expect(JSON.stringify(replied.event)).not.toContain("bit.ly");
+
+    const titled = await normalize(
+      asked(82235, {
+        text: "站会",
+        checklist: {
+          title: 1,
+          title_entities: [link("https://bit.ly/title82235")],
+          tasks: [{ id: 1, text: "做" }],
+        },
+      }),
+    );
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(titled.event)).not.toContain("title82235");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
