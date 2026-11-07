@@ -807,7 +807,7 @@ function richCustomEmoji(value: unknown): boolean {
     return false;
   }
   if (value.type === "audio") {
-    // 文件名、标题、表演者和类型不进正文。这四处里的自定义表情不读。
+    // 文件名、标题、表演者、类型和缩略图不进正文。这五处里的自定义表情不读。
     for (const [key, nested] of Object.entries(value)) {
       if (key === "audio" && isRecord(nested)) {
         for (const [innerKey, inner] of Object.entries(nested)) {
@@ -815,7 +815,8 @@ function richCustomEmoji(value: unknown): boolean {
             innerKey === "file_name" ||
             innerKey === "title" ||
             innerKey === "performer" ||
-            innerKey === "mime_type"
+            innerKey === "mime_type" ||
+            innerKey === "thumbnail"
           ) {
             continue;
           }
