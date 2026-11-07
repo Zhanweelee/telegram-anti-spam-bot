@@ -746,10 +746,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
   const game = message.game;
   if (isRecord(game)) {
     if (typeof game.text === "string") {
-      // 自定义表情必须整段落在游戏附加文字里。
+      // 自定义表情必须整段落在游戏附加文字里。附加文字不是字符串时不读。
       lists.push(fittingEmoji(game.text_entities, game.text.length));
-    } else {
-      lists.push(game.text_entities);
     }
   }
   const quote = message.quote;
