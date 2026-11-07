@@ -80454,7 +80454,7 @@ describe("screenTelegramEvent", () => {
         option_text_entities: [emoji("emoji82663")],
       },
     });
-    expect(added.message?.asCustomEmoji).toBe(true);
+    expect(added.message?.asCustomEmoji).toBeUndefined();
     const addedModerator = createMemoryModerator();
     const addedHit = await screenTelegramEvent(added, {
       source: rule(),
@@ -80462,11 +80462,8 @@ describe("screenTelegramEvent", () => {
       moderator: addedModerator,
       rateWindow: createMemoryRateWindow(),
     });
-    expect(addedHit.decision.action).toBe("delete");
-    expect(addedHit.decision.reasons).toContain("custom_emoji");
-    expect(addedModerator.deleted).toEqual([
-      { tenantId: "local", chatId: "-1082663", messageId: "82663" },
-    ]);
+    expect(addedHit.decision.action).toBe("allow");
+    expect(addedModerator.deleted).toEqual([]);
     expect(JSON.stringify(added)).not.toContain("emoji82663");
 
     const paid = await posted(
@@ -80492,5 +80489,156 @@ describe("screenTelegramEvent", () => {
     });
     expect(paidModerator.deleted).toEqual([]);
     expect(JSON.stringify(paid)).not.toContain("emoji82664");
+  });
+
+  it("leaves an added or deleted option emoji when the option text is not a string", async () => {
+    function rule(): RuleSource {
+      return {
+        async loadChat() {
+          return {
+            version: 1,
+            aggregate: "max",
+            rules: [
+              {
+                id: "custom_emoji",
+                enabled: true,
+                when: { eventKind: "message" },
+                detectorIds: ["custom_emoji"],
+                threshold: 1,
+                actions: ["delete"],
+              },
+            ],
+          };
+        },
+        async loadDefault() {
+          return { version: 1, aggregate: "max", rules: [] };
+        },
+      };
+    }
+    async function posted(
+      updateId: number,
+      message: Record<string, unknown>,
+      paid = false,
+    ) {
+      const chatId = -(1_000_000 + updateId);
+      const normalized = await normalizeUpdate({
+        update: {
+          update_id: updateId,
+          message: {
+            message_id: updateId,
+            date: 1761955200,
+            chat: { id: chatId, type: "supergroup", title: "机密群" },
+            from: { id: 124, first_name: "Ada" },
+            text: "站会",
+            ...(paid ? { is_paid_post: true } : {}),
+            ...message,
+          },
+        },
+        tenantId: "local",
+        adminUserIds: [],
+        nowIso: "2026-11-01T00:00:00.000Z",
+      });
+      expect(normalized.status).toBe("event");
+      if (normalized.status !== "event") {
+        throw new Error("expected event");
+      }
+      return normalized.event;
+    }
+    const emoji = (id: string) => ({
+      type: "custom_emoji",
+      offset: 0,
+      length: 1,
+      custom_emoji_id: id,
+    });
+
+    const hidden = await posted(82681, {
+      poll_option_added: {
+        option_text: 1,
+        option_text_entities: [emoji("emoji82681")],
+      },
+    });
+    expect(hidden.message?.text).toBe("站会");
+    expect(hidden.message?.asCustomEmoji).toBeUndefined();
+    const hiddenModerator = createMemoryModerator();
+    const hiddenHit = await screenTelegramEvent(hidden, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: hiddenModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(hiddenHit.decision.action).toBe("allow");
+    expect(hiddenModerator.deleted).toEqual([]);
+    expect(JSON.stringify(hidden)).not.toContain("emoji82681");
+
+    const drawn = await posted(82682, {
+      poll_option_added: {
+        option_text: "新",
+        option_text_entities: [emoji("emoji82682")],
+      },
+    });
+    expect(drawn.message?.text).toBe("站会");
+    expect(drawn.message?.asCustomEmoji).toBe(true);
+    const moderator = createMemoryModerator();
+    const drawnHit = await screenTelegramEvent(drawn, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(drawnHit.decision.action).toBe("delete");
+    expect(drawnHit.decision.reasons).toContain("custom_emoji");
+    expect(moderator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082682", messageId: "82682" },
+    ]);
+    expect(JSON.stringify(drawn)).not.toContain("emoji82682");
+
+    const titled = await posted(82683, {
+      checklist: {
+        title: 1,
+        title_entities: [emoji("emoji82683")],
+        tasks: [{ id: 1, text: "甲" }],
+      },
+    });
+    expect(titled.message?.asCustomEmoji).toBe(true);
+    const titledModerator = createMemoryModerator();
+    const titledHit = await screenTelegramEvent(titled, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: titledModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(titledHit.decision.action).toBe("delete");
+    expect(titledHit.decision.reasons).toContain("custom_emoji");
+    expect(titledModerator.deleted).toEqual([
+      { tenantId: "local", chatId: "-1082683", messageId: "82683" },
+    ]);
+    expect(JSON.stringify(titled)).not.toContain("emoji82683");
+
+    const paid = await posted(
+      82684,
+      {
+        poll_option_deleted: {
+          option_text: "删",
+          option_text_entities: [emoji("emoji82684")],
+        },
+      },
+      true,
+    );
+    expect(paid.message?.asCustomEmoji).toBe(true);
+    const paidModerator = createMemoryModerator();
+    const paidHit = await screenTelegramEvent(paid, {
+      source: rule(),
+      cache: createMemoryCache(),
+      moderator: paidModerator,
+      rateWindow: createMemoryRateWindow(),
+    });
+    expect(paidHit.decision.action).toBe("delete");
+    expect(paidHit.actionResults).toContainEqual({
+      actionId: "delete",
+      status: "skipped",
+      detail: "paid_post",
+    });
+    expect(paidModerator.deleted).toEqual([]);
+    expect(JSON.stringify(paid)).not.toContain("emoji82684");
   });
 });
