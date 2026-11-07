@@ -2113,12 +2113,10 @@ function linkHosts(message: Record<string, unknown>): {
   }
   if (isRecord(checklist)) {
     const title = checklist.title;
-    // 标题上的文字链接，起点必须落在标题里，长度必须大于 0。
-    lists.push(
-      typeof title === "string"
-        ? drawnTextLink(checklist.title_entities, title.length)
-        : checklist.title_entities,
-    );
+    // 标题上的文字链接，起点必须落在标题里，长度必须大于 0。标题不是字符串时不读。
+    if (typeof title === "string") {
+      lists.push(drawnTextLink(checklist.title_entities, title.length));
+    }
   }
   const quote = message.quote;
   if (
@@ -5212,17 +5210,17 @@ function pushLoadedReplyLine(
         return;
       }
     }
-    // 文字链接的起点必须落在这段画出的标题里，长度必须大于 0。
+    // 文字链接的起点必须落在这段画出的标题里，长度必须大于 0。标题不是字符串时不读。
     pushPlainUrls(reply.checklist.title, urls);
-    pushTextLinks(
-      typeof reply.checklist.title === "string"
-        ? drawnTextLink(
-            reply.checklist.title_entities,
-            reply.checklist.title.length,
-          )
-        : reply.checklist.title_entities,
-      urls,
-    );
+    if (typeof reply.checklist.title === "string") {
+      pushTextLinks(
+        drawnTextLink(
+          reply.checklist.title_entities,
+          reply.checklist.title.length,
+        ),
+        urls,
+      );
+    }
     return;
   }
   const optionId = message.reply_to_poll_option_id;
@@ -5578,8 +5576,8 @@ function drawnDiceEmoji(dice: Record<string, unknown>): string | undefined {
  */
 function pushDrawnLine(text: unknown, entities: unknown, urls: string[]): void {
   pushPlainUrls(text, urls);
+  // 标题不是字符串时，没有可以落点的文字。
   if (typeof text !== "string") {
-    pushTextLinks(entities, urls);
     return;
   }
   pushTextLinks(drawnTextLink(entities, text.length), urls);
