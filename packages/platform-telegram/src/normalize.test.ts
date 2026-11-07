@@ -13559,8 +13559,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("desc81671");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("desc81671");
+    expect(looseDump).not.toContain("bit.ly");
 
     const chosen = await normalize({
       update_id: 81672,
@@ -17577,8 +17579,111 @@ describe("normalizeUpdate", () => {
     if (described.status !== "event") {
       return;
     }
-    expect(described.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(described.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(described.event)).not.toContain("desc82194");
+    expect(JSON.stringify(described.event)).not.toContain("bit.ly");
+  });
+
+  it("skips a description link when the description is not a string", async () => {
+    const link = (url: string, length = 1) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...message,
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82211, {
+        text: "站会",
+        poll: {
+          question: "题",
+          description: 1,
+          description_entities: [link("https://bit.ly/desc82211")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.hosts).toBeUndefined();
+    const numberedDump = JSON.stringify(numbered.event);
+    expect(numberedDump).not.toContain("desc82211");
+    expect(numberedDump).not.toContain("bit.ly");
+
+    const coded = await normalize(
+      asked(82212, {
+        text: "站会",
+        poll: {
+          question: "题",
+          description: false,
+          description_entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 1,
+              language: "https://cutt.ly/desc82212",
+            },
+          ],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("desc82212");
+    expect(JSON.stringify(coded.event)).not.toContain("cutt.ly");
+
+    const drawn = await normalize(
+      asked(82213, {
+        text: "站会",
+        poll: {
+          question: "题",
+          description: "文",
+          description_entities: [link("https://tinyurl.com/desc82213")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.pollDescription).toBe("文");
+    expect(drawn.event.message?.hosts).toEqual(["tinyurl.com"]);
+    expect(JSON.stringify(drawn.event)).not.toContain("desc82213");
+
+    const question = await normalize(
+      asked(82214, {
+        text: "站会",
+        poll: {
+          question: 1,
+          question_entities: [link("https://bit.ly/ask82214")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(question.status).toBe("event");
+    if (question.status !== "event") {
+      return;
+    }
+    expect(question.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(question.event)).not.toContain("ask82214");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
@@ -18567,9 +18672,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(open.event.message?.pollDescription).toBeUndefined();
-    expect(open.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(open.event.message?.hosts).toBeUndefined();
     const openDump = JSON.stringify(open.event);
     expect(openDump).not.toContain("desc80925");
+    expect(openDump).not.toContain("bit.ly");
   });
 
   it("skips a message custom emoji that does not fit inside the text", async () => {
