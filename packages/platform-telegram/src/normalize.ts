@@ -976,6 +976,18 @@ function richCustomEmoji(value: unknown): boolean {
     }
     return false;
   }
+  if (value.type === "map") {
+    // 坐标不进正文。坐标里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "location") {
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
