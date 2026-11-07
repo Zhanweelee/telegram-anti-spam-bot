@@ -993,6 +993,18 @@ function richCustomEmoji(value: unknown): boolean {
     }
     return false;
   }
+  if (value.type === "live_photo") {
+    // 实况照片不进正文。实况照片里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "live_photo") {
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
