@@ -739,10 +739,8 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
       continue;
     }
     if (typeof gift.text === "string") {
-      // 自定义表情必须整段落在礼物附言里。
+      // 自定义表情必须整段落在礼物附言里。附言不是字符串时不读。
       lists.push(fittingEmoji(gift.entities, gift.text.length));
-    } else {
-      lists.push(gift.entities);
     }
   }
   const game = message.game;
