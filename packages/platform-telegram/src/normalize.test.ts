@@ -22384,7 +22384,7 @@ describe("normalizeUpdate", () => {
     if (askedPoll.status !== "event") {
       return;
     }
-    expect(askedPoll.event.message?.asTextMention).toBe(true);
+    expect(askedPoll.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(askedPoll.event)).not.toContain("77082374");
   });
 
@@ -22592,6 +22592,108 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(question.event)).not.toContain("77081221");
   });
 
+  it("skips a poll question mention when the question is not a string", async () => {
+    const user = (id: number) => ({ id, first_name: "隐" });
+    const asked = (id: number, poll: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        poll: {
+          options: [{ text: "甲", voter_count: 0 }],
+          ...poll,
+        },
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82391, {
+        question: 1,
+        question_entities: [
+          { type: "text_mention", offset: 0, length: 2, user: user(77082391) },
+        ],
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(numbered.event)).not.toContain("77082391");
+
+    const flagged = await normalize(
+      asked(82392, {
+        question: false,
+        question_entities: [
+          { type: "text_mention", offset: 0, length: 1, user: user(77082392) },
+        ],
+      }),
+    );
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("77082392");
+
+    const drawn = await normalize(
+      asked(82393, {
+        question: "题",
+        question_entities: [
+          { type: "text_mention", offset: 0, length: 1, user: user(77082393) },
+        ],
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("77082393");
+
+    const explained = await normalize(
+      asked(82394, {
+        question: "题",
+        explanation: 1,
+        explanation_entities: [
+          { type: "text_mention", offset: 0, length: 1, user: user(77082394) },
+        ],
+      }),
+    );
+    expect(explained.status).toBe("event");
+    if (explained.status !== "event") {
+      return;
+    }
+    expect(explained.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(explained.event)).not.toContain("77082394");
+
+    const emoji = await normalize(
+      asked(82395, {
+        question: 1,
+        question_entities: [
+          {
+            type: "custom_emoji",
+            offset: 0,
+            length: 2,
+            custom_emoji_id: "emoji82395",
+          },
+        ],
+      }),
+    );
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("emoji82395");
+  });
+
   it("skips a poll question text mention that starts outside the question", async () => {
     const user = { id: 77081241, first_name: "隐名丙", username: "user77085" };
     const poll = (
@@ -22750,7 +22852,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(loose.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(loose.event)).not.toContain("77081241");
 
     const explained = await normalize(
