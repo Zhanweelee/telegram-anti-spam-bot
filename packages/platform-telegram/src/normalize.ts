@@ -4703,14 +4703,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         if (!isRecord(task)) {
           continue;
         }
-        // 文字链接的起点必须落在这条任务文字里，长度必须大于 0。
+        // 文字链接的起点必须落在这条任务文字里，长度必须大于 0。文字不是字符串时不读。
         pushPlainUrls(task.text, urls);
-        pushTextLinks(
-          typeof task.text === "string"
-            ? drawnTextLink(task.text_entities, task.text.length)
-            : task.text_entities,
-          urls,
-        );
+        if (typeof task.text === "string") {
+          pushTextLinks(
+            drawnTextLink(task.text_entities, task.text.length),
+            urls,
+          );
+        }
         pushTaskCompleterUrls(task, urls);
       }
     }
@@ -4828,14 +4828,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
       if (!isRecord(task)) {
         continue;
       }
-      // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。
+      // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。文字不是字符串时不读。
       pushPlainUrls(task.text, urls);
-      pushTextLinks(
-        typeof task.text === "string"
-          ? drawnTextLink(task.text_entities, task.text.length)
-          : task.text_entities,
-        urls,
-      );
+      if (typeof task.text === "string") {
+        pushTextLinks(
+          drawnTextLink(task.text_entities, task.text.length),
+          urls,
+        );
+      }
       pushTaskCompleterUrls(task, urls);
     }
   }
@@ -5203,14 +5203,14 @@ function pushLoadedReplyLine(
         if (!isRecord(task) || task.id !== taskId) {
           continue;
         }
-        // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。
+        // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。文字不是字符串时不读。
         pushPlainUrls(task.text, urls);
-        pushTextLinks(
-          typeof task.text === "string"
-            ? drawnTextLink(task.text_entities, task.text.length)
-            : task.text_entities,
-          urls,
-        );
+        if (typeof task.text === "string") {
+          pushTextLinks(
+            drawnTextLink(task.text_entities, task.text.length),
+            urls,
+          );
+        }
         return;
       }
     }
@@ -7078,14 +7078,11 @@ function pushDoneTaskUrls(
     if (!isRecord(task) || task.id !== id) {
       continue;
     }
-    // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。
+    // 文字链接的起点必须落在这条画出的任务文字里，长度必须大于 0。文字不是字符串时不读。
     pushPlainUrls(task.text, urls);
-    pushTextLinks(
-      typeof task.text === "string"
-        ? drawnTextLink(task.text_entities, task.text.length)
-        : task.text_entities,
-      urls,
-    );
+    if (typeof task.text === "string") {
+      pushTextLinks(drawnTextLink(task.text_entities, task.text.length), urls);
+    }
     return;
   }
 }
