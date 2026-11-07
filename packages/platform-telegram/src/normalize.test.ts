@@ -23210,7 +23210,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(empty.event.message?.text).toBe("站会");
-    expect(empty.event.message?.asCustomEmoji).toBe(true);
+    expect(empty.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(empty.event)).not.toContain("emoji82814");
 
     const mentioned = await normalize({
@@ -23240,6 +23240,112 @@ describe("normalizeUpdate", () => {
     expect(mentioned.event.message?.asCustomEmoji).toBeUndefined();
     expect(JSON.stringify(mentioned.event)).not.toContain("77082815");
     expect(JSON.stringify(mentioned.event)).not.toContain("emoji82815");
+  });
+
+  it("skips a rich emoji when the alternative text is empty", async () => {
+    const asked = (id: number, rich: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        rich_message: rich,
+      },
+    });
+    const emoji = (id: string, alternative: unknown) => ({
+      blocks: [
+        {
+          type: "paragraph",
+          text: {
+            type: "custom_emoji",
+            custom_emoji_id: id,
+            alternative_text: alternative,
+          },
+        },
+      ],
+    });
+
+    const empty = await normalize(asked(82831, emoji("emoji82831", "")));
+    expect(empty.status).toBe("event");
+    if (empty.status !== "event") {
+      return;
+    }
+    expect(empty.event.message?.text).toBe("站会");
+    expect(empty.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(empty.event)).not.toContain("emoji82831");
+
+    const drawn = await normalize(asked(82832, emoji("emoji82832", "引")));
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.richText).toBe("引");
+    expect(drawn.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("emoji82832");
+
+    const spaced = await normalize(asked(82833, emoji("emoji82833", " ")));
+    expect(spaced.status).toBe("event");
+    if (spaced.status !== "event") {
+      return;
+    }
+    expect(spaced.event.message?.text).toBe("站会");
+    expect(spaced.event.message?.richText).toBeUndefined();
+    expect(spaced.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(spaced.event)).not.toContain("emoji82833");
+
+    const formula = await normalize(
+      asked(82834, {
+        blocks: [
+          {
+            type: "mathematical_expression",
+            expression: {
+              type: "custom_emoji",
+              custom_emoji_id: "emoji82834",
+              alternative_text: "引",
+            },
+          },
+        ],
+      }),
+    );
+    expect(formula.status).toBe("event");
+    if (formula.status !== "event") {
+      return;
+    }
+    expect(formula.event.message?.text).toBe("站会");
+    expect(formula.event.message?.richText).toBeUndefined();
+    expect(formula.event.message?.asCustomEmoji).toBe(true);
+    expect(JSON.stringify(formula.event)).not.toContain("emoji82834");
+
+    const mentioned = await normalize({
+      update_id: 82835,
+      message: {
+        message_id: 82835,
+        date: 1761955200,
+        chat: { id: -10082835, type: "supergroup" },
+        from: { id: 82835, first_name: "Ada" },
+        text: "站会",
+        entities: [
+          {
+            type: "text_mention",
+            offset: 0,
+            length: 1,
+            user: { id: 77082835, first_name: "隐" },
+          },
+        ],
+        rich_message: emoji("emoji82835", ""),
+      },
+    });
+    expect(mentioned.status).toBe("event");
+    if (mentioned.status !== "event") {
+      return;
+    }
+    expect(mentioned.event.message?.asTextMention).toBe(true);
+    expect(mentioned.event.message?.asCustomEmoji).toBeUndefined();
+    expect(JSON.stringify(mentioned.event)).not.toContain("77082835");
+    expect(JSON.stringify(mentioned.event)).not.toContain("emoji82835");
   });
 
   it("skips a manual quote custom emoji that does not fit inside the quote", async () => {
