@@ -4634,14 +4634,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
         if (!isRecord(option)) {
           continue;
         }
-        // 文字链接的起点必须落在这条选项文字里，长度必须大于 0。
+        // 文字链接的起点必须落在这条选项文字里，长度必须大于 0。文字不是字符串时不读。
         pushPlainUrls(option.text, urls);
-        pushTextLinks(
-          typeof option.text === "string"
-            ? drawnTextLink(option.text_entities, option.text.length)
-            : option.text_entities,
-          urls,
-        );
+        if (typeof option.text === "string") {
+          pushTextLinks(
+            drawnTextLink(option.text_entities, option.text.length),
+            urls,
+          );
+        }
         pushPollAdderUrls(option, urls);
       }
     }
@@ -4813,14 +4813,14 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (!isRecord(value)) {
       continue;
     }
-    // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。
+    // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。文字不是字符串时不读。
     pushPlainUrls(value.option_text, urls);
-    pushTextLinks(
-      typeof value.option_text === "string"
-        ? drawnTextLink(value.option_text_entities, value.option_text.length)
-        : value.option_text_entities,
-      urls,
-    );
+    if (typeof value.option_text === "string") {
+      pushTextLinks(
+        drawnTextLink(value.option_text_entities, value.option_text.length),
+        urls,
+      );
+    }
   }
   const addedTasks = message.checklist_tasks_added;
   if (isRecord(addedTasks) && Array.isArray(addedTasks.tasks)) {
@@ -5240,14 +5240,14 @@ function pushLoadedReplyLine(
         if (!isRecord(option) || option.persistent_id !== optionId) {
           continue;
         }
-        // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。
+        // 文字链接的起点必须落在这条画出的选项文字里，长度必须大于 0。文字不是字符串时不读。
         pushPlainUrls(option.text, urls);
-        pushTextLinks(
-          typeof option.text === "string"
-            ? drawnTextLink(option.text_entities, option.text.length)
-            : option.text_entities,
-          urls,
-        );
+        if (typeof option.text === "string") {
+          pushTextLinks(
+            drawnTextLink(option.text_entities, option.text.length),
+            urls,
+          );
+        }
         return;
       }
     }
