@@ -23824,7 +23824,7 @@ describe("normalizeUpdate", () => {
     if (added.status !== "event") {
       return;
     }
-    expect(added.event.message?.asTextMention).toBe(true);
+    expect(added.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(added.event)).not.toContain("77082474");
 
     const emoji = await normalize(
@@ -23994,6 +23994,104 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(added.event)).not.toContain("77081321");
   });
 
+  it("skips an added task mention when the task text is not a string", async () => {
+    const user = (id: number) => ({ id, first_name: "隐" });
+    const asked = (id: number, extra: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        ...extra,
+      },
+    });
+    const added = (text: unknown, entities: unknown) => ({
+      checklist_tasks_added: {
+        tasks: [{ id: 1, text, text_entities: entities }],
+      },
+    });
+
+    const numbered = await normalize(
+      asked(82491, added(1, [
+        { type: "text_mention", offset: 0, length: 1, user: user(77082491) },
+      ])),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(numbered.event)).not.toContain("77082491");
+
+    const flagged = await normalize(
+      asked(82492, added(false, [
+        { type: "text_mention", offset: 0, length: 1, user: user(77082492) },
+      ])),
+    );
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("77082492");
+
+    const drawn = await normalize(
+      asked(82493, added("加", [
+        { type: "text_mention", offset: 0, length: 1, user: user(77082493) },
+      ])),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("77082493");
+
+    const gifted = await normalize(
+      asked(82494, {
+        gift: {
+          text: 1,
+          entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: user(77082494),
+            },
+          ],
+        },
+      }),
+    );
+    expect(gifted.status).toBe("event");
+    if (gifted.status !== "event") {
+      return;
+    }
+    expect(gifted.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(gifted.event)).not.toContain("77082494");
+
+    const emoji = await normalize(
+      asked(82495, added(1, [
+        {
+          type: "custom_emoji",
+          offset: 0,
+          length: 2,
+          custom_emoji_id: "emoji82495",
+        },
+      ])),
+    );
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("emoji82495");
+  });
+
   it("skips an added task text mention that starts outside the task", async () => {
     const user = { id: 77081341, first_name: "隐名辛", username: "user77095" };
     const mention = (offset: number, length: number) => [
@@ -24099,7 +24197,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(loose.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(loose.event)).not.toContain("77081341");
 
     const fourth = await normalize(
