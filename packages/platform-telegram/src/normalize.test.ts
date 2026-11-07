@@ -13804,8 +13804,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("opt81701");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("opt81701");
+    expect(looseDump).not.toContain("bit.ly");
 
     const later = await normalize({
       update_id: 81702,
@@ -14359,8 +14361,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("add81761");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("add81761");
+    expect(looseDump).not.toContain("bit.ly");
 
     const removed = await normalize(
       asked(81762, "poll_option_deleted", "甲", [
@@ -15683,8 +15687,10 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("站会");
-    expect(loose.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(loose.event)).not.toContain("option81910");
+    expect(loose.event.message?.hosts).toBeUndefined();
+    const looseDump = JSON.stringify(loose.event);
+    expect(looseDump).not.toContain("option81910");
+    expect(looseDump).not.toContain("bit.ly");
 
     const question = await normalize(
       asked(
@@ -17314,8 +17320,159 @@ describe("normalizeUpdate", () => {
     if (option.status !== "event") {
       return;
     }
-    expect(option.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(option.event.message?.hosts).toBeUndefined();
     expect(JSON.stringify(option.event)).not.toContain("opt82155");
+    expect(JSON.stringify(option.event)).not.toContain("bit.ly");
+  });
+
+  it("skips an option link when the option text is not a string", async () => {
+    const link = (url: string, length = 1) => ({
+      type: "text_link",
+      offset: 0,
+      length,
+      url,
+    });
+    const asked = (id: number, message: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        ...message,
+      },
+    });
+
+    const listed = await normalize(
+      asked(82171, {
+        poll: {
+          question: "题",
+          options: [
+            {
+              text: 1,
+              voter_count: 0,
+              text_entities: [link("https://bit.ly/opt82171")],
+            },
+            {
+              text: false,
+              voter_count: 0,
+              text_entities: [
+                {
+                  type: "pre",
+                  offset: 0,
+                  length: 1,
+                  language: "https://cutt.ly/pre82171",
+                },
+              ],
+            },
+            {
+              text: "文",
+              voter_count: 0,
+              text_entities: [link("https://tinyurl.com/opt82171")],
+            },
+          ],
+        },
+      }),
+    );
+    expect(listed.status).toBe("event");
+    if (listed.status !== "event") {
+      return;
+    }
+    expect(listed.event.message?.hosts).toEqual(["tinyurl.com"]);
+    const listedDump = JSON.stringify(listed.event);
+    expect(listedDump).not.toContain("opt82171");
+    expect(listedDump).not.toContain("pre82171");
+    expect(listedDump).not.toContain("bit.ly");
+    expect(listedDump).not.toContain("cutt.ly");
+
+    const added = await normalize(
+      asked(82172, {
+        poll_option_added: {
+          option_text: 1,
+          option_text_entities: [link("https://bit.ly/add82172")],
+        },
+      }),
+    );
+    expect(added.status).toBe("event");
+    if (added.status !== "event") {
+      return;
+    }
+    expect(added.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(added.event)).not.toContain("add82172");
+    expect(JSON.stringify(added.event)).not.toContain("bit.ly");
+
+    const removed = await normalize(
+      asked(82173, {
+        text: "删",
+        poll_option_deleted: {
+          option_text: false,
+          option_text_entities: [
+            {
+              type: "pre",
+              offset: 0,
+              length: 1,
+              language: "https://cutt.ly/del82173",
+            },
+          ],
+        },
+      }),
+    );
+    expect(removed.status).toBe("event");
+    if (removed.status !== "event") {
+      return;
+    }
+    expect(removed.event.message?.text).toBe("删");
+    expect(removed.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(removed.event)).not.toContain("del82173");
+    expect(JSON.stringify(removed.event)).not.toContain("cutt.ly");
+
+    const replied = await normalize(
+      asked(82174, {
+        text: "回",
+        reply_to_poll_option_id: "opt",
+        reply_to_message: {
+          message_id: 821740,
+          date: 1761955100,
+          chat: { id: -10082174, type: "supergroup" },
+          poll: {
+            question: "题",
+            options: [
+              {
+                text: 1,
+                voter_count: 0,
+                persistent_id: "opt",
+                text_entities: [link("https://bit.ly/reply82174")],
+              },
+            ],
+          },
+        },
+      }),
+    );
+    expect(replied.status).toBe("event");
+    if (replied.status !== "event") {
+      return;
+    }
+    expect(replied.event.message?.text).toBe("回");
+    expect(replied.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(replied.event)).not.toContain("reply82174");
+    expect(JSON.stringify(replied.event)).not.toContain("bit.ly");
+
+    const explanation = await normalize(
+      asked(82175, {
+        poll: {
+          question: "题",
+          explanation: 1,
+          explanation_entities: [link("https://bit.ly/exp82175")],
+          options: [{ text: "甲", voter_count: 0 }],
+        },
+      }),
+    );
+    expect(explanation.status).toBe("event");
+    if (explanation.status !== "event") {
+      return;
+    }
+    expect(explanation.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(explanation.event)).not.toContain("exp82175");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
