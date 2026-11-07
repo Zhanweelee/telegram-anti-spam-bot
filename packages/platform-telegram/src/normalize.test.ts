@@ -16642,8 +16642,220 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(pinned.event.message?.asPin).toBe(true);
-    expect(pinned.event.message?.hosts).toEqual(["bit.ly"]);
-    expect(JSON.stringify(pinned.event)).not.toContain("pin82044");
+    expect(pinned.event.message?.hosts).toBeUndefined();
+    const pinnedDump = JSON.stringify(pinned.event);
+    expect(pinnedDump).not.toContain("pin82044");
+    expect(pinnedDump).not.toContain("bit.ly");
+  });
+
+  it("skips a pin preview link whose length is not positive", async () => {
+    const link = (
+      length: number,
+      url: string,
+      offset = 0,
+    ): Record<string, unknown> => ({
+      type: "text_link",
+      offset,
+      length,
+      url,
+    });
+    const asked = (id: number, pinned: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        pinned_message: {
+          message_id: id * 10,
+          date: 1761955100,
+          chat: { id: -10000000 - id, type: "supergroup" },
+          ...pinned,
+        },
+      },
+    });
+
+    const zero = await normalize(
+      asked(82091, {
+        text: "文",
+        entities: [link(0, "https://bit.ly/pin82091")],
+      }),
+    );
+    expect(zero.status).toBe("event");
+    if (zero.status !== "event") {
+      return;
+    }
+    expect(zero.event.message?.text).toBe("");
+    expect(zero.event.message?.asPin).toBe(true);
+    expect(zero.event.message?.hosts).toBeUndefined();
+    const zeroDump = JSON.stringify(zero.event);
+    expect(zeroDump).not.toContain("pin82091");
+    expect(zeroDump).not.toContain("bit.ly");
+
+    const negative = await normalize(
+      asked(82092, {
+        text: "文",
+        entities: [link(-1, "https://bit.ly/pin82092")],
+      }),
+    );
+    expect(negative.status).toBe("event");
+    if (negative.status !== "event") {
+      return;
+    }
+    expect(negative.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(negative.event)).not.toContain("pin82092");
+
+    const fraction = await normalize(
+      asked(82093, {
+        text: "文",
+        entities: [link(1.5, "https://bit.ly/pin82093")],
+      }),
+    );
+    expect(fraction.status).toBe("event");
+    if (fraction.status !== "event") {
+      return;
+    }
+    expect(fraction.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(fraction.event)).not.toContain("pin82093");
+
+    const clamped = await normalize(
+      asked(82094, {
+        text: "文",
+        entities: [link(2, "https://bit.ly/pin82094")],
+      }),
+    );
+    expect(clamped.status).toBe("event");
+    if (clamped.status !== "event") {
+      return;
+    }
+    expect(clamped.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(clamped.event)).not.toContain("pin82094");
+
+    const plain = await normalize(
+      asked(82095, {
+        text: `https://example.com https://bit.ly/tail82095`,
+        entities: [link(0, "https://bit.ly/pin82095")],
+      }),
+    );
+    expect(plain.status).toBe("event");
+    if (plain.status !== "event") {
+      return;
+    }
+    expect(plain.event.message?.hosts).toEqual(["example.com"]);
+    const plainDump = JSON.stringify(plain.event);
+    expect(plainDump).not.toContain("pin82095");
+    expect(plainDump).not.toContain("tail82095");
+    expect(plainDump).not.toContain("bit.ly");
+
+    const wide = await normalize(
+      asked(82096, {
+        text: "文".repeat(21),
+        entities: [link(1, "https://bit.ly/pin82096", 19)],
+      }),
+    );
+    expect(wide.status).toBe("event");
+    if (wide.status !== "event") {
+      return;
+    }
+    expect(wide.event.message?.hosts).toEqual(["bit.ly"]);
+    expect(JSON.stringify(wide.event)).not.toContain("pin82096");
+
+    const past = await normalize(
+      asked(82097, {
+        text: "文".repeat(21),
+        entities: [link(1, "https://bit.ly/pin82097", 20)],
+      }),
+    );
+    expect(past.status).toBe("event");
+    if (past.status !== "event") {
+      return;
+    }
+    expect(past.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(past.event)).not.toContain("pin82097");
+
+    const coded = await normalize(
+      asked(82098, {
+        text: "文",
+        entities: [
+          {
+            type: "pre",
+            offset: 0,
+            length: 1,
+            language: "https://bit.ly/pin82098",
+          },
+        ],
+      }),
+    );
+    expect(coded.status).toBe("event");
+    if (coded.status !== "event") {
+      return;
+    }
+    expect(coded.event.message?.hosts).toBeUndefined();
+    expect(JSON.stringify(coded.event)).not.toContain("pin82098");
+
+    const list = await normalize(
+      asked(82099, {
+        checklist: {
+          title: "单",
+          title_entities: [link(0, "https://bit.ly/pin82099")],
+          tasks: [{ id: 1, text: "https://tinyurl.com/task82099" }],
+        },
+      }),
+    );
+    expect(list.status).toBe("event");
+    if (list.status !== "event") {
+      return;
+    }
+    expect(list.event.message?.hosts).toBeUndefined();
+    const listDump = JSON.stringify(list.event);
+    expect(listDump).not.toContain("pin82099");
+    expect(listDump).not.toContain("task82099");
+    expect(listDump).not.toContain("tinyurl");
+    expect(listDump).not.toContain("bit.ly");
+
+    const invoice = await normalize(
+      asked(82100, {
+        invoice: { title: "账单", description: "https://example.com/inv82100" },
+        entities: [link(1, "https://bit.ly/pin82100")],
+      }),
+    );
+    expect(invoice.status).toBe("event");
+    if (invoice.status !== "event") {
+      return;
+    }
+    expect(invoice.event.message?.hosts).toEqual(["example.com"]);
+    const invoiceDump = JSON.stringify(invoice.event);
+    expect(invoiceDump).not.toContain("inv82100");
+    expect(invoiceDump).not.toContain("pin82100");
+    expect(invoiceDump).not.toContain("bit.ly");
+
+    const rich = await normalize(
+      asked(82101, {
+        text: "文",
+        entities: [link(0, "https://tinyurl.com/pin82101")],
+        rich_message: {
+          blocks: [
+            {
+              type: "paragraph",
+              text: {
+                type: "url",
+                text: "点这里看",
+                url: "https://bit.ly/rich82101",
+              },
+            },
+          ],
+        },
+      }),
+    );
+    expect(rich.status).toBe("event");
+    if (rich.status !== "event") {
+      return;
+    }
+    expect(rich.event.message?.hosts).toEqual(["bit.ly"]);
+    const richDump = JSON.stringify(rich.event);
+    expect(richDump).not.toContain("rich82101");
+    expect(richDump).not.toContain("pin82101");
+    expect(richDump).not.toContain("tinyurl");
   });
 
   it("skips a caption text link that starts after the drawn caption", async () => {
