@@ -572,12 +572,10 @@ function textMentionMark(message: Record<string, unknown>): boolean {
   const checklist = message.checklist;
   if (isRecord(checklist)) {
     if (typeof checklist.title === "string") {
-      // 按标识提及的起点必须落在清单标题里。
+      // 按标识提及的起点必须落在清单标题里。标题不是字符串时不读。
       lists.push(
         drawnMention(checklist.title_entities, checklist.title.length),
       );
-    } else {
-      lists.push(checklist.title_entities);
     }
     if (Array.isArray(checklist.tasks)) {
       for (const task of checklist.tasks) {
