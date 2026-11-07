@@ -964,6 +964,18 @@ function richCustomEmoji(value: unknown): boolean {
     }
     return false;
   }
+  if (value.type === "photo") {
+    // 照片不进正文。照片里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "photo") {
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
