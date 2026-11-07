@@ -850,6 +850,26 @@ function richCustomEmoji(value: unknown): boolean {
     }
     return false;
   }
+  if (value.type === "animation") {
+    // 文件名不进正文。文件名里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "animation" && isRecord(nested)) {
+        for (const [innerKey, inner] of Object.entries(nested)) {
+          if (innerKey === "file_name") {
+            continue;
+          }
+          if (richCustomEmoji(inner)) {
+            return true;
+          }
+        }
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
