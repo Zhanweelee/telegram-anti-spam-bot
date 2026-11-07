@@ -607,10 +607,8 @@ function textMentionMark(message: Record<string, unknown>): boolean {
       continue;
     }
     if (typeof gift.text === "string") {
-      // 按标识提及的起点必须落在礼物附言里。
+      // 按标识提及的起点必须落在礼物附言里。附言不是字符串时不读。
       lists.push(drawnMention(gift.entities, gift.text.length));
-    } else {
-      lists.push(gift.entities);
     }
   }
   const game = message.game;
