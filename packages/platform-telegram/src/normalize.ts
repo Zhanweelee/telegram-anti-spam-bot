@@ -782,6 +782,18 @@ function richCustomEmoji(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
   }
+  if (value.type === "mathematical_expression") {
+    // 公式画成固定说法。源码里的自定义表情不读。
+    for (const [key, nested] of Object.entries(value)) {
+      if (key === "expression") {
+        continue;
+      }
+      if (richCustomEmoji(nested)) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (
     value.type === "custom_emoji" &&
     hiddenSecret(value.custom_emoji_id) &&
