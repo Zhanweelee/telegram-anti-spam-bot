@@ -782,7 +782,12 @@ function richCustomEmoji(value: unknown): boolean {
   if (!isRecord(value)) {
     return false;
   }
-  if (value.type === "custom_emoji" && hiddenSecret(value.custom_emoji_id)) {
+  if (
+    value.type === "custom_emoji" &&
+    hiddenSecret(value.custom_emoji_id) &&
+    typeof value.alternative_text === "string"
+  ) {
+    // 替代文字不是字符串时，这个节点没有可以落点的文字。
     return true;
   }
   for (const nested of Object.values(value)) {
