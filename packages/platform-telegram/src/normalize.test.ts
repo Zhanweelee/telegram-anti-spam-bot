@@ -22948,7 +22948,7 @@ describe("normalizeUpdate", () => {
     if (described.status !== "event") {
       return;
     }
-    expect(described.event.message?.asTextMention).toBe(true);
+    expect(described.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(described.event)).not.toContain("77082414");
 
     const emoji = await normalize(
@@ -23126,6 +23126,140 @@ describe("normalizeUpdate", () => {
     expect(JSON.stringify(described.event)).not.toContain("77081261");
   });
 
+  it("skips a poll description mention when the description is not a string", async () => {
+    const user = (id: number) => ({ id, first_name: "隐" });
+    const asked = (id: number, extra: Record<string, unknown>) => ({
+      update_id: id,
+      message: {
+        message_id: id,
+        date: 1761955200,
+        chat: { id: -10000000 - id, type: "supergroup" },
+        from: { id, first_name: "Ada" },
+        text: "站会",
+        ...extra,
+      },
+    });
+    const poll = (fields: Record<string, unknown>) => ({
+      question: "题",
+      options: [{ text: "甲", voter_count: 0 }],
+      ...fields,
+    });
+
+    const numbered = await normalize(
+      asked(82431, {
+        poll: poll({
+          description: 1,
+          description_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: user(77082431),
+            },
+          ],
+        }),
+      }),
+    );
+    expect(numbered.status).toBe("event");
+    if (numbered.status !== "event") {
+      return;
+    }
+    expect(numbered.event.message?.text).toBe("站会");
+    expect(numbered.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(numbered.event)).not.toContain("77082431");
+
+    const flagged = await normalize(
+      asked(82432, {
+        poll: poll({
+          description: false,
+          description_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: user(77082432),
+            },
+          ],
+        }),
+      }),
+    );
+    expect(flagged.status).toBe("event");
+    if (flagged.status !== "event") {
+      return;
+    }
+    expect(flagged.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(flagged.event)).not.toContain("77082432");
+
+    const drawn = await normalize(
+      asked(82433, {
+        poll: poll({
+          description: "述",
+          description_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: user(77082433),
+            },
+          ],
+        }),
+      }),
+    );
+    expect(drawn.status).toBe("event");
+    if (drawn.status !== "event") {
+      return;
+    }
+    expect(drawn.event.message?.text).toBe("站会");
+    expect(drawn.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(drawn.event)).not.toContain("77082433");
+
+    const titled = await normalize(
+      asked(82434, {
+        checklist: {
+          title: 1,
+          title_entities: [
+            {
+              type: "text_mention",
+              offset: 0,
+              length: 1,
+              user: user(77082434),
+            },
+          ],
+          tasks: [{ id: 1, text: "甲" }],
+        },
+      }),
+    );
+    expect(titled.status).toBe("event");
+    if (titled.status !== "event") {
+      return;
+    }
+    expect(titled.event.message?.asTextMention).toBe(true);
+    expect(JSON.stringify(titled.event)).not.toContain("77082434");
+
+    const emoji = await normalize(
+      asked(82435, {
+        poll: poll({
+          description: 1,
+          description_entities: [
+            {
+              type: "custom_emoji",
+              offset: 0,
+              length: 2,
+              custom_emoji_id: "emoji82435",
+            },
+          ],
+        }),
+      }),
+    );
+    expect(emoji.status).toBe("event");
+    if (emoji.status !== "event") {
+      return;
+    }
+    expect(emoji.event.message?.asCustomEmoji).toBe(true);
+    expect(emoji.event.message?.asTextMention).toBeUndefined();
+    expect(JSON.stringify(emoji.event)).not.toContain("emoji82435");
+  });
+
   it("skips a poll description text mention that starts outside the description", async () => {
     const user = { id: 77081281, first_name: "隐名戊", username: "user77089" };
     const poll = (id: number, fields: Record<string, unknown>) => ({
@@ -23257,7 +23391,7 @@ describe("normalizeUpdate", () => {
       return;
     }
     expect(loose.event.message?.text).toBe("题");
-    expect(loose.event.message?.asTextMention).toBe(true);
+    expect(loose.event.message?.asTextMention).toBeUndefined();
     expect(JSON.stringify(loose.event)).not.toContain("77081281");
 
     const titled = await normalize({

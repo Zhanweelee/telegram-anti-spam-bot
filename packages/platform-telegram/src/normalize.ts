@@ -563,12 +563,10 @@ function textMentionMark(message: Record<string, unknown>): boolean {
       );
     }
     if (typeof poll.description === "string") {
-      // 按标识提及的起点必须落在投票描述里。
+      // 按标识提及的起点必须落在投票描述里。描述不是字符串时不读。
       lists.push(
         drawnMention(poll.description_entities, poll.description.length),
       );
-    } else {
-      lists.push(poll.description_entities);
     }
   }
   const checklist = message.checklist;
