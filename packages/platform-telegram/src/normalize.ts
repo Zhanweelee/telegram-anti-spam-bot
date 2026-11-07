@@ -672,12 +672,10 @@ function customEmojiMark(message: Record<string, unknown>): boolean {
       );
     }
     if (typeof poll.description === "string") {
-      // 自定义表情必须整段落在投票描述里。
+      // 自定义表情必须整段落在投票描述里。描述不是字符串时不读。
       lists.push(
         fittingEmoji(poll.description_entities, poll.description.length),
       );
-    } else {
-      lists.push(poll.description_entities);
     }
     if (Array.isArray(poll.options)) {
       for (const option of poll.options) {
