@@ -4718,14 +4718,11 @@ function sideUrls(message: Record<string, unknown>): string[] {
     if (gameDescriptionOpen(message, game)) {
       pushOpenedSpans(game.description, urls);
     }
-    // 文字链接的起点必须落在这段附加文字里，长度必须大于 0。
+    // 文字链接的起点必须落在这段附加文字里，长度必须大于 0。附加文字不是字符串时不读。
     pushPlainUrls(game.text, urls);
-    pushTextLinks(
-      typeof game.text === "string"
-        ? drawnTextLink(game.text_entities, game.text.length)
-        : game.text_entities,
-      urls,
-    );
+    if (typeof game.text === "string") {
+      pushTextLinks(drawnTextLink(game.text_entities, game.text.length), urls);
+    }
     if (isRecord(game.animation)) {
       pushPlainUrls(game.animation.file_name, urls);
     }
